@@ -1,17 +1,21 @@
-use crate::constants::PRINT_DEBUG;
+use crate::constants::MAP_HEIGHT;
+use crate::constants::MAP_LENGTH;
+use crate::constants::MAP_WIDTH;
+use crate::models::position::Position;
 use crate::models::ship::shield::Shield;
+use crate::models::ship::armor::Armor;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+
+use super::weapon::Weapon;
 
 //SHIP DETAILS
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Ship {
     pub name: String,
     pub owner: String,
-    x: i32,
-    y: i32,
-    z: i32,
+    position: Position,
     status: ShipStatus,
     pub hp: i32,
     pub combat_state: CombatState,
@@ -53,61 +57,6 @@ pub enum CombatState {
     Default,
     Evasive,
     Passive,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum Weapon {
-    PhotonSingularityBeam { damage: i32 },
-    QuantumEntanglementTorpedo { damage: i32 },
-    NeutronBeam { damage: i32 },
-    GravitonPulse { damage: i32 },
-    MagneticResonanceDisruptor { damage: i32 },
-}
-impl Weapon {
-    pub fn damage(&self) -> i32 {
-        match self {
-            Weapon::PhotonSingularityBeam { damage } => *damage,
-            Weapon::QuantumEntanglementTorpedo { damage } => *damage,
-            Weapon::NeutronBeam { damage } => *damage,
-            Weapon::GravitonPulse { damage } => *damage,
-            Weapon::MagneticResonanceDisruptor { damage } => *damage,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Armor {
-    pub durability: i32,
-}
-
-impl Armor {
-    pub fn new(durability: i32) -> Self {
-        Self { durability }
-    }
-
-    pub fn calculate_damage(&mut self, damage: i32) -> i32 {
-        if PRINT_DEBUG {
-            println!(
-                "Calculating damage with armor durability: {}",
-                self.durability
-            );
-            println!("Incoming damage: {}", damage);
-        }
-        let remaining_durability = self.durability - damage;
-        let damage_absorbed = if remaining_durability < 0 {
-            self.durability
-        } else {
-            damage
-        };
-        if PRINT_DEBUG {
-            println!("Armor absorbed {} damage", damage_absorbed);
-        }
-        self.durability = remaining_durability.max(0);
-        if PRINT_DEBUG {
-            println!("Remaining armor durability: {}", self.durability);
-        }
-        damage - damage_absorbed
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -408,12 +357,14 @@ impl Distribution<Ship> for Standard {
         let cargo = generate_ship_resources();
         let hit_points = rng.gen_range(1..101);
 
+        let x = rng.gen_range(1..=MAP_WIDTH as i32);
+        let y = rng.gen_range(1..=MAP_HEIGHT as i32);
+        let z = rng.gen_range(1..=MAP_LENGTH as i32);
+        let position = Position { x: x, y: y, z: z };
         Ship {
             name,
             owner,
-            x: 0,
-            y: 0,
-            z: 0,
+            position,
             combat_state: CombatState::NotInCombat,
             specialization,
             size,

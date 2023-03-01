@@ -1,0 +1,46 @@
+Currently working on feautres: 
+- implementing stars
+    currently star_type does not actually do anything - this will be fixed later
+- position structure
+
+Future feature list ordered by current priority (this may change of course):
+- when generating planets or star systems, make sure there are not two models in the same position
+- create an expanded resources model
+- create a structure to hold player data (credits, ship ownership, fleet etc) and begin to use this structure
+- create basic trade system
+- create world_map which is collection of star_system_maps and plot them around the vector space
+- add movement functionality
+- actually make combat
+- save functionality
+- reputation system 
+- - with planets
+- - with star systems?
+- implement factions
+- - reputation system with factions
+- quests (bounty (dead/alive/dead_or_alive), anomaly investigation, Transport goods)
+
+General TODO - not sure when this will be started
+- make some UI based on existing functionalities.
+
+Potential Features list (ordered by most likely to least likely to be added to the game):
+- create modified "random" in starting star system to make game start easier and less random (ie, make sure player can at least travel to another planet at the start of the game)
+- create modified "random" for planet type and/or star type generation to have higher weight towards "normal" types
+- alien races
+- - reputation system with these alien races
+- various reputations can be combined eg(good standing with alien race but poor standing with planet = average standing when communicating with said alien)
+- make planets orbit
+- make star systems orbit the galactic center
+
+Highly unlikely features
+- create double star system
+- implement multiple galaxies
+- - galactical orbits/movements
+
+Mostly complete
+- position
+- star
+- star_system
+
+Feature complete elements: (the item on this list are largely feauture complete and will undergo fewer changes than other strucutres)
+- ship model
+- planet model

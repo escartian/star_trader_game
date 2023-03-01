@@ -1,14 +1,14 @@
 use rand::distributions::{Distribution, Standard};
 use rand::{Rng};
 use serde::{Deserialize, Serialize};
+use super::position::{Position, random_nonzero_position};
+
 //PLANET DETAILS
 // Define a struct to represent a planet
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Planet {
     name: String,
-    x: i32,
-    y: i32,
-    z: i32,
+    position: Position,
     economy: Economy,
     specialization: PlanetSpecialization,
     danger: PlanetDanger,
@@ -130,22 +130,15 @@ impl Distribution<PlanetSpecialization> for Standard {
         }
     }
 }
-pub fn generate_world_map(num_planets: u32, map_width: u32, map_height: u32) -> Vec<Planet> {
+pub fn generate_planets(num_planets: u32, map_width: i32, map_height: i32, map_length: i32) -> Vec<Planet> {
     // Initialize a vector to hold the planets
     let mut planets = Vec::new();
 
-    // Create a random number generator
-    let mut rng = rand::thread_rng();
-
     // Loop to generate the specified number of planets
     for i in 0..num_planets {
-        // Generate a random name for the planet
+        // Generate a name for the planet
         let name = format!("Planet {}", i + 1);
-
-        // Generate random x and y coordinates for the planet
-        let x = rng.gen_range(0..=map_width as i32);
-        let y = rng.gen_range(0..=map_height as i32);
-        let z = rng.gen_range(0..=map_height as i32);
+        let position = random_nonzero_position(map_width, map_height, map_length);
         let economy: Economy = rand::random();
         let specialization: PlanetSpecialization = rand::random();
         let biome: Biome = rand::random();
@@ -157,9 +150,7 @@ pub fn generate_world_map(num_planets: u32, map_width: u32, map_height: u32) -> 
             economy,
             specialization,
             danger,
-            x,
-            y,
-            z,
+            position,
             biome,
         };
 

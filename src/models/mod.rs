@@ -1,3 +1,5 @@
 pub mod planet;
+pub mod star;
 pub mod ship;
-mod shield;
+pub mod position;
+pub mod star_system;

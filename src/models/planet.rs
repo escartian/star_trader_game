@@ -223,6 +223,14 @@ mod planet_tests {
             danger: rand::random(),
             biome: rand::random(),
         };
+        let p3 = Planet {
+            name: "D".to_string(),
+            position: Position { x: 4, y: 5, z: 6 },
+            economy: rand::random(),
+            specialization: rand::random(),
+            danger: rand::random(),
+            biome: rand::random(),
+        };
 
         // Add the planets to a vector
         let mut planets = vec![p1, p2, p3];

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 //how to create an instance of type Position
 //let pos = Position { x: 3, y: 4, z: 0 };
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
@@ -32,7 +32,7 @@ impl Position {
         let mut y = rng.gen_range(-y_range..=y_range);
         let mut z = rng.gen_range(-z_range..=z_range);
         //in the unlikely case that position values are 0,0,0, rerun random until not 0,0,0 
-        //as this position is reserved for the star at the center of the star sysstem
+        //as this position is reserved for the star at the center of the star system
         while x == 0 && y == 0 && z == 0 {
             x = rng.gen_range(-x_range..=x_range);
             y = rng.gen_range(-y_range..=y_range);

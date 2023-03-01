@@ -2,13 +2,13 @@ mod constants;
 mod models;
 use crate::combat::combat::{CombatResult, auto_resolve_ship_combat};
 use crate::models::ship::ship::Ship;
-use crate::models::star_system::generate_star_system;
+use crate::models::star_system::generate_star_system_default;
 mod combat;
 
 fn main() {
     // Generate a star_system_map with 3-10 planets in a 100x100*100 map
     //let star_system_map = generate_star_system_map(3, 10, MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH);
-    let star_system_map = generate_star_system();
+    let star_system_map = generate_star_system_default();
     let player_name = String::from("Igor");
     // Print the generated world map
     println!("{:#?}", star_system_map);

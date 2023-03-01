@@ -1,6 +1,9 @@
 use rand::distributions::{Distribution, Standard};
 use rand::{Rng};
+use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
+use crate::constants::PRINT_DEBUG;
+
 use super::position::{Position, random_nonzero_position};
 
 //PLANET DETAILS
@@ -14,7 +17,6 @@ pub struct Planet {
     danger: PlanetDanger,
     biome: Biome,
 }
-
 #[derive(Serialize, Deserialize, Debug)]
 enum PlanetDanger {
     VerySafe,
@@ -143,7 +145,6 @@ pub fn generate_planets(num_planets: u32, map_width: i32, map_height: i32, map_l
         let specialization: PlanetSpecialization = rand::random();
         let biome: Biome = rand::random();
         let danger: PlanetDanger = rand::random();
-
         // Create a new planet with the generated name, coordinates, and other properties
         let planet = Planet {
             name,
@@ -158,6 +159,28 @@ pub fn generate_planets(num_planets: u32, map_width: i32, map_height: i32, map_l
         planets.push(planet);
     }
 
+    remove_colliding_planets(&mut planets);
     // Return the vector of planets
     planets
+}
+
+fn remove_colliding_planets(planets: &mut Vec<Planet>) {
+    let mut unique_positions: HashSet<&Position> = HashSet::new();
+    let mut duplicates: Vec<usize> = vec![];
+
+    for (i, planet) in planets.iter().enumerate() {
+        if unique_positions.contains(&planet.position) {
+            duplicates.push(i);
+        } else {
+            unique_positions.insert(&planet.position);
+        }
+    }
+
+    // Remove the duplicates from the planets vector
+    for i in duplicates.iter().rev() {
+        if PRINT_DEBUG{ 
+                println!("Planets generated in same location. Removing all but one");
+         }
+        planets.remove(*i);
+    }
 }

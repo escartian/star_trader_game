@@ -5,6 +5,7 @@ use crate::models::planet::generate_planets;
 
 use crate::constants::{MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH};
 
+use super::position::random_position;
 use super::{star::{generate_star, Star}, position::Position};
 //use super::(planet);
 #[derive(Serialize, Deserialize, Debug)]
@@ -15,17 +16,13 @@ pub struct StarSystem{
     planets: Vec<Planet>
 }
 
-pub fn generate_star_system() -> StarSystem{
+pub fn generate_star_system_default() -> StarSystem{
     
     // Create a random number generator
     let mut rng = rand::thread_rng();
     let star = generate_star();
     let planets = generate_planets(rng.gen_range(3..10), MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH);
-    let position = Position { 
-        x: rng.gen_range(-MAP_WIDTH..=MAP_WIDTH as i32),
-         y: rng.gen_range(-MAP_HEIGHT..=MAP_HEIGHT as i32), 
-         z: rng.gen_range(-MAP_LENGTH..=MAP_LENGTH as i32) 
-        };
+    let position = random_position(MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH);
 
     let star_system = StarSystem { star, position, planets };
     

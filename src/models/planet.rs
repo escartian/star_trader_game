@@ -1,10 +1,10 @@
-use rand::distributions::{Distribution, Standard};
-use rand::{Rng};
-use std::collections::HashSet;
-use serde::{Deserialize, Serialize};
 use crate::constants::PRINT_DEBUG;
+use rand::distributions::{Distribution, Standard};
+use rand::Rng;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
-use super::position::{Position, random_nonzero_position};
+use super::position::{random_nonzero_position, Position};
 
 //PLANET DETAILS
 // Define a struct to represent a planet
@@ -54,6 +54,7 @@ enum PlanetSpecialization {
     Mining,
     Manufacturing,
     Technology,
+    Research,
     Tourism,
     Service,
     None,
@@ -121,18 +122,24 @@ impl Distribution<Economy> for Standard {
 }
 impl Distribution<PlanetSpecialization> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> PlanetSpecialization {
-        match rng.gen_range(0..5) {
+        match rng.gen_range(0..7) {
             0 => PlanetSpecialization::Agriculture,
             1 => PlanetSpecialization::Mining,
             2 => PlanetSpecialization::Manufacturing,
             3 => PlanetSpecialization::Technology,
             4 => PlanetSpecialization::Tourism,
             5 => PlanetSpecialization::Service,
+            6 => PlanetSpecialization::Research,
             _ => PlanetSpecialization::None,
         }
     }
 }
-pub fn generate_planets(num_planets: u32, map_width: i32, map_height: i32, map_length: i32) -> Vec<Planet> {
+pub fn generate_planets(
+    num_planets: u32,
+    map_width: i32,
+    map_height: i32,
+    map_length: i32,
+) -> Vec<Planet> {
     // Initialize a vector to hold the planets
     let mut planets = Vec::new();
 
@@ -178,9 +185,51 @@ fn remove_colliding_planets(planets: &mut Vec<Planet>) {
 
     // Remove the duplicates from the planets vector
     for i in duplicates.iter().rev() {
-        if PRINT_DEBUG{ 
-                println!("Planets generated in same location. Removing all but one");
-         }
+        if PRINT_DEBUG {
+            println!("Planets generated in same location. Removing all but one");
+        }
         planets.remove(*i);
+    }
+}
+
+#[cfg(test)]
+mod planet_tests {
+    use crate::models::{planet::{Planet, remove_colliding_planets}, position::Position};
+
+    #[test]
+    fn test_remove_colliding_planets() {
+        // Create some planets with the same position
+        let p1 = Planet {
+            name: "A".to_string(),
+            position: Position { x: 1, y: 2, z: 3 },
+            economy: rand::random(),
+            specialization: rand::random(),
+            danger: rand::random(),
+            biome: rand::random(),
+        };
+        let p2 = Planet {
+            name: "B".to_string(),
+            position: Position { x: 1, y: 2, z: 3 },
+            economy: rand::random(),
+            specialization: rand::random(),
+            danger: rand::random(),
+            biome: rand::random(),
+        };
+        let p3 = Planet {
+            name: "C".to_string(),
+            position: Position { x: 4, y: 5, z: 6 },
+            economy: rand::random(),
+            specialization: rand::random(),
+            danger: rand::random(),
+            biome: rand::random(),
+        };
+
+        // Add the planets to a vector
+        let mut planets = vec![p1, p2, p3];
+
+        // Ensure that there are no planets with the same position
+        remove_colliding_planets(&mut planets);
+        //there should only be 2 planets in the vactor
+        assert_eq!(planets.len(), 2);
     }
 }

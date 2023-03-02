@@ -1,8 +1,11 @@
-use rand::Rng;
-use crate::models::ship::ship::Ship;
 use crate::constants::MAX_COMBAT_TIME;
+use crate::models::ship::ship::Ship;
+use rand::Rng;
 
-pub fn auto_resolve_ship_combat(attackers: &mut Vec<Ship>, defenders: &mut Vec<Ship>) -> CombatResult {
+pub fn auto_resolve_ship_combat(
+    attackers: &mut Vec<Ship>,
+    defenders: &mut Vec<Ship>,
+) -> CombatResult {
     let mut combat_tic = 0;
 
     while combat_tic < MAX_COMBAT_TIME {
@@ -88,7 +91,7 @@ pub fn auto_resolve_ship_combat(attackers: &mut Vec<Ship>, defenders: &mut Vec<S
         }
     }
     println!("Auto combat timed out");
-    let combat_result  = CombatResult::TimedOut(attackers.clone(),defenders.clone());
+    let combat_result = CombatResult::TimedOut(attackers.clone(), defenders.clone());
     combat_result
 }
 
@@ -96,5 +99,5 @@ pub enum CombatResult {
     AttackersVictory(Vec<Ship>),
     DefendersVictory(Vec<Ship>),
     TotalDestruction(),
-    TimedOut(Vec<Ship>,Vec<Ship>)
+    TimedOut(Vec<Ship>, Vec<Ship>),
 }

@@ -1,4 +1,4 @@
-use rand::{Rng};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 //how to create an instance of type Position
@@ -24,38 +24,34 @@ impl Position {
     }
 }
 
-    //since a random position is used often during world gen, this function was created
-    pub fn random_nonzero_position(x_range: i32, y_range: i32, z_range: i32) -> Position {
-        let mut rng = rand::thread_rng();
+//since a random position is used often during world gen, this function was created
+pub fn random_nonzero_position(x_range: i32, y_range: i32, z_range: i32) -> Position {
+    let mut rng = rand::thread_rng();
 
-        let mut x = rng.gen_range(-x_range..=x_range);
-        let mut y = rng.gen_range(-y_range..=y_range);
-        let mut z = rng.gen_range(-z_range..=z_range);
-        //in the unlikely case that position values are 0,0,0, rerun random until not 0,0,0 
-        //as this position is reserved for the star at the center of the star system
-        while x == 0 && y == 0 && z == 0 {
-            x = rng.gen_range(-x_range..=x_range);
-            y = rng.gen_range(-y_range..=y_range);
-            z = rng.gen_range(-z_range..=z_range);
-        }
-
-        Position { x, y, z }
+    let mut x = rng.gen_range(-x_range..=x_range);
+    let mut y = rng.gen_range(-y_range..=y_range);
+    let mut z = rng.gen_range(-z_range..=z_range);
+    //in the unlikely case that position values are 0,0,0, rerun random until not 0,0,0
+    //as this position is reserved for the star at the center of the star system
+    while x == 0 && y == 0 && z == 0 {
+        x = rng.gen_range(-x_range..=x_range);
+        y = rng.gen_range(-y_range..=y_range);
+        z = rng.gen_range(-z_range..=z_range);
     }
 
-    pub fn random_position(x_range: i32, y_range: i32, z_range: i32) -> Position {
-        let mut rng = rand::thread_rng();
+    Position { x, y, z }
+}
 
-        let x = rng.gen_range(-x_range..=x_range);
-        let y = rng.gen_range(-y_range..=y_range);
-        let z = rng.gen_range(-z_range..=z_range);
+pub fn random_position(x_range: i32, y_range: i32, z_range: i32) -> Position {
+    let mut rng = rand::thread_rng();
 
-        Position { x, y, z }
-    }
+    let x = rng.gen_range(-x_range..=x_range);
+    let y = rng.gen_range(-y_range..=y_range);
+    let z = rng.gen_range(-z_range..=z_range);
 
+    Position { x, y, z }
+}
 
-
-
-    
 #[cfg(test)]
 mod tests {
     use crate::models::position::Position;

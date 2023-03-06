@@ -3,6 +3,7 @@ use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::fmt;
 
 use super::position::{random_nonzero_position, Position};
 
@@ -17,8 +18,8 @@ pub struct Planet {
     danger: PlanetDanger,
     biome: Biome,
 }
-#[derive(Serialize, Deserialize, Debug)]
-enum PlanetDanger {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum PlanetDanger {
     VerySafe,
     Safe,
     Harmless,
@@ -30,6 +31,23 @@ enum PlanetDanger {
     Deadly,
     Insidious,
 }
+impl fmt::Display for PlanetDanger {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            PlanetDanger::VerySafe => write!(f, "VerySafe"),
+            PlanetDanger::Safe => write!(f, "Safe"),
+            PlanetDanger::Harmless => write!(f, "Harmless"),
+            PlanetDanger::Benign => write!(f, "Benign"),
+            PlanetDanger::Normal => write!(f, "Normal"),
+            PlanetDanger::Tainted => write!(f, "Tainted"),
+            PlanetDanger::Hazardous => write!(f, "Hazardous"),
+            PlanetDanger::Corrosive => write!(f, "Corrosive"),
+            PlanetDanger::Deadly => write!(f, "Deadly"),
+            PlanetDanger::Insidious => write!(f, "Insidious"),
+        }
+    }
+}
+
 
 #[derive(Serialize, Deserialize, Debug)]
 enum Biome {
@@ -191,7 +209,20 @@ fn remove_colliding_planets(planets: &mut Vec<Planet>) {
         planets.remove(*i);
     }
 }
+pub trait PlanetTrait {
+    type PlanetDanger;
+    fn get_danger(&self) -> &Self::PlanetDanger;
+}
 
+// Implement the trait for the Planet structure
+impl PlanetTrait for Planet {
+    type PlanetDanger = PlanetDanger;
+
+    fn get_danger(&self) -> &Self::PlanetDanger {
+        // Return the danger level of the planet
+        &self.danger
+    }
+}
 #[cfg(test)]
 mod planet_tests {
     use crate::models::{planet::{Planet, remove_colliding_planets}, position::Position};

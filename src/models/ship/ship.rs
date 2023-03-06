@@ -1,7 +1,11 @@
+use std::ptr::null;
+
 use crate::constants::MAP_HEIGHT;
 use crate::constants::MAP_LENGTH;
 use crate::constants::MAP_WIDTH;
 use crate::models::position::Position;
+use crate::models::resource::Resource;
+use crate::models::resource::ResourceType;
 use crate::models::ship::shield::Shield;
 use crate::models::ship::armor::Armor;
 use rand::distributions::{Distribution, Standard};
@@ -37,17 +41,6 @@ enum ShipStatus {
     SubLightTravel,
     Warp,
     Stationary,
-}
-#[derive(Serialize, Deserialize, Debug, Clone)]
-enum ResourceType {
-    Food,
-    Fuel,
-    Metals,
-}
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Resource {
-    resource_type: ResourceType,
-    quantity: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -168,7 +161,9 @@ fn generate_ship_resources() -> Vec<Resource> {
     let fuel_amount = 10;
     let fuel = Resource {
         resource_type: ResourceType::Fuel,
-        quantity: fuel_amount,
+        quantity: Some(fuel_amount),
+        buy: None,
+        sell: None,
     };
     resources.push(fuel);
 

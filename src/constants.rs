@@ -1,4 +1,4 @@
-pub(crate) const PRINT_DEBUG: bool = false;
+pub(crate) const PRINT_DEBUG: bool = true;
 pub(crate) const MAX_COMBAT_TIME: u32 = 500;
 
 pub(crate) const MAP_WIDTH: i32 = 100;

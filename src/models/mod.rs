@@ -4,3 +4,6 @@ pub mod ship;
 pub mod position;
 pub mod star_system;
 pub mod galaxy;
+pub mod trader;
+pub mod resource;
+pub mod player;

@@ -1,10 +1,12 @@
 Currently working on feautres: 
-- implementing stars
-    currently star_type does not actually do anything - this will be fixed later
-- position structure
+Implementing 
+- trade
+- traders
+- basic resources
+- player
+
 
 Future feature list ordered by current priority (this may change of course):
-- when generating planets or star systems, make sure there are not two models in the same position
 - create an expanded resources model
 - create a structure to hold player data (credits, ship ownership, fleet etc) and begin to use this structure
 - create basic trade system
@@ -39,8 +41,11 @@ Highly unlikely features
 Mostly complete
 - position
 - star
+    currently star_type does not actually do anything - this will be fixed later
 - star_system
+- galaxy
 
 Feature complete elements: (the item on this list are largely feauture complete and will undergo fewer changes than other strucutres)
 - ship model
 - planet model
+- position structure

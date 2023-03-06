@@ -6,7 +6,7 @@ use strum_macros::EnumIter;
 use std::slice::SliceIndex;
 
 // Enumeration of the different types of resources that can be traded in the game.
-#[derive(Serialize, Deserialize, Debug, Clone, EnumIter, Eq, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, EnumIter, Eq, Hash, PartialEq, Copy)]
 pub enum ResourceType {
     Water,
     Food,
@@ -31,6 +31,14 @@ impl Resource {
 
     pub fn sell_price(&self) -> Option<f32> {
         self.sell
+    }
+    pub fn new(resource_type: ResourceType, quantity: u32) -> Self {
+        Resource {
+            resource_type,
+            quantity: Some(quantity),
+            buy: None,
+            sell: None,
+        }
     }
 }
 

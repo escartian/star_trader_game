@@ -1,5 +1,6 @@
 mod constants;
 mod models;
+use crate::models::player::Player;
 //use crate::combat::combat::{CombatResult, auto_resolve_ship_combat};
 //use crate::models::galaxy::generate_galaxy;
 //use crate::models::player::Player;
@@ -10,22 +11,36 @@ use crate::models::trader::{Trader, TraderPersonality};
 mod combat;
 
 fn main() {
-//WORLD GENERATION TEST
+//WORLD GENERATION
     //let galactic_map = generate_galaxy(10);
     // Print the generated world map
     //println!("{:#?}", galactic_map);
 
-    //let player_name = String::from("Igor");
+
+//TRADING
+    let player_name = String::from("Igor");
+    let mut player: Player = Player::new(&player_name);
+    println!("{:?}", player);
     let trader_personality = rand::random::<TraderPersonality>();
     let mut trader1 = Trader::new(trader_personality, generate_resources());
     
     let trader_personality = rand::random::<TraderPersonality>();
     let mut trader2 = Trader::new(trader_personality, generate_resources());
-    //let player = Player::new("Igor");
     //let quote = trader1.get_opening_line(&galactic_map[0].planets[0]);
     //println!("{}", quote);
-    let result = trader1.sell_resource_trader_to_trader(models::resource::ResourceType::Fuel, 10, &mut trader2);
+    println!("{:?}", player.resources[0]);
+    println!("{}", player.credits);
+    let result = trader1.buy_resource(models::resource::ResourceType::Water, 10, &mut player);
+    println!("{:?}", result);
 
+    println!("{:?}", player.resources[0]);
+    println!("{}", player.credits);
+    let result = trader2.buy_resource(models::resource::ResourceType::Water, 10, &mut player);
+    
+    println!("{:?}", player.resources[0]);
+    println!("{}", player.credits);
+    println!("{:?}", result);
+    let result = trader1.sell_resource(models::resource::ResourceType::Water, 10, &mut player);
     println!("{:?}", result);
 
 /* SHIP/FLEET GENERATION AND AUTO RESOLVE BATTLE TEST

@@ -8,11 +8,11 @@ use crate::constants::{MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH};
 use super::position::random_position;
 use super::{star::{generate_star, Star}, position::Position};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StarSystem{
     star: Star,
     //this is used to maintain position of the StarSystem in the galaxy
-    position: Position,
+    pub position: Position,
     pub planets: Vec<Planet>
 }
 

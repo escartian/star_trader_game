@@ -9,7 +9,7 @@ use super::position::{random_nonzero_position, Position};
 
 //PLANET DETAILS
 // Define a struct to represent a planet
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Planet {
     name: String,
     position: Position,
@@ -49,7 +49,7 @@ impl fmt::Display for PlanetDanger {
 }
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 enum Biome {
     Terran,
     Jungle,
@@ -66,7 +66,7 @@ enum Biome {
     Radiated,
     Inhospitable,
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 enum PlanetSpecialization {
     Agriculture,
     Mining,
@@ -78,7 +78,7 @@ enum PlanetSpecialization {
     None,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 enum Economy {
     Booming,
     Growing,

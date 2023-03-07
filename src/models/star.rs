@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 use super::position::Position;
 //STAR DETAILS
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Star {
     pub name: String,
     pub star_type: StarType,
     position: Position,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum StarType {
     Nebula,
     Protostar,

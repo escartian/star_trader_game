@@ -3,8 +3,6 @@ use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-use std::slice::SliceIndex;
-
 // Enumeration of the different types of resources that can be traded in the game.
 #[derive(Serialize, Deserialize, Debug, Clone, EnumIter, Eq, Hash, PartialEq, Copy)]
 pub enum ResourceType {

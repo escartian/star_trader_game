@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{to_writer};
 use crate::constants::INITIAL_CREDIT_COUNT;
 use std::path::Path;
+use std::fs::File;
+use std::io::Read;
 use crate::models::resource::generate_resources_no_trade;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +26,21 @@ impl Player {
 }
 
 pub fn create_player(game_id: &str, player_name: &str) -> Player {
+    let data_path = Path::new("data")
+    .join("game")
+    .join(game_id)
+    .join("players")
+    .join(player_name)
+    .with_extension("json");
+    if std::fs::metadata(&data_path).is_ok() {
+        let mut file = File::open(data_path);
+        let mut contents = String::new();
+        file.expect("REASON").read_to_string(&mut contents);
+
+        let player = serde_json::from_str(&contents).expect("Failed to parse player data");
+        return player;
+    }
+
     let mut player = Player::new(player_name);
 
     // Create the path to the player file

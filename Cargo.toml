@@ -1,16 +1,15 @@
 [package]
 name = "star_trader_game"
 version = "0.1.1"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-
-serde = {version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-rand = "0.8.4"
-thiserror = "1.0"
-strum = "0.23"
-strum_macros = "0.23"
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = "1.0.140"
+rand = "0.8.5"
+thiserror = "1.0.40"
+strum = "0.24.0"
+strum_macros = "0.24.0"
 lazy_static = "1.4.0"
-
-rocket = "0.5.0-rc.2"
+rocket = "0.5.0-rc.3"
+rocket_dyn_templates = {version = "0.2.0", features = ["tera"]}

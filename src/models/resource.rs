@@ -66,7 +66,12 @@ pub fn generate_resources() -> Vec<Resource> {
             // Generate a random quantity with a 50% chance
             Some(rng.gen_range(10..100))
         } else {
-            None // 50% chance of no quantity
+            if sell_price.is_some() {
+                Some(rng.gen_range(10..100))
+            }
+            else{
+                None // 50% chance of no quantity
+            }
         };
 
         let resource = Resource {
@@ -74,6 +79,42 @@ pub fn generate_resources() -> Vec<Resource> {
             resource_type,
             buy: buy_price,
             sell: sell_price,
+            quantity,
+        };
+        inventory.push(resource); // Add the new Resource object to the inventory vector
+    }
+
+    inventory // Return the completed inventory vector
+}
+
+
+/** 
+* Generates a vector of Resource objects with random quantities, but without any buy or sell prices. This is used to generate the resources for the player at the start of the game.
+*
+* # Returns
+* A vector of Resource objects with random quantities, but without any buy or sell prices.
+**/
+pub fn generate_resources_no_trade() -> Vec<Resource> {
+    let mut inventory = vec![]; // Create an empty vector to hold the resources
+
+    let resource_types: Vec<ResourceType> = ResourceType::iter().collect(); // Define a vector of all possible resource types
+
+    let mut rng = thread_rng(); // Create a new random number generator
+
+    // Loop through each resource type and generate a random Resource object for it
+    for resource_type in resource_types {
+        let quantity: Option<u32> = if rng.gen_bool(0.7) {
+            // Generate a random quantity with a 70% chance
+            Some(rng.gen_range(10..100))
+        } else {
+            None // 30% chance of no quantity
+        };
+
+        let resource = Resource {
+            // Create a new Resource object with the generated values
+            resource_type,
+            buy: None,
+            sell: None,
             quantity,
         };
         inventory.push(resource); // Add the new Resource object to the inventory vector

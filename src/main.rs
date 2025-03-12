@@ -1,5 +1,7 @@
 mod constants;
 mod models;
+mod routes;
+
 use models::position;
 
 use rocket::form::name;
@@ -14,12 +16,15 @@ use rocket::catchers;
 use rocket::catch;
 
 use std::fs;
+use std::env;
 
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::Path;
 use std::string::String;
 use rand::Rng;
+
+use crate::routes::*;
 
 use crate::combat::combat::{auto_resolve_ship_combat, CombatResult};
 use crate::models::galaxy::generate_galaxy;
@@ -30,9 +35,8 @@ use crate::models::trader::{Trader, TraderPersonality};
 use crate::models::player::create_player;
 mod combat;
 use lazy_static::lazy_static;
-use std::collections::HashMap;
 use std::io::Read;
-use std::ptr::null;
+
 
 use crate::constants::HOST_PLAYER_NAME;
 use crate::constants::GAME_ID;
@@ -60,51 +64,8 @@ lazy_static! {
     };
 }
 
-#[catch(500)]
-fn internal_error(_req: &Request) -> Template {
-    Template::render("500", ())
-}
 
-/// Handles the root route (`/`) and renders the index page
-#[get("/")]
-fn index() -> Template {
-    let mut context = HashMap::new();
-    context.insert("player_name", HOST_PLAYER_NAME);
-    Template::render("index", &context)
-}
-
-#[get("/player/<name>")]
-fn get_player(name: String) -> String {
-    let data_path = Path::new("data")
-        .join("game")
-        .join(GAME_ID)
-        .join("players")
-        .join(format!("{}.json", name));
-
-    let file = File::open(data_path);
-    let mut contents = String::new();
-    file.expect("REASON").read_to_string(&mut contents);
-
-    return contents;
-}
-
-
-// Returns a serialized JSON string representation of the galaxy map.
-// This function handles the `/galaxy_map` route and provides the client
-// with the current state of the galaxy map as a JSON string.
-#[get("/galaxy_map")]
-fn get_galaxy_map() -> String {
-    serde_json::to_string(&get_global_game_world()).unwrap()
-}
-// Returns a star system with the given id from the galaxy map as a serialized JSON string
-#[get("/star_system/<id>")]
-fn get_star_system(id: usize) -> Option<String> {
-    get_global_game_world()
-        .get(id)
-        .map(|system| serde_json::to_string(system).unwrap())
-}
-
-fn get_global_game_world() -> Vec<StarSystem> {
+pub(crate) fn get_global_game_world() -> Vec<StarSystem> {
     if GLOBAL_GAME_WORLD.is_empty() {
         println!("Game world is empty");
         create_game_world_file(GAME_ID, true);
@@ -276,8 +237,11 @@ async fn main() {
             }
         }
     */
+    println!("Current working directory: {:?}", env::current_dir().unwrap());
+    let template_dir = Path::new("src").join("templates");
+    println!("Template directory: {:?}", template_dir);
     rocket::build()
-        .mount("/", routes![index, get_player,get_galaxy_map, get_star_system])
+        .mount("/", routes![index, get_player, get_galaxy_map, get_star_system])
         .attach(Template::fairing())
         .register("/", catchers![internal_error])
         .launch()

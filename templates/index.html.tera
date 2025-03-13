@@ -4,9 +4,243 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Star Trader Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; }
+        button { display: block; margin-top: 20px; padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .resource-table { margin-bottom: 20px; }
+    </style>
 </head>
 <body>
     <h1>Welcome to Star Trader Game</h1>
-    <button onclick="window.location.href='/galaxy_map'">Get Galaxy Map</button>
+
+    <form id="getStarSystemForm">
+        <label for="starSystemId">Select Star System:</label>
+        <input type="number" id="starSystemId" name="starSystemId" placeholder="Enter Star System ID">
+        <button type="submit">View Star System</button>
+    </form>
+
+    <form id="getPlayerDataForm">
+        <label for="playerName">Retrieve Player Data:</label>
+        <input type="text" id="playerName" name="playerName" placeholder="Enter Player Name">
+        <button type="submit">Get Player Data</button>
+    </form>
+
+    <form id="getGalaxyMapForm">
+        <button type="submit">View Galaxy Map</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        let currently_displaying = null;
+
+        async function fetchData(url) {
+            try {
+                const response = await fetch(url);
+                const data = await response.text();
+                document.getElementById('result').innerHTML = data;
+                if(url.includes('/player/')){
+                    displayPlayerData(data);
+                    currently_displaying = "player"
+                }else if (url.includes('/star_system')) {
+                    displayGalaxyMap(data);
+                }
+                else if (url.includes('/galaxy_map')) {
+                    displayGalaxyMap(data);
+                }
+
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        document.getElementById('getStarSystemForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const starSystemId = document.getElementById('starSystemId').value;
+            try {
+                const response = await fetch(`/star_system/${starSystemId}`);
+                const dataString = await response.text();
+                displayStarSystemData(starSystemId, dataString);
+            } catch (error) {
+                console.error("Error fetching star system data:", error);
+                document.getElementById('result').innerHTML = `<p>Error: Unable to fetch star system data</p>`;
+            }
+        });
+
+        document.getElementById('getPlayerDataForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const playerName = document.getElementById('playerName').value;
+            try {
+                const response = await fetch(`/player/${playerName}`);
+                const dataString = await response.text();
+                displayPlayerData(dataString);
+            } catch (error) {
+                console.error("Error fetching player data:", error);
+                document.getElementById('result').innerHTML = `<p>Error: Unable to fetch player data</p>`;
+            }
+        });
+
+        document.getElementById('getGalaxyMapForm').addEventListener('click', async function(e) {
+            e.preventDefault();
+            try {
+                const response = await fetch('/galaxy_map');
+                const dataString = await response.text();
+                displayGalaxyData(dataString);
+            } catch (error) {
+                console.error("Error fetching galaxy data:", error);
+                document.getElementById('result').innerHTML = `<p>Error: Unable to fetch galaxy data</p>`;
+            }
+        });
+
+        async function displayPlayerData(dataString) {
+            try {
+                // Clear the #result div at the start of each function call
+                document.getElementById('result').innerHTML = '';
+
+                // Parse the JSON string
+                const data = JSON.parse(dataString);
+
+                // Create the player info section
+                const playerInfo = document.createElement('div');
+                playerInfo.innerHTML = `
+                    <h2>Player Information</h2>
+                    <h3>Name: ${data.name}</h3>
+                `;
+                
+                // Append player info to #result
+                document.getElementById('result').appendChild(playerInfo);
+
+                // Display credits if data.credits exists
+                if (typeof data.credits === 'number') {
+                    const creditsDiv = document.createElement('div');
+                    creditsDiv.innerHTML = `
+                        <h3>Credits: ${data.credits.toFixed(2)}</h3>
+                    `;
+                    document.getElementById('result').appendChild(creditsDiv);
+                }
+
+                // Check if data.resources exists and is an array
+                if (Array.isArray(data.resources)) {
+                    const resourcesTable = document.createElement('table');
+                    resourcesTable.className = 'resource-table';
+                    resourcesTable.innerHTML = `
+                        <tr><th>Resource Type</th><th>Buy Price</th><th>Sell Price</th><th>Quantity</th></tr>
+                    `;
+
+                    data.resources.forEach((resource, index) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${resource.resource_type || 'N'}</td>
+                            <td>${resource.buy || 'N'}</td>
+                            <td>${resource.sell || 'N'}</td>
+                            <td>${resource.quantity || 'N'}</td>
+                        `;
+                        resourcesTable.appendChild(row);
+                    });
+
+                    document.getElementById('result').appendChild(resourcesTable);
+
+                } else {
+                    console.warn("data.resources is not an array as expected");
+                    console.log(data);
+                }
+            } catch (error) {
+                console.error("Error parsing JSON:", error);
+                document.getElementById('result').innerHTML = `<p>Error: Unable to parse player data</p>`;
+            }
+        }  
+    
+        async function displayStarSystemData(id, dataString) {
+            try {
+                // Clear the #result div at the start of each function call
+                document.getElementById('result').innerHTML = '';
+
+                // Parse the JSON string
+                const data = JSON.parse(dataString);
+
+                // Create the star system info section
+                const starSystemInfo = document.createElement('div');
+                starSystemInfo.innerHTML = `
+                    <h2>Star System Information</h2>
+                    <h3>Star Details</h3>
+                    <ul>
+                        <li>Name: ${data.star.name}</li>
+                        <li>Star Type: ${data.star.star_type}</li>
+                        <li>Position: (${data.position.x}, ${data.position.y}, ${data.position.z})</li>
+                    </ul>
+
+                    <h3>Planets</h3>
+                    <table class="star-system-table">
+                        <tr><th>Name</th><th>Economy</th><th>Specialization</th><th>Danger</th><th>Biome</th></tr>
+                        ${data.planets.map(planet => `
+                            <tr>
+                                <td>${planet.name}</td>
+                                <td>${planet.economy || 'N'}</td>
+                                <td>${planet.specialization || 'N'}</td>
+                                <td>${planet.danger || 'N'}</td>
+                                <td>${planet.biome || 'N'}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+                document.getElementById('result').appendChild(starSystemInfo);
+
+            } catch (error) {
+                console.error("Error parsing JSON:", error);
+                document.getElementById('result').innerHTML = `<p>Error: Unable to parse star system data</p>`;
+            }
+        }
+
+        async function displayGalaxyData(dataString) {
+            try {
+                // Clear the #result div at the start of each function call
+                document.getElementById('result').innerHTML = '';
+
+                // Parse the JSON string
+                const data = JSON.parse(dataString);
+
+                // Create the galaxy info section
+                const galaxyInfo = document.createElement('div');
+                let systemsHtml = '';
+
+                data.forEach(system => {
+                    const systemHtml = `
+                        <h3>Star System: ${system.star.name}</h3>
+                        <p>Star Type: ${system.star.star_type}</p>
+                        <p>Position: (${system.position.x}, ${system.position.y}, ${system.position.z})</p>
+                    `;
+                    
+                    systemsHtml += systemHtml;
+                });
+
+                galaxyInfo.innerHTML = `
+                    <h2>Galaxy Map</h2>
+                    ${systemsHtml}
+                `;
+
+                /*
+                // Create the galaxy info section
+                const galaxyInfo = document.createElement('div');
+                galaxyInfo.innerHTML = `
+                    <h2>Galaxy Map</h2>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                */
+                
+                // Append galaxy info to #result
+                document.getElementById('result').appendChild(galaxyInfo);
+
+            } catch (error) {
+                console.error("Error parsing JSON:", error);
+                document.getElementById('result').innerHTML = `<p>Error: Unable to parse galaxy data</p>`;
+            }
+        }
+
+    </script>
 </body>
 </html>

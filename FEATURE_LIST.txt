@@ -1,7 +1,15 @@
+Currently implemented mvp features:
+- create world_map
+- world and player data remain consistent between launches (data is stored)
+- position
+- star
+- star_system
+- galaxy
+
 Currently working on feautres: 
 Implementing 
-- trade
-- traders
+- trade Buying and selling
+- traders + personality
 - basic resources
 - player
 
@@ -10,7 +18,6 @@ Future feature list ordered by current priority (this may change of course):
 - create an expanded resources model
 - create a structure to hold player data (credits, ship ownership, fleet etc) and begin to use this structure
 - create basic trade system
-- create world_map which is collection of star_system_maps and plot them around the vector space
 - add movement functionality
 - actually make combat
 - save functionality
@@ -38,12 +45,6 @@ Highly unlikely features
 - implement multiple galaxies
 - - galactical orbits/movements
 
-Mostly complete
-- position
-- star
-    currently star_type does not actually do anything - this will be fixed later
-- star_system
-- galaxy
 
 Feature complete elements: (the item on this list are largely feauture complete and will undergo fewer changes than other strucutres)
 - ship model

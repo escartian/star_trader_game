@@ -25,7 +25,7 @@ pub fn index() -> Template {
 }
 
 #[get("/player/<name>")]
-pub fn get_player(name: String) -> String {
+pub fn get_player(name: &str) -> String {
     let data_path = Path::new("data")
         .join("game")
         .join(GAME_ID)

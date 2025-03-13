@@ -9,10 +9,12 @@ pub enum ResourceType {
     Water,
     Food,
     Fuel,
+    Minerals,
     Metals,
     Electronics,
     LuxuryGoods,
     Narcotics,
+
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -30,6 +32,11 @@ impl Resource {
     pub fn sell_price(&self) -> Option<f32> {
         self.sell
     }
+
+    pub fn set_quantity(&mut self, quantity: u32) {
+        self.quantity = Some(quantity);
+    }
+
     pub fn new(resource_type: ResourceType, quantity: u32) -> Self {
         Resource {
             resource_type,

@@ -2,7 +2,7 @@ use crate::{constants::PRINT_DEBUG, models::planet::PlanetTrait};
 use core::fmt;
 use rand::{distributions::Standard, prelude::Distribution, Rng};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, path::Path};
+use std::{fs, path::Path};
 
 use super::{
     planet::Planet,
@@ -35,8 +35,11 @@ impl Distribution<TraderPersonality> for Standard {
 pub struct Trader {
     personality: TraderPersonality,
     pub resources: Vec<Resource>,
-    pub credits: f32,
+    pub credits: f32, 
+    //pub faction: Faction
+    //pub race: Race
 }
+
 impl fmt::Display for TraderPersonality {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -48,6 +51,10 @@ impl fmt::Display for TraderPersonality {
 }
 
 impl Trader {
+    pub fn is_null(&self) -> bool {
+        &self as *const _ == std::ptr::null()
+    }
+
     pub fn get_opening_line(&self, planet: &Planet) -> String {
         let data_path = Path::new("data")
             .join("quotes")
@@ -55,7 +62,7 @@ impl Trader {
             .join("TraderDangerHello.json");
         println!("{}", data_path.display());
 
-        let data = match fs::read_to_string(data_path) {
+        let data: String  = match fs::read_to_string(data_path) {
             Ok(content) => content,
             Err(e) => {
                 eprintln!("Error reading file: {}", e);
@@ -170,6 +177,12 @@ pub fn buy_resource(
         // Check if the trader has a buy price for this resource
         if let Some(buy_price) = resource.buy_price() {
             // Calculate the total cost of the purchase
+
+
+            
+            //self.calculate_price(resource_type, quantity);
+
+
             let cost = quantity as f32 * buy_price;
 
             // Check if the player has enough credits to buy

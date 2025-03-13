@@ -2,37 +2,30 @@ mod constants;
 mod models;
 mod routes;
 
-use models::position;
-
-use rocket::form::name;
 use rocket::{get, routes, Request, Response};
 use rocket_dyn_templates::{Template, tera::Tera, context};
 
-use serde ::{Deserialize, Serialize};
-use serde_json::{to_writer, Result};
+//use serde ::{Deserialize, Serialize};
+//use serde_json::{to_writer, Result};
 
-use rocket::response::content;
 use rocket::catchers;
-use rocket::catch;
+use serde_json::to_writer;
 
 use std::fs;
 use std::env;
 
 use std::fs::File;
-use std::io::{self, Write};
 use std::path::Path;
 use std::string::String;
-use rand::Rng;
 
 use crate::routes::*;
 
-use crate::combat::combat::{auto_resolve_ship_combat, CombatResult};
+//use crate::combat::combat::{auto_resolve_ship_combat, CombatResult};
 use crate::models::galaxy::generate_galaxy;
-use crate::models::player::Player;
-use crate::models::ship::ship::Ship;
+//use crate::models::player::Player;
+//use crate::models::ship::ship::Ship;
 use crate::models::star_system::StarSystem;
-use crate::models::trader::{Trader, TraderPersonality};
-use crate::models::player::create_player;
+use crate::models::trader::Trader;
 mod combat;
 use lazy_static::lazy_static;
 use std::io::Read;
@@ -152,7 +145,7 @@ async fn main() {
 
     /***On game launch create the game. ***/
     let gameworld = get_global_game_world();
-    let player = create_player(GAME_ID, HOST_PLAYER_NAME);
+    let player = get_player(HOST_PLAYER_NAME);
 
 
 

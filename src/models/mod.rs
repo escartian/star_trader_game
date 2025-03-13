@@ -5,5 +5,6 @@ pub mod position;
 pub mod star_system;
 pub mod galaxy;
 pub mod trader;
+pub mod trade;
 pub mod resource;
 pub mod player;

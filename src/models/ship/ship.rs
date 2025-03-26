@@ -373,3 +373,20 @@ impl Distribution<Ship> for Standard {
         }
     }
 }
+
+impl Ship {
+    pub fn get_cargo_capacity(&self) -> u32 {
+        match self.size {
+            ShipSize::Tiny => 100,
+            ShipSize::Small => 250,
+            ShipSize::Medium => 500,
+            ShipSize::Large => 1000,
+            ShipSize::Huge => 2500,
+            ShipSize::Planetary => 5000,
+        }
+    }
+
+    pub fn get_current_cargo(&self) -> u32 {
+        self.cargo.iter().map(|r| r.quantity.unwrap_or(0)).sum()
+    }
+}

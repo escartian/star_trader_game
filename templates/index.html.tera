@@ -642,7 +642,20 @@
                                     <th>Weapons</th>
                                     <th>Cargo</th>
                                 </tr>
-                                ${fleet.ships.map(ship => `
+                                ${fleet.ships.map(ship => {
+                                    const cargoCapacity = {
+                                        'Tiny': 100,
+                                        'Small': 250,
+                                        'Medium': 500,
+                                        'Large': 1000,
+                                        'Huge': 2500,
+                                        'Planetary': 5000
+                                    }[ship.size] || 0;
+                                    
+                                    const currentCargo = ship.cargo.reduce((sum, resource) => 
+                                        sum + (resource.quantity || 0), 0);
+                                    
+                                    return `
                                     <tr>
                                         <td>${ship.name}</td>
                                         <td>${ship.specialization}</td>
@@ -652,9 +665,9 @@
                                             const weaponName = Object.keys(w)[0];
                                             return weaponName.replace(/([A-Z])/g, ' $1').trim();
                                         }).join(', ') : 'None'}</td>
-                                        <td>${ship.cargo ? ship.cargo.length : 0} units</td>
+                                        <td>${currentCargo}/${cargoCapacity} units</td>
                                     </tr>
-                                `).join('')}
+                                `}).join('')}
                             </table>
                         </div>
                     `).join('<hr>');

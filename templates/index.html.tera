@@ -94,6 +94,50 @@
             gap: 10px;
             margin-top: 20px;
         }
+
+        .notification {
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .close-notification {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #666;
+            padding: 0 5px;
+        }
+
+        .close-notification:hover {
+            color: #000;
+        }
+
+        .trade-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .custom-amount {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .custom-amount input {
+            width: 80px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .custom-amount button {
+            padding: 4px 8px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -169,7 +213,7 @@
                     displayPlayerData(data);
                     currently_displaying = "player"
                 }else if (url.includes('/star_system')) {
-                    displayGalaxyMap(data);
+                    displayStarSystemData(starSystemId, dataString);
                     currently_displaying = "star_system"
                 }
                 else if (url.includes('/galaxy_map')) {
@@ -321,46 +365,124 @@
         async function showPlanetMarket(systemId, planetId) {
             try {
                 // Remove any existing market displays
-                const existingMarkets = document.querySelectorAll('.market-panel');
+                const existingMarkets = document.querySelectorAll('.market-container');
                 existingMarkets.forEach(market => market.remove());
 
-                const response = await fetch(`/planet/${systemId}/${planetId}/market`);
-                const marketData = await response.json();
-                
-                const marketDisplay = document.createElement('div');
-                marketDisplay.className = 'market-panel info-panel';
-                marketDisplay.innerHTML = `
-                    <h3>Planet Market</h3>
+                // Get player data
+                const playerName = document.getElementById('playerName').value;
+                if (!playerName) {
+                    alert("Please enter your player name first");
+                    return;
+                }
+
+                const playerResponse = await fetch(`/player/${playerName}`);
+                const playerData = await playerResponse.text();
+                const playerDataObj = JSON.parse(playerData);
+
+                // Create a container for both market and player data
+                const container = document.createElement('div');
+                container.className = 'market-container';
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
+                container.style.gap = '20px';
+                container.style.width = '100%';
+
+                // Create player info panel
+                const playerPanel = document.createElement('div');
+                playerPanel.className = 'info-panel';
+                playerPanel.style.width = '300px';
+                playerPanel.style.position = 'fixed';
+                playerPanel.style.top = '20px';
+                playerPanel.style.right = '20px';
+                playerPanel.style.zIndex = '1000';
+                playerPanel.innerHTML = `
+                    <h2>Player Information</h2>
+                    <h3>${playerDataObj.name}</h3>
+                    <p>Credits: ${playerDataObj.credits?.toFixed(2) || 0}</p>
+                    <h3>Resources</h3>
                     <table class="resource-table">
-                        <tr>
-                            <th>Resource</th>
-                            <th>Buy Price</th>
-                            <th>Sell Price</th>
-                            <th>Available</th>
-                            <th>Actions</th>
-                        </tr>
-                        ${marketData.map(resource => `
+                        <tr><th>Resource Type</th><th>Quantity</th></tr>
+                        ${Array.isArray(playerDataObj.resources) ? playerDataObj.resources.map(resource => `
                             <tr>
-                                <td>${resource.resource_type}</td>
-                                <td>${resource.buy ? resource.buy.toFixed(2) : 'N/A'}</td>
-                                <td>${resource.sell ? resource.sell.toFixed(2) : 'N/A'}</td>
+                                <td>${resource.resource_type || 'N/A'}</td>
                                 <td>${resource.quantity || 0}</td>
-                                <td>
-                                    ${resource.buy ? `
-                                        <button onclick="buyResource(${systemId}, ${planetId}, '${resource.resource_type}', 1)">Buy 1</button>
-                                        <button onclick="buyResource(${systemId}, ${planetId}, '${resource.resource_type}', 10)">Buy 10</button>
-                                    ` : ''}
-                                    ${resource.sell ? `
-                                        <button onclick="sellResource(${systemId}, ${planetId}, '${resource.resource_type}', 1)">Sell 1</button>
-                                        <button onclick="sellResource(${systemId}, ${planetId}, '${resource.resource_type}', 10)">Sell 10</button>
-                                    ` : ''}
-                                </td>
                             </tr>
-                        `).join('')}
+                        `).join('') : ''}
                     </table>
                 `;
-                
-                document.getElementById('result').appendChild(marketDisplay);
+
+                // Create market panel
+                const marketPanel = document.createElement('div');
+                marketPanel.className = 'market-panel info-panel';
+                marketPanel.style.width = '80%';
+                marketPanel.style.maxWidth = '1200px';
+                marketPanel.style.position = 'fixed';
+                marketPanel.style.left = '50%';
+                marketPanel.style.top = '50%';
+                marketPanel.style.transform = 'translate(-50%, -50%)';
+                marketPanel.style.zIndex = '1000';
+                marketPanel.style.maxHeight = '80vh';
+                marketPanel.style.overflowY = 'auto';
+                marketPanel.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                marketPanel.style.padding = '20px';
+                marketPanel.style.borderRadius = '10px';
+                marketPanel.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                const marketResponse = await fetch(`/planet/${systemId}/${planetId}/market`);
+                const marketData = await marketResponse.json();
+                marketPanel.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0;">Planet Market</h3>
+                        <button onclick="this.closest('.market-panel').remove()" style="padding: 5px 10px;">Close</button>
+                    </div>
+                    <table class="resource-table" style="width: 100%;">
+                        <tr>
+                            <th style="width: 20%;">Resource</th>
+                            <th style="width: 15%;">Buy Price</th>
+                            <th style="width: 15%;">Sell Price</th>
+                            <th style="width: 15%;">Stock</th>
+                            <th style="width: 35%;">Actions</th>
+                        </tr>
+                        ${marketData.map(resource => {
+                            const playerResource = playerDataObj.resources?.find(r => r.resource_type === resource.resource_type);
+                            const playerQuantity = playerResource?.quantity || 0;
+                            const planetQuantity = resource.quantity || 0;
+                            
+                            return `
+                                <tr>
+                                    <td>${resource.resource_type}</td>
+                                    <td>${resource.buy ? resource.buy.toFixed(2) : 'N/A'}</td>
+                                    <td>${resource.sell ? resource.sell.toFixed(2) : 'N/A'}</td>
+                                    <td>${planetQuantity}</td>
+                                    <td>
+                                        <div class="trade-actions">
+                                            ${resource.buy ? `
+                                                <div class="custom-amount" style="display: inline-flex; gap: 5px; align-items: center;">
+                                                    <input type="number" min="1" max="${planetQuantity}" 
+                                                        id="buy-${resource.resource_type}" placeholder="Amount" style="width: 80px;">
+                                                    <button onclick="buyResource(${systemId}, ${planetId}, '${resource.resource_type}', 
+                                                        parseInt(document.getElementById('buy-${resource.resource_type}').value))" >Buy</button>
+                                                </div>
+                                            ` : ''}
+                                            ${resource.sell ? `
+                                                <div class="custom-amount" style="display: inline-flex; gap: 5px; align-items: center;">
+                                                    <input type="number" min="1" max="${playerQuantity}"
+                                                        id="sell-${resource.resource_type}" placeholder="Amount" style="width: 80px;">
+                                                    <button onclick="sellResource(${systemId}, ${planetId}, '${resource.resource_type}', 
+                                                        parseInt(document.getElementById('sell-${resource.resource_type}').value))" >Sell</button>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </table>
+                `;
+
+                // Add both panels to the container
+                container.appendChild(playerPanel);
+                container.appendChild(marketPanel);
+                document.getElementById('result').appendChild(container);
             } catch (error) {
                 console.error("Error fetching market data:", error);
                 document.getElementById('result').innerHTML += `<p>Error: Unable to load market data</p>`;
@@ -371,45 +493,49 @@
             try {
                 const response = await fetch(`/planet/${systemId}/${planetId}/buy/${resourceType}/${quantity}`);
                 const result = await response.json();
-                alert(result);
                 
-                // Get the current player name from the form
-                const playerName = document.getElementById('playerName').value;
-                if (!playerName) {
-                    alert("Please enter your player name first");
-                    return;
-                }
-
-                // Refresh player data
-                const playerResponse = await fetch(`/player/${playerName}`);
-                const playerData = await playerResponse.text();
+                // Create feedback message
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.className = 'info-panel notification';
+                feedbackDiv.style.backgroundColor = '#e8f5e9';
+                feedbackDiv.style.marginBottom = '10px';
+                feedbackDiv.style.position = 'relative';
+                feedbackDiv.style.paddingRight = '30px';
+                feedbackDiv.innerHTML = `
+                    ${result}
+                    <span class="close-notification" onclick="this.parentElement.remove()">&times;</span>
+                `;
+                document.getElementById('result').insertBefore(feedbackDiv, document.querySelector('.market-container'));
                 
-                // Update the player display
-                const playerDisplay = document.querySelector('.info-panel:not(.market-panel)');
-                if (playerDisplay) {
-                    const playerDataObj = JSON.parse(playerData);
-                    playerDisplay.innerHTML = `
-                        <h2>Player Information</h2>
-                        <h3>${playerDataObj.name}</h3>
-                        <p>Credits: ${playerDataObj.credits?.toFixed(2) || 0}</p>
-                        <h3>Resources</h3>
-                        <table class="resource-table">
-                            <tr><th>Resource Type</th><th>Quantity</th></tr>
-                            ${Array.isArray(playerDataObj.resources) ? playerDataObj.resources.map(resource => `
-                                <tr>
-                                    <td>${resource.resource_type || 'N/A'}</td>
-                                    <td>${resource.quantity || 0}</td>
-                                </tr>
-                            `).join('') : ''}
-                        </table>
-                    `;
-                }
-
-                // Refresh market display
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    if (feedbackDiv.parentNode) {
+                        feedbackDiv.remove();
+                    }
+                }, 5000);
+                
+                // Refresh both displays
                 await showPlanetMarket(systemId, planetId);
             } catch (error) {
                 console.error("Error buying resource:", error);
-                alert("Error buying resource");
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'info-panel notification';
+                errorDiv.style.backgroundColor = '#ffebee';
+                errorDiv.style.marginBottom = '10px';
+                errorDiv.style.position = 'relative';
+                errorDiv.style.paddingRight = '30px';
+                errorDiv.innerHTML = `
+                    Error buying resource
+                    <span class="close-notification" onclick="this.parentElement.remove()">&times;</span>
+                `;
+                document.getElementById('result').insertBefore(errorDiv, document.querySelector('.market-container'));
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.remove();
+                    }
+                }, 5000);
             }
         }
 
@@ -417,45 +543,49 @@
             try {
                 const response = await fetch(`/planet/${systemId}/${planetId}/sell/${resourceType}/${quantity}`);
                 const result = await response.json();
-                alert(result);
                 
-                // Get the current player name from the form
-                const playerName = document.getElementById('playerName').value;
-                if (!playerName) {
-                    alert("Please enter your player name first");
-                    return;
-                }
-
-                // Refresh player data
-                const playerResponse = await fetch(`/player/${playerName}`);
-                const playerData = await playerResponse.text();
+                // Create feedback message
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.className = 'info-panel notification';
+                feedbackDiv.style.backgroundColor = '#e8f5e9';
+                feedbackDiv.style.marginBottom = '10px';
+                feedbackDiv.style.position = 'relative';
+                feedbackDiv.style.paddingRight = '30px';
+                feedbackDiv.innerHTML = `
+                    ${result}
+                    <span class="close-notification" onclick="this.parentElement.remove()">&times;</span>
+                `;
+                document.getElementById('result').insertBefore(feedbackDiv, document.querySelector('.market-container'));
                 
-                // Update the player display
-                const playerDisplay = document.querySelector('.info-panel:not(.market-panel)');
-                if (playerDisplay) {
-                    const playerDataObj = JSON.parse(playerData);
-                    playerDisplay.innerHTML = `
-                        <h2>Player Information</h2>
-                        <h3>${playerDataObj.name}</h3>
-                        <p>Credits: ${playerDataObj.credits?.toFixed(2) || 0}</p>
-                        <h3>Resources</h3>
-                        <table class="resource-table">
-                            <tr><th>Resource Type</th><th>Quantity</th></tr>
-                            ${Array.isArray(playerDataObj.resources) ? playerDataObj.resources.map(resource => `
-                                <tr>
-                                    <td>${resource.resource_type || 'N/A'}</td>
-                                    <td>${resource.quantity || 0}</td>
-                                </tr>
-                            `).join('') : ''}
-                        </table>
-                    `;
-                }
-
-                // Refresh market display
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    if (feedbackDiv.parentNode) {
+                        feedbackDiv.remove();
+                    }
+                }, 5000);
+                
+                // Refresh both displays
                 await showPlanetMarket(systemId, planetId);
             } catch (error) {
                 console.error("Error selling resource:", error);
-                alert("Error selling resource");
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'info-panel notification';
+                errorDiv.style.backgroundColor = '#ffebee';
+                errorDiv.style.marginBottom = '10px';
+                errorDiv.style.position = 'relative';
+                errorDiv.style.paddingRight = '30px';
+                errorDiv.innerHTML = `
+                    Error selling resource
+                    <span class="close-notification" onclick="this.parentElement.remove()">&times;</span>
+                `;
+                document.getElementById('result').insertBefore(errorDiv, document.querySelector('.market-container'));
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.remove();
+                    }
+                }, 5000);
             }
         }
 

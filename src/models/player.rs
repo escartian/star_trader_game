@@ -57,17 +57,13 @@ impl Player {
         
         let resource_type = resource.resource_type;
         
-        self.resources.retain_mut(|r| {
-            if r.resource_type == resource_type {
-                if let Some(q) = r.quantity.clone() {
-                    if q >= quantity {
-                        return false; // Don't remove this resource
-                    }
-                    r.quantity = Some(q.saturating_sub(quantity));
+        if let Some(existing_resource) = self.resources.iter_mut().find(|r| r.resource_type == resource_type) {
+            if let Some(existing_quantity) = existing_resource.quantity {
+                if existing_quantity >= quantity {
+                    existing_resource.quantity = Some(existing_quantity - quantity);
                 }
             }
-            true // Keep this resource
-        });
+        }
     }
 
     pub fn trade_with_trader(&mut self, trader: &mut Trader, action: TradeAction) -> TradeResult {

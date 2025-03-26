@@ -76,12 +76,18 @@ pub(crate) fn get_global_game_world() -> Vec<StarSystem> {
 
 fn create_player_fleet() {
     if !GAME_GENERATED.load(Ordering::Relaxed) {
-        if let Ok(fleet) = generate_and_save_fleet(
-            HOST_PLAYER_NAME.to_string(),
-            random_position(MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH),
-            1, // Start with 1 ship
-        ) {
-            println!("Generated player fleet: {}", fleet.name);
+        // Check if player fleet already exists
+        let fleets = crate::models::fleet::list_owner_fleets(HOST_PLAYER_NAME).unwrap_or_default();
+        if fleets.is_empty() {
+            if let Ok(fleet) = generate_and_save_fleet(
+                HOST_PLAYER_NAME.to_string(),
+                random_position(MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH),
+                1, // Start with 1 ship
+            ) {
+                println!("Generated player fleet: {}", fleet.name);
+            }
+        } else {
+            println!("Player fleet already exists");
         }
     }
 }
@@ -89,6 +95,12 @@ fn create_player_fleet() {
 fn create_faction_fleets(factions: &[(&str, &str)]) {
     if !GAME_GENERATED.load(Ordering::Relaxed) {
         for (name, desc) in factions {
+            // Check if faction already exists
+            if let Ok(Some(_)) = crate::models::faction::load_faction(name) {
+                println!("Faction {} already exists", name);
+                continue;
+            }
+
             let faction = Faction::new(name.to_string(), desc.to_string());
             if let Ok(_) = save_faction(&faction) {
                 println!("Created faction: {}", faction.name);

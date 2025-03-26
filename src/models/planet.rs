@@ -234,43 +234,33 @@ fn generate_planet_market(specialization: &PlanetSpecialization, economy: &Econo
 
     // Generate market resources based on specialization
     for resource_type in ResourceType::iter() {
-        let (buy_price, sell_price) = match specialization {
-            PlanetSpecialization::Agriculture => match resource_type {
-                ResourceType::Food => (Some(0.5), Some(1.5)),
-                ResourceType::Water => (Some(0.7), Some(1.3)),
-                _ => (None, None),
+        let (buy_price, sell_price) = match resource_type {
+            // Essential resources that all planets should trade
+            ResourceType::Water | ResourceType::Food | ResourceType::Fuel => {
+                let base_buy = 0.7;
+                let base_sell = 1.3;
+                (Some(base_buy), Some(base_sell))
             },
-            PlanetSpecialization::Mining => match resource_type {
-                ResourceType::Minerals => (Some(0.5), Some(1.5)),
-                ResourceType::Metals => (Some(0.7), Some(1.3)),
-                _ => (None, None),
+            // Common resources that most planets trade
+            ResourceType::Minerals | ResourceType::Metals | ResourceType::Electronics => {
+                let base_buy = 0.8;
+                let base_sell = 1.2;
+                (Some(base_buy), Some(base_sell))
             },
-            PlanetSpecialization::Manufacturing => match resource_type {
-                ResourceType::Electronics => (Some(0.5), Some(1.5)),
-                ResourceType::Metals => (Some(0.7), Some(1.3)),
-                _ => (None, None),
+            // Luxury goods that most planets trade but with higher prices
+            ResourceType::LuxuryGoods => {
+                let base_buy = 1.0;
+                let base_sell = 1.5;
+                (Some(base_buy), Some(base_sell))
             },
-            PlanetSpecialization::Technology => match resource_type {
-                ResourceType::Electronics => (Some(0.5), Some(1.5)),
-                ResourceType::LuxuryGoods => (Some(0.7), Some(1.3)),
-                _ => (None, None),
+            // Narcotics - restricted based on specialization and economy
+            ResourceType::Narcotics => {
+                match (specialization, economy) {
+                    (PlanetSpecialization::Research, _) => (Some(1.2), Some(1.8)),
+                    (_, Economy::Crashing | Economy::Nonexistent) => (Some(1.5), Some(2.0)),
+                    _ => (None, None),
+                }
             },
-            PlanetSpecialization::Research => match resource_type {
-                ResourceType::Electronics => (Some(0.5), Some(1.5)),
-                ResourceType::LuxuryGoods => (Some(0.7), Some(1.3)),
-                _ => (None, None),
-            },
-            PlanetSpecialization::Tourism => match resource_type {
-                ResourceType::LuxuryGoods => (Some(0.5), Some(1.5)),
-                ResourceType::Food => (Some(0.7), Some(1.3)),
-                _ => (None, None),
-            },
-            PlanetSpecialization::Service => match resource_type {
-                ResourceType::Food => (Some(0.5), Some(1.5)),
-                ResourceType::Water => (Some(0.7), Some(1.3)),
-                _ => (None, None),
-            },
-            PlanetSpecialization::None => (None, None),
         };
 
         // Apply economy multiplier to prices

@@ -127,7 +127,6 @@ fn create_faction_fleets(factions: &[(&str, &str)]) {
 /// the routes.
 #[rocket::main]
 async fn main() {
-    let game_generated = false;
     /***On game launch create the game. ***/
     let gameworld = get_global_game_world();
     
@@ -155,10 +154,16 @@ async fn main() {
         ("The Trade Federation", "Wealthy merchants and traders"),
     ];
 
-    if !game_generated {
+    // Only generate fleets if the game hasn't been generated yet
+    if !GAME_GENERATED.load(Ordering::Relaxed) {
+        println!("Generating initial game state...");
         create_player_fleet();
         create_faction_fleets(&factions);
+        GAME_GENERATED.store(true, Ordering::Relaxed);
+    } else {
+        println!("Game already generated, skipping fleet generation");
     }
+
     println!("Current working directory: {:?}", env::current_dir().unwrap());
     let template_dir = Path::new("src").join("templates");
     println!("Template directory: {:?}", template_dir);

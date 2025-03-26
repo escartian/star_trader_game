@@ -4,19 +4,23 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt;
+use strum::IntoEnumIterator;
 
 use super::position::{random_nonzero_position, Position};
+use super::resource::{Resource, ResourceType};
+use super::player::Player;
 
 //PLANET DETAILS
 // Define a struct to represent a planet
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Planet {
-    name: String,
+    pub name: String,
     pub position: Position,
-    economy: Economy,
-    specialization: PlanetSpecialization,
-    danger: PlanetDanger,
-    biome: Biome,
+    pub economy: Economy,
+    pub specialization: PlanetSpecialization,
+    pub danger: PlanetDanger,
+    pub biome: Biome,
+    pub market: Vec<Resource>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlanetDanger {
@@ -170,6 +174,8 @@ pub fn generate_planets(
         let specialization: PlanetSpecialization = rand::random();
         let biome: Biome = rand::random();
         let danger: PlanetDanger = rand::random();
+        let market = generate_planet_market(&specialization, &economy);
+        
         // Create a new planet with the generated name, coordinates, and other properties
         let planet = Planet {
             name,
@@ -178,6 +184,7 @@ pub fn generate_planets(
             danger,
             position,
             biome,
+            market,
         };
 
         // Add the planet to the vector of planets
@@ -209,6 +216,85 @@ fn remove_colliding_planets(planets: &mut Vec<Planet>) {
         planets.remove(*i);
     }
 }
+
+fn generate_planet_market(specialization: &PlanetSpecialization, economy: &Economy) -> Vec<Resource> {
+    let mut market = Vec::new();
+    let mut rng = rand::thread_rng();
+    
+    // Base price multiplier based on economy
+    let economy_multiplier = match economy {
+        Economy::Booming => 1.5,
+        Economy::Growing => 1.2,
+        Economy::Stable => 1.0,
+        Economy::Struggling => 0.8,
+        Economy::Declining => 0.6,
+        Economy::Crashing => 0.4,
+        Economy::Nonexistent => 0.2,
+    };
+
+    // Generate market resources based on specialization
+    for resource_type in ResourceType::iter() {
+        let (buy_price, sell_price) = match specialization {
+            PlanetSpecialization::Agriculture => match resource_type {
+                ResourceType::Food => (Some(0.5), Some(1.5)),
+                ResourceType::Water => (Some(0.7), Some(1.3)),
+                _ => (None, None),
+            },
+            PlanetSpecialization::Mining => match resource_type {
+                ResourceType::Minerals => (Some(0.5), Some(1.5)),
+                ResourceType::Metals => (Some(0.7), Some(1.3)),
+                _ => (None, None),
+            },
+            PlanetSpecialization::Manufacturing => match resource_type {
+                ResourceType::Electronics => (Some(0.5), Some(1.5)),
+                ResourceType::Metals => (Some(0.7), Some(1.3)),
+                _ => (None, None),
+            },
+            PlanetSpecialization::Technology => match resource_type {
+                ResourceType::Electronics => (Some(0.5), Some(1.5)),
+                ResourceType::LuxuryGoods => (Some(0.7), Some(1.3)),
+                _ => (None, None),
+            },
+            PlanetSpecialization::Research => match resource_type {
+                ResourceType::Electronics => (Some(0.5), Some(1.5)),
+                ResourceType::LuxuryGoods => (Some(0.7), Some(1.3)),
+                _ => (None, None),
+            },
+            PlanetSpecialization::Tourism => match resource_type {
+                ResourceType::LuxuryGoods => (Some(0.5), Some(1.5)),
+                ResourceType::Food => (Some(0.7), Some(1.3)),
+                _ => (None, None),
+            },
+            PlanetSpecialization::Service => match resource_type {
+                ResourceType::Food => (Some(0.5), Some(1.5)),
+                ResourceType::Water => (Some(0.7), Some(1.3)),
+                _ => (None, None),
+            },
+            PlanetSpecialization::None => (None, None),
+        };
+
+        // Apply economy multiplier to prices
+        let buy_price = buy_price.map(|p| p * economy_multiplier);
+        let sell_price = sell_price.map(|p| p * economy_multiplier);
+
+        // Generate random quantity if the planet trades this resource
+        let quantity = if buy_price.is_some() || sell_price.is_some() {
+            Some(rng.gen_range(10..100))
+        } else {
+            None
+        };
+
+        market.push(Resource {
+            resource_type,
+            buy: buy_price,
+            sell: sell_price,
+            quantity,
+        });
+    }
+
+    market
+}
+
 pub trait PlanetTrait {
     type PlanetDanger;
     fn get_danger(&self) -> &Self::PlanetDanger;
@@ -223,6 +309,84 @@ impl PlanetTrait for Planet {
         &self.danger
     }
 }
+
+impl Planet {
+    pub fn buy_resource(&mut self, resource_type: ResourceType, quantity: u32, player: &mut Player) -> Result<(), String> {
+        // Find the resource in the planet's market
+        if let Some(market_resource) = self.market.iter_mut().find(|r| r.resource_type == resource_type) {
+            if let Some(buy_price) = market_resource.buy_price() {
+                let cost = quantity as f32 * buy_price;
+
+                // Check if the player has enough credits
+                if player.credits >= cost {
+                    // Check if the planet has enough quantity
+                    if let Some(available_quantity) = market_resource.quantity {
+                        if available_quantity >= quantity {
+                            // Update planet's market
+                            market_resource.quantity = Some(available_quantity - quantity);
+                            
+                            // Update player's inventory and credits
+                            player.credits -= cost;
+                            player.add_resource(Resource::new(resource_type, quantity));
+
+                            if PRINT_DEBUG {
+                                println!(
+                                    "Successfully bought {} {} from {} for {} credits",
+                                    quantity, resource_type, self.name, cost
+                                );
+                            }
+                            return Ok(());
+                        }
+                    }
+                    return Err(format!("Planet does not have enough {} to sell", resource_type));
+                }
+                return Err(format!("Player does not have enough credits to buy {}", resource_type));
+            }
+            return Err(format!("Planet does not buy {}", resource_type));
+        }
+        Err(format!("Planet does not trade {}", resource_type))
+    }
+
+    pub fn sell_resource(&mut self, resource_type: ResourceType, quantity: u32, player: &mut Player) -> Result<(), String> {
+        // Find the resource in the planet's market
+        if let Some(market_resource) = self.market.iter_mut().find(|r| r.resource_type == resource_type) {
+            if let Some(sell_price) = market_resource.sell_price() {
+                let earnings = quantity as f32 * sell_price;
+
+                // Check if the player has enough of the resource
+                if let Some(player_resource) = player.resources.iter_mut().find(|r| r.resource_type == resource_type) {
+                    if let Some(player_quantity) = player_resource.quantity {
+                        if player_quantity >= quantity {
+                            // Update planet's market
+                            if let Some(available_quantity) = market_resource.quantity {
+                                market_resource.quantity = Some(available_quantity + quantity);
+                            } else {
+                                market_resource.quantity = Some(quantity);
+                            }
+                            
+                            // Update player's inventory and credits
+                            player.credits += earnings;
+                            player.remove_resource(Resource::new(resource_type, quantity), quantity);
+
+                            if PRINT_DEBUG {
+                                println!(
+                                    "Successfully sold {} {} to {} for {} credits",
+                                    quantity, resource_type, self.name, earnings
+                                );
+                            }
+                            return Ok(());
+                        }
+                    }
+                    return Err(format!("Player does not have enough {} to sell", resource_type));
+                }
+                return Err(format!("Player does not have any {} to sell", resource_type));
+            }
+            return Err(format!("Planet does not buy {}", resource_type));
+        }
+        Err(format!("Planet does not trade {}", resource_type))
+    }
+}
+
 #[cfg(test)]
 mod planet_tests {
     use crate::models::{planet::{Planet, remove_colliding_planets}, position::Position};
@@ -237,6 +401,7 @@ mod planet_tests {
             specialization: rand::random(),
             danger: rand::random(),
             biome: rand::random(),
+            market: Vec::new(),
         };
         let p2 = Planet {
             name: "B".to_string(),
@@ -245,6 +410,7 @@ mod planet_tests {
             specialization: rand::random(),
             danger: rand::random(),
             biome: rand::random(),
+            market: Vec::new(),
         };
         let p3 = Planet {
             name: "C".to_string(),
@@ -253,6 +419,7 @@ mod planet_tests {
             specialization: rand::random(),
             danger: rand::random(),
             biome: rand::random(),
+            market: Vec::new(),
         };
         let p3 = Planet {
             name: "D".to_string(),
@@ -261,6 +428,7 @@ mod planet_tests {
             specialization: rand::random(),
             danger: rand::random(),
             biome: rand::random(),
+            market: Vec::new(),
         };
 
         // Add the planets to a vector

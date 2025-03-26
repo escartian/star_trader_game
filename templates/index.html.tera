@@ -287,14 +287,24 @@
 
                     <h3>Planetary Bodies</h3>
                     <table class="star-system-table">
-                        <tr><th>Name</th><th>Economy</th><th>Specialization</th><th>Danger</th><th>Biome</th></tr>
-                        ${data.planets.map(planet => `
+                        <tr>
+                            <th>Name</th>
+                            <th>Economy</th>
+                            <th>Specialization</th>
+                            <th>Danger</th>
+                            <th>Biome</th>
+                            <th>Actions</th>
+                        </tr>
+                        ${data.planets.map((planet, index) => `
                             <tr>
                                 <td>${planet.name}</td>
                                 <td>${planet.economy || 'N/A'}</td>
                                 <td>${planet.specialization || 'N/A'}</td>
                                 <td>${planet.danger || 'Low'}</td>
                                 <td>${planet.biome || 'Unknown'}</td>
+                                <td>
+                                    <button onclick="showPlanetMarket(${id}, ${index})">View Market</button>
+                                </td>
                             </tr>
                         `).join('')}
                     </table>
@@ -305,6 +315,147 @@
             } catch (error) {
                 console.error("Error parsing JSON:", error);
                 document.getElementById('result').innerHTML = `<p>Error: Unable to parse star system data</p>`;
+            }
+        }
+
+        async function showPlanetMarket(systemId, planetId) {
+            try {
+                // Remove any existing market displays
+                const existingMarkets = document.querySelectorAll('.market-panel');
+                existingMarkets.forEach(market => market.remove());
+
+                const response = await fetch(`/planet/${systemId}/${planetId}/market`);
+                const marketData = await response.json();
+                
+                const marketDisplay = document.createElement('div');
+                marketDisplay.className = 'market-panel info-panel';
+                marketDisplay.innerHTML = `
+                    <h3>Planet Market</h3>
+                    <table class="resource-table">
+                        <tr>
+                            <th>Resource</th>
+                            <th>Buy Price</th>
+                            <th>Sell Price</th>
+                            <th>Available</th>
+                            <th>Actions</th>
+                        </tr>
+                        ${marketData.map(resource => `
+                            <tr>
+                                <td>${resource.resource_type}</td>
+                                <td>${resource.buy ? resource.buy.toFixed(2) : 'N/A'}</td>
+                                <td>${resource.sell ? resource.sell.toFixed(2) : 'N/A'}</td>
+                                <td>${resource.quantity || 0}</td>
+                                <td>
+                                    ${resource.buy ? `
+                                        <button onclick="buyResource(${systemId}, ${planetId}, '${resource.resource_type}', 1)">Buy 1</button>
+                                        <button onclick="buyResource(${systemId}, ${planetId}, '${resource.resource_type}', 10)">Buy 10</button>
+                                    ` : ''}
+                                    ${resource.sell ? `
+                                        <button onclick="sellResource(${systemId}, ${planetId}, '${resource.resource_type}', 1)">Sell 1</button>
+                                        <button onclick="sellResource(${systemId}, ${planetId}, '${resource.resource_type}', 10)">Sell 10</button>
+                                    ` : ''}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+                
+                document.getElementById('result').appendChild(marketDisplay);
+            } catch (error) {
+                console.error("Error fetching market data:", error);
+                document.getElementById('result').innerHTML += `<p>Error: Unable to load market data</p>`;
+            }
+        }
+
+        async function buyResource(systemId, planetId, resourceType, quantity) {
+            try {
+                const response = await fetch(`/planet/${systemId}/${planetId}/buy/${resourceType}/${quantity}`);
+                const result = await response.json();
+                alert(result);
+                
+                // Get the current player name from the form
+                const playerName = document.getElementById('playerName').value;
+                if (!playerName) {
+                    alert("Please enter your player name first");
+                    return;
+                }
+
+                // Refresh player data
+                const playerResponse = await fetch(`/player/${playerName}`);
+                const playerData = await playerResponse.text();
+                
+                // Update the player display
+                const playerDisplay = document.querySelector('.info-panel:not(.market-panel)');
+                if (playerDisplay) {
+                    const playerDataObj = JSON.parse(playerData);
+                    playerDisplay.innerHTML = `
+                        <h2>Player Information</h2>
+                        <h3>${playerDataObj.name}</h3>
+                        <p>Credits: ${playerDataObj.credits?.toFixed(2) || 0}</p>
+                        <h3>Resources</h3>
+                        <table class="resource-table">
+                            <tr><th>Resource Type</th><th>Quantity</th></tr>
+                            ${Array.isArray(playerDataObj.resources) ? playerDataObj.resources.map(resource => `
+                                <tr>
+                                    <td>${resource.resource_type || 'N/A'}</td>
+                                    <td>${resource.quantity || 0}</td>
+                                </tr>
+                            `).join('') : ''}
+                        </table>
+                    `;
+                }
+
+                // Refresh market display
+                await showPlanetMarket(systemId, planetId);
+            } catch (error) {
+                console.error("Error buying resource:", error);
+                alert("Error buying resource");
+            }
+        }
+
+        async function sellResource(systemId, planetId, resourceType, quantity) {
+            try {
+                const response = await fetch(`/planet/${systemId}/${planetId}/sell/${resourceType}/${quantity}`);
+                const result = await response.json();
+                alert(result);
+                
+                // Get the current player name from the form
+                const playerName = document.getElementById('playerName').value;
+                if (!playerName) {
+                    alert("Please enter your player name first");
+                    return;
+                }
+
+                // Refresh player data
+                const playerResponse = await fetch(`/player/${playerName}`);
+                const playerData = await playerResponse.text();
+                
+                // Update the player display
+                const playerDisplay = document.querySelector('.info-panel:not(.market-panel)');
+                if (playerDisplay) {
+                    const playerDataObj = JSON.parse(playerData);
+                    playerDisplay.innerHTML = `
+                        <h2>Player Information</h2>
+                        <h3>${playerDataObj.name}</h3>
+                        <p>Credits: ${playerDataObj.credits?.toFixed(2) || 0}</p>
+                        <h3>Resources</h3>
+                        <table class="resource-table">
+                            <tr><th>Resource Type</th><th>Quantity</th></tr>
+                            ${Array.isArray(playerDataObj.resources) ? playerDataObj.resources.map(resource => `
+                                <tr>
+                                    <td>${resource.resource_type || 'N/A'}</td>
+                                    <td>${resource.quantity || 0}</td>
+                                </tr>
+                            `).join('') : ''}
+                        </table>
+                    `;
+                }
+
+                // Refresh market display
+                await showPlanetMarket(systemId, planetId);
+            } catch (error) {
+                console.error("Error selling resource:", error);
+                alert("Error selling resource");
             }
         }
 

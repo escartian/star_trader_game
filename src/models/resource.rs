@@ -2,6 +2,9 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use rocket::request::FromParam;
+use rocket::http::RawStr;
+use std::fmt;
 
 // Enumeration of the different types of resources that can be traded in the game.
 #[derive(Serialize, Deserialize, Debug, Clone, EnumIter, Eq, Hash, PartialEq, Copy)]
@@ -128,4 +131,35 @@ pub fn generate_resources_no_trade() -> Vec<Resource> {
     }
 
     inventory // Return the completed inventory vector
+}
+
+impl<'a> FromParam<'a> for ResourceType {
+    type Error = &'a str;
+
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        match param {
+            "Food" => Ok(ResourceType::Food),
+            "Water" => Ok(ResourceType::Water),
+            "Minerals" => Ok(ResourceType::Minerals),
+            "Metals" => Ok(ResourceType::Metals),
+            "Electronics" => Ok(ResourceType::Electronics),
+            "LuxuryGoods" => Ok(ResourceType::LuxuryGoods),
+            _ => Err(param),
+        }
+    }
+}
+
+impl fmt::Display for ResourceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ResourceType::Water => write!(f, "Water"),
+            ResourceType::Food => write!(f, "Food"),
+            ResourceType::Fuel => write!(f, "Fuel"),
+            ResourceType::Minerals => write!(f, "Minerals"),
+            ResourceType::Metals => write!(f, "Metals"),
+            ResourceType::Electronics => write!(f, "Electronics"),
+            ResourceType::LuxuryGoods => write!(f, "LuxuryGoods"),
+            ResourceType::Narcotics => write!(f, "Narcotics"),
+        }
+    }
 }

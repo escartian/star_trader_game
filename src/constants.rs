@@ -1,4 +1,6 @@
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
+use crate::models::star_system::StarSystem;
 
 pub(crate) const PRINT_DEBUG: bool = true;
 pub(crate) const MAX_COMBAT_TIME: u32 = 500;
@@ -16,3 +18,4 @@ pub(crate) const GAME_ID: &str = "1";
 pub(crate) const STAR_COUNT: i32 = 10;
 
 pub(crate) static GAME_GENERATED: AtomicBool = AtomicBool::new(false);
+pub(crate) static GLOBAL_GAME_WORLD: Mutex<Vec<StarSystem>> = Mutex::new(Vec::new());

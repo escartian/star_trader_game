@@ -1,5 +1,6 @@
 use crate::get_global_game_world;
 use crate::GAME_ID;
+use crate::GLOBAL_GAME_WORLD;
 use std::fs::File;
 use std::path::Path;
 use rocket_dyn_templates::Template;
@@ -12,7 +13,13 @@ use crate::models::star_system::StarSystem;
 use rocket::catch;
 use rocket::serde::json::Json;
 use crate::models::fleet::Fleet;
+use crate::models::resource::{Resource, ResourceType};
+use crate::models::player::Player;
 use rand;
+use serde_json;
+use std::sync::Mutex;
+use std::sync::LockResult;
+use std::sync::MutexGuard;
 
 
 #[catch(500)]
@@ -90,5 +97,103 @@ pub fn get_fleet(owner_id: String, fleet_number: usize) -> Json<Option<Fleet>> {
             println!("Error loading fleet: {}", e);
             Json(None)
         }
+    }
+}
+
+#[get("/planet/<system_id>/<planet_id>/market")]
+pub fn get_planet_market(system_id: usize, planet_id: usize) -> Option<Json<Vec<Resource>>> {
+    get_global_game_world()
+        .get(system_id)
+        .and_then(|system| system.planets.get(planet_id))
+        .map(|planet| Json(planet.market.clone()))
+}
+
+#[get("/planet/<system_id>/<planet_id>/buy/<resource_type>/<quantity>")]
+pub fn buy_from_planet(system_id: usize, planet_id: usize, resource_type: ResourceType, quantity: u32) -> Json<String> {
+    let mut game_world = get_global_game_world();
+    let mut player = serde_json::from_str(&get_player(HOST_PLAYER_NAME)).unwrap();
+
+    if let Some(system) = game_world.get_mut(system_id) {
+        if let Some(planet) = system.planets.get_mut(planet_id) {
+            match planet.buy_resource(resource_type, quantity, &mut player) {
+                Ok(_) => {
+                    // Save the updated player data
+                    let player_path = Path::new("data")
+                        .join("game")
+                        .join(GAME_ID)
+                        .join("players")
+                        .join(format!("{}.json", HOST_PLAYER_NAME));
+                    
+                    let player_file = File::create(player_path).unwrap();
+                    serde_json::to_writer(player_file, &player).unwrap();
+
+                    // Save the updated game world
+                    let world_path = Path::new("data")
+                        .join("game")
+                        .join(GAME_ID)
+                        .join("GameWorld.json");
+                    
+                    let world_file = File::create(world_path).unwrap();
+                    serde_json::to_writer(world_file, &game_world).unwrap();
+                    
+                    // Update the global game world state
+                    if let Ok(mut guard) = GLOBAL_GAME_WORLD.lock() {
+                        *guard = game_world;
+                    }
+                    
+                    Json("Successfully bought resource".to_string())
+                },
+                Err(e) => Json(e),
+            }
+        } else {
+            Json("Planet not found".to_string())
+        }
+    } else {
+        Json("Star system not found".to_string())
+    }
+}
+
+#[get("/planet/<system_id>/<planet_id>/sell/<resource_type>/<quantity>")]
+pub fn sell_to_planet(system_id: usize, planet_id: usize, resource_type: ResourceType, quantity: u32) -> Json<String> {
+    let mut game_world = get_global_game_world();
+    let mut player = serde_json::from_str(&get_player(HOST_PLAYER_NAME)).unwrap();
+
+    if let Some(system) = game_world.get_mut(system_id) {
+        if let Some(planet) = system.planets.get_mut(planet_id) {
+            match planet.sell_resource(resource_type, quantity, &mut player) {
+                Ok(_) => {
+                    // Save the updated player data
+                    let player_path = Path::new("data")
+                        .join("game")
+                        .join(GAME_ID)
+                        .join("players")
+                        .join(format!("{}.json", HOST_PLAYER_NAME));
+                    
+                    let player_file = File::create(player_path).unwrap();
+                    serde_json::to_writer(player_file, &player).unwrap();
+
+                    // Save the updated game world
+                    let world_path = Path::new("data")
+                        .join("game")
+                        .join(GAME_ID)
+                        .join("GameWorld.json");
+                    
+                    let world_file = File::create(world_path).unwrap();
+                    serde_json::to_writer(world_file, &game_world).unwrap();
+                    
+                    // Update the global game world state
+                    if let Ok(mut guard) = GLOBAL_GAME_WORLD.lock() {
+                        *guard = game_world;
+                    }
+                    
+                    Json("Successfully sold resource".to_string())
+                },
+                Err(e) => Json(e),
+            }
+        } else {
+            Json("Planet not found".to_string())
+        }
+    } else {
+        Json("Star system not found".to_string())
     }
 } 

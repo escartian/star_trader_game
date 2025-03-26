@@ -35,7 +35,19 @@ impl Player {
         }
     }
     pub fn add_resource(&mut self, resource: Resource) {
-        self.resources.push(resource);
+        if let Some(existing_resource) = self.resources.iter_mut().find(|r| r.resource_type == resource.resource_type) {
+            // If the resource exists, add to its quantity
+            if let Some(existing_quantity) = existing_resource.quantity {
+                if let Some(new_quantity) = resource.quantity {
+                    existing_resource.quantity = Some(existing_quantity + new_quantity);
+                }
+            } else {
+                existing_resource.quantity = resource.quantity;
+            }
+        } else {
+            // If the resource doesn't exist, add it as new
+            self.resources.push(resource);
+        }
     }
 
     pub fn remove_resource(&mut self, resource: Resource, quantity: u32) {

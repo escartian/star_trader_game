@@ -23,13 +23,14 @@ use std::string::String;
 use crate::routes::*;
 
 //use crate::combat::combat::{auto_resolve_ship_combat, CombatResult};
-//use crate::models::player::Player;
+use crate::models::player::Player;
 //use crate::models::ship::ship::Ship;
 use crate::models::star_system::StarSystem;
 use crate::models::trader::Trader;
 mod combat;
 use lazy_static::lazy_static;
 use std::io::Read;
+use std::sync::Mutex;
 
 use crate::constants::HOST_PLAYER_NAME;
 use crate::constants::GAME_ID;
@@ -45,38 +46,32 @@ use crate::constants::{MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH, GAME_GENERATED};
 
 
 lazy_static! {
-    static ref GLOBAL_GAME_WORLD: Vec<StarSystem> = {
+    static ref GLOBAL_GAME_WORLD: Mutex<Vec<StarSystem>> = {
         println!("Loading Game World");
         let data_path = Path::new("data")
             .join("game")
             .join(GAME_ID)
             .join("GameWorld.json");
 
-            println!("{}", data_path.display());
-            if data_path.exists() && data_path.is_file() {
-                
-                let file = File::open(data_path);
-                let mut contents = String::new();
-                file.expect("REASON").read_to_string(&mut contents);
-                serde_json::from_str(&contents).unwrap()
+        println!("{}", data_path.display());
+        if data_path.exists() && data_path.is_file() {
+            let file = File::open(data_path);
+            let mut contents = String::new();
+            file.expect("REASON").read_to_string(&mut contents);
+            Mutex::new(serde_json::from_str(&contents).unwrap())
         } else {
             println!("Game world is empty");
-            create_game_world_file(GAME_ID, true)
+            Mutex::new(create_game_world_file(GAME_ID, true))
         }
     };
 }
 
-
 pub(crate) fn get_global_game_world() -> Vec<StarSystem> {
-    if GLOBAL_GAME_WORLD.is_empty() {
-        println!("Game world is empty");
-        create_game_world_file(GAME_ID, true);
-    }else{
-        println!("Game world is not empty");  
-        GAME_GENERATED.store(true, Ordering::Relaxed);
+    if let Ok(guard) = GLOBAL_GAME_WORLD.lock() {
+        guard.clone()
+    } else {
+        Vec::new()
     }
-    
-    GLOBAL_GAME_WORLD.clone()
 }
 
 fn create_player_fleet() {
@@ -123,6 +118,22 @@ async fn main() {
     let game_generated = false;
     /***On game launch create the game. ***/
     let gameworld = get_global_game_world();
+    
+    // Check if player exists, if not create them
+    let player_path = Path::new("data")
+        .join("game")
+        .join(GAME_ID)
+        .join("players")
+        .join(format!("{}.json", HOST_PLAYER_NAME));
+    
+    if !player_path.exists() {
+        println!("Creating new player: {}", HOST_PLAYER_NAME);
+        let player = Player::create_player(GAME_ID, HOST_PLAYER_NAME);
+        println!("Player created with {} credits", player.credits);
+    } else {
+        println!("Loading existing player: {}", HOST_PLAYER_NAME);
+    }
+    
     let player = get_player(HOST_PLAYER_NAME);
 
     // Generate some factions
@@ -140,7 +151,17 @@ async fn main() {
     let template_dir = Path::new("src").join("templates");
     println!("Template directory: {:?}", template_dir);
     rocket::build()
-        .mount("/", routes![index, get_player, get_galaxy_map, get_star_system, get_fleet, get_owner_fleets])
+        .mount("/", routes![
+            index, 
+            get_player, 
+            get_galaxy_map, 
+            get_star_system, 
+            get_fleet, 
+            get_owner_fleets,
+            get_planet_market,
+            buy_from_planet,
+            sell_to_planet
+        ])
         .attach(Template::fairing())
         .register("/", catchers![internal_error])
         .launch()

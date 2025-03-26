@@ -14,10 +14,72 @@
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         tr:nth-child(even) { background-color: #f2f2f2; }
         .resource-table { margin-bottom: 20px; }
+        
+        /* New styles */
+        .player-info-corner {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            max-width: 300px;
+        }
+        .star-details {
+            background: linear-gradient(to right,rgb(20, 34, 88), rgb(20, 34, 88),rgb(72, 206, 32), #fdbb2d);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .debug-window {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            width: 80%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .debug-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
+    <div id="playerInfoCorner" class="player-info-corner"></div>
+    <div id="debugOverlay" class="debug-overlay"></div>
+    <div id="debugWindow" class="debug-window">
+        <h2>Debug Console</h2>
+        <div id="debugContent"></div>
+        <button onclick="closeDebugWindow()">Close</button>
+    </div>
+
     <h1>Welcome to Star Trader Game</h1>
+
+    <div class="button-group">
+        <button onclick="openDebugWindow()">Debug Console</button>
+        <button onclick="viewFleet()">View Fleet</button>
+    </div>
 
     <form id="getStarSystemForm">
         <label for="starSystemId">Select Star System:</label>
@@ -38,6 +100,29 @@
 
     <script>
         let currently_displaying = null;
+
+        function openDebugWindow() {
+            document.getElementById('debugWindow').style.display = 'block';
+            document.getElementById('debugOverlay').style.display = 'block';
+            // Example debug data - replace with actual debug info
+            document.getElementById('debugContent').innerHTML = `
+                <h3>Debug Information - WIP </h3>
+                <pre>Game State: Active
+                    Current Memory Usage: ...
+                    Active Systems: ...
+                    Player States: ...</pre>
+            `;
+        }
+
+        function closeDebugWindow() {
+            document.getElementById('debugWindow').style.display = 'none';
+            document.getElementById('debugOverlay').style.display = 'none';
+        }
+
+        function viewFleet() {
+            // This will be implemented when the fleet endpoint is ready
+            alert('Fleet management coming soon!');
+        }
 
         async function fetchData(url) {
             try {
@@ -99,56 +184,30 @@
 
         async function displayPlayerData(dataString) {
             try {
-                // Clear the #result div at the start of each function call
-                document.getElementById('result').innerHTML = '';
-
-                // Parse the JSON string
                 const data = JSON.parse(dataString);
-
-                // Create the player info section
-                const playerInfo = document.createElement('div');
-                playerInfo.innerHTML = `
-                    <h2>Player Information</h2>
-                    <h3>Name: ${data.name}</h3>
-                `;
                 
-                // Append player info to #result
-                document.getElementById('result').appendChild(playerInfo);
+                // Update corner display
+                const cornerHtml = `
+                    <h3>${data.name}</h3>
+                    <p>Credits: ${data.credits?.toFixed(2) || 0}</p>
+                `;
+                document.getElementById('playerInfoCorner').innerHTML = cornerHtml;
 
-                // Display credits if data.credits exists
-                if (typeof data.credits === 'number') {
-                    const creditsDiv = document.createElement('div');
-                    creditsDiv.innerHTML = `
-                        <h3>Credits: ${data.credits.toFixed(2)}</h3>
-                    `;
-                    document.getElementById('result').appendChild(creditsDiv);
-                }
+                // Main display
+                const mainContent = `
+                    <h2>Detailed Player Information</h2>
+                    <table class="resource-table">
+                        <tr><th>Resource Type</th><th>Quantity</th></tr>
+                        ${Array.isArray(data.resources) ? data.resources.map(resource => `
+                            <tr>
+                                <td>${resource.resource_type || 'N/A'}</td>
+                                <td>${resource.quantity || 0}</td>
+                            </tr>
+                        `).join('') : ''}
+                    </table>
+                `;
+                document.getElementById('result').innerHTML = mainContent;
 
-                // Check if data.resources exists and is an array
-                if (Array.isArray(data.resources)) {
-                    const resourcesTable = document.createElement('table');
-                    resourcesTable.className = 'resource-table';
-                    resourcesTable.innerHTML = `
-                        <tr><th>Resource Type</th><th>Buy Price</th><th>Sell Price</th><th>Quantity</th></tr>
-                    `;
-
-                    data.resources.forEach((resource, index) => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${resource.resource_type || 'N'}</td>
-                            <td>${resource.buy || 'N'}</td>
-                            <td>${resource.sell || 'N'}</td>
-                            <td>${resource.quantity || 'N'}</td>
-                        `;
-                        resourcesTable.appendChild(row);
-                    });
-
-                    document.getElementById('result').appendChild(resourcesTable);
-
-                } else {
-                    console.warn("data.resources is not an array as expected");
-                    console.log(data);
-                }
             } catch (error) {
                 console.error("Error parsing JSON:", error);
                 document.getElementById('result').innerHTML = `<p>Error: Unable to parse player data</p>`;
@@ -157,37 +216,40 @@
     
         async function displayStarSystemData(id, dataString) {
             try {
-                // Clear the #result div at the start of each function call
-                document.getElementById('result').innerHTML = '';
-
-                // Parse the JSON string
                 const data = JSON.parse(dataString);
-
-                // Create the star system info section
                 const starSystemInfo = document.createElement('div');
                 starSystemInfo.innerHTML = `
-                    <h2>Star System Information</h2>
-                    <h3>Star Details</h3>
-                    <ul>
-                        <li>Name: ${data.star.name}</li>
-                        <li>Star Type: ${data.star.star_type}</li>
-                        <li>Position: (${data.position.x}, ${data.position.y}, ${data.position.z})</li>
-                    </ul>
+                    <div class="star-details">
+                        <h2>${data.star.name} System</h2>
+                        <div style="display: flex; justify-content: space-between;">
+                            <div>
+                                <h3>Star Classification</h3>
+                                <p>Type: ${data.star.star_type}</p>
+                                <p>Coordinates: (${data.position.x}, ${data.position.y}, ${data.position.z})</p>
+                            </div>
+                            <div>
+                                <h3>System Status</h3>
+                                <p>Planets: ${data.planets.length}</p>
+                                <p>Security Level: ${data.star.security_level || 'Unknown'}</p>
+                            </div>
+                        </div>
+                    </div>
 
-                    <h3>Planets</h3>
+                    <h3>Planetary Bodies</h3>
                     <table class="star-system-table">
                         <tr><th>Name</th><th>Economy</th><th>Specialization</th><th>Danger</th><th>Biome</th></tr>
                         ${data.planets.map(planet => `
                             <tr>
                                 <td>${planet.name}</td>
-                                <td>${planet.economy || 'N'}</td>
-                                <td>${planet.specialization || 'N'}</td>
-                                <td>${planet.danger || 'N'}</td>
-                                <td>${planet.biome || 'N'}</td>
+                                <td>${planet.economy || 'N/A'}</td>
+                                <td>${planet.specialization || 'N/A'}</td>
+                                <td>${planet.danger || 'Low'}</td>
+                                <td>${planet.biome || 'Unknown'}</td>
                             </tr>
                         `).join('')}
                     </table>
                 `;
+                document.getElementById('result').innerHTML = '';
                 document.getElementById('result').appendChild(starSystemInfo);
 
             } catch (error) {
@@ -198,41 +260,27 @@
 
         async function displayGalaxyData(dataString) {
             try {
-                // Clear the #result div at the start of each function call
-                document.getElementById('result').innerHTML = '';
-
-                // Parse the JSON string
                 const data = JSON.parse(dataString);
-
-                // Create the galaxy info section
                 const galaxyInfo = document.createElement('div');
                 let systemsHtml = '';
 
                 data.forEach(system => {
-                    const systemHtml = `
-                        <h3>Star System: ${system.star.name}</h3>
-                        <p>Star Type: ${system.star.star_type}</p>
-                        <p>Position: (${system.position.x}, ${system.position.y}, ${system.position.z})</p>
+                    systemsHtml += `
+                        <div class="star-details">
+                            <h3>${system.star.name}</h3>
+                            <p>Type: ${system.star.star_type}</p>
+                            <p>Location: (${system.position.x}, ${system.position.y}, ${system.position.z})</p>
+                            <p>Planets: ${system.planets.length}</p>
+                        </div>
                     `;
-                    
-                    systemsHtml += systemHtml;
                 });
 
                 galaxyInfo.innerHTML = `
                     <h2>Galaxy Map</h2>
                     ${systemsHtml}
                 `;
-
-                /*
-                // Create the galaxy info section
-                const galaxyInfo = document.createElement('div');
-                galaxyInfo.innerHTML = `
-                    <h2>Galaxy Map</h2>
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
-                `;
-                */
                 
-                // Append galaxy info to #result
+                document.getElementById('result').innerHTML = '';
                 document.getElementById('result').appendChild(galaxyInfo);
 
             } catch (error) {
@@ -240,7 +288,6 @@
                 document.getElementById('result').innerHTML = `<p>Error: Unable to parse galaxy data</p>`;
             }
         }
-
     </script>
 </body>
 </html>

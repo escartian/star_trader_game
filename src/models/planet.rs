@@ -237,27 +237,27 @@ fn generate_planet_market(specialization: &PlanetSpecialization, economy: &Econo
         let (buy_price, sell_price) = match resource_type {
             // Essential resources that all planets should trade
             ResourceType::Water | ResourceType::Food | ResourceType::Fuel => {
-                let base_buy = 0.7;
-                let base_sell = 1.3;
+                let base_buy = 1.3;  // Higher buy price
+                let base_sell = 0.7; // Lower sell price
                 (Some(base_buy), Some(base_sell))
             },
             // Common resources that most planets trade
             ResourceType::Minerals | ResourceType::Metals | ResourceType::Electronics => {
-                let base_buy = 0.8;
-                let base_sell = 1.2;
+                let base_buy = 1.2;  // Higher buy price
+                let base_sell = 0.8; // Lower sell price
                 (Some(base_buy), Some(base_sell))
             },
             // Luxury goods that most planets trade but with higher prices
             ResourceType::LuxuryGoods => {
-                let base_buy = 1.0;
-                let base_sell = 1.5;
+                let base_buy = 1.5;  // Higher buy price
+                let base_sell = 1.0; // Lower sell price
                 (Some(base_buy), Some(base_sell))
             },
             // Narcotics - restricted based on specialization and economy
             ResourceType::Narcotics => {
                 match (specialization, economy) {
-                    (PlanetSpecialization::Research, _) => (Some(1.2), Some(1.8)),
-                    (_, Economy::Crashing | Economy::Nonexistent) => (Some(1.5), Some(2.0)),
+                    (PlanetSpecialization::Research, _) => (Some(1.8), Some(1.2)),  // Higher buy, lower sell
+                    (_, Economy::Crashing | Economy::Nonexistent) => (Some(2.0), Some(1.5)),  // Higher buy, lower sell
                     _ => (None, None),
                 }
             },

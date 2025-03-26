@@ -9,3 +9,4 @@ pub mod trade;
 pub mod resource;
 pub mod player;
 pub mod game_world;
+pub mod fleet;

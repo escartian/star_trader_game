@@ -167,7 +167,7 @@ async fn main() {
     let template_dir = Path::new("src").join("templates");
     println!("Template directory: {:?}", template_dir);
     rocket::build()
-        .mount("/", routes![index, get_player, get_galaxy_map, get_star_system])
+        .mount("/", routes![index, get_player, get_galaxy_map, get_star_system, get_fleet])
         .attach(Template::fairing())
         .register("/", catchers![internal_error])
         .launch()

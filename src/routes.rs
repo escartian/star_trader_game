@@ -10,6 +10,9 @@ use rocket::get;
 use std::io::Read;
 use crate::models::star_system::StarSystem;
 use rocket::catch;
+use rocket::serde::json::Json;
+use crate::models::fleet::{Fleet, OwnerType};
+
 
 #[catch(500)]
 pub fn internal_error(_req: &Request) -> Template {
@@ -52,3 +55,25 @@ pub fn get_star_system(id: usize) -> Option<String> {
         .get(id)
         .map(|system| serde_json::to_string(system).unwrap())
 }
+
+#[get("/fleet/<owner_type>/<owner_id>")]
+pub fn get_fleet(owner_type: String, owner_id: String) -> Json<Option<Fleet>> {
+    let owner_type = match owner_type.to_lowercase().as_str() {
+        "player" => OwnerType::Player,
+        "planet" => OwnerType::Planet,
+        "faction" => OwnerType::Faction,
+        _ => return Json(None),
+    };
+
+    // Here you would typically:
+    // 1. Query your database/game state for the fleet
+    // 2. Return the fleet if found
+    // For now, we'll return a mock fleet
+    let mut fleet = Fleet::new(owner_id, owner_type, "default_system".to_string());
+    
+    // Add some mock ships
+    // In a real implementation, you'd load the actual ships
+    // fleet.add_ship(...);
+
+    Json(Some(fleet))
+} 

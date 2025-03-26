@@ -7,7 +7,7 @@
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
         h1 { color: #333; }
-        button { display: block; margin-top: 20px; padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button { padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
         button:hover { background-color: #0056b3; }
         pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; }
         table { width: 100%; border-collapse: collapse; }
@@ -15,20 +15,51 @@
         tr:nth-child(even) { background-color: #f2f2f2; }
         .resource-table { margin-bottom: 20px; }
         
-        /* New styles */
-        .player-info-corner {
-            position: fixed;
-            top: 10px;
-            right: 10px;
+        /* Form styles */
+        form {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        form label {
+            white-space: nowrap;
+        }
+        form input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        form button {
+            margin: 0;
+        }
+        
+        .info-panel {
             background: rgba(255, 255, 255, 0.9);
             padding: 15px;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            max-width: 300px;
+            margin: 20px 0;
+        }
+        .fleet-table {
+            font-size: 0.9em;
+        }
+        .fleet-table th, .fleet-table td {
+            padding: 4px 8px;
         }
         .star-details {
-            background: linear-gradient(to right,rgb(20, 34, 88), rgb(20, 34, 88),rgb(72, 206, 32), #fdbb2d);
+            background: linear-gradient(to right,
+            rgb(20, 34, 88),   /* Deep blue */
+            rgb(70, 100, 200), /* Blue-white */
+            rgb(173, 216, 230),/* White */
+            rgb(255, 233, 140),/* Yellow-white */
+            rgb(255, 214, 69), /* Yellow */
+            rgb(230, 126, 34), /* Orange */
+            rgb(255, 87, 51),  /* Red-orange */
+            rgb(150, 36, 36)   /* Deep red */
+            );
             color: white;
+            text-shadow: 2px 2px 3px black;
             padding: 20px;
             border-radius: 10px;
             margin: 20px 0;
@@ -66,7 +97,6 @@
     </style>
 </head>
 <body>
-    <div id="playerInfoCorner" class="player-info-corner"></div>
     <div id="debugOverlay" class="debug-overlay"></div>
     <div id="debugWindow" class="debug-window">
         <h2>Debug Console</h2>
@@ -78,8 +108,13 @@
 
     <div class="button-group">
         <button onclick="openDebugWindow()">Debug Console</button>
-        <button onclick="viewFleet()">View Fleet</button>
     </div>
+
+    <form id="fleetSearchForm">
+        <label for="fleetOwnerId">Search Fleets:</label>
+        <input type="text" id="fleetOwnerId" placeholder="Owner ID" required>
+        <button type="submit">Search Fleet</button>
+    </form>
 
     <form id="getStarSystemForm">
         <label for="starSystemId">Select Star System:</label>
@@ -101,6 +136,11 @@
     <script>
         let currently_displaying = null;
 
+        function clearAllInfo() {
+            document.getElementById('result').innerHTML = '';
+            currently_displaying = null;
+        }
+
         function openDebugWindow() {
             document.getElementById('debugWindow').style.display = 'block';
             document.getElementById('debugOverlay').style.display = 'block';
@@ -119,13 +159,9 @@
             document.getElementById('debugOverlay').style.display = 'none';
         }
 
-        function viewFleet() {
-            // This will be implemented when the fleet endpoint is ready
-            alert('Fleet management coming soon!');
-        }
-
         async function fetchData(url) {
             try {
+                clearAllInfo();
                 const response = await fetch(url);
                 const data = await response.text();
                 document.getElementById('result').innerHTML = data;
@@ -134,9 +170,11 @@
                     currently_displaying = "player"
                 }else if (url.includes('/star_system')) {
                     displayGalaxyMap(data);
+                    currently_displaying = "star_system"
                 }
                 else if (url.includes('/galaxy_map')) {
                     displayGalaxyMap(data);
+                    currently_displaying = "galaxy_map"
                 }
 
             } catch (error) {
@@ -146,11 +184,13 @@
 
         document.getElementById('getStarSystemForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            clearAllInfo();
             const starSystemId = document.getElementById('starSystemId').value;
             try {
                 const response = await fetch(`/star_system/${starSystemId}`);
                 const dataString = await response.text();
                 displayStarSystemData(starSystemId, dataString);
+                currently_displaying = "star_system";
             } catch (error) {
                 console.error("Error fetching star system data:", error);
                 document.getElementById('result').innerHTML = `<p>Error: Unable to fetch star system data</p>`;
@@ -159,11 +199,13 @@
 
         document.getElementById('getPlayerDataForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            clearAllInfo();
             const playerName = document.getElementById('playerName').value;
             try {
                 const response = await fetch(`/player/${playerName}`);
                 const dataString = await response.text();
                 displayPlayerData(dataString);
+                currently_displaying = "player";
             } catch (error) {
                 console.error("Error fetching player data:", error);
                 document.getElementById('result').innerHTML = `<p>Error: Unable to fetch player data</p>`;
@@ -172,39 +214,47 @@
 
         document.getElementById('getGalaxyMapForm').addEventListener('click', async function(e) {
             e.preventDefault();
+            clearAllInfo();
             try {
                 const response = await fetch('/galaxy_map');
                 const dataString = await response.text();
                 displayGalaxyData(dataString);
+                currently_displaying = "galaxy_map";
             } catch (error) {
                 console.error("Error fetching galaxy data:", error);
                 document.getElementById('result').innerHTML = `<p>Error: Unable to fetch galaxy data</p>`;
             }
         });
 
+        document.getElementById('fleetSearchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            clearAllInfo();
+            const ownerId = document.getElementById('fleetOwnerId').value;
+            searchFleet(ownerId);
+            currently_displaying = "fleet";
+        });
+
         async function displayPlayerData(dataString) {
             try {
                 const data = JSON.parse(dataString);
                 
-                // Update corner display
-                const cornerHtml = `
-                    <h3>${data.name}</h3>
-                    <p>Credits: ${data.credits?.toFixed(2) || 0}</p>
-                `;
-                document.getElementById('playerInfoCorner').innerHTML = cornerHtml;
-
                 // Main display
                 const mainContent = `
-                    <h2>Detailed Player Information</h2>
-                    <table class="resource-table">
-                        <tr><th>Resource Type</th><th>Quantity</th></tr>
-                        ${Array.isArray(data.resources) ? data.resources.map(resource => `
-                            <tr>
-                                <td>${resource.resource_type || 'N/A'}</td>
-                                <td>${resource.quantity || 0}</td>
-                            </tr>
-                        `).join('') : ''}
-                    </table>
+                    <div class="info-panel">
+                        <h2>Player Information</h2>
+                        <h3>${data.name}</h3>
+                        <p>Credits: ${data.credits?.toFixed(2) || 0}</p>
+                        <h3>Resources</h3>
+                        <table class="resource-table">
+                            <tr><th>Resource Type</th><th>Quantity</th></tr>
+                            ${Array.isArray(data.resources) ? data.resources.map(resource => `
+                                <tr>
+                                    <td>${resource.resource_type || 'N/A'}</td>
+                                    <td>${resource.quantity || 0}</td>
+                                </tr>
+                            `).join('') : ''}
+                        </table>
+                    </div>
                 `;
                 document.getElementById('result').innerHTML = mainContent;
 
@@ -286,6 +336,53 @@
             } catch (error) {
                 console.error("Error parsing JSON:", error);
                 document.getElementById('result').innerHTML = `<p>Error: Unable to parse galaxy data</p>`;
+            }
+        }
+
+        async function searchFleet(ownerId) {
+            try {
+                const response = await fetch(`/fleets/${ownerId}`);
+                const fleets = await response.json();
+                
+                if (fleets && fleets.length > 0) {
+                    document.getElementById('result').innerHTML = fleets.map(fleet => `
+                        <div class="info-panel">
+                            <h4>${fleet.name}</h4>
+                            <p>Owner: ${fleet.owner_id}</p>
+                            <p>Location: (${fleet.position.x}, ${fleet.position.y}, ${fleet.position.z})</p>
+                            <p>Total Ships: ${fleet.ships.length}</p>
+                            <h5>Ships:</h5>
+                            <table class="fleet-table">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Health</th>
+                                    <th>Shields</th>
+                                    <th>Weapons</th>
+                                    <th>Cargo</th>
+                                </tr>
+                                ${fleet.ships.map(ship => `
+                                    <tr>
+                                        <td>${ship.name}</td>
+                                        <td>${ship.specialization}</td>
+                                        <td>${ship.hp}/100</td>
+                                        <td>${ship.shields.strength}/100</td>
+                                        <td>${ship.weapons ? ship.weapons.map(w => {
+                                            const weaponName = Object.keys(w)[0];
+                                            return weaponName.replace(/([A-Z])/g, ' $1').trim();
+                                        }).join(', ') : 'None'}</td>
+                                        <td>${ship.cargo ? ship.cargo.length : 0} units</td>
+                                    </tr>
+                                `).join('')}
+                            </table>
+                        </div>
+                    `).join('<hr>');
+                } else {
+                    document.getElementById('result').innerHTML = '<p>No fleets found</p>';
+                }
+            } catch (error) {
+                console.error("Error loading fleet information:", error);
+                document.getElementById('result').innerHTML = '<p>Error loading fleet information</p>';
             }
         }
     </script>

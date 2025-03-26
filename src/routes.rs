@@ -11,7 +11,8 @@ use std::io::Read;
 use crate::models::star_system::StarSystem;
 use rocket::catch;
 use rocket::serde::json::Json;
-use crate::models::fleet::{Fleet, OwnerType};
+use crate::models::fleet::Fleet;
+use rand;
 
 
 #[catch(500)]
@@ -56,24 +57,38 @@ pub fn get_star_system(id: usize) -> Option<String> {
         .map(|system| serde_json::to_string(system).unwrap())
 }
 
-#[get("/fleet/<owner_type>/<owner_id>")]
-pub fn get_fleet(owner_type: String, owner_id: String) -> Json<Option<Fleet>> {
-    let owner_type = match owner_type.to_lowercase().as_str() {
-        "player" => OwnerType::Player,
-        "planet" => OwnerType::Planet,
-        "faction" => OwnerType::Faction,
-        _ => return Json(None),
-    };
+#[get("/fleets/<owner_id>")]
+pub fn get_owner_fleets(owner_id: String) -> Json<Vec<Fleet>> {
+    println!("Getting fleets for owner: {}", owner_id);
 
-    // Here you would typically:
-    // 1. Query your database/game state for the fleet
-    // 2. Return the fleet if found
-    // For now, we'll return a mock fleet
-    let mut fleet = Fleet::new(owner_id, owner_type, "default_system".to_string());
+    match crate::models::fleet::list_owner_fleets(&owner_id) {
+        Ok(fleets) => {
+            println!("Found {} fleets for owner", fleets.len());
+            Json(fleets)
+        }
+        Err(e) => {
+            println!("Error loading fleets: {}", e);
+            Json(Vec::new())
+        }
+    }
+}
+
+#[get("/fleet/<owner_id>/<fleet_number>")]
+pub fn get_fleet(owner_id: String, fleet_number: usize) -> Json<Option<Fleet>> {
+    println!("Getting fleet {} for owner: {}", fleet_number, owner_id);
+
+    // Try to load existing fleet
+    let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
+    println!("Looking for fleet with name: {}", fleet_name);
     
-    // Add some mock ships
-    // In a real implementation, you'd load the actual ships
-    // fleet.add_ship(...);
-
-    Json(Some(fleet))
+    match crate::models::fleet::load_fleet(&fleet_name) {
+        Ok(fleet) => {
+            println!("Fleet loaded successfully");
+            Json(fleet)
+        }
+        Err(e) => {
+            println!("Error loading fleet: {}", e);
+            Json(None)
+        }
+    }
 } 

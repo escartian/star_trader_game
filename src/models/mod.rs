@@ -10,3 +10,4 @@ pub mod resource;
 pub mod player;
 pub mod game_world;
 pub mod fleet;
+pub mod faction;

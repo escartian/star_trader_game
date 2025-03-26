@@ -12,7 +12,7 @@ use super::position::{random_nonzero_position, Position};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Planet {
     name: String,
-    position: Position,
+    pub position: Position,
     economy: Economy,
     specialization: PlanetSpecialization,
     danger: PlanetDanger,

@@ -5,6 +5,7 @@ mod engine;
 
 use rocket::{get, routes, Request, Response};
 use rocket_dyn_templates::{Template, tera::Tera, context};
+use std::sync::atomic::Ordering;
 
 //use serde ::{Deserialize, Serialize};
 //use serde_json::{to_writer, Result};
@@ -30,12 +31,18 @@ mod combat;
 use lazy_static::lazy_static;
 use std::io::Read;
 
-
 use crate::constants::HOST_PLAYER_NAME;
 use crate::constants::GAME_ID;
 use crate::constants::STAR_COUNT;
 use crate::models::game_world;
 use crate::models::game_world::create_game_world_file;
+use crate::models::faction::{Faction, save_faction};
+use crate::models::fleet::generate_and_save_fleet;
+use crate::models::position::Position;
+use crate::models::position::random_position;
+use crate::constants::{MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH, GAME_GENERATED};
+
+
 
 lazy_static! {
     static ref GLOBAL_GAME_WORLD: Vec<StarSystem> = {
@@ -64,9 +71,47 @@ pub(crate) fn get_global_game_world() -> Vec<StarSystem> {
     if GLOBAL_GAME_WORLD.is_empty() {
         println!("Game world is empty");
         create_game_world_file(GAME_ID, true);
-    }else{println!("Game world is not empty")};
+    }else{
+        println!("Game world is not empty");  
+        GAME_GENERATED.store(true, Ordering::Relaxed);
+    }
     
     GLOBAL_GAME_WORLD.clone()
+}
+
+fn create_player_fleet() {
+    if !GAME_GENERATED.load(Ordering::Relaxed) {
+        if let Ok(fleet) = generate_and_save_fleet(
+            HOST_PLAYER_NAME.to_string(),
+            random_position(MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH),
+            1, // Start with 1 ship
+        ) {
+            println!("Generated player fleet: {}", fleet.name);
+        }
+    }
+}
+
+fn create_faction_fleets(factions: &[(&str, &str)]) {
+    if !GAME_GENERATED.load(Ordering::Relaxed) {
+        for (name, desc) in factions {
+            let faction = Faction::new(name.to_string(), desc.to_string());
+            if let Ok(_) = save_faction(&faction) {
+                println!("Created faction: {}", faction.name);
+                
+                // Generate 2-3 fleets for each faction in different positions
+                let fleet_count = rand::random::<usize>() % 2 + 2; // Random number between 2-3
+                for _ in 0..fleet_count {
+                    if let Ok(fleet) = generate_and_save_fleet(
+                        faction.name.clone(),
+                        random_position(MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH),
+                        rand::random::<usize>() % 5 + 1, // Random number of ships (1-5)
+                    ) {
+                        println!("Generated fleet for faction {}: {}", faction.name, fleet.name);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// The main entry point for the Rocket application.
@@ -75,99 +120,27 @@ pub(crate) fn get_global_game_world() -> Vec<StarSystem> {
 /// the routes.
 #[rocket::main]
 async fn main() {
-
+    let game_generated = false;
     /***On game launch create the game. ***/
     let gameworld = get_global_game_world();
     let player = get_player(HOST_PLAYER_NAME);
 
+    // Generate some factions
+    let factions = vec![
+        ("The Galactic Empire", "A powerful military dictatorship"),
+        ("The Rebel Alliance", "Freedom fighters against tyranny"),
+        ("The Trade Federation", "Wealthy merchants and traders"),
+    ];
 
-
-        /*
-        //TRADING
-        let player_name = String::from("Igor");
-        let mut player: Player = Player::new(&player_name);
-        println!("{:?}", player);
-        let trader_personality = rand::random::<TraderPersonality>();
-        let mut trader1 = Trader::new(trader_personality);
-
-        let trader_personality = rand::random::<TraderPersonality>();
-        let mut trader2 = Trader::new(trader_personality);
-        let quote = trader1.get_opening_line(&galactic_map[0].planets[0]);
-        println!("{}", quote);
-
-        println!("{:?}", player.resources[0]);
-        println!("{}", player.credits);
-        let result = trader1.buy_resource(models::resource::ResourceType::Water, 10, &mut player);
-        println!("{:?}", result);
-
-        println!("{:?}", player.resources[0]);
-        println!("{}", player.credits);
-        let result = trader2.buy_resource(models::resource::ResourceType::Water, 10, &mut player);
-
-        println!("{:?}", player.resources[0]);
-        println!("{}", player.credits);
-        println!("{:?}", result);
-        let result = trader1.sell_resource(models::resource::ResourceType::Water, 10, &mut player);
-        println!("{:?}", result);
-
-        // SHIP/FLEET GENERATION AND AUTO RESOLVE BATTLE TEST
-
-        let player_name = String::from("Igor");
-
-        let ship_count_player = 5;
-        let ship_count_computer = 5;
-
-        let mut fleet1 = Vec::new();
-        let mut fleet2 = Vec::new();
-
-        for _ in 0..ship_count_player {
-            let mut ship = rand::random::<Ship>();
-            ship.owner = player_name.to_string();
-            fleet1.push(ship);
-        }
-
-        for _ in 0..ship_count_computer {
-            let ship = rand::random::<Ship>();
-            //println!("{:#?}",ship);
-            fleet2.push(ship);
-        }
-
-        let result = auto_resolve_ship_combat(&mut fleet1, &mut fleet2);
-
-        match result {
-            CombatResult::AttackersVictory(remaining_ships) => {
-                println!("Attackers won with the following ships remaining:");
-                for ship in remaining_ships {
-                    println!("- {}", ship.name);
-                }
-            }
-            CombatResult::DefendersVictory(remaining_ships) => {
-                println!("Defenders won with the following ships remaining:");
-                for ship in remaining_ships {
-                    println!("- {}", ship.name);
-                }
-            }
-            CombatResult::TotalDestruction() => {
-                println!("All ships were destroyed in the battle");
-            }
-            CombatResult::TimedOut(attacking_ships, defending_ships) => {
-                println!("Auto Combat took too long");
-                println!("Attacker's surviving ships");
-                for ship in attacking_ships {
-                    println!("- {}", ship.name);
-                }
-                println!("Defender's surviving ships");
-                for ship in defending_ships {
-                    println!("- {}", ship.name);
-                }
-            }
-        }
-    */
+    if !game_generated {
+        create_player_fleet();
+        create_faction_fleets(&factions);
+    }
     println!("Current working directory: {:?}", env::current_dir().unwrap());
     let template_dir = Path::new("src").join("templates");
     println!("Template directory: {:?}", template_dir);
     rocket::build()
-        .mount("/", routes![index, get_player, get_galaxy_map, get_star_system, get_fleet])
+        .mount("/", routes![index, get_player, get_galaxy_map, get_star_system, get_fleet, get_owner_fleets])
         .attach(Template::fairing())
         .register("/", catchers![internal_error])
         .launch()

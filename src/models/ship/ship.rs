@@ -19,7 +19,7 @@ use super::weapon::Weapon;
 pub struct Ship {
     pub name: String,
     pub owner: String,
-    position: Position,
+    pub position: Position,
     status: ShipStatus,
     pub hp: i32,
     pub combat_state: CombatState,

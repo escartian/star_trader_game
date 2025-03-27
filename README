@@ -8,10 +8,13 @@ To run, there are two parts the backend and the frontend
 
 For the backend simply install rust compiler (not the game),
 
+
+In the terminal go to the upper level directory and build the code and then run the code
+
 If you want to build the backend you can run
 ### `cargo build`
 
-in the terminal go to the upper level directory and run
+And if you want to run the code you can run it with the following command
 ###`cargo run` 
 
 If you want to run the unit tests run

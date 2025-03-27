@@ -1,35 +1,43 @@
-Currently implemented mvp features:
-- create world_map
-- world and player data remain consistent between launches (data is stored)
-- position
-- star
-- star_system
-- galaxy
-
 Currently working on feautres: 
 Implementing 
-- trade Buying and selling
 - traders + personality
-- basic resources
-- player
-
-
+- player data
+Fleet Management System
+-Implement fleet viewing and management in the React frontend
+-Add fleet movement between star systems
+-Show fleet cargo and ship details
+===========================================================================
 Future feature list ordered by current priority (this may change of course):
-- create an expanded resources model
+
+Combat System
+-Implement the combat system that's already defined in the backend
+-Add fleet combat UI
+-Show combat results and ship damage
+Faction System
+-Add faction relationships and reputation, possibly also implement for planets and starsystems
+-Show faction territories and influence
+-Implement faction-specific missions or trading opportunities
+Ship Management
+-Add ship customization and upgrades
+-Implement ship repair and maintenance
+-Show detailed ship statistics and capabilities
+
+
+- rename host/main player
 - create a structure to hold player data (credits, ship ownership, fleet etc) and begin to use this structure
-- create basic trade system
+
 - add movement functionality
 - actually make combat
-- save functionality
-- reputation system 
-- - with planets
-- - with star systems?
-- implement factions
-- - reputation system with factions
-- quests (bounty (dead/alive/dead_or_alive), anomaly investigation, Transport goods)
 
-General TODO - not sure when this will be started
-- make some UI based on existing functionalities.
+- ability to save/load multiple saves
+- create an expanded resources model
+
+Mission System
+- Add trading missions (Transport goods)
+- Implement combat missions
+- Add exploration missions (eg: anomaly investigation)
+- Bountyhunter missions
+- Pirating goods/people missions
 
 Potential Features list (ordered by most likely to least likely to be added to the game):
 - create modified "random" in starting star system to make game start easier and less random (ie, make sure player can at least travel to another planet at the start of the game)
@@ -46,7 +54,20 @@ Highly unlikely features
 - - galactical orbits/movements
 
 
+Currently implemented mvp features:
+- create world_map
+- world and player data remain consistent between launches (data is stored)
+- position
+- star
+- star_system
+- galaxy
+- basic resources
+- trade Buying and selling with planets
+- game state changes are always saved
+
 Feature complete elements: (the item on this list are largely feauture complete and will undergo fewer changes than other strucutres)
 - ship model
 - planet model
+- star model
+- galaxy model
 - position structure

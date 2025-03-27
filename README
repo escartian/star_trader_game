@@ -1,12 +1,33 @@
-The following is a game made in Rust with future plans to have a UI built in react.js allowing the game to be played in a web browser.
-The idea is to make the UI look like an email client but actually be a largely text based game.
+The following is a work in progress game made in Rust with a UI built in react.js allowing the game to be played in a web browser.
+The idea is to make the UI look like an "email" client but actually be a largely text based game.
 
-To run, simply install rust,
+To run, there are two parts the backend and the frontend
+
+For the backend simply install rust compiler (not the game),
+
+If you want to build the backend you can run
+### `cargo build`
+
 in the terminal go to the upper level directory and run
-cargo run 
-
-If you want to build but not run you can run
-cargo build
+###`cargo run` 
 
 If you want to run the unit tests run
-cargo test
+###`cargo test`
+
+
+In the terminal go to frontend directory ( STAR_TRADER_GAME\frontend\ ), there you can run:
+### `npm start`
+
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+
+The page will reload if you make edits.\
+You will also see any lint errors in the console.
+
+### `npm run build`
+
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
+
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!

@@ -40,10 +40,6 @@ export const FleetList: React.FC = () => {
         }
     };
 
-    const handleOwnerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setOwnerId(e.target.value);
-    };
-
     if (loading) return <div className="fleet-loading">Loading fleets...</div>;
     if (error) return <div className="fleet-error">{error}</div>;
 
@@ -51,15 +47,19 @@ export const FleetList: React.FC = () => {
         <div className="fleet-container">
             <div className="fleet-header">
                 <h2>Fleet Management</h2>
-                <div className="owner-input">
-                    <label htmlFor="ownerId">Owner/Faction:</label>
-                    <input
-                        type="text"
-                        id="ownerId"
+            </div>
+            <div className="search-controls">
+                <div className="fleet-controls">
+                    <select
+                        className="faction-select"
                         value={ownerId}
-                        onChange={handleOwnerChange}
-                        placeholder="Enter owner or faction name"
-                    />
+                        onChange={(e) => setOwnerId(e.target.value)}
+                    >
+                        <option value="Igor">Igor</option>
+                        <option value="The Galactic Empire">Galactic Empire</option>
+                        <option value="The Rebel Alliance">Rebel Alliance</option>
+                        <option value="The Trade Federation">Trade Federation</option>
+                    </select>
                 </div>
             </div>
             <div className="fleet-grid">
@@ -84,15 +84,16 @@ export const FleetList: React.FC = () => {
             {selectedFleet && (
                 <div className="fleet-details-modal">
                     <div className="fleet-details-content">
-                        <h2>{selectedFleet.name}</h2>
-                        <div className="fleet-summary">
-                            <p>Position: ({selectedFleet.position.x}, {selectedFleet.position.y}, {selectedFleet.position.z})</p>
-                            <p>Current System: {selectedFleet.current_system_id || 'In Transit'}</p>
+                        <div className="fleet-details-header">
+                            <h2>{selectedFleet.name}</h2>
+                            <span className="fleet-summary">Ships: {selectedFleet.ships.length}</span>
+                            <button className="close-button" onClick={() => setSelectedFleet(null)}>×</button>
                         </div>
                         <div className="ships-grid">
                             {selectedFleet.ships.map((ship) => (
                                 <div key={ship.name} className="ship-card">
                                     <h3>{ship.name}</h3>
+                                    <div className="ship-type-badge">{ship.specialization}</div>
                                     <div className="ship-stats">
                                         <div className="stat-group">
                                             <h4>Basic Info</h4>
@@ -116,12 +117,22 @@ export const FleetList: React.FC = () => {
                                             <p>Regen: {ship.armor.regen}</p>
                                         </div>
                                         <div className="stat-group">
-                                            <h4>Weapons</h4>
-                                            <ul>
+                                            <h5>Weapons</h5>
+                                            <div className="weapons-grid">
                                                 {ship.weapons.map((weapon, i) => (
-                                                    <li key={i}>{weapon.name} (Damage: {weapon.damage})</li>
+                                                    <div key={i} className="weapon-card">
+                                                        <div className="weapon-header">
+                                                            <span className="weapon-name">{weapon.name}</span>
+                                                            <span className="weapon-damage">DMG: {weapon.damage}</span>
+                                                        </div>
+                                                        <div className="weapon-stats">
+                                                            <div className="damage-bar" 
+                                                                 style={{width: `${(weapon.damage/100)*100}%`}}>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 ))}
-                                            </ul>
+                                            </div>
                                         </div>
                                         <div className="stat-group">
                                             <h4>Cargo</h4>
@@ -137,15 +148,9 @@ export const FleetList: React.FC = () => {
                                 </div>
                             ))}
                         </div>
-                        <button 
-                            className="close-details-btn"
-                            onClick={() => setSelectedFleet(null)}
-                        >
-                            Close
-                        </button>
                     </div>
                 </div>
             )}
         </div>
     );
-}; 
+};

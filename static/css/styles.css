@@ -117,6 +117,12 @@ input[type="number"] {
     margin-top: 20px;
 }
 
+.fleet-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
 .fleet-table {
     width: 100%;
     border-collapse: collapse;

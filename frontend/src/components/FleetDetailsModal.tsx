@@ -52,11 +52,21 @@ export const FleetDetailsModal: React.FC<FleetDetailsModalProps> = ({ fleet, onC
                                         </div>
                                         <div className="stat-group">
                                             <h5>Weapons</h5>
-                                            <ul>
+                                            <div className="weapons-grid">
                                                 {ship.weapons.map((weapon, i) => (
-                                                    <li key={i}>{weapon.name} (Damage: {weapon.damage})</li>
+                                                    <div key={i} className="weapon-card">
+                                                        <div className="weapon-header">
+                                                            <span className="weapon-name">{weapon.name}</span>
+                                                            <span className="weapon-damage">DMG: {weapon.damage}</span>
+                                                        </div>
+                                                        <div className="weapon-stats">
+                                                            <div className="damage-bar" 
+                                                                 style={{width: `${(weapon.damage/100)*100}%`}}>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 ))}
-                                            </ul>
+                                            </div>
                                         </div>
                                         <div className="stat-group">
                                             <h5>Cargo</h5>
@@ -77,4 +87,4 @@ export const FleetDetailsModal: React.FC<FleetDetailsModalProps> = ({ fleet, onC
             </div>
         </div>
     );
-}; 
+};

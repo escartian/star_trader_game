@@ -51,21 +51,32 @@ export const FleetDetailsModal: React.FC<FleetDetailsModalProps> = ({ fleet, onC
                                             <p>Regen: {ship.armor.regen}</p>
                                         </div>
                                         <div className="stat-group">
-                                            <h5>Weapons</h5>
+                                            <h4>Weapons</h4>
                                             <div className="weapons-grid">
-                                                {ship.weapons.map((weapon, i) => (
-                                                    <div key={i} className="weapon-card">
-                                                        <div className="weapon-header">
-                                                            <span className="weapon-name">{weapon.name}</span>
-                                                            <span className="weapon-damage">DMG: {weapon.damage}</span>
-                                                        </div>
-                                                        <div className="weapon-stats">
-                                                            <div className="damage-bar" 
-                                                                 style={{width: `${(weapon.damage/100)*100}%`}}>
+                                                {ship.weapons.map((weapon, i) => {
+                                                    const weaponType = Object.keys(weapon)[0];
+                                                    const weaponName = weaponType
+                                                        .replace(/([A-Z])/g, ' $1')
+                                                        .trim();
+                                                    const weaponDamage = weapon[weaponType as keyof typeof weapon]?.damage || 0;
+                                                    return (
+                                                        <div key={i} className="weapon-card">
+                                                            <div className="weapon-header">
+                                                                <span className="weapon-name">
+                                                                    {weaponName}
+                                                                </span>
+                                                                <span className="weapon-damage">
+                                                                    DMG: {weaponDamage}
+                                                                </span>
+                                                            </div>
+                                                            <div className="weapon-stats">
+                                                                <div className="damage-bar" 
+                                                                     style={{width: `${(weaponDamage/100)*100}%`}}>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                         <div className="stat-group">

@@ -24,8 +24,11 @@ export interface Armor {
 }
 
 export interface Weapon {
-    name: string;
-    damage: number;
+    PhotonSingularityBeam?: { damage: number };
+    QuantumEntanglementTorpedo?: { damage: number };
+    NeutronBeam?: { damage: number };
+    GravitonPulse?: { damage: number };
+    MagneticResonanceDisruptor?: { damage: number };
 }
 
 export interface Ship {

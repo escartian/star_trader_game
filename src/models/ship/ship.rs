@@ -395,6 +395,10 @@ impl Distribution<Ship> for Standard {
         let shield_capacity = (hp as f32 * 1.5) as i32;
         let armor_capacity = (hp as f32 * 2.0) as i32;
 
+        // Generate weapons and cargo based on ship type
+        let weapons = generate_ship_weapons(&specialization);
+        let cargo = generate_ship_resources();
+
         Ship {
             name,
             owner: String::new(), // Will be set by fleet
@@ -405,8 +409,8 @@ impl Distribution<Ship> for Standard {
             specialization,
             size,
             engine,
-            weapons: vec![], // Will be populated by weapon generation
-            cargo: vec![],
+            weapons,
+            cargo,
             shields: Shield::new(shield_capacity),
             armor: Armor::new(armor_capacity),
         }

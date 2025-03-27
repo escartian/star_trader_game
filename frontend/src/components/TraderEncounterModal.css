@@ -1,0 +1,151 @@
+.trader-encounter {
+    max-width: 800px;
+}
+
+.encounter-info {
+    background-color: #222;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.encounter-info h3 {
+    color: #00ff00;
+    margin-top: 0;
+}
+
+.trader-cargo {
+    background-color: #222;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.trader-cargo h3 {
+    color: #00ff00;
+    margin-top: 0;
+}
+
+.cargo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.cargo-item {
+    background-color: #1a1a1a;
+    padding: 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.cargo-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 255, 0, 0.1);
+}
+
+.cargo-item.selected {
+    border-color: #00ff00;
+    background-color: #1a2a1a;
+}
+
+.cargo-item h4 {
+    margin: 0;
+    color: #fff;
+}
+
+.cargo-item .quantity {
+    margin: 0;
+    color: #00ff00;
+    font-size: 0.9em;
+}
+
+.trade-controls {
+    background-color: #222;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.trade-controls h3 {
+    color: #00ff00;
+    margin-top: 0;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.input-group label {
+    color: #fff;
+    min-width: 80px;
+}
+
+.input-group input {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    width: 100px;
+}
+
+.error-message {
+    color: #ff4444;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: rgba(255, 68, 68, 0.1);
+    border-radius: 4px;
+}
+
+.success-message {
+    color: #00ff00;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: rgba(0, 255, 0, 0.1);
+    border-radius: 4px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+}
+
+.trade-button, .attack-button, .ignore-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.trade-button {
+    background-color: #00ff00;
+    color: #000;
+}
+
+.attack-button {
+    background-color: #ff4444;
+    color: #fff;
+}
+
+.ignore-button {
+    background-color: #666;
+    color: #fff;
+}
+
+.trade-button:hover, .attack-button:hover, .ignore-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+} 

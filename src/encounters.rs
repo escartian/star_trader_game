@@ -5,6 +5,7 @@ use crate::models::ship::weapon::Weapon;
 use crate::models::ship::shield::Shield;
 use crate::models::position::Position;
 use rand::Rng;
+use crate::models::resource::{ResourceType, Resource};
 
 pub struct EncounterFleet {
     pub name: String,
@@ -82,6 +83,41 @@ fn generate_pirate_ship() -> Ship {
 
 fn generate_trader_ship() -> Ship {
     let mut rng = rand::thread_rng();
+    let mut cargo = Vec::new();
+    
+    // Generate 2-4 random resources for each trader ship
+    let resource_count = rng.gen_range(2..=4);
+    let resource_types = vec![
+        ResourceType::Water,
+        ResourceType::Food,
+        ResourceType::Fuel,
+        ResourceType::Minerals,
+        ResourceType::Metals,
+        ResourceType::Electronics,
+        ResourceType::LuxuryGoods,
+        ResourceType::Narcotics,
+    ];
+    
+    // Randomly select resources
+    let mut available_types = resource_types.clone();
+    for _ in 0..resource_count {
+        if available_types.is_empty() {
+            break;
+        }
+        let index = rng.gen_range(0..available_types.len());
+        let resource_type = available_types.remove(index);
+        
+        // Generate random quantity between 10 and 100
+        let quantity = rng.gen_range(10..=100);
+        
+        cargo.push(Resource {
+            resource_type,
+            quantity: Some(quantity),
+            buy: Some(rng.gen_range(10.0..=50.0)),
+            sell: Some(rng.gen_range(50.0..=100.0)),
+        });
+    }
+
     Ship {
         name: format!("Trader_Ship_{}", rng.gen_range(1000..9999)),
         owner: format!("Trader_{}", rng.gen_range(1000..9999)),
@@ -92,7 +128,7 @@ fn generate_trader_ship() -> Ship {
         status: ShipStatus::Stationary,
         hp: 80,
         combat_state: CombatState::Passive,
-        cargo: vec![],
+        cargo,
         shields: Shield::new(50),
         weapons: vec![
             Weapon::GravitonPulse { damage: 20 },

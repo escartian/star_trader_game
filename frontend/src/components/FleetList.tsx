@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { FleetModal } from './FleetModal';
 import { CombatModal } from './CombatModal';
 import { EncounterModal } from './EncounterModal';
+import { TraderEncounterModal } from './TraderEncounterModal';
 import './FleetList.css';
 
 export const FleetList: React.FC = () => {

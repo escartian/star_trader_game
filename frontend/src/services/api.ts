@@ -87,5 +87,11 @@ export const api = {
     checkForEncounter: async (ownerId: string, fleetNumber: number): Promise<Fleet[]> => {
         const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/encounter`);
         return handleResponse<Fleet[]>(response);
+    },
+
+    // Trade endpoints
+    tradeWithTrader: async (fleetId: string, fleetNumber: number, resourceType: string, quantity: number, tradeType: 'buy' | 'sell'): Promise<string> => {
+        const response = await fetch(`${API_BASE_URL}/fleet/${fleetId}/${fleetNumber}/trade/${resourceType}/${quantity}/${tradeType}`);
+        return handleResponse<string>(response);
     }
 };

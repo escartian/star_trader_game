@@ -53,46 +53,68 @@ pub fn create_game_world_file(game_id: &str, empty_world: bool) -> Vec<StarSyste
     let galactic_map;
     if empty_world {   
         galactic_map = generate_galaxy(STAR_COUNT);
-        let data_path = Path::new("data")
+        
+        // Create the star_systems directory
+        let systems_dir = Path::new("data")
             .join("game")
             .join(game_id)
-            .join("GameWorld.json");
-
-        // Create the necessary directories if they don't exist
-        if let Some(parent) = data_path.parent() {
+            .join("star_systems");
+        
+        if let Some(parent) = systems_dir.parent() {
             println!("{}", parent.display());
             fs::create_dir_all(parent).expect("Failed to create directories");
         }
-        
-        // Create the file and handle any errors
-        let file = match File::create(&data_path) {
-            Ok(file) => file,
-            Err(e) => panic!("Failed to create file: {}", e),
-        };
+        fs::create_dir_all(&systems_dir).expect("Failed to create star_systems directory");
 
-        println!("Game world file created at: {:?}", data_path);
-
-        // Write the galaxy map to the file
-        match to_writer(&file, &galactic_map) {
-            Ok(_) => println!("Successfully wrote galaxy map to file"),
-            Err(e) => panic!("Failed to write galaxy map to file: {}", e),
+        // Save each star system individually
+        for (index, system) in galactic_map.iter().enumerate() {
+            let system_path = systems_dir.join(format!("system_{}.json", index));
+            let file = File::create(system_path).expect("Failed to create system file");
+            to_writer(file, system).expect("Failed to write system data");
         }
-        return galactic_map;
-    } else {
-        println!("Game World Already Exists");
-        let data_path = Path::new("data")
+
+        // Save the full game world for save state
+        let world_path = Path::new("data")
             .join("game")
             .join(game_id)
             .join("GameWorld.json");
-        let file = File::open(data_path);
-        let mut contents = String::new();
-        file.expect("REASON").read_to_string(&mut contents);
-        galactic_map = serde_json::from_str(&contents).unwrap();
-
+        
+        let file = File::create(world_path).expect("Failed to create game world file");
+        to_writer(file, &galactic_map).expect("Failed to write game world data");
+        
+        println!("Game world files created successfully");
         return galactic_map;
+    } else {
+        println!("Loading existing game world");
+        let systems_dir = Path::new("data")
+            .join("game")
+            .join(game_id)
+            .join("star_systems");
+
+        if systems_dir.exists() {
+            // Load from individual system files
+            let mut systems = Vec::new();
+            for i in 0..STAR_COUNT {
+                let system_path = systems_dir.join(format!("system_{}.json", i));
+                if system_path.exists() {
+                    let mut contents = String::new();
+                    File::open(system_path).expect("Failed to open system file").read_to_string(&mut contents).expect("Failed to read system file");
+                    let system: StarSystem = serde_json::from_str(&contents).expect("Failed to parse system data");
+                    systems.push(system);
+                }
+            }
+            return systems;
+        } else {
+            // Fallback to loading from the full game world file
+            let world_path = Path::new("data")
+                .join("game")
+                .join(game_id)
+                .join("GameWorld.json");
+            let mut contents = String::new();
+            File::open(world_path).expect("Failed to open game world file").read_to_string(&mut contents).expect("Failed to read game world file");
+            return serde_json::from_str(&contents).expect("Failed to parse game world data");
+        }
     }
-    panic!("World failed to generate!");
-    return generate_galaxy(1);
 }
 
 impl PlayerState {
@@ -104,5 +126,36 @@ impl PlayerState {
             credits: 0,
         }
     }
+}
+
+/// Saves a single star system to its individual file
+pub fn save_star_system(game_id: &str, system_id: usize, system: &StarSystem) -> std::io::Result<()> {
+    let system_path = Path::new("data")
+        .join("game")
+        .join(game_id)
+        .join("star_systems")
+        .join(format!("system_{}.json", system_id));
+
+    let file = File::create(system_path)?;
+    to_writer(file, system)?;
+    Ok(())
+}
+
+/// Loads a single star system from its individual file
+pub fn load_star_system(game_id: &str, system_id: usize) -> std::io::Result<Option<StarSystem>> {
+    let system_path = Path::new("data")
+        .join("game")
+        .join(game_id)
+        .join("star_systems")
+        .join(format!("system_{}.json", system_id));
+
+    if !system_path.exists() {
+        return Ok(None);
+    }
+
+    let mut contents = String::new();
+    File::open(system_path)?.read_to_string(&mut contents)?;
+    let system: StarSystem = serde_json::from_str(&contents)?;
+    Ok(Some(system))
 }
 

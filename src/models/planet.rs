@@ -327,14 +327,21 @@ impl Planet {
                             }
                             return Ok(());
                         }
+                        return Err(format!(
+                            "Not enough {} available on {}. Requested: {}, Available: {}",
+                            resource_type, self.name, quantity, available_quantity
+                        ));
                     }
-                    return Err(format!("Planet does not have enough {} to sell", resource_type));
+                    return Err(format!("{} is currently out of stock on {}", resource_type, self.name));
                 }
-                return Err(format!("Player does not have enough credits to buy {}", resource_type));
+                return Err(format!(
+                    "Insufficient credits to buy {} {}. Required: {:.2}, Available: {:.2}",
+                    quantity, resource_type, cost, player.credits
+                ));
             }
-            return Err(format!("Planet does not buy {}", resource_type));
+            return Err(format!("{} does not buy {} at this time", self.name, resource_type));
         }
-        Err(format!("Planet does not trade {}", resource_type))
+        Err(format!("{} does not trade {} at all", self.name, resource_type))
     }
 
     pub fn sell_resource(&mut self, resource_type: ResourceType, quantity: u32, player: &mut Player) -> Result<(), String> {
@@ -366,14 +373,18 @@ impl Planet {
                             }
                             return Ok(());
                         }
+                        return Err(format!(
+                            "Not enough {} in your inventory. Requested: {}, Available: {}",
+                            resource_type, quantity, player_quantity
+                        ));
                     }
-                    return Err(format!("Player does not have enough {} to sell", resource_type));
+                    return Err(format!("You don't have any {} to sell", resource_type));
                 }
-                return Err(format!("Player does not have any {} to sell", resource_type));
+                return Err(format!("You don't have any {} in your inventory", resource_type));
             }
-            return Err(format!("Planet does not buy {}", resource_type));
+            return Err(format!("{} does not buy {} at this time", self.name, resource_type));
         }
-        Err(format!("Planet does not trade {}", resource_type))
+        Err(format!("{} does not trade {} at all", self.name, resource_type))
     }
 }
 

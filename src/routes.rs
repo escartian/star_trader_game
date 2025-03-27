@@ -36,18 +36,37 @@ pub fn index() -> Template {
 }
 
 #[get("/player/<name>")]
-pub fn get_player(name: &str) -> String {
+pub fn get_player(name: &str) -> Result<String, rocket::http::Status> {
     let data_path = Path::new("data")
         .join("game")
         .join(GAME_ID)
         .join("players")
         .join(format!("{}.json", name));
 
-    let file = File::open(data_path);
-    let mut contents = String::new();
-    file.expect("REASON").read_to_string(&mut contents);
-
-    contents
+    match File::open(data_path) {
+        Ok(mut file) => {
+            let mut contents = String::new();
+            match file.read_to_string(&mut contents) {
+                Ok(_) => Ok(contents),
+                Err(e) => {
+                    println!("Error reading player file: {}", e);
+                    Err(rocket::http::Status::InternalServerError)
+                }
+            }
+        }
+        Err(_) => {
+            // If the file doesn't exist, create a new player
+            println!("Player file not found, creating new player: {}", name);
+            let player = Player::create_player(GAME_ID, name);
+            match serde_json::to_string(&player) {
+                Ok(json) => Ok(json),
+                Err(e) => {
+                    println!("Error serializing new player: {}", e);
+                    Err(rocket::http::Status::InternalServerError)
+                }
+            }
+        }
+    }
 }
 
 // Returns a serialized JSON string representation of the galaxy map
@@ -59,9 +78,14 @@ pub fn get_galaxy_map() -> String {
 // Returns a star system with the given id from the galaxy map as a serialized JSON string
 #[get("/star_system/<id>")]
 pub fn get_star_system(id: usize) -> Option<String> {
-    get_global_game_world()
-        .get(id)
-        .map(|system| serde_json::to_string(system).unwrap())
+    match crate::models::game_world::load_star_system(GAME_ID, id) {
+        Ok(Some(system)) => Some(serde_json::to_string(&system).unwrap()),
+        Ok(None) => None,
+        Err(e) => {
+            println!("Error loading star system: {}", e);
+            None
+        }
+    }
 }
 
 #[get("/fleets/<owner_id>")]
@@ -110,10 +134,9 @@ pub fn get_planet_market(system_id: usize, planet_id: usize) -> Option<Json<Vec<
 
 #[get("/planet/<system_id>/<planet_id>/buy/<resource_type>/<quantity>")]
 pub fn buy_from_planet(system_id: usize, planet_id: usize, resource_type: ResourceType, quantity: u32) -> Json<String> {
-    let mut game_world = get_global_game_world();
-    let mut player = serde_json::from_str(&get_player(HOST_PLAYER_NAME)).unwrap();
+    let mut player = serde_json::from_str(&get_player(HOST_PLAYER_NAME).unwrap()).unwrap();
 
-    if let Some(system) = game_world.get_mut(system_id) {
+    if let Ok(Some(mut system)) = crate::models::game_world::load_star_system(GAME_ID, system_id) {
         if let Some(planet) = system.planets.get_mut(planet_id) {
             match planet.buy_resource(resource_type, quantity, &mut player) {
                 Ok(_) => {
@@ -127,18 +150,17 @@ pub fn buy_from_planet(system_id: usize, planet_id: usize, resource_type: Resour
                     let player_file = File::create(player_path).unwrap();
                     serde_json::to_writer(player_file, &player).unwrap();
 
-                    // Save the updated game world
-                    let world_path = Path::new("data")
-                        .join("game")
-                        .join(GAME_ID)
-                        .join("GameWorld.json");
-                    
-                    let world_file = File::create(world_path).unwrap();
-                    serde_json::to_writer(world_file, &game_world).unwrap();
+                    // Save the updated star system
+                    if let Err(e) = crate::models::game_world::save_star_system(GAME_ID, system_id, &system) {
+                        println!("Error saving star system: {}", e);
+                        return Json("Error saving star system".to_string());
+                    }
                     
                     // Update the global game world state
                     if let Ok(mut guard) = GLOBAL_GAME_WORLD.lock() {
-                        *guard = game_world;
+                        if let Some(existing_system) = guard.get_mut(system_id) {
+                            *existing_system = system;
+                        }
                     }
                     
                     Json("Successfully bought resource".to_string())
@@ -155,10 +177,9 @@ pub fn buy_from_planet(system_id: usize, planet_id: usize, resource_type: Resour
 
 #[get("/planet/<system_id>/<planet_id>/sell/<resource_type>/<quantity>")]
 pub fn sell_to_planet(system_id: usize, planet_id: usize, resource_type: ResourceType, quantity: u32) -> Json<String> {
-    let mut game_world = get_global_game_world();
-    let mut player = serde_json::from_str(&get_player(HOST_PLAYER_NAME)).unwrap();
+    let mut player = serde_json::from_str(&get_player(HOST_PLAYER_NAME).unwrap()).unwrap();
 
-    if let Some(system) = game_world.get_mut(system_id) {
+    if let Ok(Some(mut system)) = crate::models::game_world::load_star_system(GAME_ID, system_id) {
         if let Some(planet) = system.planets.get_mut(planet_id) {
             match planet.sell_resource(resource_type, quantity, &mut player) {
                 Ok(_) => {
@@ -172,18 +193,17 @@ pub fn sell_to_planet(system_id: usize, planet_id: usize, resource_type: Resourc
                     let player_file = File::create(player_path).unwrap();
                     serde_json::to_writer(player_file, &player).unwrap();
 
-                    // Save the updated game world
-                    let world_path = Path::new("data")
-                        .join("game")
-                        .join(GAME_ID)
-                        .join("GameWorld.json");
-                    
-                    let world_file = File::create(world_path).unwrap();
-                    serde_json::to_writer(world_file, &game_world).unwrap();
+                    // Save the updated star system
+                    if let Err(e) = crate::models::game_world::save_star_system(GAME_ID, system_id, &system) {
+                        println!("Error saving star system: {}", e);
+                        return Json("Error saving star system".to_string());
+                    }
                     
                     // Update the global game world state
                     if let Ok(mut guard) = GLOBAL_GAME_WORLD.lock() {
-                        *guard = game_world;
+                        if let Some(existing_system) = guard.get_mut(system_id) {
+                            *existing_system = system;
+                        }
                     }
                     
                     Json("Successfully sold resource".to_string())

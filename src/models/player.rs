@@ -110,23 +110,6 @@ impl Player {
     * Returns the newly created Player object.
     **/
     pub fn create_player(game_id: &str, player_name: &str) -> Player {
-        let data_path = Path::new("data")
-        .join("game")
-        .join(game_id)
-        .join("players")
-        .join(player_name)
-        .with_extension("json");
-        if std::fs::metadata(&data_path).is_ok() {
-            let mut file = File::open(data_path);
-            let mut contents = String::new();
-            file.expect("REASON").read_to_string(&mut contents);
-
-            let player = serde_json::from_str(&contents).expect("Failed to parse player data");
-            return player;
-        }
-
-        let mut player = Player::new(player_name);
-
         // Create the path to the player file
         let data_path = Path::new("data")
             .join("game")
@@ -139,6 +122,9 @@ impl Player {
         if let Some(parent) = data_path.parent() {
             std::fs::create_dir_all(parent).expect("Failed to create directories");
         }
+
+        // Create a new player
+        let mut player = Player::new(player_name);
 
         // Create the file and handle any errors
         let file = match std::fs::File::create(&data_path) {

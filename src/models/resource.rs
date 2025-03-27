@@ -140,10 +140,12 @@ impl<'a> FromParam<'a> for ResourceType {
         match param {
             "Food" => Ok(ResourceType::Food),
             "Water" => Ok(ResourceType::Water),
+            "Fuel" => Ok(ResourceType::Fuel),
             "Minerals" => Ok(ResourceType::Minerals),
             "Metals" => Ok(ResourceType::Metals),
             "Electronics" => Ok(ResourceType::Electronics),
             "LuxuryGoods" => Ok(ResourceType::LuxuryGoods),
+            "Narcotics" => Ok(ResourceType::Narcotics),
             _ => Err(param),
         }
     }

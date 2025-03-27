@@ -43,7 +43,8 @@ use crate::models::position::Position;
 use crate::models::position::random_position;
 use crate::constants::{MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH, GAME_GENERATED};
 
-
+use rocket_cors::{AllowedOrigins, CorsOptions, AllowedHeaders};
+use rocket::fs::FileServer;
 
 lazy_static! {
     static ref GLOBAL_GAME_WORLD: Mutex<Vec<StarSystem>> = {
@@ -137,15 +138,22 @@ async fn main() {
         .join("players")
         .join(format!("{}.json", HOST_PLAYER_NAME));
     
+    // Create players directory if it doesn't exist
+    if let Some(parent) = player_path.parent() {
+        fs::create_dir_all(parent).expect("Failed to create players directory");
+    }
+    
     if !player_path.exists() {
         println!("Creating new player: {}", HOST_PLAYER_NAME);
         let player = Player::create_player(GAME_ID, HOST_PLAYER_NAME);
         println!("Player created with {} credits", player.credits);
+        
+        // Save the player file
+        let file = File::create(&player_path).expect("Failed to create player file");
+        serde_json::to_writer(file, &player).expect("Failed to write player data");
     } else {
         println!("Loading existing player: {}", HOST_PLAYER_NAME);
     }
-    
-    let player = get_player(HOST_PLAYER_NAME);
 
     // Generate some factions
     let factions = vec![
@@ -164,12 +172,25 @@ async fn main() {
         println!("Game already generated, skipping fleet generation");
     }
 
+    // Configure CORS
+    let cors = CorsOptions::default()
+        .allowed_origins(AllowedOrigins::all())
+        .allowed_methods(
+            vec!["Get", "Post", "Put", "Delete", "Options"]
+                .into_iter()
+                .map(|s| s.parse().unwrap())
+                .collect(),
+        )
+        .allowed_headers(AllowedHeaders::all())
+        .allow_credentials(true)
+        .to_cors()
+        .expect("Failed to create CORS fairing");
+
     println!("Current working directory: {:?}", env::current_dir().unwrap());
-    let template_dir = Path::new("src").join("templates");
-    println!("Template directory: {:?}", template_dir);
+    
     rocket::build()
-        .mount("/", routes![
-            index, 
+        .mount("/", FileServer::from("frontend/build"))
+        .mount("/api", routes![
             get_player, 
             get_galaxy_map, 
             get_star_system, 
@@ -179,7 +200,7 @@ async fn main() {
             buy_from_planet,
             sell_to_planet
         ])
-        .attach(Template::fairing())
+        .attach(cors)
         .register("/", catchers![internal_error])
         .launch()
         .await

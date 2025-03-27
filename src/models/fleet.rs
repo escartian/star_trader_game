@@ -91,7 +91,7 @@ pub fn list_owner_fleets(owner_id: &str) -> std::io::Result<Vec<Fleet>> {
     }
 
     let mut fleets = Vec::new();
-    let prefix = format!("Fleet_{}", owner_id);
+    let prefix = format!("Fleet_{}_", owner_id);
     
     for entry in fs::read_dir(fleets_dir)? {
         if let Ok(entry) = entry {
@@ -104,6 +104,7 @@ pub fn list_owner_fleets(owner_id: &str) -> std::io::Result<Vec<Fleet>> {
             }
         }
     }
+    println!("Fleets for owner {}: {:?}", owner_id, fleets);
     Ok(fleets)
 }
 

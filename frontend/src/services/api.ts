@@ -41,13 +41,13 @@ export const api = {
 
     // Fleet endpoints
     getFleets: async (ownerId: string): Promise<Fleet[]> => {
-        const response = await fetch(`${API_BASE_URL}/fleets/${ownerId}`);
+        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}`);
         return handleResponse<Fleet[]>(response);
     },
 
-    getFleet: async (ownerId: string, fleetNumber: number): Promise<Fleet> => {
+    getFleet: async (ownerId: string, fleetNumber: number): Promise<Fleet | null> => {
         const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}`);
-        return handleResponse<Fleet>(response);
+        return handleResponse<Fleet | null>(response);
     },
 
     // Market endpoints

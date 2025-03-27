@@ -88,7 +88,7 @@ pub fn get_star_system(id: usize) -> Option<String> {
     }
 }
 
-#[get("/fleets/<owner_id>")]
+#[get("/fleet/<owner_id>")]
 pub fn get_owner_fleets(owner_id: String) -> Json<Vec<Fleet>> {
     println!("Getting fleets for owner: {}", owner_id);
 

@@ -20,19 +20,20 @@ pub struct Ship {
     pub name: String,
     pub owner: String,
     pub position: Position,
-    status: ShipStatus,
+    pub status: ShipStatus,
     pub hp: i32,
     pub combat_state: CombatState,
-    specialization: ShipType,
-    size: ShipSize,
-    engine: ShipEngine,
+    pub specialization: ShipType,
+    pub size: ShipSize,
+    pub engine: ShipEngine,
     pub weapons: Vec<Weapon>,
     pub cargo: Vec<Resource>,
     pub shields: Shield,
     pub armor: Armor,
 }
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
-enum ShipStatus {
+pub enum ShipStatus {
     OnPlanetRough,
     Docked,
     Launching,
@@ -53,7 +54,7 @@ pub enum CombatState {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-enum ShipType {
+pub enum ShipType {
     Fighter,
     Battleship,
     Freighter,
@@ -63,7 +64,7 @@ enum ShipType {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-enum ShipSize {
+pub enum ShipSize {
     Tiny,
     Small,
     Medium,
@@ -73,7 +74,7 @@ enum ShipSize {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-enum ShipEngine {
+pub enum ShipEngine {
     Basic,
     Advanced,
     Experimental,
@@ -341,35 +342,73 @@ fn generate_owner_name() -> String {
 
 impl Distribution<Ship> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Ship {
-        let name = generate_ship_name();
-        let owner = generate_owner_name();
-        let specialization = rand::random();
-        let size = rand::random();
-        let engine = rand::random();
-        let weapons = generate_ship_weapons(&specialization);
-        let shields = Shield::new(rng.gen_range(1..101));
-        let armor = Armor::new(rng.gen_range(1..101));
-        let cargo = generate_ship_resources();
-        let hit_points = rng.gen_range(1..101);
+        let name = format!("{} {}-{}", 
+            ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa", "Lambda", "Mu", "Nu", "Xi", "Omicron", "Pi", "Rho", "Sigma", "Tau", "Upsilon", "Phi", "Chi", "Psi", "Omega"][rng.gen_range(0..24)],
+            rng.gen_range(100..1000),
+            ["squad", "team", "division", "category", "configuration", "mark", "variant", "class", "type", "model"][rng.gen_range(0..10)]
+        );
 
-        let x = rng.gen_range(1..=MAP_WIDTH as i32);
-        let y = rng.gen_range(1..=MAP_HEIGHT as i32);
-        let z = rng.gen_range(1..=MAP_LENGTH as i32);
-        let position = Position { x: x, y: y, z: z };
+        let specialization = match rng.gen_range(0..6) {
+            0 => ShipType::Fighter,
+            1 => ShipType::Battleship,
+            2 => ShipType::Freighter,
+            3 => ShipType::Explorer,
+            4 => ShipType::Shuttle,
+            _ => ShipType::Capital,
+        };
+
+        let size = match rng.gen_range(0..6) {
+            0 => ShipSize::Tiny,
+            1 => ShipSize::Small,
+            2 => ShipSize::Medium,
+            3 => ShipSize::Large,
+            4 => ShipSize::Huge,
+            _ => ShipSize::Planetary,
+        };
+
+        let engine = match rng.gen_range(0..3) {
+            0 => ShipEngine::Basic,
+            1 => ShipEngine::Advanced,
+            _ => ShipEngine::Experimental,
+        };
+
+        // Calculate base stats based on ship type and size
+        let base_hp = match specialization {
+            ShipType::Fighter => 50,
+            ShipType::Battleship => 200,
+            ShipType::Freighter => 100,
+            ShipType::Explorer => 150,
+            ShipType::Shuttle => 30,
+            ShipType::Capital => 300,
+        };
+
+        let size_multiplier = match size {
+            ShipSize::Tiny => 0.5,
+            ShipSize::Small => 0.75,
+            ShipSize::Medium => 1.0,
+            ShipSize::Large => 1.5,
+            ShipSize::Huge => 2.0,
+            ShipSize::Planetary => 3.0,
+        };
+
+        let hp = (base_hp as f32 * size_multiplier) as i32;
+        let shield_capacity = (hp as f32 * 1.5) as i32;
+        let armor_capacity = (hp as f32 * 2.0) as i32;
+
         Ship {
             name,
-            owner,
-            position,
+            owner: String::new(), // Will be set by fleet
+            position: Position { x: 0, y: 0, z: 0 }, // Will be set by fleet
+            status: ShipStatus::Stationary,
+            hp,
             combat_state: CombatState::NotInCombat,
             specialization,
             size,
             engine,
-            weapons,
-            shields,
-            armor,
-            hp: hit_points,
-            status: ShipStatus::Stationary,
-            cargo: cargo,
+            weapons: vec![], // Will be populated by weapon generation
+            cargo: vec![],
+            shields: Shield::new(shield_capacity),
+            armor: Armor::new(armor_capacity),
         }
     }
 }

@@ -23,12 +23,15 @@ pub fn auto_resolve_ship_combat(
             let mut target = &mut defenders[target_index];
 
             let total_damage = attacker.weapons.iter().map(|w| w.damage()).sum::<i32>();
-            let shield_damage = target
-                .shields
-                .calculate_damage(total_damage, target.shields.strength);
-            let damage = target.armor.calculate_damage(shield_damage);
+            let shield_damage = target.shields.calculate_damage(total_damage);
+            let armor_damage = target.armor.calculate_damage(shield_damage);
+            let final_damage = if target.shields.current > 0 {
+                target.shields.current
+            } else {
+                target.armor.current
+            };
 
-            target.hp -= damage;
+            target.hp -= final_damage;
 
             println!(
                 "Attacker: {} attacks {} and deals {} damage. Target's HP: {} Shield: {} Armor: {}",
@@ -36,8 +39,8 @@ pub fn auto_resolve_ship_combat(
                 target.name,
                 total_damage,
                 target.hp,
-                target.shields.strength,
-                target.armor.durability
+                target.shields.current,
+                target.armor.current
             );
         }
 
@@ -61,12 +64,15 @@ pub fn auto_resolve_ship_combat(
             let mut target = &mut attackers[target_index];
 
             let total_damage = defender.weapons.iter().map(|w| w.damage()).sum::<i32>();
-            let shield_damage = target
-                .shields
-                .calculate_damage(total_damage, target.shields.strength);
-            let damage = target.armor.calculate_damage(shield_damage);
+            let shield_damage = target.shields.calculate_damage(total_damage);
+            let armor_damage = target.armor.calculate_damage(shield_damage);
+            let final_damage = if target.shields.current > 0 {
+                target.shields.current
+            } else {
+                target.armor.current
+            };
 
-            target.hp -= damage;
+            target.hp -= final_damage;
 
             println!(
                 "Defender {} fires at {} and deals {} damage. Target's HP: {} Shield: {} Armor: {}",
@@ -74,8 +80,8 @@ pub fn auto_resolve_ship_combat(
                 target.name,
                 total_damage,
                 target.hp,
-                target.shields.strength,
-                target.armor.durability
+                target.shields.current,
+                target.armor.current
             );
         }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GalaxyMap } from './components/GalaxyMap';
 import { Player } from './types/game';
 import { api } from './services/api';
+import { FleetList } from './components/FleetList';
 import './App.css';
 
 function App() {
@@ -64,7 +65,14 @@ function App() {
       </header>
 
       <main className="app-main">
-        <GalaxyMap />
+        <div className="content-grid">
+          <div className="galaxy-section">
+            <GalaxyMap />
+          </div>
+          <div className="fleet-section">
+            <FleetList />
+          </div>
+        </div>
       </main>
     </div>
   );

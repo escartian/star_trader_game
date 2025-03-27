@@ -117,3 +117,24 @@
   transform: scale(1.05);
   box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
 }
+.content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    padding: 20px;
+    height: calc(100vh - 60px);
+}
+
+.galaxy-section {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 20px;
+    overflow: auto;
+}
+
+.fleet-section {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 20px;
+    overflow: auto;
+}

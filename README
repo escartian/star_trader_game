@@ -1,3 +1,6 @@
+# Startrader Game as webapp
+## In Rust and React
+
 The following is a work in progress game made in Rust with a UI built in react.js allowing the game to be played in a web browser.
 The idea is to make the UI look like an "email" client but actually be a largely text based game.
 

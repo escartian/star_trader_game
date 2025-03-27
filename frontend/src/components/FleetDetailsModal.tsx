@@ -45,7 +45,7 @@ export const FleetDetailsModal: React.FC<FleetDetailsModalProps> = ({ fleet, onC
                 <div className="fleet-details-content">
                     <div className="fleet-info">
                         <h3>Fleet Information</h3>
-                        <p><strong>Owner:</strong> {fleet.owner}</p>
+                        <p><strong>Owner:</strong> {fleet.owner_id}</p>
                         <p><strong>Position:</strong> ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})</p>
                         <p><strong>Total Ships:</strong> {fleet.ships.length}</p>
                     </div>

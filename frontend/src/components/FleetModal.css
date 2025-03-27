@@ -126,3 +126,85 @@
 .fleet-modal::-webkit-scrollbar-thumb:hover {
     background: #444;
 }
+
+.movement-controls {
+    background-color: #222;
+    padding: 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.movement-controls h3 {
+    color: #00ff00;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.movement-inputs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    color: #00ff00;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.input-group input {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 8px;
+    color: #fff;
+    font-size: 1em;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #00ff00;
+}
+
+.move-button {
+    background-color: #00ff00;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.move-button:hover:not(:disabled) {
+    background-color: #00cc00;
+}
+
+.move-button:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+}
+
+.move-message {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.move-message.success {
+    background-color: rgba(0, 255, 0, 0.1);
+    color: #00ff00;
+}
+
+.move-message.error {
+    background-color: rgba(255, 0, 0, 0.1);
+    color: #ff4444;
+}

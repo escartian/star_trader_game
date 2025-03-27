@@ -198,7 +198,9 @@ async fn main() {
             get_owner_fleets,
             get_planet_market,
             buy_from_planet,
-            sell_to_planet
+            sell_to_planet,
+            move_fleet,
+            get_fleet_owners
         ])
         .attach(cors)
         .register("/", catchers![internal_error])

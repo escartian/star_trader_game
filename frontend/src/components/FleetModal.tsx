@@ -1,5 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Fleet, Ship } from '../types/game';
+import { api } from '../services/api';
+import { MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH } from '../constants';
 import './FleetModal.css';
 
 interface FleetModalProps {
@@ -9,6 +11,11 @@ interface FleetModalProps {
 
 export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose }) => {
     const modalRef = useRef<HTMLDivElement>(null);
+    const [moveX, setMoveX] = useState(fleet.position.x);
+    const [moveY, setMoveY] = useState(fleet.position.y);
+    const [moveZ, setMoveZ] = useState(fleet.position.z);
+    const [moveMessage, setMoveMessage] = useState<string | null>(null);
+    const [isMoving, setIsMoving] = useState(false);
 
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
@@ -32,6 +39,41 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose }) => {
         };
     }, [onClose]);
 
+    const handleMove = async () => {
+        setIsMoving(true);
+        setMoveMessage(null);
+
+        // Validate position is within game world bounds (-MAP_SIZE to MAP_SIZE-1)
+        if (moveX < -MAP_WIDTH || moveX >= MAP_WIDTH || 
+            moveY < -MAP_HEIGHT || moveY >= MAP_HEIGHT || 
+            moveZ < -MAP_LENGTH || moveZ >= MAP_LENGTH) {
+            setMoveMessage('Error: Position is outside game world bounds');
+            setIsMoving(false);
+            return;
+        }
+
+        try {
+            // Extract fleet number from name (Fleet_owner_number)
+            const fleetNumber = parseInt(fleet.name.split('_').pop() || '0');
+            if (!fleet.owner_id) {
+                setMoveMessage('Error: Fleet owner is undefined');
+                setIsMoving(false);
+                return;
+            }
+            const result = await api.moveFleet(fleet.owner_id, fleetNumber, moveX, moveY, moveZ);
+            setMoveMessage(result);
+            // Refresh the fleet data
+            const updatedFleet = await api.getFleet(fleet.owner_id, fleetNumber);
+            if (updatedFleet) {
+                Object.assign(fleet, updatedFleet);
+            }
+        } catch (error) {
+            setMoveMessage('Error moving fleet');
+        } finally {
+            setIsMoving(false);
+        }
+    };
+
     return (
         <div className="modal-overlay">
             <div className="fleet-modal" ref={modalRef}>
@@ -44,6 +86,47 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose }) => {
                         <p>Position: ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})</p>
                         <p>Owner: {fleet.owner_id}</p>
                         <p>Total Ships: {fleet.ships.length}</p>
+                    </div>
+                    <div className="movement-controls">
+                        <h3>Move Fleet</h3>
+                        <div className="movement-inputs">
+                            <div className="input-group">
+                                <label>X:</label>
+                                <input 
+                                    type="number" 
+                                    value={moveX} 
+                                    onChange={(e) => setMoveX(parseInt(e.target.value) || 0)}
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label>Y:</label>
+                                <input 
+                                    type="number" 
+                                    value={moveY} 
+                                    onChange={(e) => setMoveY(parseInt(e.target.value) || 0)}
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label>Z:</label>
+                                <input 
+                                    type="number" 
+                                    value={moveZ} 
+                                    onChange={(e) => setMoveZ(parseInt(e.target.value) || 0)}
+                                />
+                            </div>
+                        </div>
+                        <button 
+                            className="move-button" 
+                            onClick={handleMove}
+                            disabled={isMoving}
+                        >
+                            {isMoving ? 'Moving...' : 'Move Fleet'}
+                        </button>
+                        {moveMessage && (
+                            <p className={`move-message ${moveMessage.includes('Error') ? 'error' : 'success'}`}>
+                                {moveMessage}
+                            </p>
+                        )}
                     </div>
                     <div className="ships-grid">
                         {fleet.ships.map((ship, index) => (

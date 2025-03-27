@@ -20,6 +20,8 @@ use serde_json;
 use std::sync::Mutex;
 use std::sync::LockResult;
 use std::sync::MutexGuard;
+use crate::models::position::Position;
+use std::fs;
 
 
 #[catch(500)]
@@ -216,4 +218,62 @@ pub fn sell_to_planet(system_id: usize, planet_id: usize, resource_type: Resourc
     } else {
         Json("Star system not found".to_string())
     }
+}
+
+#[get("/fleet/<owner_id>/<fleet_number>/move/<x>/<y>/<z>")]
+pub fn move_fleet(owner_id: String, fleet_number: usize, x: i32, y: i32, z: i32) -> Json<String> {
+    println!("Moving fleet {} for owner: {} to position ({}, {}, {})", fleet_number, owner_id, x, y, z);
+    
+    let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
+    match crate::models::fleet::load_fleet(&fleet_name) {
+        Ok(Some(mut fleet)) => {
+            let new_position = Position { x, y, z };
+            fleet.position = new_position.clone();
+            
+            // Update all ships in the fleet to the new position
+            for ship in &mut fleet.ships {
+                ship.position = new_position.clone();
+            }
+            
+            // Save the updated fleet
+            if let Err(e) = crate::models::fleet::save_fleet(&fleet) {
+                println!("Error saving fleet: {}", e);
+                return Json("Error saving fleet".to_string());
+            }
+            
+            Json("Fleet moved successfully".to_string())
+        }
+        Ok(None) => Json("Fleet not found".to_string()),
+        Err(e) => {
+            println!("Error loading fleet: {}", e);
+            Json("Error loading fleet".to_string())
+        }
+    }
+}
+
+#[get("/fleet/owners")]
+pub fn get_fleet_owners() -> Json<Vec<String>> {
+    let fleets_dir = Path::new("data")
+        .join("game")
+        .join(GAME_ID)
+        .join("fleets");
+
+    let mut owners = std::collections::HashSet::new();
+
+    if fleets_dir.exists() {
+        if let Ok(entries) = fs::read_dir(fleets_dir) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    if let Some(file_name) = entry.file_name().to_str() {
+                        // Extract owner from fleet name (Fleet_owner_number)
+                        if let Some(owner) = file_name.split('_').nth(1) {
+                            owners.insert(owner.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Json(owners.into_iter().collect())
 } 

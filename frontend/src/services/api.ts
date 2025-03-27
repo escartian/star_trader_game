@@ -50,6 +50,11 @@ export const api = {
         return handleResponse<Fleet | null>(response);
     },
 
+    moveFleet: async (ownerId: string, fleetNumber: number, x: number, y: number, z: number): Promise<string> => {
+        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move/${x}/${y}/${z}`);
+        return handleResponse<string>(response);
+    },
+
     // Market endpoints
     getPlanetMarket: async (systemId: number, planetId: number): Promise<Resource[]> => {
         const response = await fetch(`${API_BASE_URL}/planet/${systemId}/${planetId}/market`);
@@ -64,5 +69,11 @@ export const api = {
     sellToPlanet: async (systemId: number, planetId: number, resourceType: string, quantity: number): Promise<string> => {
         const response = await fetch(`${API_BASE_URL}/planet/${systemId}/${planetId}/sell/${resourceType}/${quantity}`);
         return handleResponse<string>(response);
+    },
+
+    // Fleet owner endpoints
+    getFleetOwners: async (): Promise<string[]> => {
+        const response = await fetch(`${API_BASE_URL}/fleet/owners`);
+        return handleResponse<string[]>(response);
     }
 };

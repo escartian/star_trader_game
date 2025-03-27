@@ -50,11 +50,11 @@ export interface Ship {
 }
 
 export interface Fleet {
-    owner_id: ReactNode;
     name: string;
-    owner: string;
+    owner_id: string;
     position: Position;
     ships: Ship[];
+    current_system_id: number | null;
 }
 
 export interface Planet {

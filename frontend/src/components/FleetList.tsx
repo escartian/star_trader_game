@@ -9,21 +9,51 @@ export const FleetList: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedFleet, setSelectedFleet] = useState<Fleet | null>(null);
-    const [ownerId, setOwnerId] = useState('Igor');
+    const [ownerId, setOwnerId] = useState<string>('');
+    const [fleetOwners, setFleetOwners] = useState<string[]>([]);
 
     useEffect(() => {
-        loadFleets();
+        console.log('Component mounted, loading fleet owners...');
+        loadFleetOwners();
+    }, []);
+
+    useEffect(() => {
+        if (ownerId) {
+            console.log('Owner ID changed, loading fleets for:', ownerId);
+            loadFleets();
+        }
     }, [ownerId]);
+
+    const loadFleetOwners = async () => {
+        try {
+            console.log('Fetching fleet owners...');
+            const owners = await api.getFleetOwners();
+            console.log('Fleet owners received:', owners);
+            setFleetOwners(owners);
+            if (owners.length > 0) {
+                console.log('Setting default owner:', owners[0]);
+                setOwnerId(owners[0]); // Set first owner as default
+            } else {
+                console.log('No fleet owners found');
+                setError('No fleet owners found');
+            }
+        } catch (err) {
+            console.error('Error loading fleet owners:', err);
+            setError('Failed to load fleet owners');
+        }
+    };
 
     const loadFleets = async () => {
         try {
+            console.log('Loading fleets for owner:', ownerId);
             setLoading(true);
             const data = await api.getFleets(ownerId);
+            console.log('Fleets received:', data);
             setFleets(data);
             setError(null);
         } catch (err) {
+            console.error('Error loading fleets:', err);
             setError('Failed to load fleets');
-            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -31,9 +61,12 @@ export const FleetList: React.FC = () => {
 
     const handleFleetSelect = async (fleet: Fleet) => {
         try {
+            console.log('Selected fleet:', fleet);
             const fleetNumber = parseInt(fleet.name.split('_')[2]);
+            console.log('Fetching fleet details for number:', fleetNumber);
             const fleetData = await api.getFleet(ownerId, fleetNumber);
             if (fleetData) {
+                console.log('Fleet details received:', fleetData);
                 setSelectedFleet(fleetData);
             }
         } catch (err) {
@@ -45,8 +78,17 @@ export const FleetList: React.FC = () => {
         setSelectedFleet(null);
     };
 
-    if (loading) return <div className="fleet-loading">Loading fleets...</div>;
-    if (error) return <div className="fleet-error">{error}</div>;
+    if (loading && !ownerId) {
+        return <div className="fleet-loading">Loading fleet owners...</div>;
+    }
+
+    if (loading && ownerId) {
+        return <div className="fleet-loading">Loading fleets for {ownerId}...</div>;
+    }
+
+    if (error) {
+        return <div className="fleet-error">{error}</div>;
+    }
 
     return (
         <div className="fleet-container">
@@ -60,10 +102,11 @@ export const FleetList: React.FC = () => {
                         value={ownerId}
                         onChange={(e) => setOwnerId(e.target.value)}
                     >
-                        <option value="Igor">Igor</option>
-                        <option value="The Galactic Empire">Galactic Empire</option>
-                        <option value="The Rebel Alliance">Rebel Alliance</option>
-                        <option value="The Trade Federation">Trade Federation</option>
+                        {fleetOwners.map((owner) => (
+                            <option key={owner} value={owner}>
+                                {owner}
+                            </option>
+                        ))}
                     </select>
                 </div>
             </div>

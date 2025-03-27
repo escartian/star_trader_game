@@ -64,7 +64,6 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
             setIsMoving(true);
             setError(null);
             await onMove(fleet, moveCoords.x, moveCoords.y, moveCoords.z);
-            onClose();
         } catch (err) {
             console.error('Error moving fleet:', err);
             setError('Failed to move fleet');

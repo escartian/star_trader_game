@@ -137,6 +137,14 @@ export const EncounterModal: React.FC<EncounterModalProps> = ({
         setIsLoading(false);
     };
 
+    const handleCombat = () => {
+        onCombat(fleet, encounteredFleet);
+    };
+
+    const handleIgnore = () => {
+        onClose();
+    };
+
     if (isLoading) {
         return (
             <div className="modal-overlay">
@@ -189,15 +197,18 @@ export const EncounterModal: React.FC<EncounterModalProps> = ({
                     </div>
 
                     <div className="encounter-options">
-                        {scenario?.options.map((option, index) => (
-                            <button
-                                key={index}
-                                className={`encounter-option ${option.requiresCombat ? 'combat-option' : ''}`}
-                                onClick={option.action}
-                            >
-                                {option.text}
-                            </button>
-                        ))}
+                        <button
+                            className="combat-button"
+                            onClick={handleCombat}
+                        >
+                            Engage in Combat
+                        </button>
+                        <button
+                            className="ignore-button"
+                            onClick={handleIgnore}
+                        >
+                            Ignore Situation
+                        </button>
                     </div>
                 </div>
             </div>

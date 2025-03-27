@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 //how to create an instance of type Position
 //let pos = Position { x: 3, y: 4, z: 0 };
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Position {
     pub x: i32,
     pub y: i32,

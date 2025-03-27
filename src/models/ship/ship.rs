@@ -376,45 +376,63 @@ fn generate_ship_name() -> String {
     name
 }
 
-fn generate_owner_name() -> String {
-    let mut rng = rand::thread_rng();
+pub fn generate_owner_name() -> String {
     let prefixes = vec![
-        "Star",
-        "Nova",
-        "Galactic",
-        "Cosmic",
-        "Interstellar",
-        "Astro",
-        "Space",
-        "Stellar",
-        "Celestial",
-        "Lunar",
+        "Star", "Nova", "Galactic", "Cosmic", "Interstellar", "Astro", "Space", "Stellar",
+        "Celestial", "Lunar", "Solar", "Nebula", "Orion", "Andromeda", "Proxima", "Voyager",
+        "Discovery", "Enterprise", "Millennium", "Falcon", "Serenity", "Firefly", "Battlestar",
+        "Goliath", "Colossus", "Titan", "Leviathan", "Behemoth", "Kraken", "Hydra", "Dragon",
+        "Phoenix", "Basilisk", "Minotaur", "Chimera", "Cyclops", "Medusa", "Gorgon", "Siren",
+        "Mermaid", "Naiad", "Nereid", "Triton", "Poseidon", "Neptune", "Cthulhu"
     ];
+
+    let first_names = vec![
+        "James", "John", "Robert", "Michael", "William", "David", "Joseph", "Thomas",
+        "Charles", "Christopher", "Daniel", "Matthew", "Anthony", "Donald", "Mark",
+        "Paul", "Steven", "Andrew", "Kenneth", "Joshua", "Kevin", "Brian", "George",
+        "Edward", "Ronald", "Timothy", "Jason", "Jeffrey", "Ryan", "Jacob", "Gary",
+        "Nicholas", "Eric", "Jonathan", "Stephen", "Larry", "Justin", "Scott", "Brandon",
+        "Benjamin", "Samuel", "Frank", "Gregory", "Alexander", "Raymond", "Patrick",
+        "Jack", "Dennis", "Jerry", "Tyler", "Aaron", "Jose", "Adam", "Henry", "Nathan",
+        "Douglas", "Zachary", "Peter", "Kyle", "Walter", "Ethan", "Jeremy", "Harold",
+        "Keith", "Christian", "Roger", "Noah", "Gerald", "Carl", "Terry", "Sean",
+        "Austin", "Arthur", "Lawrence", "Jesse", "Dylan", "Bryan", "Joe", "Jordan",
+        "Billy", "Bruce", "Albert", "Willie", "Gabriel", "Logan", "Alan", "Juan",
+        "Wayne", "Roy", "Ralph", "Randy", "Eugene", "Vincent", "Russell", "Elijah",
+        "Louis", "Philip", "Bobby", "Johnny", "Bradley"
+    ];
+
+    let last_names = vec![
+        "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
+        "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson",
+        "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez",
+        "Thompson", "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis",
+        "Robinson", "Walker", "Young", "Allen", "King", "Wright", "Scott", "Torres",
+        "Nguyen", "Hill", "Flores", "Green", "Adams", "Nelson", "Baker", "Hall",
+        "Rivera", "Campbell", "Mitchell", "Carter", "Roberts", "Turner", "Phillips",
+        "Evans", "Parker", "Edwards", "Collins", "Stewart", "Morris", "Murphy",
+        "Cook", "Rogers", "Gutierrez", "Ortiz", "Morgan", "Cooper", "Peterson",
+        "Bailey", "Reed", "Kelly", "Howard", "Ramos", "Kim", "Cox", "Ward",
+        "Richardson", "Watson", "Brooks", "Chavez", "Wood", "James", "Bennett",
+        "Gray", "Mendoza", "Ruiz", "Hughes", "Price", "Alvarez", "Castillo",
+        "Sanders", "Patel", "Myers", "Long", "Ross", "Foster", "Jimenez"
+    ];
+
     let suffixes = vec![
-        "Explorer",
-        "Voyager",
-        "Pioneer",
-        "Pathfinder",
-        "Adventurer",
-        "Navigator",
-        "Discoverer",
-        "Traveller",
-        "Scout",
-        "Seeker",
+        "the Explorer", "the Navigator", "the Voyager", "the Pioneer", "the Adventurer",
+        "the Wanderer", "the Seeker", "the Scout", "the Pathfinder", "the Trailblazer",
+        "the Starfarer", "the Voidwalker", "the Cosmos", "the Stargazer", "the Spacefarer",
+        "the Voidmaster", "the Starweaver", "the Cosmos", "the Starlight", "the Voidborn",
+        "the Starward", "the Voidward", "the Starwarden", "the Voidwarden", "the Starweaver",
+        "the Voidweaver", "the Starweaver", "the Voidweaver", "the Starweaver", "the Voidweaver"
     ];
-    let first_name = vec![
-        "Adam", "Aurora", "Eva", "Max", "Alex", "Olivia", "Emma", "Lucas", "Noah", "Luna", "Aria",
-        "Leo", "Nova", "Orion", "Stella",
-    ];
-    let last_name = vec![
-        "Smith", "Garcia", "Johnson", "Miller", "Davis", "Wilson", "Martinez", "Anderson",
-        "Thomas", "Jackson", "Lee", "Baker", "Gonzalez", "Wang",
-    ];
-    let prefix = prefixes[rng.gen_range(0..prefixes.len())];
-    let suffix = suffixes[rng.gen_range(0..suffixes.len())];
-    let first = first_name[rng.gen_range(0..first_name.len())];
-    let last = last_name[rng.gen_range(0..last_name.len())];
-    format!("{} {} {} {}", prefix, first, last, suffix)
+
+    let prefix = prefixes[rand::random::<usize>() % prefixes.len()];
+    let first_name = first_names[rand::random::<usize>() % first_names.len()];
+    let last_name = last_names[rand::random::<usize>() % last_names.len()];
+    let suffix = suffixes[rand::random::<usize>() % suffixes.len()];
+
+    format!("{} {} {} {}", prefix, first_name, last_name, suffix)
 }
 
 impl Distribution<Ship> for Standard {

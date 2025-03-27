@@ -75,5 +75,17 @@ export const api = {
     getFleetOwners: async (): Promise<string[]> => {
         const response = await fetch(`${API_BASE_URL}/fleet/owners`);
         return handleResponse<string[]>(response);
+    },
+
+    // Combat endpoints
+    initiateCombat: async (attackerId: string, attackerNumber: number, defenderId: string, defenderNumber: number): Promise<string> => {
+        const response = await fetch(`${API_BASE_URL}/fleet/${attackerId}/${attackerNumber}/attack/${defenderId}/${defenderNumber}`);
+        return handleResponse<string>(response);
+    },
+
+    // Encounter endpoints
+    checkForEncounter: async (ownerId: string, fleetNumber: number): Promise<Fleet[]> => {
+        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/encounter`);
+        return handleResponse<Fleet[]>(response);
     }
 };

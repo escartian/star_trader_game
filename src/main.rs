@@ -2,6 +2,8 @@ mod constants;
 mod models;
 mod routes;
 mod engine;
+mod combat;
+mod encounters;
 
 use rocket::{get, routes, Request, Response};
 use rocket_dyn_templates::{Template, tera::Tera, context};
@@ -27,7 +29,6 @@ use crate::models::player::Player;
 //use crate::models::ship::ship::Ship;
 use crate::models::star_system::StarSystem;
 use crate::models::trader::Trader;
-mod combat;
 use lazy_static::lazy_static;
 use std::io::Read;
 use std::sync::Mutex;
@@ -108,13 +109,72 @@ fn create_faction_fleets(factions: &[(&str, &str)]) {
                 
                 // Generate 2-3 fleets for each faction in different positions
                 let fleet_count = rand::random::<usize>() % 2 + 2; // Random number between 2-3
-                for _ in 0..fleet_count {
+                for fleet_num in 0..fleet_count {
                     if let Ok(fleet) = generate_and_save_fleet(
-                        faction.name.clone(),
+                        name.to_string(), // Use faction name directly as owner ID
                         random_position(MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH),
                         rand::random::<usize>() % 5 + 1, // Random number of ships (1-5)
                     ) {
-                        println!("Generated fleet for faction {}: {}", faction.name, fleet.name);
+                        println!("Generated fleet for faction {}: {}", name, fleet.name);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn create_special_fleets() {
+    if !GAME_GENERATED.load(Ordering::Relaxed) {
+        let special_types = vec![
+            ("Pirate", 3),    // 3 pirate fleets
+            ("Trader", 2),    // 2 trader fleets
+            ("Military", 2),  // 2 military fleets
+            ("Mercenary", 2), // 2 mercenary fleets
+        ];
+
+        for (fleet_type, count) in special_types {
+            // Check if any fleets of this type already exist by looking for files starting with Fleet_Pirate_, Fleet_Trader_, etc.
+            let fleets_dir = Path::new("data")
+                .join("game")
+                .join(GAME_ID)
+                .join("fleets");
+
+            let mut has_existing_fleets = false;
+            if fleets_dir.exists() {
+                if let Ok(entries) = fs::read_dir(fleets_dir) {
+                    for entry in entries {
+                        if let Ok(entry) = entry {
+                            if let Some(file_name) = entry.file_name().to_str() {
+                                if file_name.starts_with(&format!("Fleet_{}_", fleet_type)) {
+                                    has_existing_fleets = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if has_existing_fleets {
+                println!("{} fleets already exist, skipping generation", fleet_type);
+                continue;
+            }
+
+            for fleet_num in 0..count {
+                // Generate a captain name for the fleet
+                let captain_name = crate::models::ship::ship::generate_owner_name();
+                if let Ok(fleet) = generate_and_save_fleet(
+                    fleet_type.to_string(), // Use fleet type for the fleet name
+                    random_position(MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH),
+                    rand::random::<usize>() % 5 + 1, // Random number of ships (1-5)
+                ) {
+                    // Update the fleet's owner_id to be the captain name
+                    let mut fleet = fleet;
+                    fleet.owner_id = captain_name.clone();
+                    if let Err(e) = crate::models::fleet::save_fleet(&fleet) {
+                        println!("Error saving fleet: {}", e);
+                    } else {
+                        println!("Generated {} fleet: {} (Captain: {})", fleet_type, fleet.name, captain_name);
                     }
                 }
             }
@@ -167,6 +227,7 @@ async fn main() {
         println!("Generating initial game state...");
         create_player_fleet();
         create_faction_fleets(&factions);
+        create_special_fleets();
         GAME_GENERATED.store(true, Ordering::Relaxed);
     } else {
         println!("Game already generated, skipping fleet generation");
@@ -200,7 +261,9 @@ async fn main() {
             buy_from_planet,
             sell_to_planet,
             move_fleet,
-            get_fleet_owners
+            get_fleet_owners,
+            initiate_combat,
+            check_for_encounter
         ])
         .attach(cors)
         .register("/", catchers![internal_error])

@@ -22,6 +22,7 @@ use std::sync::LockResult;
 use std::sync::MutexGuard;
 use crate::models::position::Position;
 use std::fs;
+use crate::encounters::generate_encounter_fleet;
 
 
 #[catch(500)]
@@ -94,30 +95,73 @@ pub fn get_star_system(id: usize) -> Option<String> {
 pub fn get_owner_fleets(owner_id: String) -> Json<Vec<Fleet>> {
     println!("Getting fleets for owner: {}", owner_id);
 
-    match crate::models::fleet::list_owner_fleets(&owner_id) {
-        Ok(fleets) => {
-            println!("Found {} fleets for owner", fleets.len());
-            Json(fleets)
-        }
-        Err(e) => {
-            println!("Error loading fleets: {}", e);
-            Json(Vec::new())
+    let fleets_dir = Path::new("data")
+        .join("game")
+        .join(GAME_ID)
+        .join("fleets");
+
+    let mut fleets = Vec::new();
+
+    if fleets_dir.exists() {
+        if let Ok(entries) = fs::read_dir(fleets_dir) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    if let Some(file_name) = entry.file_name().to_str() {
+                        // Load all fleets for the owner
+                        if file_name.starts_with(&format!("Fleet_{}_", owner_id)) {
+                            println!("Loading fleet: {}", file_name);
+                            // Remove the .json extension if it exists
+                            let fleet_name = file_name.trim_end_matches(".json");
+                            if let Ok(Some(fleet)) = crate::models::fleet::load_fleet(fleet_name) {
+                                println!("Successfully loaded fleet: {}", fleet.name);
+                                fleets.push(fleet);
+                            } else {
+                                println!("Failed to load fleet: {}", fleet_name);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
+
+    println!("Found {} fleets for owner {}", fleets.len(), owner_id);
+    Json(fleets)
 }
 
 #[get("/fleet/<owner_id>/<fleet_number>")]
 pub fn get_fleet(owner_id: String, fleet_number: usize) -> Json<Option<Fleet>> {
     println!("Getting fleet {} for owner: {}", fleet_number, owner_id);
 
-    // Try to load existing fleet
+    // First try to load by owner_id (for regular fleets)
     let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
+    
     println!("Looking for fleet with name: {}", fleet_name);
     
     match crate::models::fleet::load_fleet(&fleet_name) {
-        Ok(fleet) => {
-            println!("Fleet loaded successfully");
-            Json(fleet)
+        Ok(Some(fleet)) => {
+            println!("Fleet loaded successfully: {}", fleet.name);
+            Json(Some(fleet))
+        }
+        Ok(None) => {
+            // If not found, try to load by fleet type (for special fleets)
+            let special_types = vec!["Pirate", "Trader", "Military", "Mercenary"];
+            for fleet_type in special_types {
+                let fleet_name = format!("Fleet_{}_{}", fleet_type, fleet_number);
+                match crate::models::fleet::load_fleet(&fleet_name) {
+                    Ok(Some(fleet)) => {
+                        println!("Special fleet loaded successfully: {}", fleet.name);
+                        return Json(Some(fleet));
+                    }
+                    Ok(None) => continue,
+                    Err(e) => {
+                        println!("Error loading special fleet: {}", e);
+                        continue;
+                    }
+                }
+            }
+            println!("Fleet not found: {}", fleet_name);
+            Json(None)
         }
         Err(e) => {
             println!("Error loading fleet: {}", e);
@@ -225,10 +269,19 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, x: i32, y: i32, z: i32)
     println!("Moving fleet {} for owner: {} to position ({}, {}, {})", fleet_number, owner_id, x, y, z);
     
     let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
+
     match crate::models::fleet::load_fleet(&fleet_name) {
         Ok(Some(mut fleet)) => {
             let new_position = Position { x, y, z };
+            
+            // Calculate movement distance
+            let dx = (fleet.position.x - new_position.x) as f64;
+            let dy = (fleet.position.y - new_position.y) as f64;
+            let dz = (fleet.position.z - new_position.z) as f64;
+            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            
             fleet.position = new_position.clone();
+            fleet.last_move_distance = Some(distance);
             
             // Update all ships in the fleet to the new position
             for ship in &mut fleet.ships {
@@ -239,6 +292,66 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, x: i32, y: i32, z: i32)
             if let Err(e) = crate::models::fleet::save_fleet(&fleet) {
                 println!("Error saving fleet: {}", e);
                 return Json("Error saving fleet".to_string());
+            }
+
+            // Check for encounters immediately after movement
+            let mut encounters = Vec::new();
+            
+            // Check for star system encounters first
+            if let Some(system_id) = fleet.current_system_id {
+                if let Ok(Some(system)) = crate::models::game_world::load_star_system(GAME_ID, system_id) {
+                    // Check if fleet is near any planets
+                    for planet in &system.planets {
+                        let planet_pos = planet.position;
+                        let distance = ((fleet.position.x - planet_pos.x).pow(2) + 
+                                      (fleet.position.y - planet_pos.y).pow(2) + 
+                                      (fleet.position.z - planet_pos.z).pow(2)) as f64;
+                        if distance <= 10.0 {
+                            // Create a fleet representing the planet's defenses
+                            let planet_fleet = Fleet {
+                                name: format!("Planet_{}", planet.name),
+                                owner_id: "Planet".to_string(),
+                                ships: Vec::new(), // Planet encounters don't have ships
+                                position: planet_pos,
+                                current_system_id: Some(system_id),
+                                last_move_distance: None,
+                            };
+                            encounters.push(planet_fleet);
+                        }
+                    }
+                }
+            }
+            
+            // Generate random encounters based on distance
+            let max_encounters = (distance / 10.0).min(3.0) as i32;
+            
+            for _ in 0..max_encounters {
+                if rand::random::<f64>() < 0.3 { // 30% chance for each potential encounter
+                    let encounter_fleet = generate_encounter_fleet(fleet.position.clone());
+                    
+                    // Only add the encounter if it's not the same owner as the player's fleet
+                    if encounter_fleet.owner_id != owner_id {
+                        let fleet = Fleet {
+                            name: encounter_fleet.name,
+                            owner_id: encounter_fleet.owner_id,
+                            ships: encounter_fleet.ships,
+                            position: encounter_fleet.position,
+                            current_system_id: fleet.current_system_id,
+                            last_move_distance: None,
+                        };
+                        encounters.push(fleet);
+                    }
+                }
+            }
+            
+            // If we have encounters, return them along with the movement success message
+            if !encounters.is_empty() {
+                let response = serde_json::json!({
+                    "status": "success",
+                    "message": "Fleet moved successfully",
+                    "encounters": encounters
+                });
+                return Json(response.to_string());
             }
             
             Json("Fleet moved successfully".to_string())
@@ -265,9 +378,13 @@ pub fn get_fleet_owners() -> Json<Vec<String>> {
             for entry in entries {
                 if let Ok(entry) = entry {
                     if let Some(file_name) = entry.file_name().to_str() {
-                        // Extract owner from fleet name (Fleet_owner_number)
-                        if let Some(owner) = file_name.split('_').nth(1) {
-                            owners.insert(owner.to_string());
+                        // Handle fleet naming scheme
+                        if file_name.starts_with("Fleet_") {
+                            // Regular fleet (Fleet_owner_number)
+                            if let Some(owner) = file_name.split('_').nth(1) {
+                                println!("Found fleet owner: {}", owner);
+                                owners.insert(owner.to_string());
+                            }
                         }
                     }
                 }
@@ -275,5 +392,128 @@ pub fn get_fleet_owners() -> Json<Vec<String>> {
         }
     }
 
-    Json(owners.into_iter().collect())
+    let owners_vec: Vec<String> = owners.into_iter().collect();
+    println!("Found {} fleet owners: {:?}", owners_vec.len(), owners_vec);
+    Json(owners_vec)
+}
+
+#[get("/fleet/<attacker_id>/<attacker_number>/attack/<defender_id>/<defender_number>")]
+pub fn initiate_combat(attacker_id: String, attacker_number: usize, defender_id: String, defender_number: usize) -> Json<String> {
+    println!("Initiating combat between Fleet_{}_{} and Fleet_{}_{}", 
+        attacker_id, attacker_number, defender_id, defender_number);
+
+    let attacker_name = format!("Fleet_{}_{}", attacker_id, attacker_number);
+    let defender_name = format!("Fleet_{}_{}", defender_id, defender_number);
+
+    match (crate::models::fleet::load_fleet(&attacker_name), crate::models::fleet::load_fleet(&defender_name)) {
+        (Ok(Some(mut attacker)), Ok(Some(mut defender))) => {
+            if !crate::combat::combat::can_engage_combat(&attacker, &defender) {
+                return Json("Fleets must be at the same position to engage in combat".to_string());
+            }
+
+            let combat_result = crate::combat::combat::auto_resolve_ship_combat(&mut attacker, &mut defender);
+
+            // Save the updated fleets
+            if let Err(e) = crate::models::fleet::save_fleet(&attacker) {
+                println!("Error saving attacker fleet: {}", e);
+                return Json("Error saving attacker fleet".to_string());
+            }
+
+            if let Err(e) = crate::models::fleet::save_fleet(&defender) {
+                println!("Error saving defender fleet: {}", e);
+                return Json("Error saving defender fleet".to_string());
+            }
+
+            // Format combat result
+            let mut result = String::new();
+            for log in combat_result.combat_log {
+                result.push_str(&format!("{}\n", log));
+            }
+            result.push_str(&format!("\nFinal fleet sizes:\nAttacker: {} ships\nDefender: {} ships", 
+                attacker.ships.len(), defender.ships.len()));
+
+            Json(result)
+        }
+        (Ok(None), _) => Json("Attacker fleet not found".to_string()),
+        (_, Ok(None)) => Json("Defender fleet not found".to_string()),
+        (Err(e), _) => Json(format!("Error loading attacker fleet: {}", e)),
+        (_, Err(e)) => Json(format!("Error loading defender fleet: {}", e)),
+    }
+}
+
+#[get("/fleet/<owner_id>/<fleet_number>/encounter")]
+pub fn check_for_encounter(owner_id: String, fleet_number: usize) -> Json<Vec<Fleet>> {
+    println!("Checking for encounters for Fleet_{}_{}", owner_id, fleet_number);
+    
+    let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
+    match crate::models::fleet::load_fleet(&fleet_name) {
+        Ok(Some(fleet)) => {
+            let mut encounters = Vec::new();
+            
+            // Check for star system encounters first
+            if let Some(system_id) = fleet.current_system_id {
+                if let Ok(Some(system)) = crate::models::game_world::load_star_system(GAME_ID, system_id) {
+                    // Check if fleet is near any planets
+                    for planet in &system.planets {
+                        let planet_pos = planet.position;
+                        let distance = ((fleet.position.x - planet_pos.x).pow(2) + 
+                                      (fleet.position.y - planet_pos.y).pow(2) + 
+                                      (fleet.position.z - planet_pos.z).pow(2)) as f64;
+                        if distance <= 10.0 {
+                            // Create a fleet representing the planet's defenses
+                            let planet_fleet = Fleet {
+                                name: format!("Planet_{}", planet.name),
+                                owner_id: "Planet".to_string(),
+                                ships: Vec::new(), // Planet encounters don't have ships
+                                position: planet_pos,
+                                current_system_id: Some(system_id),
+                                last_move_distance: None,
+                            };
+                            encounters.push(planet_fleet);
+                        }
+                    }
+                }
+            }
+            
+            // Generate random encounters based on distance
+            let distance = fleet.last_move_distance.unwrap_or(0.0);
+            let max_encounters = (distance / 10.0).min(3.0) as i32;
+            
+            for _ in 0..max_encounters {
+                if rand::random::<f64>() < 0.3 { // 30% chance for each potential encounter
+                    let encounter_fleet = generate_encounter_fleet(fleet.position.clone());
+                    
+                    // Only add the encounter if it's not the same owner as the player's fleet
+                    if encounter_fleet.owner_id != owner_id {
+                        let fleet = Fleet {
+                            name: encounter_fleet.name,
+                            owner_id: encounter_fleet.owner_id,
+                            ships: encounter_fleet.ships,
+                            position: encounter_fleet.position,
+                            current_system_id: fleet.current_system_id,
+                            last_move_distance: None,
+                        };
+                        encounters.push(fleet);
+                    }
+                }
+            }
+            
+            // If we have encounters, save the current fleet's last move distance
+            if !encounters.is_empty() {
+                if let Ok(Some(mut current_fleet)) = crate::models::fleet::load_fleet(&fleet_name) {
+                    current_fleet.last_move_distance = Some(distance);
+                    if let Err(e) = crate::models::fleet::save_fleet(&current_fleet) {
+                        println!("Error saving fleet's last move distance: {}", e);
+                    }
+                }
+            }
+            
+            Json(encounters)
+        }
+        Ok(None) => Json(Vec::new()),
+        Err(e) => {
+            println!("Error loading fleet: {}", e);
+            Json(Vec::new())
+        }
+    }
 } 

@@ -11,7 +11,7 @@
     z-index: 1000;
 }
 
-.fleet-modal {
+.modal-content {
     background-color: #1a1a1a;
     border: 1px solid #333;
     border-radius: 8px;
@@ -24,7 +24,7 @@
     position: relative;
 }
 
-.fleet-modal-header {
+.modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -33,20 +33,41 @@
     border-bottom: 1px solid #333;
 }
 
-.fleet-modal-header h2 {
+.modal-header h2 {
     margin: 0;
     color: #00ff00;
 }
 
-.fleet-summary {
+.close-button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 8px;
+}
+
+.close-button:hover {
+    color: #00ff00;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.fleet-details {
     background-color: #222;
     padding: 15px;
     border-radius: 4px;
     margin-bottom: 20px;
 }
 
-.fleet-summary p {
-    margin: 5px 0;
+.fleet-details h3 {
+    color: #00ff00;
+    margin-top: 0;
+    margin-bottom: 15px;
 }
 
 .ships-grid {
@@ -96,51 +117,20 @@
     color: #ccc;
 }
 
-.close-button {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 24px;
-    cursor: pointer;
-    padding: 0 8px;
-}
-
-.close-button:hover {
-    color: #00ff00;
-}
-
-/* Scrollbar styling */
-.fleet-modal::-webkit-scrollbar {
-    width: 8px;
-}
-
-.fleet-modal::-webkit-scrollbar-track {
-    background: #1a1a1a;
-}
-
-.fleet-modal::-webkit-scrollbar-thumb {
-    background: #333;
-    border-radius: 4px;
-}
-
-.fleet-modal::-webkit-scrollbar-thumb:hover {
-    background: #444;
-}
-
-.movement-controls {
+.move-controls {
     background-color: #222;
     padding: 20px;
     border-radius: 4px;
     margin-bottom: 20px;
 }
 
-.movement-controls h3 {
+.move-controls h3 {
     color: #00ff00;
     margin-top: 0;
     margin-bottom: 15px;
 }
 
-.movement-inputs {
+.move-inputs {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
@@ -207,4 +197,22 @@
 .move-message.error {
     background-color: rgba(255, 0, 0, 0.1);
     color: #ff4444;
+}
+
+/* Scrollbar styling */
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: #444;
 }

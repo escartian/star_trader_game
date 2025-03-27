@@ -17,6 +17,7 @@ pub struct Fleet {
     pub ships: Vec<Ship>,
     pub position: Position,
     pub current_system_id: Option<usize>, // Optional because fleet might be between systems
+    pub last_move_distance: Option<f64>,
 }
 
 impl Fleet {
@@ -27,6 +28,7 @@ impl Fleet {
             ships: Vec::new(),
             position,
             current_system_id: None,
+            last_move_distance: None,
         }
     }
 

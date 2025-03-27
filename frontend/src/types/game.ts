@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 export interface Position {
     x: number;
     y: number;
@@ -48,11 +50,11 @@ export interface Ship {
 }
 
 export interface Fleet {
+    owner_id: ReactNode;
     name: string;
-    owner_id: string;
-    ships: Ship[];
+    owner: string;
     position: Position;
-    current_system_id: number | null;
+    ships: Ship[];
 }
 
 export interface Planet {
@@ -65,7 +67,14 @@ export interface Planet {
     market: Resource[];
 }
 
+export interface Star {
+    name: string;
+    star_type: string;
+    position: Position;
+}
+
 export interface StarSystem {
+    star: Star;
     position: Position;
     planets: Planet[];
 }

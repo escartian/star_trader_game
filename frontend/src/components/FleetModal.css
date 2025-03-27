@@ -38,19 +38,6 @@
     color: #00ff00;
 }
 
-.close-button {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 24px;
-    cursor: pointer;
-    padding: 0 8px;
-}
-
-.close-button:hover {
-    color: #00ff00;
-}
-
 .fleet-summary {
     background-color: #222;
     padding: 15px;
@@ -82,17 +69,12 @@
     box-shadow: 0 4px 8px rgba(0, 255, 0, 0.1);
 }
 
-.ship-type-badge {
-    display: inline-block;
-    background-color: #00ff00;
-    color: #000;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    margin: 5px 0;
+.ship-card h4 {
+    color: #00ff00;
+    margin: 0 0 15px 0;
 }
 
-.ship-stats {
+.ship-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
@@ -109,47 +91,22 @@
     margin: 0 0 10px 0;
 }
 
-.weapons-grid {
-    display: grid;
-    gap: 10px;
-}
-
-.weapon-card {
-    background-color: #1a1a1a;
-    padding: 8px;
-    border-radius: 4px;
-}
-
-.weapon-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.weapon-name {
-    color: #00ff00;
-}
-
-.weapon-damage {
-    color: #ff4444;
-}
-
-.damage-bar {
-    height: 4px;
-    background-color: #ff4444;
-    border-radius: 2px;
-}
-
-.stat-group ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.stat-group li {
+.stat-group p {
     margin: 5px 0;
     color: #ccc;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 8px;
+}
+
+.close-button:hover {
+    color: #00ff00;
 }
 
 /* Scrollbar styling */
@@ -168,4 +125,4 @@
 
 .fleet-modal::-webkit-scrollbar-thumb:hover {
     background: #444;
-} 
+}

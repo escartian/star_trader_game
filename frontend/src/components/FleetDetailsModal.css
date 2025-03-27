@@ -21,18 +21,28 @@
     position: relative;
 }
 
-.fleet-info {
-    padding: 20px;
+.fleet-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
 }
 
-.fleet-summary {
+.fleet-details-header h2 {
+    margin: 0;
+    color: #00ff00;
+}
+
+.fleet-info {
+    padding: 20px;
     background: #2a2a2a;
-    padding: 15px;
     border-radius: 4px;
     margin-bottom: 20px;
 }
 
-.fleet-summary h3 {
+.fleet-info h3 {
     color: #00ff00;
     margin-top: 0;
 }
@@ -46,11 +56,9 @@
 
 .ship-card {
     border: 1px solid #333;
-    border-radius: 4px;
-    padding: 15px;
-    background: rgba(40, 40, 50, 0.9);
     border-radius: 8px;
     padding: 15px;
+    background: rgba(40, 40, 50, 0.9);
     margin: 10px 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -64,7 +72,7 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.ship-stats {
+.ship-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
@@ -87,49 +95,6 @@
     color: #ccc;
 }
 
-.stat-group ul {
-    list-style: none;
-    padding: 0;
-    margin: 5px 0;
-}
-
-.stat-group li {
-    color: #ccc;
-    margin: 5px 0;
-}
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    position: relative;
-    padding: 20px;
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #333;
-}
-
-.modal-header h2 {
-    margin: 0;
-    color: #00ff00;
-}
-
 .close-button {
     background: none;
     border: none;
@@ -141,4 +106,22 @@
 
 .close-button:hover {
     color: #00ff00;
-} 
+}
+
+/* Scrollbar styling */
+.fleet-details-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.fleet-details-content::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.fleet-details-content::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+.fleet-details-content::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}

@@ -74,7 +74,7 @@ export const FleetList: React.FC = () => {
                         <div className="fleet-info">
                             <p>Position: ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})</p>
                             <p>Ships: {fleet.ships.length}</p>
-                            <p>Current System: {fleet.current_system_id || 'In Transit'}</p>
+                            <p>Owner: {fleet.owner_id}</p>
                         </div>
                         <button 
                             className="view-details-btn"

@@ -157,16 +157,93 @@ fn generate_ship_weapons(specialization: &ShipType) -> Vec<Weapon> {
     weapons
 }
 
-fn generate_ship_resources() -> Vec<Resource> {
+fn generate_ship_resources(specialization: &ShipType) -> Vec<Resource> {
     let mut resources = Vec::new();
-    let fuel_amount = 10;
-    let fuel = Resource {
+    let mut rng = rand::thread_rng();
+
+    // All ships get some fuel
+    let fuel_amount = match specialization {
+        ShipType::Fighter => rng.gen_range(5..15),
+        ShipType::Battleship => rng.gen_range(20..40),
+        ShipType::Freighter => rng.gen_range(30..50),
+        ShipType::Explorer => rng.gen_range(15..30),
+        ShipType::Shuttle => rng.gen_range(3..10),
+        ShipType::Capital => rng.gen_range(40..60),
+    };
+    resources.push(Resource {
         resource_type: ResourceType::Fuel,
         quantity: Some(fuel_amount),
         buy: None,
         sell: None,
-    };
-    resources.push(fuel);
+    });
+
+    // Add additional resources based on ship type
+    match specialization {
+        ShipType::Freighter => {
+            // Freighters get more varied cargo
+            let cargo_types = vec![
+                ResourceType::Minerals,
+                ResourceType::Food,
+                ResourceType::Electronics,
+                ResourceType::LuxuryGoods,
+            ];
+            for resource_type in cargo_types {
+                if rng.gen_bool(0.7) { // 70% chance for each cargo type
+                    resources.push(Resource {
+                        resource_type,
+                        quantity: Some(rng.gen_range(10..30)),
+                        buy: None,
+                        sell: None,
+                    });
+                }
+            }
+        },
+        ShipType::Explorer => {
+            // Explorers get electronics and luxury goods
+            resources.push(Resource {
+                resource_type: ResourceType::Electronics,
+                quantity: Some(rng.gen_range(5..15)),
+                buy: None,
+                sell: None,
+            });
+            resources.push(Resource {
+                resource_type: ResourceType::LuxuryGoods,
+                quantity: Some(rng.gen_range(3..10)),
+                buy: None,
+                sell: None,
+            });
+        },
+        ShipType::Battleship | ShipType::Capital => {
+            // Military ships get metals and electronics
+            resources.push(Resource {
+                resource_type: ResourceType::Metals,
+                quantity: Some(rng.gen_range(20..40)),
+                buy: None,
+                sell: None,
+            });
+            resources.push(Resource {
+                resource_type: ResourceType::Electronics,
+                quantity: Some(rng.gen_range(10..20)),
+                buy: None,
+                sell: None,
+            });
+        },
+        _ => {
+            // Other ships get basic supplies
+            resources.push(Resource {
+                resource_type: ResourceType::Food,
+                quantity: Some(rng.gen_range(5..15)),
+                buy: None,
+                sell: None,
+            });
+            resources.push(Resource {
+                resource_type: ResourceType::Water,
+                quantity: Some(rng.gen_range(5..15)),
+                buy: None,
+                sell: None,
+            });
+        }
+    }
 
     resources
 }
@@ -397,7 +474,7 @@ impl Distribution<Ship> for Standard {
 
         // Generate weapons and cargo based on ship type
         let weapons = generate_ship_weapons(&specialization);
-        let cargo = generate_ship_resources();
+        let cargo = generate_ship_resources(&specialization);
 
         Ship {
             name,

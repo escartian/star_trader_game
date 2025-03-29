@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Fleet, Resource } from '../types/game';
 import { api } from '../services/api';
 import './TraderEncounterModal.css';
@@ -7,34 +7,36 @@ interface TraderEncounterModalProps {
     fleet: Fleet;
     encounteredFleet: Fleet;
     onClose: () => void;
-    onCombat: (attacker: Fleet, defender: Fleet) => void;
-}
-
-interface CargoItem {
-    resource_type: string;
-    quantity: number;
 }
 
 export const TraderEncounterModal: React.FC<TraderEncounterModalProps> = ({
     fleet,
     encounteredFleet,
-    onClose,
-    onCombat
+    onClose
 }) => {
     const [selectedResource, setSelectedResource] = useState<string>('');
     const [quantity, setQuantity] = useState<number>(1);
-    const [success, setSuccess] = useState<string>('');
-    const [error, setError] = useState<string>('');
     const [isBuying, setIsBuying] = useState<boolean>(true);
+    const [error, setError] = useState<string>('');
+    const [success, setSuccess] = useState<string>('');
+    const [totalCost, setTotalCost] = useState<number>(0);
+
+    useEffect(() => {
+        calculateTotalCost();
+    }, [selectedResource, quantity, isBuying]);
+
+    const handleOverlayClick = (e: React.MouseEvent) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
+    };
 
     const handleTrade = async () => {
-        if (!selectedResource || quantity <= 0) {
-            setError('Please select a resource and enter a valid quantity');
-            return;
-        }
-
         try {
-            // Parse fleet numbers
+            setError('');
+            setSuccess('');
+
+            // Parse fleet number based on fleet type
             let fleetNumber: number;
             if (fleet.name.startsWith('Fleet_Pirate_')) {
                 fleetNumber = parseInt(fleet.name.split('Fleet_Pirate_')[1]);
@@ -48,116 +50,172 @@ export const TraderEncounterModal: React.FC<TraderEncounterModalProps> = ({
                 fleetNumber = parseInt(fleet.name.split('Fleet_')[1].split('_')[1]);
             }
 
-            // Determine trade type based on whether we're buying or selling
-            const tradeType = isBuying ? 'buy' : 'sell';
-
-            // Call the trade API
             const result = await api.tradeWithTrader(
                 fleet.owner_id,
                 fleetNumber,
                 selectedResource,
                 quantity,
-                tradeType
+                isBuying ? 'buy' : 'sell'
             );
 
-            if (result === "Success") {
-                setSuccess('Trade successful!');
-                setError('');
-                setSelectedResource('');
-                setQuantity(1);
-                // Refresh the fleet data to show updated cargo
-                const updatedFleet = await api.getFleet(fleet.owner_id, fleetNumber);
-                if (updatedFleet) {
-                    // Update the fleet in the parent component
-                    onClose();
-                }
-            } else {
-                setError(result);
-                setSuccess('');
-            }
+            setSuccess(result);
+            setTimeout(() => {
+                onClose();
+            }, 2000);
         } catch (err) {
-            console.error('Error during trade:', err);
-            setError('Failed to complete trade');
-            setSuccess('');
+            setError(err instanceof Error ? err.message : 'Failed to complete trade');
         }
     };
 
-    const handleAttack = () => {
-        onCombat(fleet, encounteredFleet);
+    const getAvailableResources = () => {
+        const resources: Resource[] = [];
+        encounteredFleet.ships.forEach(ship => {
+            ship.cargo.forEach(cargo => {
+                if (!resources.find(r => r.resource_type === cargo.resource_type)) {
+                    resources.push(cargo);
+                }
+            });
+        });
+        return resources;
     };
 
-    // Get all cargo from the trader's ships and combine quantities
-    const traderCargo = encounteredFleet.ships.reduce((acc: CargoItem[], ship) => {
-        ship.cargo.forEach(item => {
-            const existingItem = acc.find(i => i.resource_type === item.resource_type);
-            if (existingItem) {
-                existingItem.quantity += item.quantity || 0;
-            } else {
-                acc.push({
-                    resource_type: item.resource_type,
-                    quantity: item.quantity || 0
-                });
-            }
+    const getPlayerResources = () => {
+        const resources: Resource[] = [];
+        fleet.ships.forEach(ship => {
+            ship.cargo.forEach(cargo => {
+                if (!resources.find(r => r.resource_type === cargo.resource_type)) {
+                    resources.push(cargo);
+                }
+            });
         });
-        return acc;
-    }, []);
+        return resources;
+    };
+
+    const calculateTotalCost = () => {
+        if (!selectedResource) {
+            setTotalCost(0);
+            return;
+        }
+
+        const resource = isBuying 
+            ? getAvailableResources().find(r => r.resource_type === selectedResource)
+            : getPlayerResources().find(r => r.resource_type === selectedResource);
+
+        if (!resource) {
+            setTotalCost(0);
+            return;
+        }
+
+        const price = isBuying ? resource.buy : resource.sell;
+        const cost = (price || 0) * quantity;
+        setTotalCost(cost);
+    };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content trader-encounter">
+        <div className="modal-overlay" onClick={handleOverlayClick}>
+            <div className="modal-content">
                 <div className="modal-header">
-                    <h2>Trade Opportunity</h2>
+                    <h2>Trader Encounter</h2>
                     <button className="close-button" onClick={onClose}>×</button>
                 </div>
                 <div className="modal-body">
                     <div className="encounter-info">
-                        <h3>Trader Fleet: {encounteredFleet.name}</h3>
-                        <p>Position: ({encounteredFleet.position.x}, {encounteredFleet.position.y}, {encounteredFleet.position.z})</p>
-                        <p>Number of Ships: {encounteredFleet.ships.length}</p>
-                    </div>
-
-                    <div className="trader-cargo">
-                        <h3>Available Resources</h3>
-                        <div className="cargo-grid">
-                            {traderCargo.map((item, index) => (
-                                <div 
-                                    key={index} 
-                                    className={`cargo-item ${selectedResource === item.resource_type ? 'selected' : ''}`}
-                                    onClick={() => setSelectedResource(item.resource_type)}
-                                >
-                                    <h4>{item.resource_type}</h4>
-                                    <p className="quantity">Available: {item.quantity}</p>
+                        <h3>You've encountered {encounteredFleet.name}</h3>
+                        <div className="fleet-details">
+                            <div className="fleet-card">
+                                <h4>Your Fleet</h4>
+                                <div className="fleet-stats">
+                                    <div className="stat-item">
+                                        <span className="stat-label">Ships:</span>
+                                        <span className="stat-value">{fleet.ships.length}</span>
+                                    </div>
+                                    <div className="stat-item">
+                                        <span className="stat-label">Position:</span>
+                                        <span className="stat-value">
+                                            ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})
+                                        </span>
+                                    </div>
                                 </div>
-                            ))}
+                            </div>
+                            <div className="fleet-card">
+                                <h4>Trader Fleet</h4>
+                                <div className="fleet-stats">
+                                    <div className="stat-item">
+                                        <span className="stat-label">Ships:</span>
+                                        <span className="stat-value">{encounteredFleet.ships.length}</span>
+                                    </div>
+                                    <div className="stat-item">
+                                        <span className="stat-label">Position:</span>
+                                        <span className="stat-value">
+                                            ({encounteredFleet.position.x}, {encounteredFleet.position.y}, {encounteredFleet.position.z})
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-
-                    {selectedResource && (
                         <div className="trade-controls">
-                            <h3>Trade Details</h3>
-                            <div className="input-group">
+                            <div className="trade-type-selector">
+                                <button
+                                    className={`trade-type-button ${isBuying ? 'active' : ''}`}
+                                    onClick={() => setIsBuying(true)}
+                                >
+                                    Buy
+                                </button>
+                                <button
+                                    className={`trade-type-button ${!isBuying ? 'active' : ''}`}
+                                    onClick={() => setIsBuying(false)}
+                                >
+                                    Sell
+                                </button>
+                            </div>
+                            <div className="resource-selector">
+                                <select
+                                    value={selectedResource}
+                                    onChange={(e) => setSelectedResource(e.target.value)}
+                                >
+                                    <option value="">Select Resource</option>
+                                    {isBuying
+                                        ? getAvailableResources().map(resource => (
+                                            <option key={resource.resource_type} value={resource.resource_type}>
+                                                {resource.resource_type} - {resource.buy} credits/unit
+                                            </option>
+                                        ))
+                                        : getPlayerResources().map(resource => (
+                                            <option key={resource.resource_type} value={resource.resource_type}>
+                                                {resource.resource_type} - {resource.sell} credits/unit
+                                            </option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+                            <div className="quantity-input">
                                 <label>Quantity:</label>
                                 <input
                                     type="number"
                                     min="1"
                                     value={quantity}
-                                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                                 />
                             </div>
-                            {error && <div className="error-message">{error}</div>}
-                            {success && <div className="success-message">{success}</div>}
-                            <button className="trade-button" onClick={handleTrade}>
-                                Trade
-                            </button>
+                            <div className="trade-summary">
+                                <div className="total-cost">
+                                    Total Cost: {totalCost.toFixed(2)} credits
+                                </div>
+                            </div>
                         </div>
-                    )}
-
+                    </div>
+                    {error && <div className="error-message">{error}</div>}
+                    {success && <div className="success-message">{success}</div>}
                     <div className="action-buttons">
-                        <button className="ignore-button" onClick={onClose}>
-                            Ignore
+                        <button
+                            className="action-button trade-button"
+                            onClick={handleTrade}
+                            disabled={!selectedResource || quantity < 1}
+                        >
+                            {isBuying ? 'Buy' : 'Sell'}
                         </button>
-                        <button className="attack-button" onClick={handleAttack}>
-                            Attack Trader
+                        <button className="action-button ignore-button" onClick={onClose}>
+                            Cancel
                         </button>
                     </div>
                 </div>

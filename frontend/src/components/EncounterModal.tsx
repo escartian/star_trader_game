@@ -136,6 +136,16 @@ export const EncounterModal: React.FC<EncounterModalProps> = ({
         return `${amount.toFixed(2)} credits`;
     };
 
+    const handleOverlayClick = (e: React.MouseEvent) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
+    };
+
+    const handleIgnore = () => {
+        onClose();
+    };
+
     const renderEncounterContent = () => {
         switch (encounteredFleet.owner_id) {
             case "Trader":
@@ -280,27 +290,57 @@ export const EncounterModal: React.FC<EncounterModalProps> = ({
     };
 
     return (
-        <div className="modal-overlay">
+        <div className="modal-overlay" onClick={handleOverlayClick}>
             <div className="modal-content encounter-modal">
                 <div className="modal-header">
-                    <h2>Fleet Encounter</h2>
+                    <h2>Space Encounter</h2>
                     <button className="close-button" onClick={onClose}>×</button>
                 </div>
                 <div className="modal-body">
                     <div className="encounter-info">
-                        <h3>Encountered Fleet: {encounteredFleet.name}</h3>
-                        <p>Position: ({encounteredFleet.position.x}, {encounteredFleet.position.y}, {encounteredFleet.position.z})</p>
-                        <p>Number of Ships: {encounteredFleet.ships.length}</p>
+                        <h3>You've encountered {encounteredFleet.name}</h3>
+                        <div className="fleet-details">
+                            <div className="fleet-card">
+                                <h4>Your Fleet</h4>
+                                <div className="fleet-stats">
+                                    <div className="stat-item">
+                                        <span className="stat-label">Ships:</span>
+                                        <span className="stat-value">{fleet.ships.length}</span>
+                                    </div>
+                                    <div className="stat-item">
+                                        <span className="stat-label">Position:</span>
+                                        <span className="stat-value">
+                                            ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="fleet-card">
+                                <h4>Encountered Fleet</h4>
+                                <div className="fleet-stats">
+                                    <div className="stat-item">
+                                        <span className="stat-label">Ships:</span>
+                                        <span className="stat-value">{encounteredFleet.ships.length}</span>
+                                    </div>
+                                    <div className="stat-item">
+                                        <span className="stat-label">Position:</span>
+                                        <span className="stat-value">
+                                            ({encounteredFleet.position.x}, {encounteredFleet.position.y}, {encounteredFleet.position.z})
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {renderEncounterContent()}
 
                     <div className="action-buttons">
-                        <button className="ignore-button" onClick={onClose}>
-                            Ignore
+                        <button className="action-button attack-button" onClick={handleAttack}>
+                            Attack
                         </button>
-                        <button className="attack-button" onClick={handleAttack}>
-                            Attack Fleet
+                        <button className="action-button ignore-button" onClick={handleIgnore}>
+                            Ignore
                         </button>
                     </div>
                 </div>

@@ -12,181 +12,169 @@
 }
 
 .modal-content {
-    background-color: #1a1a1a;
-    border: 1px solid #333;
+    background-color: #2a2a2a;
     border-radius: 8px;
-    padding: 20px;
-    width: 90%;
-    max-width: 1200px;
+    padding: 2rem;
+    max-width: 95%;
+    width: 1200px;
     max-height: 90vh;
     overflow-y: auto;
-    color: #fff;
     position: relative;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #333;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #444;
 }
 
 .modal-header h2 {
     margin: 0;
     color: #00ff00;
+    font-size: 1.5rem;
 }
 
 .close-button {
     background: none;
     border: none;
-    color: #fff;
-    font-size: 24px;
+    color: #888;
+    font-size: 1.5rem;
     cursor: pointer;
-    padding: 0 8px;
+    padding: 0.5rem;
+    line-height: 1;
 }
 
 .close-button:hover {
-    color: #00ff00;
+    color: #fff;
 }
 
 .modal-body {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 1.5rem;
 }
 
-.fleet-details {
-    background-color: #222;
-    padding: 15px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-}
-
-.fleet-details h3 {
-    color: #00ff00;
-    margin-top: 0;
-    margin-bottom: 15px;
-}
-
-.ships-grid {
+.fleet-info {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    padding: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.fleet-card {
+    background-color: #333;
+    padding: 1.5rem;
+    border-radius: 4px;
+    min-width: 0;
+}
+
+.fleet-card h4 {
+    margin: 0 0 1rem 0;
+    color: #00ff00;
+    font-size: 1.1rem;
+}
+
+.fleet-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background-color: #444;
+    border-radius: 4px;
+    min-width: 0;
+}
+
+.stat-label {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.stat-value {
+    color: #fff;
+    font-size: 1rem;
+    word-break: break-word;
+}
+
+.ship-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
 }
 
 .ship-card {
-    background-color: #222;
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 15px;
-    transition: transform 0.2s;
+    background-color: #333;
+    padding: 1.5rem;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border: 1px solid #444;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .ship-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 255, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .ship-card h4 {
+    margin: 0;
     color: #00ff00;
-    margin: 0 0 15px 0;
+    font-size: 1.2rem;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
 }
 
-.ship-details {
+.ship-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
+    gap: 1rem;
 }
 
-.stat-group {
-    background-color: #1a1a1a;
-    padding: 10px;
-    border-radius: 4px;
-}
-
-.stat-group h4 {
-    color: #00ff00;
-    margin: 0 0 10px 0;
-}
-
-.stat-group p {
-    margin: 5px 0;
-    color: #ccc;
-}
-
-.move-controls {
-    background-color: #222;
-    padding: 20px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-}
-
-.move-controls h3 {
-    color: #00ff00;
-    margin-top: 0;
-    margin-bottom: 15px;
-}
-
-.move-inputs {
+.cargo-list {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    margin-bottom: 15px;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
 }
 
-.input-group {
+.cargo-item {
+    background-color: #444;
+    padding: 1rem;
+    border-radius: 4px;
     display: flex;
     flex-direction: column;
+    gap: 0.5rem;
 }
 
-.input-group label {
+.cargo-item h4 {
+    margin: 0;
     color: #00ff00;
-    margin-bottom: 5px;
-    font-size: 0.9em;
+    font-size: 1.1rem;
 }
 
-.input-group input {
-    background-color: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 8px;
-    color: #fff;
-    font-size: 1em;
-}
-
-.input-group input:focus {
-    outline: none;
-    border-color: #00ff00;
-}
-
-.move-button {
-    background-color: #00ff00;
-    color: #000;
-    border: none;
-    border-radius: 4px;
-    padding: 10px 20px;
-    font-size: 1em;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.move-button:hover:not(:disabled) {
-    background-color: #00cc00;
-}
-
-.move-button:disabled {
-    background-color: #666;
-    cursor: not-allowed;
+.cargo-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
 }
 
 .move-message {
-    margin-top: 10px;
-    padding: 10px;
+    margin-top: 1rem;
+    padding: 0.75rem;
     border-radius: 4px;
     text-align: center;
+    font-weight: bold;
 }
 
 .move-message.success {
@@ -195,24 +183,120 @@
 }
 
 .move-message.error {
-    background-color: rgba(255, 0, 0, 0.1);
+    background-color: rgba(255, 68, 68, 0.1);
     color: #ff4444;
 }
 
-/* Scrollbar styling */
-.modal-content::-webkit-scrollbar {
-    width: 8px;
+.movement-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
 }
 
-.modal-content::-webkit-scrollbar-track {
-    background: #1a1a1a;
-}
-
-.modal-content::-webkit-scrollbar-thumb {
-    background: #333;
+.movement-controls input {
+    width: 100%;
+    padding: 0.5rem;
+    background-color: #333;
+    border: 1px solid #444;
     border-radius: 4px;
+    color: #fff;
 }
 
-.modal-content::-webkit-scrollbar-thumb:hover {
-    background: #444;
+.movement-controls button {
+    padding: 0.5rem 1rem;
+    background-color: #00ff00;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.movement-controls button:hover {
+    background-color: #00cc00;
+}
+
+.test-encounter-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.test-encounter-button {
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.test-encounter-button.pirate {
+    background-color: #ff4444;
+    color: white;
+}
+
+.test-encounter-button.trader {
+    background-color: #00ff00;
+    color: black;
+}
+
+.test-encounter-button.military {
+    background-color: #4444ff;
+    color: white;
+}
+
+.test-encounter-button.mercenary {
+    background-color: #ffaa00;
+    color: black;
+}
+
+.test-encounter-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .modal-content {
+        padding: 1rem;
+        width: 95%;
+    }
+
+    .fleet-info {
+        grid-template-columns: 1fr;
+    }
+
+    .fleet-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .ship-list {
+        grid-template-columns: 1fr;
+    }
+
+    .ship-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .cargo-list {
+        grid-template-columns: 1fr;
+    }
+
+    .movement-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .test-encounter-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-item {
+        padding: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 0.9rem;
+    }
 }

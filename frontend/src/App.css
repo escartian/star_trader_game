@@ -1,140 +1,138 @@
 .app {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  background: #000;
-  color: #fff;
+  background-color: #1a1a1a;
+  color: #ffffff;
 }
 
 .app-header {
-  background: linear-gradient(to right, #000, #1a1a1a);
-  padding: 20px;
-  border-bottom: 1px solid #333;
-  text-align: center;
+  background-color: #2a2a2a;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .app-header h1 {
   margin: 0;
+  font-size: 1.5rem;
   color: #00ff00;
-  font-size: 2.5em;
-  text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  text-align: center;
 }
 
 .player-info {
-  margin-top: 10px;
-}
-
-.player-info h2 {
-  margin: 0;
-  color: #fff;
-  font-size: 1.5em;
-}
-
-.player-info p {
-  margin: 5px 0;
-  color: #00ff00;
-  font-size: 1.2em;
-}
-
-.app-main {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.loading {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
   align-items: center;
-  height: 100vh;
-  font-size: 1.5em;
-  color: #00ff00;
-  text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
 }
 
-.loading-spinner {
-  font-size: 4em;
-  animation: bounce 1s infinite;
+.player-info span {
+  background-color: #333;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: block;
+  text-align: center;
+  min-width: 200px;
 }
 
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+.app-content {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
-.error-container {
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+
+  .player-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .app-content {
+    padding: 0.5rem;
+  }
+}
+
+/* Loading and Error States */
+.loading, .error-container {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.loading-spinner {
+  font-size: 3rem;
+  animation: spin 2s linear infinite;
 }
 
 .error-content {
   text-align: center;
   padding: 2rem;
-  background: rgba(0, 0, 0, 0.8);
-  border-radius: 15px;
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
-  max-width: 500px;
-  width: 90%;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .error-icon {
-  font-size: 4em;
+  font-size: 3rem;
   margin-bottom: 1rem;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
 }
 
 .error-content h2 {
-  color: #00ff00;
+  color: #ff4444;
   margin-bottom: 1rem;
-  font-size: 1.8em;
-}
-
-.error-content p {
-  color: #ccc;
-  margin-bottom: 2rem;
 }
 
 .error-content button {
-  background: #00ff00;
+  background-color: #00ff00;
   color: #000;
-  padding: 10px 20px;
-  border-radius: 25px;
-  font-size: 1.1em;
-  transition: all 0.3s ease;
   border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
   cursor: pointer;
+  font-weight: bold;
+  margin-top: 1rem;
 }
 
 .error-content button:hover {
-  background: #00cc00;
-  transform: scale(1.05);
-  box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+  background-color: #00cc00;
 }
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .content-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 20px;
-    padding: 20px;
-    height: calc(100vh - 60px);
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  padding: 20px;
+  height: calc(100vh - 60px);
 }
 
 .galaxy-section {
-    background: #1a1a1a;
-    border-radius: 8px;
-    padding: 20px;
-    overflow: auto;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 20px;
+  overflow: auto;
 }
 
 .fleet-section {
-    background: #1a1a1a;
-    border-radius: 8px;
-    padding: 20px;
-    overflow: auto;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 20px;
+  overflow: auto;
 }

@@ -18,6 +18,8 @@ export const MarketModal: React.FC<MarketModalProps> = ({ planet, systemId, plan
     const [player, setPlayer] = useState<Player | null>(null);
     const [tradeAmount, setTradeAmount] = useState<number>(1);
     const [tradeMessage, setTradeMessage] = useState<string | null>(null);
+    const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+    const [totalCost, setTotalCost] = useState<number>(0);
 
     useEffect(() => {
         const loadData = async () => {
@@ -41,6 +43,13 @@ export const MarketModal: React.FC<MarketModalProps> = ({ planet, systemId, plan
         loadData();
     }, [systemId, planetId]);
 
+    useEffect(() => {
+        if (selectedResource) {
+            const cost = selectedResource.buy ? selectedResource.buy * tradeAmount : 0;
+            setTotalCost(cost);
+        }
+    }, [selectedResource, tradeAmount]);
+
     const handleTrade = async (resource: Resource, isBuying: boolean) => {
         try {
             setLoading(true);
@@ -61,6 +70,11 @@ export const MarketModal: React.FC<MarketModalProps> = ({ planet, systemId, plan
             
             setMarket(updatedResources);
             setPlayer(updatedPlayer);
+            
+            // Reset selected resource and trade amount after successful trade
+            setSelectedResource(null);
+            setTradeAmount(1);
+            setTotalCost(0);
         } catch (err) {
             console.error('Trade failed:', err);
             setError('Failed to complete trade. Please try again.');
@@ -110,25 +124,28 @@ export const MarketModal: React.FC<MarketModalProps> = ({ planet, systemId, plan
                         </div>
                         {player && (
                             <div className="player-info">
-                                <h3>{player.name}</h3>
-                                <p>Credits: {player.credits.toFixed(2)}</p>
-                                <h4>Resources</h4>
-                                <table className="resource-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Resource</th>
-                                            <th>Quantity</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {player.resources.map((resource, index) => (
-                                            <tr key={index}>
-                                                <td>{resource.resource_type}</td>
-                                                <td>{resource.quantity || 0}</td>
+                                <h3>Your Resources</h3>
+                                <div className="player-resources">
+                                    <table className="resources-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Resource</th>
+                                                <th>Amount</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {player.resources.map((resource, index) => (
+                                                <tr key={index}>
+                                                    <td>{resource.resource_type}</td>
+                                                    <td>{resource.quantity || 0}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div className="credits">
+                                        <strong>Credits:</strong> {player.credits.toFixed(2)}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -139,9 +156,31 @@ export const MarketModal: React.FC<MarketModalProps> = ({ planet, systemId, plan
                                 type="number"
                                 min="1"
                                 value={tradeAmount}
-                                onChange={(e) => setTradeAmount(Math.max(1, parseInt(e.target.value) || 1))}
+                                onChange={(e) => {
+                                    const newAmount = Math.max(1, parseInt(e.target.value) || 1);
+                                    setTradeAmount(newAmount);
+                                    if (selectedResource) {
+                                        const buyCost = selectedResource.buy ? selectedResource.buy * newAmount : 0;
+                                        const sellValue = selectedResource.sell ? selectedResource.sell * newAmount : 0;
+                                        setTotalCost(buyCost);
+                                    }
+                                }}
                             />
                         </label>
+                        {selectedResource && (
+                            <div className="trade-prices">
+                                {selectedResource.buy && (
+                                    <div className="buy-price">
+                                        Buy Cost: {(selectedResource.buy * tradeAmount).toFixed(2)} credits
+                                    </div>
+                                )}
+                                {selectedResource.sell && (
+                                    <div className="sell-price">
+                                        Sell Value: {(selectedResource.sell * tradeAmount).toFixed(2)} credits
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                     {loading ? (
                         <div className="loading">Loading market data...</div>
@@ -166,15 +205,28 @@ export const MarketModal: React.FC<MarketModalProps> = ({ planet, systemId, plan
                                 </thead>
                                 <tbody>
                                     {market.map((resource, index) => (
-                                        <tr key={index}>
+                                        <tr 
+                                            key={index}
+                                            className={selectedResource?.resource_type === resource.resource_type ? 'selected' : ''}
+                                            onClick={() => {
+                                                setSelectedResource(resource);
+                                                const buyCost = resource.buy ? resource.buy * tradeAmount : 0;
+                                                const sellValue = resource.sell ? resource.sell * tradeAmount : 0;
+                                                setTotalCost(buyCost);
+                                            }}
+                                        >
                                             <td>{resource.resource_type}</td>
-                                            <td>{resource.buy?.toFixed(2) || 'N/A'}</td>
-                                            <td>{resource.sell?.toFixed(2) || 'N/A'}</td>
+                                            <td>{resource.buy ? (resource.buy * tradeAmount).toFixed(2) : 'N/A'}</td>
+                                            <td>{resource.sell ? (resource.sell * tradeAmount).toFixed(2) : 'N/A'}</td>
                                             <td>{resource.quantity || 0}</td>
                                             <td className="trade-actions">
                                                 <button 
                                                     onClick={() => handleTrade(resource, true)}
-                                                    disabled={!resource.buy || (resource.quantity || 0) < tradeAmount}
+                                                    disabled={
+                                                        !resource.buy || 
+                                                        (resource.quantity || 0) < tradeAmount ||
+                                                        (player ? resource.buy * tradeAmount > player.credits : true)
+                                                    }
                                                     className="buy-button"
                                                 >
                                                     Buy

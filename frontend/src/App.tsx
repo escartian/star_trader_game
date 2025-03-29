@@ -1,81 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { GalaxyMap } from './components/GalaxyMap';
+import { FleetList } from './components/FleetList';
+import { TabBar, TabType } from './components/TabBar';
+import { HOST_PLAYER_NAME } from './constants';
 import { Player } from './types/game';
 import { api } from './services/api';
-import { FleetList } from './components/FleetList';
 import './App.css';
 
 function App() {
-  const [player, setPlayer] = useState<Player | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    const [player, setPlayer] = useState<Player | null>(null);
+    const [activeTab, setActiveTab] = useState<TabType>('galaxy');
 
-  useEffect(() => {
-    const fetchPlayer = async () => {
-      try {
-        const data = await api.getPlayer('Igor');
-        setPlayer(data);
-      } catch (err) {
-        if (err instanceof Error) {
-          if (err.message.includes('404')) {
-            setError('Oops! Looks like we need to start a new game! 🚀');
-          } else {
-            setError('Whoops! Something went wrong. Let\'s try again! 🌟');
-          }
-        } else {
-          setError('Oops! Something unexpected happened! 🌠');
+    useEffect(() => {
+        const loadPlayer = async () => {
+            try {
+                const playerData = await api.getPlayer(HOST_PLAYER_NAME);
+                setPlayer(playerData);
+            } catch (err) {
+                console.error('Error loading player:', err);
+            }
+        };
+        loadPlayer();
+    }, []);
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'galaxy':
+                return <GalaxyMap />;
+            case 'fleets':
+                return <FleetList />;
+            case 'market':
+                return <div>Market View (Coming Soon)</div>;
+            case 'research':
+                return <div>Research View (Coming Soon)</div>;
+            default:
+                return <GalaxyMap />;
         }
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
     };
 
-    fetchPlayer();
-  }, []);
-
-  if (loading) return (
-    <div className="loading">
-      <div className="loading-spinner">🚀</div>
-      <p>Loading your galactic adventure...</p>
-    </div>
-  );
-
-  if (error) return (
-    <div className="error-container">
-      <div className="error-content">
-        <div className="error-icon">🌌</div>
-        <h2>{error}</h2>
-        <p>Don't worry, we'll get you back on track!</p>
-        <button onClick={() => window.location.reload()}>Try Again</button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Star Trader Game</h1>
-        {player && (
-          <div className="player-info">
-            <h2>Welcome, {player.name}! 👋</h2>
-            <p>Credits: {player.credits.toLocaleString()} 💰</p>
-          </div>
-        )}
-      </header>
-
-      <main className="app-main">
-        <div className="content-grid">
-          <div className="galaxy-section">
-            <GalaxyMap />
-          </div>
-          <div className="fleet-section">
-            <FleetList />
-          </div>
+    return (
+        <div className="app">
+            <header className="app-header">
+                <h1>Star Trader</h1>
+                {player && (
+                    <div className="player-info">
+                        <span>Player: {player.name}</span>
+                        <span>Credits: {player.credits.toLocaleString()}</span>
+                    </div>
+                )}
+            </header>
+            <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+            <main className="app-content">
+                {renderContent()}
+            </main>
         </div>
-      </main>
-    </div>
-  );
+    );
 }
 
 export default App;

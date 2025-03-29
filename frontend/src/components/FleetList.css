@@ -1,20 +1,21 @@
 .fleet-container {
-    padding: 20px;
+    padding: 10px;
     max-width: 1200px;
     margin: 0 auto;
 }
 
 .fleet-header {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .fleet-header h2 {
     color: #ddd;
     margin: 0;
+    font-size: 1.5rem;
 }
 
 .search-controls {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .fleet-controls {
@@ -28,25 +29,26 @@
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
-    min-width: 200px;
+    width: 100%;
+    max-width: 300px;
 }
 
 .fleet-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    padding: 20px 0;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    padding: 10px 0;
 }
 
 .fleet-card {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
-    padding: 20px;
+    padding: 15px;
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    min-width: 300px;
+    min-width: 0;
 }
 
 .fleet-card:hover {
@@ -55,9 +57,9 @@
 }
 
 .fleet-card h3 {
-    margin: 0 0 15px 0;
+    margin: 0 0 10px 0;
     color: #333;
-    font-size: 18px;
+    font-size: 1.1rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -65,13 +67,13 @@
 
 .fleet-info {
     display: grid;
-    gap: 10px;
+    gap: 8px;
 }
 
 .fleet-info p {
     margin: 0;
     color: #666;
-    font-size: 14px;
+    font-size: 0.9rem;
 }
 
 .fleet-actions {
@@ -363,4 +365,51 @@
     padding: 10px;
     background-color: #fde8e8;
     border-radius: 4px;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .fleet-container {
+        padding: 5px;
+    }
+
+    .fleet-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .fleet-card {
+        padding: 12px;
+    }
+
+    .fleet-card h3 {
+        font-size: 1rem;
+    }
+
+    .fleet-info p {
+        font-size: 0.85rem;
+    }
+
+    .faction-select {
+        max-width: 100%;
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+    .fleet-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .fleet-card {
+        padding: 10px;
+    }
+
+    .fleet-card h3 {
+        font-size: 0.95rem;
+    }
+
+    .fleet-info p {
+        font-size: 0.8rem;
+    }
 } 

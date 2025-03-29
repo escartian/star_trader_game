@@ -268,6 +268,9 @@ async fn main() {
         ])
         .attach(cors)
         .register("/", catchers![internal_error])
+        .configure(rocket::Config::figment()
+            .merge(("address", "0.0.0.0"))
+            .merge(("port", 8000)))
         .launch()
         .await
         .unwrap();

@@ -1,6 +1,8 @@
 import { Player, StarSystem, Fleet, Resource } from '../types/game';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+// Get the current hostname (excluding port)
+const hostname = window.location.hostname;
+const API_BASE_URL = `http://${hostname}:8000/api`;
 
 class ApiError extends Error {
     constructor(public status: number, message: string) {

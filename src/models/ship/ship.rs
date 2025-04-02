@@ -14,69 +14,120 @@ use serde::{Deserialize, Serialize};
 
 use super::weapon::Weapon;
 
-//SHIP DETAILS
+/// Represents a ship in the game with various attributes and capabilities.
+/// 
+/// Ships can be of different types, sizes, and have various equipment and cargo.
+/// They can also be bought and sold in ship markets, with prices determined by their attributes.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Ship {
+    /// The unique name of the ship
     pub name: String,
+    /// The owner of the ship (can be a player, faction, or special entity)
     pub owner: String,
+    /// The current position of the ship in 3D space
     pub position: Position,
+    /// The current operational status of the ship
     pub status: ShipStatus,
+    /// The current hit points of the ship
     pub hp: i32,
+    /// The current combat stance of the ship
     pub combat_state: CombatState,
+    /// The primary role/type of the ship
     pub specialization: ShipType,
+    /// The physical size category of the ship
     pub size: ShipSize,
+    /// The type of engine installed on the ship
     pub engine: ShipEngine,
+    /// The weapons installed on the ship
     pub weapons: Vec<Weapon>,
+    /// The cargo currently carried by the ship
     pub cargo: Vec<Resource>,
+    /// The shield system of the ship
     pub shields: Shield,
+    /// The armor system of the ship
     pub armor: Armor,
+    /// The current market price of the ship (if available for sale)
+    pub price: Option<f32>,
 }
 
+/// Represents the current operational status of a ship
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ShipStatus {
+    /// Ship is landed on a planet with rough terrain
     OnPlanetRough,
+    /// Ship is docked at a space station or port
     Docked,
+    /// Ship is in the process of launching from a planet
     Launching,
+    /// Ship is in the process of landing on a planet
     Landing,
+    /// Ship is orbiting a planet
     OrbitingPlanet,
+    /// Ship is traveling at sub-light speeds
     SubLightTravel,
+    /// Ship is traveling at faster-than-light speeds
     Warp,
+    /// Ship is stationary in space
     Stationary,
 }
 
+/// Represents the current combat stance of a ship
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum CombatState {
+    /// Ship is not engaged in combat
     NotInCombat,
+    /// Ship is actively seeking combat
     Aggressive,
+    /// Ship is in standard combat mode
     Default,
+    /// Ship is prioritizing evasion
     Evasive,
+    /// Ship is avoiding combat
     Passive,
 }
 
+/// Represents the primary role or type of a ship
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ShipType {
+    /// Fast and maneuverable combat ship
     Fighter,
+    /// Large and powerful warship
     Battleship,
+    /// Cargo-focused trading ship
     Freighter,
+    /// Exploration and research ship
     Explorer,
+    /// Small utility ship
     Shuttle,
+    /// Massive flagship
     Capital,
 }
 
+/// Represents the physical size category of a ship
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ShipSize {
+    /// Smallest ship category
     Tiny,
+    /// Small ship category
     Small,
+    /// Medium-sized ship category
     Medium,
+    /// Large ship category
     Large,
+    /// Very large ship category
     Huge,
+    /// Largest ship category
     Planetary,
 }
 
+/// Represents the type of engine installed on a ship
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ShipEngine {
+    /// Basic propulsion system
     Basic,
+    /// Advanced propulsion system
     Advanced,
+    /// Experimental propulsion system
     Experimental,
 }
 
@@ -508,11 +559,16 @@ impl Distribution<Ship> for Standard {
             cargo,
             shields: Shield::new(shield_capacity),
             armor: Armor::new(armor_capacity),
+            price: None,
         }
     }
 }
 
 impl Ship {
+    /// Returns the maximum cargo capacity of the ship based on its size.
+    /// 
+    /// # Returns
+    /// The maximum amount of cargo the ship can carry
     pub fn get_cargo_capacity(&self) -> u32 {
         match self.size {
             ShipSize::Tiny => 100,
@@ -524,6 +580,10 @@ impl Ship {
         }
     }
 
+    /// Returns the current amount of cargo being carried by the ship.
+    /// 
+    /// # Returns
+    /// The sum of all cargo quantities currently in the ship's hold
     pub fn get_current_cargo(&self) -> u32 {
         self.cargo.iter().map(|r| r.quantity.unwrap_or(0)).sum()
     }

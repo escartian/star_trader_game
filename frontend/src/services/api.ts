@@ -1,4 +1,4 @@
-import { Player, StarSystem, Fleet, Resource } from '../types/game';
+import { Player, StarSystem, Fleet, Resource, Ship } from '../types/game';
 
 // Get the current hostname (excluding port)
 const hostname = window.location.hostname;
@@ -74,9 +74,16 @@ export const api = {
     },
 
     // Fleet owner endpoints
+    //Returns a list of all fleet owners
     getFleetOwners: async (): Promise<string[]> => {
         const response = await fetch(`${API_BASE_URL}/fleet/owners`);
         return handleResponse<string[]>(response);
+    },
+
+    //Returns a list of all fleets owned by a specific owner
+    getOwnerFleets: async (ownerId: string): Promise<Fleet[]> => {
+        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}`);
+        return handleResponse<Fleet[]>(response);
     },
 
     // Combat endpoints
@@ -95,5 +102,73 @@ export const api = {
     tradeWithTrader: async (fleetId: string, fleetNumber: number, resourceType: string, quantity: number, tradeType: 'buy' | 'sell'): Promise<string> => {
         const response = await fetch(`${API_BASE_URL}/fleet/${fleetId}/${fleetNumber}/trade/${resourceType}/${quantity}/${tradeType}`);
         return handleResponse<string>(response);
-    }
+    },
+
+    getPlanetShipMarket: async (systemId: number, planetId: number): Promise<Ship[]> => {
+        const response = await fetch(`${API_BASE_URL}/systems/${systemId}/planets/${planetId}/ship-market`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch ship market data');
+        }
+        return response.json();
+    },
+
+    buyShip: async (systemId: number, planetId: number, shipName: string, fleetName: string, tradeInShipName?: string): Promise<string> => {
+        console.log('Making buy ship request:', {
+            systemId,
+            planetId,
+            shipName,
+            fleetName,
+            tradeInShipName
+        });
+        
+        const response = await fetch(`${API_BASE_URL}/systems/${systemId}/planets/${planetId}/ship-market/buy`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                ship_name: shipName,
+                fleet_name: fleetName,
+                trade_in_ship: tradeInShipName
+            }),
+        });
+        
+        console.log('Buy ship response status:', response.status);
+        const responseText = await response.text();
+        console.log('Buy ship response:', responseText);
+        
+        if (!response.ok) {
+            throw new Error('Failed to buy ship');
+        }
+        return responseText;
+    },
+
+    sellShip: async (systemId: number, planetId: number, shipName: string, fleetName: string): Promise<string> => {
+        console.log('Making sell ship request:', {
+            systemId,
+            planetId,
+            shipName,
+            fleetName
+        });
+        
+        const response = await fetch(`${API_BASE_URL}/systems/${systemId}/planets/${planetId}/ship-market/sell`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                ship_name: shipName,
+                fleet_name: fleetName
+            }),
+        });
+        
+        console.log('Sell ship response status:', response.status);
+        const responseText = await response.text();
+        console.log('Sell ship response:', responseText);
+        
+        if (!response.ok) {
+            throw new Error('Failed to sell ship');
+        }
+        return responseText;
+    },
 };

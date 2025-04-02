@@ -1,16 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StarSystem, Planet } from '../types/game';
+import { StarSystem, Planet, Fleet } from '../types/game';
 import './StarSystemModal.css';
 import { MarketModal } from './MarketModal';
+import { ShipMarketModal } from './ShipMarketModal';
 
 interface StarSystemModalProps {
     system: StarSystem;
     systemIndex: number;
+    selectedFleet?: Fleet | null;
     onClose: () => void;
 }
 
-export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, systemIndex, onClose }) => {
+export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, systemIndex, selectedFleet = null, onClose }) => {
     const [selectedPlanet, setSelectedPlanet] = useState<Planet | null>(null);
+    const [showMarket, setShowMarket] = useState(false);
+    const [showShipMarket, setShowShipMarket] = useState(false);
     const modalRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -39,8 +43,14 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
         }
     };
 
-    const handleCloseMarket = () => {
-        setSelectedPlanet(null);
+    const handleShowMarket = (planet: Planet) => {
+        setSelectedPlanet(planet);
+        setShowMarket(true);
+    };
+
+    const handleShowShipMarket = (planet: Planet) => {
+        setSelectedPlanet(planet);
+        setShowShipMarket(true);
     };
 
     const isStarCentered = system.star.position.x === 0 && 
@@ -78,22 +88,39 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
                                     <p><strong>Specialization:</strong> {planet.specialization}</p>
                                     <p><strong>Danger Level:</strong> {planet.danger}</p>
                                 </div>
-                                <button 
-                                    className="view-market-button"
-                                    onClick={() => setSelectedPlanet(planet)}
-                                >
-                                    View Market
-                                </button>
+                                <div className="planet-actions">
+                                    <button onClick={() => handleShowMarket(planet)}>
+                                        Open Market
+                                    </button>
+                                    <button onClick={() => handleShowShipMarket(planet)}>
+                                        Ship Market
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>
                 </div>
-                {selectedPlanet && (
+                {showMarket && selectedPlanet && (
                     <MarketModal
                         planet={selectedPlanet}
                         systemId={systemIndex}
                         planetId={system.planets.indexOf(selectedPlanet)}
-                        onClose={handleCloseMarket}
+                        onClose={() => {
+                            setShowMarket(false);
+                            setSelectedPlanet(null);
+                        }}
+                    />
+                )}
+                {showShipMarket && selectedPlanet && (
+                    <ShipMarketModal
+                        planet={selectedPlanet}
+                        systemId={systemIndex}
+                        planetId={system.planets.indexOf(selectedPlanet)}
+                        selectedFleet={selectedFleet}
+                        onClose={() => {
+                            setShowShipMarket(false);
+                            setSelectedPlanet(null);
+                        }}
                     />
                 )}
             </div>

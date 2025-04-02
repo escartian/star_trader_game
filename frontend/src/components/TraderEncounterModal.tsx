@@ -36,7 +36,6 @@ export const TraderEncounterModal: React.FC<TraderEncounterModalProps> = ({
             setError('');
             setSuccess('');
 
-            // Parse fleet number based on fleet type
             let fleetNumber: number;
             if (fleet.name.startsWith('Fleet_Pirate_')) {
                 fleetNumber = parseInt(fleet.name.split('Fleet_Pirate_')[1]);
@@ -97,127 +96,151 @@ export const TraderEncounterModal: React.FC<TraderEncounterModalProps> = ({
             return;
         }
 
-        const resource = isBuying 
-            ? getAvailableResources().find(r => r.resource_type === selectedResource)
-            : getPlayerResources().find(r => r.resource_type === selectedResource);
-
-        if (!resource) {
+        const resources = isBuying ? getAvailableResources() : getPlayerResources();
+        const resource = resources.find(r => r.resource_type === selectedResource);
+        if (resource) {
+            const price = isBuying ? resource.buy : resource.sell;
+            setTotalCost(price ? price * quantity : 0);
+        } else {
             setTotalCost(0);
-            return;
         }
+    };
 
-        const price = isBuying ? resource.buy : resource.sell;
-        const cost = (price || 0) * quantity;
-        setTotalCost(cost);
+    const handleResourceSelect = (resource: Resource, buying: boolean) => {
+        setSelectedResource(resource.resource_type);
+        setIsBuying(buying);
+        setQuantity(1);
+        calculateTotalCost();
     };
 
     return (
         <div className="modal-overlay" onClick={handleOverlayClick}>
-            <div className="modal-content">
+            <div className="trader-encounter">
                 <div className="modal-header">
-                    <h2>Trader Encounter</h2>
+                    <h2>Trading with {encounteredFleet.name}</h2>
                     <button className="close-button" onClick={onClose}>×</button>
                 </div>
                 <div className="modal-body">
-                    <div className="encounter-info">
-                        <h3>You've encountered {encounteredFleet.name}</h3>
-                        <div className="fleet-details">
-                            <div className="fleet-card">
-                                <h4>Your Fleet</h4>
-                                <div className="fleet-stats">
-                                    <div className="stat-item">
-                                        <span className="stat-label">Ships:</span>
-                                        <span className="stat-value">{fleet.ships.length}</span>
-                                    </div>
-                                    <div className="stat-item">
-                                        <span className="stat-label">Position:</span>
-                                        <span className="stat-value">
-                                            ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="fleet-card">
-                                <h4>Trader Fleet</h4>
-                                <div className="fleet-stats">
-                                    <div className="stat-item">
-                                        <span className="stat-label">Ships:</span>
-                                        <span className="stat-value">{encounteredFleet.ships.length}</span>
-                                    </div>
-                                    <div className="stat-item">
-                                        <span className="stat-label">Position:</span>
-                                        <span className="stat-value">
-                                            ({encounteredFleet.position.x}, {encounteredFleet.position.y}, {encounteredFleet.position.z})
-                                        </span>
-                                    </div>
+                    <div className="trade-instructions">
+                        <p>Click "Buy" or "Sell" next to a resource to start trading. Prices are shown in credits per unit.</p>
+                    </div>
+                    <div className="trader-layout">
+                        <div className="trader-section">
+                            <div className="trader-cargo">
+                                <h3>Available Resources</h3>
+                                <div className="market-table-container">
+                                    <table className="market-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Resource</th>
+                                                <th>Available</th>
+                                                <th>Buy Price</th>
+                                                <th>Sell Price</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {getAvailableResources().map((item, index) => (
+                                                <tr 
+                                                    key={index}
+                                                    className={selectedResource === item.resource_type ? 'selected' : ''}
+                                                >
+                                                    <td>{item.resource_type}</td>
+                                                    <td>{item.quantity}</td>
+                                                    <td className="buy-price">
+                                                        {item.buy ? `${(item.buy * quantity).toFixed(2)} cr (${item.buy} per unit)` : 'N/A'}
+                                                    </td>
+                                                    <td className="sell-price">
+                                                        {item.sell ? `${(item.sell * quantity).toFixed(2)} cr (${item.sell} per unit)` : 'N/A'}
+                                                    </td>
+                                                    <td>
+                                                        <div className="trade-actions">
+                                                            <button 
+                                                                className={`buy-button ${selectedResource === item.resource_type && isBuying ? 'selected' : ''}`}
+                                                                onClick={() => handleResourceSelect(item, true)}
+                                                                disabled={!item.buy}
+                                                            >
+                                                                Buy
+                                                            </button>
+                                                            <button 
+                                                                className={`sell-button ${selectedResource === item.resource_type && !isBuying ? 'selected' : ''}`}
+                                                                onClick={() => handleResourceSelect(item, false)}
+                                                                disabled={!item.sell}
+                                                            >
+                                                                Sell
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
-                        <div className="trade-controls">
-                            <div className="trade-type-selector">
-                                <button
-                                    className={`trade-type-button ${isBuying ? 'active' : ''}`}
-                                    onClick={() => setIsBuying(true)}
-                                >
-                                    Buy
-                                </button>
-                                <button
-                                    className={`trade-type-button ${!isBuying ? 'active' : ''}`}
-                                    onClick={() => setIsBuying(false)}
-                                >
-                                    Sell
-                                </button>
-                            </div>
-                            <div className="resource-selector">
-                                <select
-                                    value={selectedResource}
-                                    onChange={(e) => setSelectedResource(e.target.value)}
-                                >
-                                    <option value="">Select Resource</option>
-                                    {isBuying
-                                        ? getAvailableResources().map(resource => (
-                                            <option key={resource.resource_type} value={resource.resource_type}>
-                                                {resource.resource_type} - {resource.buy} credits/unit
-                                            </option>
-                                        ))
-                                        : getPlayerResources().map(resource => (
-                                            <option key={resource.resource_type} value={resource.resource_type}>
-                                                {resource.resource_type} - {resource.sell} credits/unit
-                                            </option>
-                                        ))
-                                    }
-                                </select>
-                            </div>
-                            <div className="quantity-input">
-                                <label>Quantity:</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={quantity}
-                                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                />
-                            </div>
-                            <div className="trade-summary">
-                                <div className="total-cost">
-                                    Total Cost: {totalCost.toFixed(2)} credits
+                        <div className="player-section">
+                            <div className="player-info">
+                                <h3>Your Cargo</h3>
+                                <div className="player-resources">
+                                    <table className="resources-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Resource</th>
+                                                <th>Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {getPlayerResources().map((resource, index) => (
+                                                <tr 
+                                                    key={index}
+                                                    className={selectedResource === resource.resource_type ? 'selected' : ''}
+                                                >
+                                                    <td>{resource.resource_type}</td>
+                                                    <td>{resource.quantity}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
+                            {selectedResource && (
+                                <div className="trade-controls">
+                                    <div className="trade-amount">
+                                        <label>Quantity:</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={quantity}
+                                            onChange={(e) => {
+                                                const newAmount = Math.max(1, parseInt(e.target.value) || 1);
+                                                setQuantity(newAmount);
+                                            }}
+                                        />
+                                    </div>
+                                    <h3>{isBuying ? 'Buy' : 'Sell'} {selectedResource}</h3>
+                                    <div className="trade-summary">
+                                        <div className="total-cost">
+                                            Total: {totalCost.toFixed(2)} credits
+                                        </div>
+                                    </div>
+                                    <div className="action-buttons">
+                                        <button
+                                            className={`action-button trade-button ${isBuying ? 'buy-button' : 'sell-button'}`}
+                                            onClick={handleTrade}
+                                            disabled={!selectedResource || quantity < 1}
+                                        >
+                                            {isBuying ? 'Confirm Purchase' : 'Confirm Sale'}
+                                        </button>
+                                        <button className="action-button ignore-button" onClick={onClose}>
+                                            Leave Trader
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                     {error && <div className="error-message">{error}</div>}
                     {success && <div className="success-message">{success}</div>}
-                    <div className="action-buttons">
-                        <button
-                            className="action-button trade-button"
-                            onClick={handleTrade}
-                            disabled={!selectedResource || quantity < 1}
-                        >
-                            {isBuying ? 'Buy' : 'Sell'}
-                        </button>
-                        <button className="action-button ignore-button" onClick={onClose}>
-                            Cancel
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>

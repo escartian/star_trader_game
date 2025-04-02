@@ -1,174 +1,9 @@
 .trader-encounter {
-    max-width: 800px;
-}
-
-.encounter-info {
-    background-color: #222;
-    padding: 15px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-}
-
-.encounter-info h3 {
-    color: #00ff00;
-    margin-top: 0;
-}
-
-.trader-cargo {
-    background-color: #222;
-    padding: 15px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-}
-
-.trader-cargo h3 {
-    color: #00ff00;
-    margin-top: 0;
-}
-
-.cargo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
-}
-
-.cargo-item {
-    background-color: #1a1a1a;
-    padding: 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 1px solid #333;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.cargo-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 255, 0, 0.1);
-}
-
-.cargo-item.selected {
-    border-color: #00ff00;
-    background-color: #1a2a1a;
-}
-
-.cargo-item h4 {
-    margin: 0;
-    color: #fff;
-}
-
-.cargo-item .quantity {
-    margin: 0;
-    color: #00ff00;
-    font-size: 0.9em;
-}
-
-.trade-controls {
-    background-color: #222;
-    padding: 15px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-}
-
-.trade-controls h3 {
-    color: #00ff00;
-    margin-top: 0;
-}
-
-.input-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 15px 0;
-}
-
-.input-group label {
-    color: #fff;
-    min-width: 80px;
-}
-
-.input-group input {
-    background-color: #1a1a1a;
-    border: 1px solid #333;
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 4px;
-    width: 100px;
-}
-
-.error-message {
-    color: #ff4444;
-    margin: 10px 0;
-    padding: 10px;
-    background-color: rgba(255, 68, 68, 0.1);
-    border-radius: 4px;
-}
-
-.success-message {
-    color: #00ff00;
-    margin: 10px 0;
-    padding: 10px;
-    background-color: rgba(0, 255, 0, 0.1);
-    border-radius: 4px;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 15px;
-    justify-content: flex-end;
-}
-
-.trade-button, .attack-button, .ignore-button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.2s;
-}
-
-.trade-button {
-    background-color: #00ff00;
-    color: #000;
-}
-
-.attack-button {
-    background-color: #ff4444;
-    color: #fff;
-}
-
-.ignore-button {
-    background-color: #666;
-    color: #fff;
-}
-
-.trade-button:hover, .attack-button:hover, .ignore-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
     background-color: #2a2a2a;
     border-radius: 8px;
     padding: 2rem;
-    max-width: 90%;
-    width: 800px;
+    max-width: 95%;
+    width: 1400px;
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
@@ -190,20 +25,6 @@
     font-size: 1.5rem;
 }
 
-.close-button {
-    background: none;
-    border: none;
-    color: #888;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    line-height: 1;
-}
-
-.close-button:hover {
-    color: #fff;
-}
-
 .modal-body {
     display: flex;
     flex-direction: column;
@@ -213,138 +34,220 @@
 .encounter-info {
     background-color: #333;
     padding: 1.5rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
+    border-radius: 8px;
 }
 
 .encounter-info h3 {
-    margin: 0 0 1.5rem 0;
+    margin: 0;
     color: #00ff00;
     font-size: 1.2rem;
 }
 
-.fleet-details {
+.trader-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    min-height: 600px;
 }
 
-.fleet-card {
-    background-color: #444;
+.trader-section {
+    background-color: #333;
     padding: 1.5rem;
-    border-radius: 4px;
-    min-width: 0;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
 }
 
-.fleet-card h4 {
+.trader-cargo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.trader-cargo h3 {
     margin: 0 0 1rem 0;
     color: #00ff00;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
 }
 
-.fleet-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    background-color: #333;
-    border-radius: 4px;
-    min-width: 0;
-}
-
-.stat-label {
-    color: #888;
-    font-size: 0.9rem;
-}
-
-.stat-value {
-    color: #fff;
-    font-size: 1rem;
-    word-break: break-word;
-}
-
-.trade-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    background-color: #444;
-    padding: 1.5rem;
-    border-radius: 4px;
-}
-
-.trade-type-selector {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.trade-type-button {
+.market-table-container {
     flex: 1;
-    padding: 0.75rem;
+    overflow-y: auto;
+}
+
+.market-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.market-table th,
+.market-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #444;
+}
+
+.market-table th {
+    background-color: #444;
+    color: #00ff00;
+    font-weight: bold;
+}
+
+.market-table tr {
+    transition: background-color 0.2s;
+}
+
+.market-table tr:hover {
+    background-color: #3a3a3a;
+    cursor: pointer;
+}
+
+.market-table tr.selected {
+    background-color: #444;
+    border-left: 3px solid #00ff00;
+}
+
+.price-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.buy-price {
+    color: #ff4444;
+    font-weight: bold;
+}
+
+.sell-price {
+    color: #00ff00;
+    font-weight: bold;
+}
+
+.trade-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.buy-button,
+.sell-button {
+    padding: 0.5rem 1rem;
     border: none;
     border-radius: 4px;
-    background-color: #333;
-    color: #fff;
+    font-weight: bold;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
+    flex: 1;
 }
 
-.trade-type-button.active {
+.buy-button {
     background-color: #00ff00;
     color: #000;
 }
 
-.resource-selector select {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: #333;
-    border: none;
-    border-radius: 4px;
+.sell-button {
+    background-color: #ff4444;
     color: #fff;
-    font-size: 1rem;
-    cursor: pointer;
 }
 
-.quantity-input {
+.buy-button:hover,
+.sell-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.player-section {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.player-info {
+    background-color: #333;
+    padding: 1.5rem;
+    border-radius: 8px;
+    flex: 1;
+}
+
+.player-info h3 {
+    margin: 0 0 1rem 0;
+    color: #00ff00;
+    font-size: 1.2rem;
+}
+
+.player-resources {
+    display: flex;
+    flex-direction: column;
     gap: 1rem;
 }
 
-.quantity-input label {
+.resources-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.resources-table th,
+.resources-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #444;
+}
+
+.resources-table th {
+    background-color: #444;
+    color: #00ff00;
+    font-weight: bold;
+}
+
+.resources-table tr.selected {
+    background-color: #444;
+    border-left: 3px solid #00ff00;
+}
+
+.trade-controls {
+    background-color: #333;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.trade-amount {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.trade-amount label {
     color: #fff;
     min-width: 80px;
 }
 
-.quantity-input input {
+.trade-amount input {
     flex: 1;
     padding: 0.75rem;
-    background-color: #333;
-    border: none;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
     border-radius: 4px;
     color: #fff;
     font-size: 1rem;
 }
 
 .trade-summary {
-    background-color: #333;
+    background-color: #2a2a2a;
     padding: 1rem;
     border-radius: 4px;
-    margin-top: 1rem;
+    text-align: center;
 }
 
 .total-cost {
     color: #00ff00;
     font-size: 1.2rem;
     font-weight: bold;
-    text-align: center;
 }
 
 .error-message {
@@ -402,29 +305,50 @@
     background-color: #777;
 }
 
-@media (max-width: 768px) {
-    .modal-content {
-        padding: 1rem;
+.close-button {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    line-height: 1;
+}
+
+.close-button:hover {
+    color: #fff;
+}
+
+@media (max-width: 1200px) {
+    .trader-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .trader-encounter {
         width: 95%;
     }
+}
 
-    .fleet-details {
-        grid-template-columns: 1fr;
-    }
-
-    .fleet-card {
+@media (max-width: 768px) {
+    .trader-encounter {
         padding: 1rem;
     }
 
-    .fleet-stats {
-        grid-template-columns: 1fr;
+    .market-table th,
+    .market-table td {
+        padding: 0.75rem;
     }
 
-    .trade-type-selector {
+    .trade-actions {
         flex-direction: column;
     }
 
-    .quantity-input {
+    .buy-button,
+    .sell-button {
+        width: 100%;
+    }
+
+    .trade-amount {
         flex-direction: column;
         align-items: stretch;
     }
@@ -436,12 +360,22 @@
     .action-button {
         width: 100%;
     }
+}
 
-    .stat-item {
-        padding: 0.5rem;
-    }
+/* Custom scrollbar */
+.trader-encounter::-webkit-scrollbar {
+    width: 8px;
+}
 
-    .stat-value {
-        font-size: 0.9rem;
-    }
+.trader-encounter::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.trader-encounter::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+.trader-encounter::-webkit-scrollbar-thumb:hover {
+    background: #555;
 } 

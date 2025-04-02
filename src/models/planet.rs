@@ -1,14 +1,20 @@
 use crate::constants::PRINT_DEBUG;
+use crate::GAME_ID;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt;
 use strum::IntoEnumIterator;
+use std::fs::{self, File};
+use std::path::Path;
 
 use super::position::{random_nonzero_position, Position};
 use super::resource::{Resource, ResourceType};
 use super::player::Player;
+use super::market::Market;
+use crate::models::ship::ship::{Ship, ShipEngine, ShipSize, ShipType};
+use crate::models::fleet::Fleet;
 
 //PLANET DETAILS
 // Define a struct to represent a planet
@@ -20,7 +26,7 @@ pub struct Planet {
     pub specialization: PlanetSpecialization,
     pub danger: PlanetDanger,
     pub biome: Biome,
-    pub market: Vec<Resource>,
+    pub credits: f32,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlanetDanger {
@@ -54,7 +60,7 @@ impl fmt::Display for PlanetDanger {
 
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-enum Biome {
+pub enum Biome {
     Terran,
     Jungle,
     Ocean,
@@ -70,8 +76,9 @@ enum Biome {
     Radiated,
     Inhospitable,
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
-enum PlanetSpecialization {
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum PlanetSpecialization {
     Agriculture,
     Mining,
     Manufacturing,
@@ -82,8 +89,8 @@ enum PlanetSpecialization {
     None,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-enum Economy {
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum Economy {
     Booming,
     Growing,
     Stable,
@@ -92,6 +99,7 @@ enum Economy {
     Crashing,
     Nonexistent,
 }
+
 impl Distribution<PlanetDanger> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> PlanetDanger {
         match rng.gen_range(0..10) {
@@ -174,7 +182,6 @@ pub fn generate_planets(
         let specialization: PlanetSpecialization = rand::random();
         let biome: Biome = rand::random();
         let danger: PlanetDanger = rand::random();
-        let market = generate_planet_market(&specialization, &economy);
         
         // Create a new planet with the generated name, coordinates, and other properties
         let planet = Planet {
@@ -184,7 +191,7 @@ pub fn generate_planets(
             danger,
             position,
             biome,
-            market,
+            credits: 0.0,
         };
 
         // Add the planet to the vector of planets
@@ -301,90 +308,264 @@ impl PlanetTrait for Planet {
 }
 
 impl Planet {
-    pub fn buy_resource(&mut self, resource_type: ResourceType, quantity: u32, player: &mut Player) -> Result<(), String> {
-        // Find the resource in the planet's market
-        if let Some(market_resource) = self.market.iter_mut().find(|r| r.resource_type == resource_type) {
-            if let Some(buy_price) = market_resource.buy_price() {
-                let cost = quantity as f32 * buy_price;
+    pub fn get_ship_market(&self, system_id: usize, planet_id: usize) -> std::io::Result<Vec<Ship>> {
+        let market_path = Path::new("data")
+            .join("game")
+            .join(GAME_ID)
+            .join("markets")
+            .join(format!("Star_System_{}_Planet_{}_ships.json", system_id, planet_id));
 
-                // Check if the player has enough credits
-                if player.credits >= cost {
-                    // Check if the planet has enough quantity
-                    if let Some(available_quantity) = market_resource.quantity {
-                        if available_quantity >= quantity {
-                            // Update planet's market
-                            market_resource.quantity = Some(available_quantity - quantity);
-                            
-                            // Update player's inventory and credits
-                            player.credits -= cost;
-                            player.add_resource(Resource::new(resource_type, quantity));
-
-                            if PRINT_DEBUG {
-                                println!(
-                                    "Successfully bought {} {} from {} for {} credits",
-                                    quantity, resource_type, self.name, cost
-                                );
-                            }
-                            return Ok(());
-                        }
-                        return Err(format!(
-                            "Not enough {} available on {}. Requested: {}, Available: {}",
-                            resource_type, self.name, quantity, available_quantity
-                        ));
-                    }
-                    return Err(format!("{} is currently out of stock on {}", resource_type, self.name));
-                }
-                return Err(format!(
-                    "Insufficient credits to buy {} {}. Required: {:.2}, Available: {:.2}",
-                    quantity, resource_type, cost, player.credits
-                ));
+        if market_path.exists() {
+            let contents = fs::read_to_string(market_path)?;
+            Ok(serde_json::from_str(&contents)?)
+        } else {
+            // Generate new ship market if none exists
+            let ships = self.generate_ship_market();
+            // Save the generated market
+            if let Some(parent) = market_path.parent() {
+                fs::create_dir_all(parent)?;
             }
-            return Err(format!("{} does not buy {} at this time", self.name, resource_type));
+            let market_json = serde_json::to_string(&ships)?;
+            fs::write(&market_path, market_json)?;
+            Ok(ships)
         }
-        Err(format!("{} does not trade {} at all", self.name, resource_type))
     }
 
-    pub fn sell_resource(&mut self, resource_type: ResourceType, quantity: u32, player: &mut Player) -> Result<(), String> {
-        // Find the resource in the planet's market
-        if let Some(market_resource) = self.market.iter_mut().find(|r| r.resource_type == resource_type) {
-            if let Some(sell_price) = market_resource.sell_price() {
-                let earnings = quantity as f32 * sell_price;
+    pub fn generate_ship_market(&self) -> Vec<Ship> {
+        let mut rng = rand::thread_rng();
+        let ship_count = rng.gen_range(3..=8); // Generate 3-8 ships
+        let mut ships = Vec::new();
 
-                // Check if the player has enough of the resource
-                if let Some(player_resource) = player.resources.iter_mut().find(|r| r.resource_type == resource_type) {
-                    if let Some(player_quantity) = player_resource.quantity {
-                        if player_quantity >= quantity {
-                            // Update planet's market
-                            if let Some(available_quantity) = market_resource.quantity {
-                                market_resource.quantity = Some(available_quantity + quantity);
-                            } else {
-                                market_resource.quantity = Some(quantity);
-                            }
-                            
-                            // Update player's inventory and credits
-                            player.credits += earnings;
-                            player.remove_resource(Resource::new(resource_type, quantity), quantity);
-
-                            if PRINT_DEBUG {
-                                println!(
-                                    "Successfully sold {} {} to {} for {} credits",
-                                    quantity, resource_type, self.name, earnings
-                                );
-                            }
-                            return Ok(());
-                        }
-                        return Err(format!(
-                            "Not enough {} in your inventory. Requested: {}, Available: {}",
-                            resource_type, quantity, player_quantity
-                        ));
-                    }
-                    return Err(format!("You don't have any {} to sell", resource_type));
+        for _ in 0..ship_count {
+            let ship_type = match self.specialization {
+                PlanetSpecialization::Technology => ShipType::Battleship,
+                PlanetSpecialization::Manufacturing => ShipType::Freighter,
+                PlanetSpecialization::Mining => ShipType::Explorer,
+                _ => {
+                    // Random ship type for other specializations
+                    let types = vec![ShipType::Fighter, ShipType::Freighter, ShipType::Explorer];
+                    types[rng.gen_range(0..types.len())].clone()
                 }
-                return Err(format!("You don't have any {} in your inventory", resource_type));
-            }
-            return Err(format!("{} does not buy {} at this time", self.name, resource_type));
+            };
+
+            let mut ship: Ship = rand::random();
+            ship.specialization = ship_type;
+            
+            // Set price based on ship size and planet economy
+            let base_price = match ship.size {
+                ShipSize::Tiny => 1000.0,
+                ShipSize::Small => 2500.0,
+                ShipSize::Medium => 5000.0,
+                ShipSize::Large => 10000.0,
+                _ => 20000.0,
+            };
+
+            let economy_multiplier = match self.economy {
+                Economy::Booming => 1.5,
+                Economy::Crashing => 0.8,
+                _ => 1.0,
+            };
+
+            ship.price = Some(base_price * economy_multiplier);
+            ships.push(ship);
         }
-        Err(format!("{} does not trade {} at all", self.name, resource_type))
+
+        ships
+    }
+
+    fn save_ship_market(&self, market: &[Ship], system_id: usize, planet_id: usize) -> std::io::Result<()> {
+        let market_path = Path::new("data")
+            .join("game")
+            .join(GAME_ID)
+            .join("markets")
+            .join(format!("Star_System_{}_Planet_{}_ships.json", system_id, planet_id));
+
+        if let Some(parent) = market_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let market_json = serde_json::to_string(market)?;
+        fs::write(market_path, market_json)
+    }
+
+    pub fn refresh_ship_market(&mut self, system_id: usize, planet_id: usize) -> std::io::Result<()> {
+        let ships = self.generate_ship_market();
+        self.save_ship_market(&ships, system_id, planet_id)
+    }
+
+    pub fn buy_resource(&mut self, resource_type: ResourceType, quantity: u32, player: &mut Player, system_id: usize, planet_id: usize) -> Result<(), String> {
+        let mut market = Market::load(system_id, planet_id).map_err(|e| format!("Failed to load market: {}", e))?;
+        
+        // Check if player has enough credits
+        let cost = market.buy_resource(resource_type, quantity)?;
+        if player.credits >= cost {
+            // Update player's inventory and credits
+            player.credits -= cost;
+            player.add_resource(Resource::new(resource_type, quantity));
+
+            if PRINT_DEBUG {
+                println!(
+                    "Successfully bought {} {} from {} for {} credits",
+                    quantity, resource_type, self.name, cost
+                );
+            }
+            Ok(())
+        } else {
+            Err(format!(
+                "Insufficient credits to buy {} {}. Required: {:.2}, Available: {:.2}",
+                quantity, resource_type, cost, player.credits
+            ))
+        }
+    }
+
+    pub fn sell_resource(&mut self, resource_type: ResourceType, quantity: u32, player: &mut Player, system_id: usize, planet_id: usize) -> Result<(), String> {
+        let mut market = Market::load(system_id, planet_id).map_err(|e| format!("Failed to load market: {}", e))?;
+        
+        // Check if the player has enough of the resource
+        if let Some(player_resource) = player.resources.iter_mut().find(|r| r.resource_type == resource_type) {
+            if let Some(player_quantity) = player_resource.quantity {
+                if player_quantity >= quantity {
+                    // Update player's inventory and credits
+                    let earnings = market.sell_resource(resource_type, quantity)?;
+                    player.credits += earnings;
+                    player.remove_resource(Resource::new(resource_type, quantity), quantity);
+
+                    if PRINT_DEBUG {
+                        println!(
+                            "Successfully sold {} {} to {} for {} credits",
+                            quantity, resource_type, self.name, earnings
+                        );
+                    }
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "Not enough {} in your inventory. Requested: {}, Available: {}",
+                        resource_type, quantity, player_quantity
+                    ))
+                }
+            } else {
+                Err(format!("You don't have any {} to sell", resource_type))
+            }
+        } else {
+            Err(format!("You don't have any {} in your inventory", resource_type))
+        }
+    }
+
+    pub fn buy_ship(&mut self, ship_name: &str, fleet_name: &str, player: &mut Player, system_id: usize, planet_id: usize) -> Result<(), String> {
+        // Load the fleet
+        let fleet_path = format!("data/game/{}/fleets/{}.json", GAME_ID, fleet_name);
+        let mut fleet = Fleet::load(&fleet_path).map_err(|e| format!("Failed to load fleet: {}", e))?;
+
+        // Load the ship market
+        let ship_market = self.get_ship_market(system_id, planet_id).map_err(|e| format!("Failed to load ship market: {}", e))?;
+
+        // Find the ship in the market
+        let ship = ship_market.iter()
+            .find(|s| s.name == ship_name)
+            .ok_or_else(|| "Ship not found in market".to_string())?;
+
+        // Get the ship price
+        let ship_price = ship.price.ok_or_else(|| "Ship is not for sale".to_string())?;
+
+        // Check if player has enough credits
+        if player.credits < ship_price {
+            return Err(format!("Insufficient credits. Need: {}, Have: {}", ship_price, player.credits));
+        }
+
+        // Add the new ship to the fleet
+        let mut new_ship = ship.clone();
+        new_ship.owner = fleet_name.to_string();
+        new_ship.price = None; // Clear price as it's now owned
+        fleet.ships.push(new_ship);
+
+        // Update player credits
+        player.credits -= ship_price;
+
+        // Save the updated fleet
+        fleet.save(&fleet_path).map_err(|e| format!("Failed to save fleet: {}", e))?;
+
+        // Update and save the ship market
+        let mut updated_market = ship_market;
+        updated_market.retain(|s| s.name != ship_name);
+        self.save_ship_market(&updated_market, system_id, planet_id).map_err(|e| format!("Failed to save ship market: {}", e))?;
+
+        Ok(())
+    }
+
+    pub fn save_market(&self, market: &[Resource]) -> std::io::Result<()> {
+        let market_path = Path::new("data")
+            .join("game")
+            .join(GAME_ID)
+            .join("markets")
+            .join(format!("{}_resources.json", self.name));
+
+        if let Some(parent) = market_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let market_json = serde_json::to_string(market)?;
+        fs::write(market_path, market_json)
+    }
+
+    pub fn sell_ship(&mut self, ship_name: &str, fleet_name: &str, player: &mut Player, system_id: usize, planet_id: usize) -> Result<(), String> {
+        // Load the player's fleet
+        let fleet_path = format!("data/game/{}/fleets/{}.json", GAME_ID, fleet_name);
+        let mut fleet = Fleet::load(&fleet_path).map_err(|e| format!("Failed to load fleet: {}", e))?;
+
+        // Find the ship in the fleet
+        let ship_index = fleet.ships.iter()
+            .position(|s| s.name == ship_name)
+            .ok_or_else(|| "Ship not found in fleet".to_string())?;
+
+        // Get the ship and calculate its value
+        let ship = fleet.ships.remove(ship_index);
+        
+        // Calculate ship value based on attributes
+        let base_value = match ship.size {
+            ShipSize::Tiny => 500.0,
+            ShipSize::Small => 1250.0,
+            ShipSize::Medium => 2500.0,
+            ShipSize::Large => 5000.0,
+            ShipSize::Huge => 10000.0,
+            ShipSize::Planetary => 25000.0,
+        };
+
+        let specialization_multiplier = match ship.specialization {
+            ShipType::Fighter => 1.1,
+            ShipType::Battleship => 1.8,
+            ShipType::Freighter => 1.3,
+            ShipType::Explorer => 1.5,
+            ShipType::Shuttle => 0.7,
+            ShipType::Capital => 2.5,
+        };
+
+        let engine_multiplier = match ship.engine {
+            ShipEngine::Basic => 0.8,
+            ShipEngine::Advanced => 1.2,
+            ShipEngine::Experimental => 1.5,
+        };
+
+        let condition_multiplier = (ship.hp as f32 / 100.0).max(0.5);
+
+        let ship_value = base_value * specialization_multiplier * engine_multiplier * condition_multiplier;
+
+        // Update player's credits
+        player.credits += ship_value;
+
+        // Save the updated fleet
+        fleet.save(&fleet_path).map_err(|e| format!("Failed to save fleet: {}", e))?;
+
+        // Add ship to market with calculated value
+        let mut market_ships = self.get_ship_market(system_id, planet_id).map_err(|e| e.to_string())?;
+        let mut market_ship = ship.clone();
+        market_ship.price = Some(ship_value);
+        market_ship.owner = "".to_string(); // Clear owner as it's now in the market
+        market_ships.push(market_ship);
+        
+        // Save the updated market
+        self.save_ship_market(&market_ships, system_id, planet_id).map_err(|e| e.to_string())?;
+
+        Ok(())
     }
 }
 
@@ -402,7 +583,7 @@ mod planet_tests {
             specialization: rand::random(),
             danger: rand::random(),
             biome: rand::random(),
-            market: Vec::new(),
+            credits: 0.0,
         };
         let p2 = Planet {
             name: "B".to_string(),
@@ -411,7 +592,7 @@ mod planet_tests {
             specialization: rand::random(),
             danger: rand::random(),
             biome: rand::random(),
-            market: Vec::new(),
+            credits: 0.0,
         };
         let p3 = Planet {
             name: "C".to_string(),
@@ -420,7 +601,7 @@ mod planet_tests {
             specialization: rand::random(),
             danger: rand::random(),
             biome: rand::random(),
-            market: Vec::new(),
+            credits: 0.0,
         };
         let p3 = Planet {
             name: "D".to_string(),
@@ -429,7 +610,7 @@ mod planet_tests {
             specialization: rand::random(),
             danger: rand::random(),
             biome: rand::random(),
-            market: Vec::new(),
+            credits: 0.0,
         };
 
         // Add the planets to a vector

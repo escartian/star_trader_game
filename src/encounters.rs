@@ -14,6 +14,14 @@ pub struct EncounterFleet {
     pub position: Position,
 }
 
+/// Generates a random encounter fleet at the specified position.
+/// The fleet type and number of ships are determined by weighted probabilities.
+/// 
+/// # Arguments
+/// * `position` - The position where the encounter fleet should be generated
+/// 
+/// # Returns
+/// An `EncounterFleet` containing randomly generated ships based on the fleet type
 pub fn generate_encounter_fleet(position: Position) -> EncounterFleet {
     let mut rng = rand::thread_rng();
     
@@ -52,16 +60,49 @@ pub fn generate_encounter_fleet(position: Position) -> EncounterFleet {
     }
     
     EncounterFleet {
-        name: format!("{}_Fleet_{}", fleet_type, rng.gen_range(1000..9999)),
+        name: format!("Fleet_{}_{}", fleet_type, rng.gen_range(1000..9999)),
         owner_id: fleet_type.to_string(),
         ships,
         position,
     }
 }
 
+/// Calculates the base price for a ship based on its attributes
+fn calculate_ship_price(ship: &Ship) -> f32 {
+    let base_price = match ship.size {
+        ShipSize::Tiny => 1000.0,
+        ShipSize::Small => 2500.0,
+        ShipSize::Medium => 5000.0,
+        ShipSize::Large => 10000.0,
+        ShipSize::Huge => 20000.0,
+        ShipSize::Planetary => 50000.0,
+    };
+
+    let specialization_multiplier = match ship.specialization {
+        ShipType::Fighter => 1.2,
+        ShipType::Battleship => 2.0,
+        ShipType::Freighter => 1.5,
+        ShipType::Explorer => 1.8,
+        ShipType::Shuttle => 0.8,
+        ShipType::Capital => 3.0,
+    };
+
+    let engine_multiplier = match ship.engine {
+        ShipEngine::Basic => 1.0,
+        ShipEngine::Advanced => 1.5,
+        ShipEngine::Experimental => 2.0,
+    };
+
+    base_price * specialization_multiplier * engine_multiplier
+}
+
+/// Generates a pirate ship with aggressive combat capabilities.
+/// 
+/// # Returns
+/// A `Ship` configured for combat with high damage weapons and balanced defenses
 fn generate_pirate_ship() -> Ship {
     let mut rng = rand::thread_rng();
-    Ship {
+    let mut ship = Ship {
         name: format!("Pirate_Ship_{}", rng.gen_range(1000..9999)),
         owner: format!("Pirate_{}", rng.gen_range(1000..9999)),
         position: Position { x: 0, y: 0, z: 0 },
@@ -78,9 +119,16 @@ fn generate_pirate_ship() -> Ship {
             Weapon::QuantumEntanglementTorpedo { damage: 30 },
         ],
         armor: Armor::new(75),
-    }
+        price: None, // Pirate ships are not for sale
+    };
+    ship.price = Some(calculate_ship_price(&ship));
+    ship
 }
 
+/// Generates a trader ship with cargo capacity and basic defenses.
+/// 
+/// # Returns
+/// A `Ship` configured for trading with cargo space and minimal combat capabilities
 fn generate_trader_ship() -> Ship {
     let mut rng = rand::thread_rng();
     let mut cargo = Vec::new();
@@ -118,7 +166,7 @@ fn generate_trader_ship() -> Ship {
         });
     }
 
-    Ship {
+    let mut ship = Ship {
         name: format!("Trader_Ship_{}", rng.gen_range(1000..9999)),
         owner: format!("Trader_{}", rng.gen_range(1000..9999)),
         position: Position { x: 0, y: 0, z: 0 },
@@ -134,12 +182,19 @@ fn generate_trader_ship() -> Ship {
             Weapon::GravitonPulse { damage: 20 },
         ],
         armor: Armor::new(50),
-    }
+        price: None, // Will be set below
+    };
+    ship.price = Some(calculate_ship_price(&ship));
+    ship
 }
 
+/// Generates a military ship with strong combat capabilities.
+/// 
+/// # Returns
+/// A `Ship` configured for military operations with powerful weapons and heavy defenses
 fn generate_military_ship() -> Ship {
     let mut rng = rand::thread_rng();
-    Ship {
+    let mut ship = Ship {
         name: format!("Military_Ship_{}", rng.gen_range(1000..9999)),
         owner: format!("Military_{}", rng.gen_range(1000..9999)),
         position: Position { x: 0, y: 0, z: 0 },
@@ -157,12 +212,19 @@ fn generate_military_ship() -> Ship {
             Weapon::MagneticResonanceDisruptor { damage: 150 },
         ],
         armor: Armor::new(150),
-    }
+        price: None, // Will be set below
+    };
+    ship.price = Some(calculate_ship_price(&ship));
+    ship
 }
 
+/// Generates a mercenary ship with balanced combat capabilities.
+/// 
+/// # Returns
+/// A `Ship` configured for mercenary operations with versatile weapons and defenses
 fn generate_mercenary_ship() -> Ship {
     let mut rng = rand::thread_rng();
-    Ship {
+    let mut ship = Ship {
         name: format!("Mercenary_Ship_{}", rng.gen_range(1000..9999)),
         owner: format!("Mercenary_{}", rng.gen_range(1000..9999)),
         position: Position { x: 0, y: 0, z: 0 },
@@ -179,5 +241,8 @@ fn generate_mercenary_ship() -> Ship {
             Weapon::QuantumEntanglementTorpedo { damage: 50 },
         ],
         armor: Armor::new(100),
-    }
+        price: None, // Mercenary ships are not for sale
+    };
+    ship.price = Some(calculate_ship_price(&ship));
+    ship
 } 

@@ -52,6 +52,18 @@ impl Fleet {
         }
     }
 
+    pub fn load(path: &str) -> std::io::Result<Fleet> {
+        let mut contents = String::new();
+        File::open(path)?.read_to_string(&mut contents)?;
+        let fleet: Fleet = serde_json::from_str(&contents)?;
+        Ok(fleet)
+    }
+
+    pub fn save(&self, path: &str) -> std::io::Result<()> {
+        let file = File::create(path)?;
+        serde_json::to_writer(file, self)?;
+        Ok(())
+    }
 }
 
 pub fn get_next_fleet_number(owner_id: &str) -> std::io::Result<usize> {

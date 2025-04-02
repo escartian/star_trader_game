@@ -18,4 +18,3 @@ pub(crate) const GAME_ID: &str = "1";
 pub(crate) const STAR_COUNT: i32 = 10;
 
 pub(crate) static GAME_GENERATED: AtomicBool = AtomicBool::new(false);
-pub(crate) static GLOBAL_GAME_WORLD: Mutex<Vec<StarSystem>> = Mutex::new(Vec::new());

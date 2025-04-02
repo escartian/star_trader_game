@@ -264,7 +264,10 @@ async fn main() {
             get_fleet_owners,
             initiate_combat,
             check_for_encounter,
-            trade_with_trader
+            trade_with_trader,
+            get_planet_ship_market,
+            buy_ship,
+            sell_ship
         ])
         .attach(cors)
         .register("/", catchers![internal_error])

@@ -110,152 +110,81 @@
 
 /* Market Modal Styles */
 .market-modal {
-    background-color: #2a2a2a;
-    border-radius: 8px;
-    padding: 2rem;
-    max-width: 95%;
-    width: 1200px;
-    max-height: 90vh;
-    overflow-y: auto;
-    position: relative;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background: #1a1a1a;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 1400px;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
 }
 
 .market-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #444;
+    padding: 1rem 1.5rem;
+    background: #2a2a2a;
+    border-bottom: 1px solid #3a3a3a;
 }
 
 .market-modal-header h2 {
     margin: 0;
-    color: #00ff00;
+    color: #00ffff;
     font-size: 1.5rem;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color 0.2s;
+}
+
+.close-button:hover {
+    color: #ff3333;
 }
 
 .market-content {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-}
-
-.planet-info {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    background-color: #333;
-    padding: 1.5rem;
-    border-radius: 8px;
-}
-
-.planet-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.player-info {
-    background-color: #333;
-    padding: 1.5rem;
-    border-radius: 8px;
-}
-
-.player-info h3 {
-    margin: 0 0 1rem 0;
-    color: #00ff00;
-    font-size: 1.2rem;
-}
-
-.player-resources {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.resources-table {
-    width: 100%;
-    border-collapse: collapse;
-    background-color: #2a2a2a;
-    border-radius: 4px;
+    flex: 1;
     overflow: hidden;
-}
-
-.resources-table th,
-.resources-table td {
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid #444;
-}
-
-.resources-table th {
-    background-color: #444;
-    color: #00ff00;
-    font-weight: bold;
-}
-
-.resources-table tr:last-child td {
-    border-bottom: none;
-}
-
-.credits {
+    gap: 1rem;
     padding: 1rem;
-    background-color: #444;
-    border-radius: 4px;
-    color: #00ff00;
-    font-size: 1.1rem;
+    background: #1a1a1a;
 }
 
-.trade-controls {
+.market-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    min-height: 600px;
+}
+
+.market-section {
     background-color: #333;
     padding: 1.5rem;
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
 }
 
-.trade-controls label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.trade-controls input {
-    padding: 0.75rem;
-    background-color: #2a2a2a;
-    border: 1px solid #444;
-    border-radius: 4px;
-    color: #fff;
-    font-size: 1rem;
-}
-
-.trade-prices {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1rem;
-    background-color: #2a2a2a;
-    border-radius: 4px;
-}
-
-.buy-price {
-    color: #ff4444;
-    font-weight: bold;
-}
-
-.sell-price {
-    color: #00ff00;
-    font-weight: bold;
+.market-table-container {
+    flex: 1;
+    overflow-y: auto;
 }
 
 .market-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: #333;
-    border-radius: 8px;
+    background-color: #2a2a2a;
+    border-radius: 4px;
     overflow: hidden;
 }
 
@@ -285,6 +214,22 @@
     background-color: #444;
 }
 
+.price-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.buy-price {
+    color: #ff4444;
+    font-weight: bold;
+}
+
+.sell-price {
+    color: #00ff00;
+    font-weight: bold;
+}
+
 .trade-actions {
     display: flex;
     gap: 0.5rem;
@@ -298,6 +243,7 @@
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s;
+    flex: 1;
 }
 
 .buy-button {
@@ -324,6 +270,102 @@
     box-shadow: none;
 }
 
+.player-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.player-info {
+    background-color: #333;
+    padding: 1.5rem;
+    border-radius: 8px;
+    flex: 1;
+}
+
+.player-info h3 {
+    margin: 0 0 1rem 0;
+    color: #00ff00;
+    font-size: 1.2rem;
+}
+
+.player-resources {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.credits {
+    padding: 1rem;
+    background-color: #444;
+    border-radius: 4px;
+    color: #00ff00;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.resources-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.resources-table th,
+.resources-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #444;
+}
+
+.resources-table th {
+    background-color: #444;
+    color: #00ff00;
+    font-weight: bold;
+}
+
+.trade-controls {
+    background-color: #333;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.trade-amount {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.trade-amount label {
+    color: #fff;
+    min-width: 80px;
+}
+
+.trade-amount input {
+    flex: 1;
+    padding: 0.75rem;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.trade-summary {
+    background-color: #2a2a2a;
+    padding: 1rem;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.total-cost {
+    color: #00ff00;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
 .trade-message {
     padding: 1rem;
     border-radius: 4px;
@@ -342,16 +384,18 @@
     color: #ff4444;
 }
 
-@media (max-width: 768px) {
-    .market-modal {
-        padding: 1rem;
-    }
-
-    .planet-info {
+@media (max-width: 1200px) {
+    .market-layout {
         grid-template-columns: 1fr;
     }
 
-    .trade-controls {
+    .market-modal {
+        width: 95%;
+    }
+}
+
+@media (max-width: 768px) {
+    .market-modal {
         padding: 1rem;
     }
 
@@ -368,26 +412,27 @@
     .sell-button {
         width: 100%;
     }
+
+    .trade-amount {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }
 
 /* Custom scrollbar */
-.star-system-modal::-webkit-scrollbar,
 .market-modal::-webkit-scrollbar {
     width: 8px;
 }
 
-.star-system-modal::-webkit-scrollbar-track,
 .market-modal::-webkit-scrollbar-track {
     background: #1a1a1a;
 }
 
-.star-system-modal::-webkit-scrollbar-thumb,
 .market-modal::-webkit-scrollbar-thumb {
     background: #444;
     border-radius: 4px;
 }
 
-.star-system-modal::-webkit-scrollbar-thumb:hover,
 .market-modal::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
@@ -453,4 +498,552 @@
 @keyframes twinkle {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+}
+
+.planet-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.planet-actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #2c3e50;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.planet-actions button:hover {
+    background-color: #34495e;
+}
+
+/* Ship Market Styles */
+.fleet-ships {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.fleet-ships table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fleet-ships th,
+.fleet-ships td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #34495e;
+}
+
+.fleet-ships th {
+    background-color: #2c3e50;
+    color: white;
+}
+
+.fleet-ships tr:hover {
+    background-color: rgba(44, 62, 80, 0.1);
+}
+
+.buy-button,
+.sell-button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.buy-button {
+    background-color: #27ae60;
+    color: white;
+}
+
+.buy-button:hover {
+    background-color: #2ecc71;
+}
+
+.buy-button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
+.sell-button {
+    background-color: #c0392b;
+    color: white;
+}
+
+.sell-button:hover {
+    background-color: #e74c3c;
+}
+
+.buy-price {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.trade-message {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.trade-message.success {
+    background-color: rgba(39, 174, 96, 0.2);
+    color: #27ae60;
+    border: 1px solid #27ae60;
+}
+
+.trade-message.error {
+    background-color: rgba(192, 57, 43, 0.2);
+    color: #c0392b;
+    border: 1px solid #c0392b;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #7f8c8d;
+}
+
+.error {
+    color: #c0392b;
+    padding: 10px;
+    text-align: center;
+}
+
+.market-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: #2a2a2a;
+    border-radius: 8px;
+}
+
+.fleet-selector {
+    padding: 0.5rem 1rem;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    background: #333;
+    color: #fff;
+    font-size: 1rem;
+    min-width: 200px;
+}
+
+.player-credits {
+    font-size: 1.2rem;
+    color: #00ff00;
+    font-weight: bold;
+}
+
+.market-grid {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1rem;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    height: calc(90vh - 150px);
+}
+
+.market-list {
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 1rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.ships-table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.ships-table thead {
+    position: sticky;
+    top: 0;
+    background: #2a2a2a;
+    z-index: 1;
+}
+
+.ships-table tbody {
+    flex: 1;
+    overflow-y: auto;
+    display: block;
+}
+
+.ships-table thead,
+.ships-table tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.ships-table th {
+    text-align: left;
+    padding: 0.75rem;
+    background: #333;
+    color: #fff;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.ships-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.ship-row {
+    transition: all 0.2s ease;
+}
+
+.ship-row:hover {
+    background: #3d4b66;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.selected-row {
+    background: #2d3b55 !important;
+    border-left: 4px solid #00ffff;
+}
+
+.price-cell {
+    font-family: monospace;
+}
+
+.price-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.base-price {
+    color: #fff;
+}
+
+.trade-value {
+    color: #00ff00;
+}
+
+.final-price {
+    color: #00ffff;
+    font-weight: bold;
+}
+
+.details-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    overflow: hidden;
+}
+
+.details-section {
+    flex: 0 0 auto;
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.ship-details {
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.ship-details h3 {
+    color: #00ffff;
+    margin: 0 0 1rem 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.stat-box {
+    background: #333;
+    padding: 0.75rem;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stat-label {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.stat-value {
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.price-summary {
+    background: #333;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.price-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #4a4a4a;
+}
+
+.price-line:last-child {
+    border-bottom: none;
+}
+
+.price-line.trade-in span:last-child {
+    color: #00ff00;
+}
+
+.price-line.final {
+    font-weight: bold;
+    color: #00ffff;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.confirm-button, .cancel-button, .select-button, .deselect-button, .sell-button {
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.confirm-button {
+    background: #00ff00;
+    color: #000;
+    flex: 2;
+}
+
+.confirm-button:hover {
+    background: #00cc00;
+}
+
+.confirm-button:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.cancel-button {
+    background: #ff3333;
+    color: #fff;
+    flex: 1;
+}
+
+.cancel-button:hover {
+    background: #cc0000;
+}
+
+.select-button {
+    background: #4a4a4a;
+    color: #fff;
+    min-width: 100px;
+}
+
+.select-button:hover {
+    background: #5a5a5a;
+}
+
+.select-button.selected {
+    background: #00ffff;
+    color: #000;
+}
+
+.deselect-button {
+    background: #666;
+    color: #fff;
+}
+
+.sell-button {
+    background: #ff3333;
+    color: #fff;
+}
+
+.sell-button:hover {
+    background: #cc0000;
+}
+
+.trade-in-panel {
+    flex: 1;
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 1rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.trade-in-panel h3 {
+    margin: 0 0 1rem 0;
+    color: #00ffff;
+    flex: 0 0 auto;
+}
+
+.trade-in-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    padding-right: 0.5rem;
+    min-height: 0;
+}
+
+.trade-in-card {
+    background: #333;
+    border-radius: 4px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.trade-in-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: #3d4b66;
+}
+
+.trade-in-card.selected {
+    background: #2d3b55;
+    border: 1px solid #00ffff;
+}
+
+.ship-details.sell-mode {
+    margin-bottom: 1rem;
+}
+
+.ship-details.sell-mode h3 {
+    color: #ff3333;
+}
+
+.ship-details.sell-mode .price-line.final {
+    color: #ff3333;
+}
+
+.ship-details.sell-mode .confirm-button {
+    background: #ff3333;
+    color: #fff;
+}
+
+.ship-details.sell-mode .confirm-button:hover {
+    background: #cc0000;
+}
+
+.ship-info h4 {
+    margin: 0;
+    color: #fff;
+}
+
+.ship-quick-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.ship-quick-stats span {
+    background: #4a4a4a;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.no-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    background: #2a2a2a;
+    border-radius: 8px;
+    color: #666;
+}
+
+/* Custom scrollbar styling */
+.ships-table tbody::-webkit-scrollbar,
+.trade-in-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ships-table tbody::-webkit-scrollbar-track,
+.trade-in-grid::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 4px;
+}
+
+.ships-table tbody::-webkit-scrollbar-thumb,
+.trade-in-grid::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 4px;
+}
+
+.ships-table tbody::-webkit-scrollbar-thumb:hover,
+.trade-in-grid::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+}
+
+.sell-confirmation {
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    border: 1px solid #ff3333;
+}
+
+.sell-confirmation h3 {
+    color: #ff3333;
+    margin: 0 0 1rem 0;
+}
+
+.sell-confirmation .price-line.final {
+    color: #ff3333;
+}
+
+.sell-confirmation .confirm-button {
+    background: #ff3333;
+    color: #fff;
+}
+
+.sell-confirmation .confirm-button:hover {
+    background: #cc0000;
+}
+
+.sell-confirmation .ship-details {
+    background: transparent;
+    padding: 0;
 } 

@@ -78,6 +78,7 @@ export const GalaxyMap: React.FC = () => {
                     system={selectedSystem}
                     systemIndex={selectedSystemIndex}
                     onClose={handleCloseSystem}
+                    selectedFleet={null}
                 />
             )}
         </div>

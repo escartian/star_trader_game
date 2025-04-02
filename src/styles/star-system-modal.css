@@ -1,0 +1,48 @@
+.star-system-modal {
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.star-system-modal h2 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.planet-info {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.planet-info p {
+    margin: 8px 0;
+    color: #455a64;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.market-button {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 24px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.market-button:hover {
+    background-color: #1976d2;
+}
+
+.market-button:disabled {
+    background-color: #bdbdbd;
+    cursor: not-allowed;
+} 

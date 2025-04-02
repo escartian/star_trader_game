@@ -11,3 +11,4 @@ pub mod player;
 pub mod game_world;
 pub mod fleet;
 pub mod faction;
+pub mod market;

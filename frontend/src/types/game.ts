@@ -47,14 +47,16 @@ export interface Ship {
     cargo: Resource[];
     shields: Shield;
     armor: Armor;
+    price?: number;
 }
 
 export interface Fleet {
     name: string;
     owner_id: string;
-    position: Position;
     ships: Ship[];
+    position: Position;
     current_system_id: number | null;
+    last_move_distance: number | null;
 }
 
 export interface Planet {

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::io::Read;
 use serde_json::to_writer;
 use crate::models::star_system::StarSystem;
+use crate::models::market::Market;
 
 pub struct GameWorld {
     planets: Vec<Planet>,
@@ -66,11 +67,39 @@ pub fn create_game_world_file(game_id: &str, empty_world: bool) -> Vec<StarSyste
         }
         fs::create_dir_all(&systems_dir).expect("Failed to create star_systems directory");
 
-        // Save each star system individually
+        // Save each star system individually and initialize markets
         for (index, system) in galactic_map.iter().enumerate() {
             let system_path = systems_dir.join(format!("system_{}.json", index));
             let file = File::create(system_path).expect("Failed to create system file");
             to_writer(file, system).expect("Failed to write system data");
+
+            // Initialize markets for each planet in the system
+            for (planet_id, planet) in system.planets.iter().enumerate() {
+                // Create resource market
+                let market = Market::new(
+                    planet.name.clone(),
+                    index,
+                    planet_id,
+                    planet.specialization.clone(),
+                    planet.economy.clone()
+                );
+                market.save().expect("Failed to save planet market");
+
+                // Generate and save ship market
+                let ships = planet.generate_ship_market();
+                let market_path = Path::new("data")
+                    .join("game")
+                    .join(game_id)
+                    .join("markets")
+                    .join(format!("Star_System_{}_Planet_{}_ships.json", index, planet_id));
+
+                if let Some(parent) = market_path.parent() {
+                    fs::create_dir_all(parent).expect("Failed to create markets directory");
+                }
+
+                let market_json = serde_json::to_string(&ships).expect("Failed to serialize ship market");
+                fs::write(&market_path, market_json).expect("Failed to save ship market");
+            }
         }
 
         // Save the full game world for save state
@@ -99,7 +128,33 @@ pub fn create_game_world_file(game_id: &str, empty_world: bool) -> Vec<StarSyste
                 if system_path.exists() {
                     let mut contents = String::new();
                     File::open(system_path).expect("Failed to open system file").read_to_string(&mut contents).expect("Failed to read system file");
-                    let system: StarSystem = serde_json::from_str(&contents).expect("Failed to parse system data");
+                    let mut system: StarSystem = serde_json::from_str(&contents).expect("Failed to parse system data");
+                    
+                    // Load markets for each planet
+                    for (planet_id, planet) in system.planets.iter_mut().enumerate() {
+                        let mut market = Market::load(i as usize, planet_id).expect("Failed to load planet market");
+                        // Update market if needed based on planet's current state
+                        if market.needs_update(&planet.specialization, &planet.economy) {
+                            market.update(&planet.specialization, &planet.economy).expect("Failed to update market");
+                        }
+
+                        // Check if ship market exists, if not generate it
+                        let ship_market_path = Path::new("data")
+                            .join("game")
+                            .join(game_id)
+                            .join("markets")
+                            .join(format!("Star_System_{}_Planet_{}_ships.json", i, planet_id));
+
+                        if !ship_market_path.exists() {
+                            let ships = planet.generate_ship_market();
+                            if let Some(parent) = ship_market_path.parent() {
+                                fs::create_dir_all(parent).expect("Failed to create markets directory");
+                            }
+                            let market_json = serde_json::to_string(&ships).expect("Failed to serialize ship market");
+                            fs::write(&ship_market_path, market_json).expect("Failed to save ship market");
+                        }
+                    }
+                    
                     systems.push(system);
                 }
             }
@@ -112,7 +167,36 @@ pub fn create_game_world_file(game_id: &str, empty_world: bool) -> Vec<StarSyste
                 .join("GameWorld.json");
             let mut contents = String::new();
             File::open(world_path).expect("Failed to open game world file").read_to_string(&mut contents).expect("Failed to read game world file");
-            return serde_json::from_str(&contents).expect("Failed to parse game world data");
+            let mut systems: Vec<StarSystem> = serde_json::from_str(&contents).expect("Failed to parse game world data");
+            
+            // Load markets for each planet in each system
+            for (system_id, system) in systems.iter_mut().enumerate() {
+                for (planet_id, planet) in system.planets.iter_mut().enumerate() {
+                    let mut market = Market::load(system_id, planet_id).expect("Failed to load planet market");
+                    // Update market if needed based on planet's current state
+                    if market.needs_update(&planet.specialization, &planet.economy) {
+                        market.update(&planet.specialization, &planet.economy).expect("Failed to update market");
+                    }
+
+                    // Check if ship market exists, if not generate it
+                    let ship_market_path = Path::new("data")
+                        .join("game")
+                        .join(game_id)
+                        .join("markets")
+                        .join(format!("Star_System_{}_Planet_{}_ships.json", system_id, planet_id));
+
+                    if !ship_market_path.exists() {
+                        let ships = planet.generate_ship_market();
+                        if let Some(parent) = ship_market_path.parent() {
+                            fs::create_dir_all(parent).expect("Failed to create markets directory");
+                        }
+                        let market_json = serde_json::to_string(&ships).expect("Failed to serialize ship market");
+                        fs::write(&ship_market_path, market_json).expect("Failed to save ship market");
+                    }
+                }
+            }
+            
+            return systems;
         }
     }
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Fleet, Ship, Shield, Armor, Weapon } from '../types/game';
 import { api } from '../services/api';
-import { MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH } from '../constants';
+import { MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH, HOST_PLAYER_NAME } from '../constants';
 import './FleetModal.css';
 
 interface FleetModalProps {
@@ -16,7 +16,7 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
     const [targetY, setTargetY] = useState<number>(fleet.position.y);
     const [targetZ, setTargetZ] = useState<number>(fleet.position.z);
     const [moveMessage, setMoveMessage] = useState<string>('');
-    const [moveStatus, setMoveStatus] = useState<'success' | 'error' | null>(null);
+    const [moveStatus, setMoveStatus] = useState<'success' | 'error' | 'info' | null>(null);
     const [encounterFleets, setEncounterFleets] = useState<Fleet[]>([]);
     const [currentEncounterIndex, setCurrentEncounterIndex] = useState(0);
 
@@ -48,31 +48,10 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
         }
     };
 
-    const handleMove = () => {
-        // Calculate distance
-        const dx = targetX - fleet.position.x;
-        const dy = targetY - fleet.position.y;
-        const dz = targetZ - fleet.position.z;
-        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-        // Check if within game world bounds
-        if (targetX < -MAP_WIDTH/2 || targetX > MAP_WIDTH/2 ||
-            targetY < -MAP_HEIGHT/2 || targetY > MAP_HEIGHT/2 ||
-            targetZ < -MAP_LENGTH/2 || targetZ > MAP_LENGTH/2) {
-            setMoveMessage('Target position is outside the game world bounds');
-            setMoveStatus('error');
-            return;
-        }
-
-        setMoveMessage(`Distance to travel: ${distance.toFixed(2)} units`);
-        setMoveStatus('success');
-        onMove(fleet, targetX, targetY, targetZ);
-    };
-
     const handleTestEncounter = (type: 'Pirate' | 'Trader' | 'Military' | 'Mercenary') => {
         // Create a test encounter fleet
         const testFleet: Fleet = {
-            name: `Fleet_${type}_Test`,
+            name: `Fleet_${type}_1`,
             owner_id: type,
             ships: [
                 {
@@ -80,7 +59,20 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
                     owner: type,
                     specialization: type.toLowerCase() as any,
                     position: fleet.position,
-                    cargo: [],
+                    cargo: [
+                        {
+                            resource_type: "Iron",
+                            quantity: 100,
+                            buy: 50,
+                            sell: 40
+                        },
+                        {
+                            resource_type: "Gold",
+                            quantity: 50,
+                            buy: 100,
+                            sell: 80
+                        }
+                    ],
                     shields: { capacity: 100, current: 100, regen: 5 },
                     weapons: [{ PhotonSingularityBeam: { damage: 50 } }],
                     armor: { capacity: 50, current: 50, regen: 3 },
@@ -92,12 +84,66 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
                 }
             ],
             position: fleet.position,
-            current_system_id: fleet.current_system_id
+            current_system_id: fleet.current_system_id,
+            last_move_distance: null
         };
 
-        // Trigger the encounter
-        onMove(fleet, fleet.position.x, fleet.position.y, fleet.position.z);
+        // Create encounter response format
+        const encounterResponse = {
+            status: "encounter",
+            message: "Encounter detected during movement",
+            encounters: [testFleet],
+            current_position: fleet.position,
+            target_position: fleet.position,
+            remaining_distance: 0
+        };
+
+        // Simulate the encounter by directly setting the encounter fleets
+        setEncounterFleets([testFleet]);
+        setCurrentEncounterIndex(0);
     };
+
+    const handleMove = () => {
+        // Calculate distance
+        const dx = targetX - fleet.position.x;
+        const dy = targetY - fleet.position.y;
+        const dz = targetZ - fleet.position.z;
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        // Check if within game world bounds
+        if (Math.abs(targetX) > MAP_WIDTH || 
+            Math.abs(targetY) > MAP_HEIGHT || 
+            Math.abs(targetZ) > MAP_LENGTH) {
+            setMoveMessage('Target position is outside the game world bounds');
+            setMoveStatus('error');
+            return;
+        }
+
+        // Only allow moving player's own fleet
+        if (!fleet.owner_id.includes(HOST_PLAYER_NAME)) {
+            setMoveMessage('You can only move your own fleet');
+            setMoveStatus('error');
+            return;
+        }
+
+        setMoveMessage(`Distance to travel: ${distance.toFixed(2)} units`);
+        setMoveStatus('success');
+        onMove(fleet, targetX, targetY, targetZ);
+    };
+
+    const calculateDistance = () => {
+        const dx = targetX - fleet.position.x;
+        const dy = targetY - fleet.position.y;
+        const dz = targetZ - fleet.position.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    };
+
+    // Update distance whenever target coordinates change
+    useEffect(() => {
+        const distance = calculateDistance();
+        setMoveMessage(`Distance to travel: ${distance.toFixed(2)} units`);
+        setMoveStatus('info');
+    }, [targetX, targetY, targetZ]);
 
     const renderShield = (shield: Shield) => {
         return `${shield.current}/${shield.capacity} (${shield.regen}/s)`;
@@ -170,43 +216,43 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
                                         onChange={(e) => setTargetZ(parseInt(e.target.value) || 0)}
                                     />
                                 </div>
-                                <button onClick={handleMove}>Move Fleet</button>
-                            </div>
-                            {moveMessage && (
-                                <div className={`move-message ${moveStatus}`}>
-                                    {moveMessage}
+                                <div className="movement-info">
+                                    {moveMessage && (
+                                        <div className={`move-message ${moveStatus}`}>
+                                            {moveMessage}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="fleet-card">
-                        <h4>Test Encounters</h4>
-                        <div className="test-encounter-buttons">
-                            <button 
-                                className="test-encounter-button pirate"
-                                onClick={() => handleTestEncounter('Pirate')}
-                            >
-                                Test Pirate Encounter
-                            </button>
-                            <button 
-                                className="test-encounter-button trader"
-                                onClick={() => handleTestEncounter('Trader')}
-                            >
-                                Test Trader Encounter
-                            </button>
-                            <button 
-                                className="test-encounter-button military"
-                                onClick={() => handleTestEncounter('Military')}
-                            >
-                                Test Military Encounter
-                            </button>
-                            <button 
-                                className="test-encounter-button mercenary"
-                                onClick={() => handleTestEncounter('Mercenary')}
-                            >
-                                Test Mercenary Encounter
-                            </button>
+                                <div className="movement-actions">
+                                    <button onClick={handleMove}>Move Fleet</button>
+                                </div>
+                                <div className="test-encounter-buttons">
+                                    <button 
+                                        className="test-encounter-button trader"
+                                        onClick={() => handleTestEncounter('Trader')}
+                                    >
+                                        Test Trader
+                                    </button>
+                                    <button 
+                                        className="test-encounter-button pirate"
+                                        onClick={() => handleTestEncounter('Pirate')}
+                                    >
+                                        Test Pirate
+                                    </button>
+                                    <button 
+                                        className="test-encounter-button military"
+                                        onClick={() => handleTestEncounter('Military')}
+                                    >
+                                        Test Military
+                                    </button>
+                                    <button 
+                                        className="test-encounter-button mercenary"
+                                        onClick={() => handleTestEncounter('Mercenary')}
+                                    >
+                                        Test Mercenary
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

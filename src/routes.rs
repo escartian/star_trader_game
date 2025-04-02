@@ -23,6 +23,10 @@ use std::sync::MutexGuard;
 use crate::models::position::Position;
 use std::fs;
 use crate::encounters::generate_encounter_fleet;
+use rocket::post;
+use serde::Deserialize;
+use crate::models::ship::ship::Ship;
+use crate::models::market::Market;
 
 
 #[catch(500)]
@@ -183,7 +187,8 @@ pub fn get_planet_market(system_id: usize, planet_id: usize) -> Option<Json<Vec<
     get_global_game_world()
         .get(system_id)
         .and_then(|system| system.planets.get(planet_id))
-        .map(|planet| Json(planet.market.clone()))
+        .and_then(|_| Market::load(system_id, planet_id).ok())
+        .map(|market| Json(market.resources))
 }
 
 #[get("/planet/<system_id>/<planet_id>/buy/<resource_type>/<quantity>")]
@@ -192,7 +197,7 @@ pub fn buy_from_planet(system_id: usize, planet_id: usize, resource_type: Resour
 
     if let Ok(Some(mut system)) = crate::models::game_world::load_star_system(GAME_ID, system_id) {
         if let Some(planet) = system.planets.get_mut(planet_id) {
-            match planet.buy_resource(resource_type, quantity, &mut player) {
+            match planet.buy_resource(resource_type, quantity, &mut player, system_id, planet_id) {
                 Ok(_) => {
                     // Save the updated player data
                     let player_path = Path::new("data")
@@ -235,7 +240,7 @@ pub fn sell_to_planet(system_id: usize, planet_id: usize, resource_type: Resourc
 
     if let Ok(Some(mut system)) = crate::models::game_world::load_star_system(GAME_ID, system_id) {
         if let Some(planet) = system.planets.get_mut(planet_id) {
-            match planet.sell_resource(resource_type, quantity, &mut player) {
+            match planet.sell_resource(resource_type, quantity, &mut player, system_id, planet_id) {
                 Ok(_) => {
                     // Save the updated player data
                     let player_path = Path::new("data")
@@ -913,4 +918,91 @@ pub fn trade_with_trader(owner_id: String, fleet_number: usize, resource_type: R
             Json("Error loading trader fleet".to_string())
         }
     }
+}
+
+#[get("/systems/<system_id>/planets/<planet_id>/ship-market")]
+pub fn get_planet_ship_market(system_id: usize, planet_id: usize) -> Option<Json<Vec<Ship>>> {
+    get_global_game_world()
+        .get(system_id)
+        .and_then(|system| system.planets.get(planet_id))
+        .and_then(|planet| planet.get_ship_market(system_id, planet_id).ok())
+        .map(|ships| Json(ships))
+}
+
+#[post("/systems/<system_id>/planets/<planet_id>/ship-market/buy", format = "json", data = "<data>")]
+pub fn buy_ship(system_id: usize, planet_id: usize, data: Json<ShipTradeData>) -> Json<String> {
+    let mut player = serde_json::from_str(&get_player(HOST_PLAYER_NAME).unwrap()).unwrap();
+
+    if let Ok(Some(mut system)) = crate::models::game_world::load_star_system(GAME_ID, system_id) {
+        if let Some(planet) = system.planets.get_mut(planet_id) {
+            match planet.buy_ship(&data.ship_name, &data.fleet_name, &mut player, system_id, planet_id) {
+                Ok(_) => {
+                    // Save the updated player data
+                    let player_path = Path::new("data")
+                        .join("game")
+                        .join(GAME_ID)
+                        .join("players")
+                        .join(format!("{}.json", HOST_PLAYER_NAME));
+                    
+                    let player_file = File::create(player_path).unwrap();
+                    serde_json::to_writer(player_file, &player).unwrap();
+
+                    // Save the updated star system
+                    if let Err(e) = crate::models::game_world::save_star_system(GAME_ID, system_id, &system) {
+                        println!("Error saving star system: {}", e);
+                        return Json("Error saving star system".to_string());
+                    }
+                    
+                    Json("Successfully bought ship".to_string())
+                },
+                Err(e) => Json(e),
+            }
+        } else {
+            Json("Planet not found".to_string())
+        }
+    } else {
+        Json("Star system not found".to_string())
+    }
+}
+
+#[post("/systems/<system_id>/planets/<planet_id>/ship-market/sell", format = "json", data = "<data>")]
+pub fn sell_ship(system_id: usize, planet_id: usize, data: Json<ShipTradeData>) -> Json<String> {
+    let mut player = serde_json::from_str(&get_player(HOST_PLAYER_NAME).unwrap()).unwrap();
+
+    if let Ok(Some(mut system)) = crate::models::game_world::load_star_system(GAME_ID, system_id) {
+        if let Some(planet) = system.planets.get_mut(planet_id) {
+            match planet.sell_ship(&data.ship_name, &data.fleet_name, &mut player, system_id, planet_id) {
+                Ok(_) => {
+                    // Save the updated player data
+                    let player_path = Path::new("data")
+                        .join("game")
+                        .join(GAME_ID)
+                        .join("players")
+                        .join(format!("{}.json", HOST_PLAYER_NAME));
+                    
+                    let player_file = File::create(player_path).unwrap();
+                    serde_json::to_writer(player_file, &player).unwrap();
+
+                    // Save the updated star system
+                    if let Err(e) = crate::models::game_world::save_star_system(GAME_ID, system_id, &system) {
+                        println!("Error saving star system: {}", e);
+                        return Json("Error saving star system".to_string());
+                    }
+                    
+                    Json("Successfully sold ship".to_string())
+                },
+                Err(e) => Json(e),
+            }
+        } else {
+            Json("Planet not found".to_string())
+        }
+    } else {
+        Json("Star system not found".to_string())
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ShipTradeData {
+    ship_name: String,
+    fleet_name: String,
 } 

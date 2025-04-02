@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Fleet, Ship, Shield, Armor, Weapon } from '../types/game';
+import { Fleet, Ship, Shield, Armor, Weapon, ResourceType } from '../types/game';
 import { api } from '../services/api';
 import { MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH, HOST_PLAYER_NAME } from '../constants';
 import './FleetModal.css';
@@ -61,13 +61,13 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
                     position: fleet.position,
                     cargo: [
                         {
-                            resource_type: "Iron",
+                            resource_type: ResourceType.Minerals,
                             quantity: 100,
                             buy: 50,
                             sell: 40
                         },
                         {
-                            resource_type: "Gold",
+                            resource_type: ResourceType.Luxury,
                             quantity: 50,
                             buy: 100,
                             sell: 80

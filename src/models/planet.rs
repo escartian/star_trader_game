@@ -451,25 +451,93 @@ impl Planet {
         }
     }
 
-    pub fn buy_ship(&mut self, ship_name: &str, fleet_name: &str, player: &mut Player, system_id: usize, planet_id: usize) -> Result<(), String> {
+    pub fn buy_ship(&mut self, ship_name: &str, fleet_name: &str, player: &mut Player, system_id: usize, planet_id: usize, trade_in_ship: Option<&str>) -> Result<(), String> {
+        println!("Starting buy_ship operation:");
+        println!("  Ship to buy: {}", ship_name);
+        println!("  Fleet: {}", fleet_name);
+        println!("  Trade-in ship: {:?}", trade_in_ship);
+
         // Load the fleet
         let fleet_path = format!("data/game/{}/fleets/{}.json", GAME_ID, fleet_name);
+        println!("Loading fleet from: {}", fleet_path);
         let mut fleet = Fleet::load(&fleet_path).map_err(|e| format!("Failed to load fleet: {}", e))?;
+        println!("Loaded fleet with {} ships", fleet.ships.len());
 
         // Load the ship market
-        let ship_market = self.get_ship_market(system_id, planet_id).map_err(|e| format!("Failed to load ship market: {}", e))?;
+        println!("Loading ship market for system {} planet {}", system_id, planet_id);
+        let mut ship_market = self.get_ship_market(system_id, planet_id).map_err(|e| format!("Failed to load ship market: {}", e))?;
+        println!("Loaded market with {} ships", ship_market.len());
 
         // Find the ship in the market
+        println!("Looking for ship {} in market", ship_name);
         let ship = ship_market.iter()
             .find(|s| s.name == ship_name)
             .ok_or_else(|| "Ship not found in market".to_string())?;
+        println!("Found ship in market: {}", ship.name);
 
         // Get the ship price
         let ship_price = ship.price.ok_or_else(|| "Ship is not for sale".to_string())?;
+        println!("Ship price: {}", ship_price);
+
+        // Calculate trade-in value if applicable
+        let (trade_in_value, trade_in_ship) = if let Some(trade_in_name) = trade_in_ship {
+            println!("Processing trade-in for ship: {}", trade_in_name);
+            // Find the trade-in ship in the fleet
+            let trade_in_index = fleet.ships.iter()
+                .position(|s| s.name == trade_in_name)
+                .ok_or_else(|| "Trade-in ship not found in fleet".to_string())?;
+            println!("Found trade-in ship at index {}", trade_in_index);
+
+            // Get the trade-in ship and calculate its value
+            let trade_in_ship = fleet.ships.remove(trade_in_index);
+            println!("Removed trade-in ship from fleet. Fleet now has {} ships", fleet.ships.len());
+            
+            // Calculate trade-in value based on attributes
+            let base_value = match trade_in_ship.size {
+                ShipSize::Tiny => 500.0,
+                ShipSize::Small => 1250.0,
+                ShipSize::Medium => 2500.0,
+                ShipSize::Large => 5000.0,
+                ShipSize::Huge => 10000.0,
+                ShipSize::Planetary => 25000.0,
+            };
+
+            let specialization_multiplier = match trade_in_ship.specialization {
+                ShipType::Fighter => 1.1,
+                ShipType::Battleship => 1.8,
+                ShipType::Freighter => 1.3,
+                ShipType::Explorer => 1.5,
+                ShipType::Shuttle => 0.7,
+                ShipType::Capital => 2.5,
+            };
+
+            let engine_multiplier = match trade_in_ship.engine {
+                ShipEngine::Basic => 0.8,
+                ShipEngine::Advanced => 1.2,
+                ShipEngine::Experimental => 1.5,
+            };
+
+            let condition_multiplier = (trade_in_ship.hp as f32 / 100.0).max(0.5);
+
+            let final_value = base_value * specialization_multiplier * engine_multiplier * condition_multiplier;
+            println!("Calculated trade-in value: {} (base: {}, spec: {}, engine: {}, condition: {})", 
+                final_value, base_value, specialization_multiplier, engine_multiplier, condition_multiplier);
+
+            (final_value, Some(trade_in_ship))
+        } else {
+            println!("No trade-in ship specified");
+            (0.0, None)
+        };
+
+        // Calculate final price after trade-in
+        let final_price = ship_price - trade_in_value;
+        println!("Final price after trade-in: {} (original: {}, trade-in: {})", 
+            final_price, ship_price, trade_in_value);
 
         // Check if player has enough credits
-        if player.credits < ship_price {
-            return Err(format!("Insufficient credits. Need: {}, Have: {}", ship_price, player.credits));
+        if player.credits < final_price {
+            println!("Insufficient credits. Need: {}, Have: {}", final_price, player.credits);
+            return Err(format!("Insufficient credits. Need: {}, Have: {}", final_price, player.credits));
         }
 
         // Add the new ship to the fleet
@@ -477,18 +545,35 @@ impl Planet {
         new_ship.owner = fleet_name.to_string();
         new_ship.price = None; // Clear price as it's now owned
         fleet.ships.push(new_ship);
+        println!("Added new ship to fleet. Fleet now has {} ships", fleet.ships.len());
 
         // Update player credits
-        player.credits -= ship_price;
+        player.credits -= final_price;
+        println!("Updated player credits: {} (deducted {})", player.credits, final_price);
+
+        // If there was a trade-in, add the traded ship to the market
+        if let Some(mut market_ship) = trade_in_ship {
+            println!("Adding trade-in ship to market");
+            market_ship.price = Some(trade_in_value);
+            market_ship.owner = "".to_string(); // Clear owner as it's now in the market
+            ship_market.push(market_ship);
+            println!("Market now has {} ships", ship_market.len());
+        }
+
+        // Remove the purchased ship from the market
+        println!("Removing purchased ship from market");
+        ship_market.retain(|s| s.name != ship_name);
+        println!("Market now has {} ships after removing purchased ship", ship_market.len());
 
         // Save the updated fleet
+        println!("Saving updated fleet");
         fleet.save(&fleet_path).map_err(|e| format!("Failed to save fleet: {}", e))?;
 
-        // Update and save the ship market
-        let mut updated_market = ship_market;
-        updated_market.retain(|s| s.name != ship_name);
-        self.save_ship_market(&updated_market, system_id, planet_id).map_err(|e| format!("Failed to save ship market: {}", e))?;
+        // Save the updated market
+        println!("Saving updated market");
+        self.save_ship_market(&ship_market, system_id, planet_id).map_err(|e| format!("Failed to save ship market: {}", e))?;
 
+        println!("Buy ship operation completed successfully");
         Ok(())
     }
 

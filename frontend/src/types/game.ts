@@ -7,7 +7,7 @@ export interface Position {
 }
 
 export interface Resource {
-    resource_type: string;
+    resource_type: ResourceType;
     quantity: number | null;
     buy: number | null;
     sell: number | null;
@@ -85,4 +85,17 @@ export interface Player {
     name: string;
     credits: number;
     resources: Resource[];
+}
+
+export enum ResourceType {
+    Minerals = 'Minerals',
+    Food = 'Food',
+    Technology = 'Technology',
+    Luxury = 'Luxury',
+    RawMaterials = 'RawMaterials',
+    Energy = 'Energy',
+    Water = 'Water',
+    Medicine = 'Medicine',
+    Weapons = 'Weapons',
+    Electronics = 'Electronics'
 }

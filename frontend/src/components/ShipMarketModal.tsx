@@ -171,6 +171,7 @@ export const ShipMarketModal: React.FC<ShipMarketModalProps> = ({
             // Clear any selected ships
             setSelectedShip(null);
             setSelectedTradeIn(null);
+            setSelectedSellShip(null);
         } catch (err) {
             console.error('Ship sale failed:', err);
             setError('Failed to complete sale. Please try again.');

@@ -31,11 +31,20 @@ impl Market {
     }
 
     pub fn load(system_id: usize, planet_id: usize) -> std::io::Result<Market> {
-        let market_path = Path::new("data")
+        let market_dir = Path::new("data")
             .join("game")
             .join(GAME_ID)
-            .join("markets")
-            .join(format!("Star_System_{}_Planet_{}_market.json", system_id, planet_id));
+            .join("markets");
+
+        // Create market directory if it doesn't exist
+        if !market_dir.exists() {
+            if let Some(parent) = market_dir.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::create_dir_all(&market_dir)?;
+        }
+
+        let market_path = market_dir.join(format!("Star_System_{}_Planet_{}_market.json", system_id, planet_id));
 
         if market_path.exists() {
             let contents = fs::read_to_string(market_path)?;
@@ -54,13 +63,21 @@ impl Market {
             .join(GAME_ID)
             .join("markets")
             .join(format!("Star_System_{}_Planet_{}_market.json", self.system_id, self.planet_id));
+        
+        println!("Market::save - Attempting to save market to: {:?}", market_path);
 
         if let Some(parent) = market_path.parent() {
+            println!("Market::save - Creating parent directory: {:?}", parent);
             fs::create_dir_all(parent)?;
         }
 
         let market_json = serde_json::to_string(self)?;
-        fs::write(market_path, market_json)
+        println!("Market::save - Successfully serialized market to JSON");
+        
+        fs::write(&market_path, market_json)?;
+        println!("Market::save - Successfully wrote market file");
+        
+        Ok(())
     }
 
     pub fn needs_update(&self, specialization: &PlanetSpecialization, economy: &Economy) -> bool {

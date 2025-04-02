@@ -15,6 +15,7 @@ use super::player::Player;
 use super::market::Market;
 use crate::models::ship::ship::{Ship, ShipEngine, ShipSize, ShipType};
 use crate::models::fleet::Fleet;
+use crate::models::trade::{buy_from_planet, sell_to_planet};
 
 //PLANET DETAILS
 // Define a struct to represent a planet
@@ -394,61 +395,11 @@ impl Planet {
     }
 
     pub fn buy_resource(&mut self, resource_type: ResourceType, quantity: u32, player: &mut Player, system_id: usize, planet_id: usize) -> Result<(), String> {
-        let mut market = Market::load(system_id, planet_id).map_err(|e| format!("Failed to load market: {}", e))?;
-        
-        // Check if player has enough credits
-        let cost = market.buy_resource(resource_type, quantity)?;
-        if player.credits >= cost {
-            // Update player's inventory and credits
-            player.credits -= cost;
-            player.add_resource(Resource::new(resource_type, quantity));
-
-            if PRINT_DEBUG {
-                println!(
-                    "Successfully bought {} {} from {} for {} credits",
-                    quantity, resource_type, self.name, cost
-                );
-            }
-            Ok(())
-        } else {
-            Err(format!(
-                "Insufficient credits to buy {} {}. Required: {:.2}, Available: {:.2}",
-                quantity, resource_type, cost, player.credits
-            ))
-        }
+        buy_from_planet(self, player, resource_type, quantity, system_id, planet_id)
     }
 
     pub fn sell_resource(&mut self, resource_type: ResourceType, quantity: u32, player: &mut Player, system_id: usize, planet_id: usize) -> Result<(), String> {
-        let mut market = Market::load(system_id, planet_id).map_err(|e| format!("Failed to load market: {}", e))?;
-        
-        // Check if the player has enough of the resource
-        if let Some(player_resource) = player.resources.iter_mut().find(|r| r.resource_type == resource_type) {
-            if let Some(player_quantity) = player_resource.quantity {
-                if player_quantity >= quantity {
-                    // Update player's inventory and credits
-                    let earnings = market.sell_resource(resource_type, quantity)?;
-                    player.credits += earnings;
-                    player.remove_resource(Resource::new(resource_type, quantity), quantity);
-
-                    if PRINT_DEBUG {
-                        println!(
-                            "Successfully sold {} {} to {} for {} credits",
-                            quantity, resource_type, self.name, earnings
-                        );
-                    }
-                    Ok(())
-                } else {
-                    Err(format!(
-                        "Not enough {} in your inventory. Requested: {}, Available: {}",
-                        resource_type, quantity, player_quantity
-                    ))
-                }
-            } else {
-                Err(format!("You don't have any {} to sell", resource_type))
-            }
-        } else {
-            Err(format!("You don't have any {} in your inventory", resource_type))
-        }
+        sell_to_planet(self, player, resource_type, quantity, system_id, planet_id)
     }
 
     pub fn buy_ship(&mut self, ship_name: &str, fleet_name: &str, player: &mut Player, system_id: usize, planet_id: usize, trade_in_ship: Option<&str>) -> Result<(), String> {

@@ -1,16 +1,9 @@
 use serde::Serialize;
 use serde::Deserialize;
 use serde_json::to_writer;
-
-
 use crate::constants::INITIAL_CREDIT_COUNT;
 use std::path::Path;
-use std::fs::File;
-use std::io::Read;
 use crate::models::resource::generate_resources_no_trade;
-use crate::Trader;
-use crate::models::trade::TradeAction;
-use crate::models::trade::TradeResult;
 use super::resource::Resource;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,6 +27,7 @@ impl Player {
 
         }
     }
+
     pub fn add_resource(&mut self, resource: Resource) {
         if let Some(existing_resource) = self.resources.iter_mut().find(|r| r.resource_type == resource.resource_type) {
             // If the resource exists, add to its quantity
@@ -66,45 +60,6 @@ impl Player {
         }
     }
 
-    pub fn trade_with_trader(&mut self, trader: &mut Trader, action: TradeAction) -> TradeResult {
-    // Check if the trader reference is valid
-        if trader.is_null() {
-            return TradeResult::TraderNotFound;
-        }
-        else {    
-            match action {
-                TradeAction::Buy { resource_type, quantity } => {
-                    // Check for invalid quantity
-                    if quantity == 0 {
-                        return TradeResult::InvalidResource;
-                    }
-                    // Attempt to buy resource and handle potential errors
-                    match trader.buy_resource(resource_type, quantity, self) {
-                        Ok(_) => TradeResult::Success,
-                        Err(e) => {
-                            eprintln!("Error during buying resource: {}", e);
-                            TradeResult::TransactionFailed
-                        }
-                    }
-                }
-                TradeAction::Sell { resource_type, quantity } => {
-                    // Check for invalid quantity
-                    if quantity == 0 {
-                        return TradeResult::InvalidResource;
-                    }
-                    // Attempt to sell resource and handle potential errors
-                    match trader.sell_resource(resource_type, quantity, self) {
-                        Ok(_) => TradeResult::Success,
-                        Err(e) => {
-                            eprintln!("Error during selling resource: {}", e);
-                            TradeResult::TransactionFailed
-                        }
-                    }
-                }
-            }
-        }    
-    }
-
     /** Creates a new player with the specified name and saves their data to a JSON file 
     * within the game directory. If necessary, creates the required directories.
     * Returns the newly created Player object.
@@ -124,7 +79,7 @@ impl Player {
         }
 
         // Create a new player
-        let mut player = Player::new(player_name);
+        let player = Player::new(player_name);
 
         // Create the file and handle any errors
         let file = match std::fs::File::create(&data_path) {

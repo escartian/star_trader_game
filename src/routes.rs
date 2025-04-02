@@ -25,6 +25,7 @@ use crate::models::ship::ship::Ship;
 use crate::models::market::Market;
 use crate::models::response::ApiResponse;
 use crate::models::game_state::{load_player, load_star_system, save_trade_state, game_path, ensure_parent_dirs, save_json, load_json};
+use crate::models::trade::trade_with_fleet;
 
 
 #[catch(500)]
@@ -745,156 +746,8 @@ pub fn trade_with_trader(owner_id: String, fleet_number: usize, resource_type: R
     // Load both fleets
     match (crate::models::fleet::load_fleet(&fleet_name), crate::models::fleet::load_fleet(&trader_fleet_name)) {
         (Ok(Some(mut player_fleet)), Ok(Some(mut trader_fleet))) => {
-            // Find the resource in trader's cargo
-            let mut trader_resource = None;
-            let mut trader_ship_index = 0;
-            let mut cargo_index = 0;
-
-            for (ship_idx, ship) in trader_fleet.ships.iter().enumerate() {
-                for (cargo_idx, cargo) in ship.cargo.iter().enumerate() {
-                    if cargo.resource_type == resource_type {
-                        trader_resource = Some(cargo.clone());
-                        trader_ship_index = ship_idx;
-                        cargo_index = cargo_idx;
-                        break;
-                    }
-                }
-                if trader_resource.is_some() {
-                    break;
-                }
-            }
-
-            match trader_resource {
-                Some(resource) => {
-                    match trade_type.as_str() {
-                        "buy" => {
-                            // Calculate total cost
-                            let total_cost = (resource.buy.unwrap_or(0.0) * quantity as f32) as f32;
-                            
-                            // Check if player has enough credits
-                            if player.credits < total_cost {
-                                return Json("Insufficient credits".to_string());
-                            }
-
-                            // Check if trader has enough quantity
-                            if resource.quantity.unwrap_or(0) < quantity {
-                                return Json("Trader doesn't have enough resources".to_string());
-                            }
-
-                            // Update player's credits and cargo
-                            player.credits -= total_cost;
-                            
-                            // Add cargo to player's fleet
-                            let mut found = false;
-                            for ship in &mut player_fleet.ships {
-                                for cargo in &mut ship.cargo {
-                                    if cargo.resource_type == resource_type {
-                                        cargo.quantity = Some(cargo.quantity.unwrap_or(0) + quantity);
-                                        found = true;
-                                        break;
-                                    }
-                                }
-                                if found {
-                                    break;
-                                }
-                            }
-
-                            if !found {
-                                // Add new cargo item if not found
-                                if let Some(ship) = player_fleet.ships.first_mut() {
-                                    ship.cargo.push(Resource {
-                                        resource_type: resource_type.clone(),
-                                        quantity: Some(quantity),
-                                        buy: None,
-                                        sell: None
-                                    });
-                                }
-                            }
-
-                            // Update trader's cargo
-                            if let Some(ship) = trader_fleet.ships.get_mut(trader_ship_index) {
-                                if let Some(cargo) = ship.cargo.get_mut(cargo_index) {
-                                    cargo.quantity = Some(cargo.quantity.unwrap_or(0) - quantity);
-                                }
-                            }
-                        },
-                        "sell" => {
-                            // Find resource in player's fleet
-                            let mut player_resource = None;
-                            let mut player_ship_index = 0;
-                            let mut player_cargo_index = 0;
-
-                            for (ship_idx, ship) in player_fleet.ships.iter().enumerate() {
-                                for (cargo_idx, cargo) in ship.cargo.iter().enumerate() {
-                                    if cargo.resource_type == resource_type {
-                                        player_resource = Some(cargo.clone());
-                                        player_ship_index = ship_idx;
-                                        player_cargo_index = cargo_idx;
-                                        break;
-                                    }
-                                }
-                                if player_resource.is_some() {
-                                    break;
-                                }
-                            }
-
-                            match player_resource {
-                                Some(resource) => {
-                                    // Check if player has enough quantity
-                                    if resource.quantity.unwrap_or(0) < quantity {
-                                        return Json("You don't have enough resources".to_string());
-                                    }
-
-                                    // Calculate total earnings
-                                    let total_earnings = (resource.sell.unwrap_or(0.0) * quantity as f32) as f32;
-                                    
-                                    // Update player's credits and cargo
-                                    player.credits += total_earnings;
-                                    
-                                    // Update player's cargo
-                                    if let Some(ship) = player_fleet.ships.get_mut(player_ship_index) {
-                                        if let Some(cargo) = ship.cargo.get_mut(player_cargo_index) {
-                                            cargo.quantity = Some(cargo.quantity.unwrap_or(0) - quantity);
-                                        }
-                                    }
-
-                                    // Add cargo to trader's fleet
-                                    let mut found = false;
-                                    for ship in &mut trader_fleet.ships {
-                                        for cargo in &mut ship.cargo {
-                                            if cargo.resource_type == resource_type {
-                                                cargo.quantity = Some(cargo.quantity.unwrap_or(0) + quantity);
-                                                found = true;
-                                                break;
-                                            }
-                                        }
-                                        if found {
-                                            break;
-                                        }
-                                    }
-
-                                    if !found {
-                                        // Add new cargo item if not found
-                                        if let Some(ship) = trader_fleet.ships.first_mut() {
-                                            ship.cargo.push(Resource {
-                                                resource_type: resource_type.clone(),
-                                                quantity: Some(quantity),
-                                                buy: resource.buy,
-                                                sell: resource.sell
-                                            });
-                                        }
-                                    }
-                                },
-                                None => {
-                                    return Json("You don't have this resource".to_string());
-                                }
-                            }
-                        },
-                        _ => {
-                            return Json("Invalid trade type".to_string());
-                        }
-                    }
-
+            match trade_with_fleet(&mut player_fleet, &mut trader_fleet, resource_type, quantity, &trade_type, &mut player) {
+                Ok(_) => {
                     // Save all changes
                     if let Err(e) = crate::models::fleet::save_fleet(&player_fleet) {
                         println!("Error saving player fleet: {}", e);
@@ -914,9 +767,7 @@ pub fn trade_with_trader(owner_id: String, fleet_number: usize, resource_type: R
 
                     Json("Success".to_string())
                 },
-                None => {
-                    Json("Resource not found in trader's cargo".to_string())
-                }
+                Err(e) => Json(e)
             }
         },
         (Ok(Some(_)), Ok(None)) => {

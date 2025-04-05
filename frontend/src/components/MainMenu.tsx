@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { GameSettings, SavedGame, Faction } from '../types/game';
-import StarBackground from './StarBackground';
+import CanvasBackground from './CanvasBackground';
 import './MainMenu.css';
 
 interface MainMenuProps {
@@ -97,7 +97,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
 
     return (
         <>
-            <StarBackground />
+            <CanvasBackground />
             <div className="main-menu">
                 <h1>Star Trader</h1>
                 

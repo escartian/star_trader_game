@@ -1163,6 +1163,7 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
     println!("Starting create_new_game with settings: {:?}", settings);
     let mut settings = settings.into_inner();
     let game_id = settings.game_id.clone();
+    let display_name = settings.display_name.clone();
     
     // Add required fields
     let now = Utc::now().to_rfc3339();
@@ -1190,6 +1191,7 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
     // Create a new saved game entry first
     let saved_game = SavedGame {
         game_id: game_id.clone(),
+        display_name: display_name.clone(),
         created_at: settings.created_at.clone(),
         last_played: settings.last_played.clone(),
         settings: settings.clone(),

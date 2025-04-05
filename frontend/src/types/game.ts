@@ -110,6 +110,7 @@ export interface Faction {
 
 export interface GameSettings {
     game_id: string;
+    display_name: string;
     player_name: string;
     map_width: number;
     map_height: number;

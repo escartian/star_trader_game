@@ -7,10 +7,13 @@ use crate::models::game_state::game_path;
 use std::path::Path;
 use std::fs::File;
 use std::io::Read;
+use uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromForm)]
 pub struct GameSettings {
     pub game_id: String,
+    #[serde(default = "default_display_name")]
+    pub display_name: String,
     pub player_name: String,
     pub map_width: u32,
     pub map_height: u32,
@@ -21,10 +24,15 @@ pub struct GameSettings {
     pub last_played: String,
 }
 
+fn default_display_name() -> String {
+    "New Game".to_string()
+}
+
 impl Default for GameSettings {
     fn default() -> Self {
         GameSettings {
             game_id: "default_game".to_string(),
+            display_name: default_display_name(),
             player_name: "Player".to_string(),
             map_width: 1000,
             map_height: 1000,
@@ -38,10 +46,11 @@ impl Default for GameSettings {
 }
 
 impl GameSettings {
-    pub fn new(player_name: String, map_width: u32, map_height: u32, map_length: u32, star_count: u32, starting_credits: f32) -> Self {
+    pub fn new(display_name: String, player_name: String, map_width: u32, map_height: u32, map_length: u32, star_count: u32, starting_credits: f32) -> Self {
         let now = Utc::now().to_rfc3339();
         Self {
-            game_id: format!("game_{}", now.replace(":", "-")),
+            game_id: uuid::Uuid::new_v4().to_string(),
+            display_name,
             player_name,
             map_width,
             map_height,
@@ -75,6 +84,7 @@ impl GameSettings {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SavedGame {
     pub game_id: String,
+    pub display_name: String,
     pub created_at: String,
     pub last_played: String,
     pub settings: GameSettings,

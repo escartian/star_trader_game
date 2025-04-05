@@ -110,7 +110,7 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
                                 </div>
                                 <div className="planet-actions">
                                     <button onClick={() => handleShowMarket(planet)}>
-                                        Open Market
+                                        Resource Market
                                     </button>
                                     <button onClick={() => handleShowShipMarket(planet)}>
                                         Ship Market

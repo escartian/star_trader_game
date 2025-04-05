@@ -13,6 +13,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
     const [settings, setSettings] = useState<GameSettings>({
         game_id: Date.now().toString(),
+        display_name: 'New Game',
         player_name: 'Player1',
         map_width: 100,
         map_height: 100,
@@ -108,6 +109,18 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
                 <div className="new-game-settings">
                     <h2>New Game Settings</h2>
                     <div className="settings-form">
+                        <div className="setting-group">
+                            <label>Game Name:</label>
+                            <input
+                                type="text"
+                                value={settings.display_name}
+                                onChange={(e) => setSettings({
+                                    ...settings,
+                                    display_name: e.target.value
+                                })}
+                            />
+                        </div>
+
                         <div className="setting-group">
                             <label>Map Size:</label>
                             <div className="map-size-inputs">
@@ -220,7 +233,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
                     {savedGames.map((game) => (
                         <div key={game.game_id} className="saved-game-item">
                             <div className="game-info">
-                                <span>Game {game.game_id}</span>
+                                <span>{game.settings.display_name}</span>
                                 <span>Last played: {new Date(game.last_played).toLocaleDateString()}</span>
                             </div>
                             <div className="game-actions">

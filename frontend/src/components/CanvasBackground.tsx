@@ -313,62 +313,23 @@ const CanvasBackground: React.FC = () => {
                 '#ffcc6f'  // M-type (2,400-3,700K) - Red
             ];
 
-            // Calculate new star count needed with higher density
             const newWidth = canvas.width;
             const newHeight = canvas.height;
             const newStarCount = Math.floor((newWidth * newHeight) / 1000);
-            const currentStarCount = starsRef.current.length;
 
-            if (newStarCount > currentStarCount) {
-                // Calculate the expanded areas
-                const widthExpanded = newWidth > oldWidth;
-                const heightExpanded = newHeight > oldHeight;
-                
-                // Add new stars to fill the expanded space
-                const starsToAdd = newStarCount - currentStarCount;
-                const newStars = Array(starsToAdd).fill(null).map(() => {
-                    const color = colors[Math.floor(Math.random() * colors.length)];
-                    
-                    // Determine where to place the new star
-                    let x, y;
-                    if (widthExpanded && heightExpanded) {
-                        // If both dimensions expanded, place star in the new corner areas
-                        if (Math.random() < 0.5) {
-                            x = Math.random() * (newWidth - oldWidth) + (newWidth > oldWidth ? oldWidth : 0);
-                            y = Math.random() * newHeight;
-                        } else {
-                            x = Math.random() * newWidth;
-                            y = Math.random() * (newHeight - oldHeight) + (newHeight > oldHeight ? oldHeight : 0);
-                        }
-                    } else if (widthExpanded) {
-                        // If only width expanded, place star in the new side areas
-                        x = Math.random() * (newWidth - oldWidth) + (newWidth > oldWidth ? oldWidth : 0);
-                        y = Math.random() * newHeight;
-                    } else if (heightExpanded) {
-                        // If only height expanded, place star in the new top/bottom areas
-                        x = Math.random() * newWidth;
-                        y = Math.random() * (newHeight - oldHeight) + (newHeight > oldHeight ? oldHeight : 0);
-                    } else {
-                        // If no expansion, distribute evenly (shouldn't happen)
-                        x = Math.random() * newWidth;
-                        y = Math.random() * newHeight;
-                    }
-
-                    return {
-                        x,
-                        y,
-                        size: Math.random() * 1.5 + 0.5,
-                        brightness: Math.random() * 0.7 + 0.3,
-                        twinkleSpeed: Math.random() * 0.03 + 0.02,
-                        twinkleOffset: Math.random() * Math.PI * 2,
-                        color
-                    };
-                });
-                starsRef.current = [...starsRef.current, ...newStars];
-            } else if (newStarCount < currentStarCount) {
-                // Remove excess stars if canvas got smaller
-                starsRef.current = starsRef.current.slice(0, newStarCount);
-            }
+            // Regenerate entire star field to maintain even density
+            starsRef.current = Array(newStarCount).fill(null).map(() => {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                return {
+                    x: Math.random() * newWidth,
+                    y: Math.random() * newHeight,
+                    size: Math.random() * 1.5 + 0.5,
+                    brightness: Math.random() * 0.7 + 0.3,
+                    twinkleSpeed: Math.random() * 0.03 + 0.02,
+                    twinkleOffset: Math.random() * Math.PI * 2,
+                    color
+                };
+            });
 
             // Adjust existing stars' positions if they're now outside the canvas
             starsRef.current = starsRef.current.map(star => {

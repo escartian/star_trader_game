@@ -124,26 +124,116 @@
     border: 1px solid #004400;
 }
 
-.faction-settings {
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-    border: 1px solid #003300;
+.settings-description {
+    color: #00ff00;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.8;
 }
 
-.faction-settings button {
-    margin-top: 0.5rem;
+.faction-settings {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #004400;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.faction-settings:hover {
+    border-color: #006600;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.influence-value {
+    color: #00ff00;
+    margin-left: 1rem;
+    font-size: 0.9rem;
+}
+
+.remove-faction-button {
+    margin-top: 1rem;
     padding: 0.5rem 1rem;
-    background: #660000;
+    background: #440000;
     color: #ff0000;
-    border: 1px solid #ff0000;
+    border: 1px solid #660000;
     border-radius: 4px;
     cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-.faction-settings button:hover {
-    background: #880000;
+.remove-faction-button:hover:not(:disabled) {
+    background: #660000;
+    border-color: #880000;
+}
+
+.remove-faction-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #220000;
+}
+
+.add-faction-button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: #004400;
+    color: #00ff00;
+    border: 1px solid #006600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.add-faction-button:hover:not(:disabled) {
+    background: #006600;
+    border-color: #008800;
+}
+
+.add-faction-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #002200;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: #004400;
+    border-radius: 4px;
+    outline: none;
+    margin: 1rem 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #00ff00;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: #00cc00;
+    transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #00ff00;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    background: #00cc00;
+    transform: scale(1.1);
 }
 
 .game-actions {

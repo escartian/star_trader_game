@@ -24,10 +24,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
         print_debug: true,
         max_combat_time: 500,
         factions: [
-            { name: 'Federation', influence: 50, prefix: 'The' },
-            { name: 'Empire', influence: 50, prefix: 'The' },
-            { name: 'Republic', influence: 50, prefix: 'The' },
-            { name: 'Alliance', influence: 50, prefix: 'The' }
+            { name: 'Federation', influence: 50 },
+            { name: 'Empire', influence: 50 },
+            { name: 'Republic', influence: 50 },
+            { name: 'Alliance', influence: 50 }
         ],
         created_at: new Date().toISOString(),
         last_played: new Date().toISOString()
@@ -78,7 +78,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
     const addFaction = () => {
         setSettings({
             ...settings,
-            factions: [...settings.factions, { name: 'New Faction', influence: 50, prefix: 'The' }]
+            factions: [...settings.factions, { name: 'New Faction', influence: 50 }]
         });
     };
 
@@ -189,6 +189,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
                             {showAdvancedSettings && (
                                 <div className="advanced-settings">
                                     <h3>Faction Settings</h3>
+                                    <p className="settings-description">Configure the major factions that will influence the galaxy. Each faction's influence affects their starting territory and fleet strength.</p>
                                     {settings.factions.map((faction, index) => (
                                         <div key={index} className="faction-settings">
                                             <div className="setting-group">
@@ -197,30 +198,39 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
                                                     type="text"
                                                     value={faction.name}
                                                     onChange={(e) => updateFaction(index, 'name', e.target.value)}
+                                                    placeholder="Enter faction name"
                                                 />
                                             </div>
                                             <div className="setting-group">
-                                                <label>Influence:</label>
+                                                <label>Starting Influence:</label>
                                                 <input
-                                                    type="number"
+                                                    type="range"
                                                     value={faction.influence}
                                                     onChange={(e) => updateFaction(index, 'influence', parseInt(e.target.value))}
-                                                    min="0"
-                                                    max="100"
+                                                    min="10"
+                                                    max="90"
+                                                    step="10"
                                                 />
+                                                <span className="influence-value">{faction.influence}%</span>
                                             </div>
-                                            <div className="setting-group">
-                                                <label>Prefix:</label>
-                                                <input
-                                                    type="text"
-                                                    value={faction.prefix}
-                                                    onChange={(e) => updateFaction(index, 'prefix', e.target.value)}
-                                                />
-                                            </div>
-                                            <button onClick={() => removeFaction(index)}>Remove Faction</button>
+                                            <button 
+                                                onClick={() => removeFaction(index)}
+                                                className="remove-faction-button"
+                                                disabled={settings.factions.length <= 2}
+                                                title={settings.factions.length <= 2 ? "At least 2 factions are required" : "Remove this faction"}
+                                            >
+                                                Remove Faction
+                                            </button>
                                         </div>
                                     ))}
-                                    <button onClick={addFaction}>Add Faction</button>
+                                    <button 
+                                        onClick={addFaction}
+                                        className="add-faction-button"
+                                        disabled={settings.factions.length >= 6}
+                                        title={settings.factions.length >= 6 ? "Maximum 6 factions allowed" : "Add a new faction"}
+                                    >
+                                        Add Faction
+                                    </button>
                                 </div>
                             )}
 

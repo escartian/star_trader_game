@@ -22,6 +22,13 @@ pub struct GameSettings {
     pub starting_credits: f32,
     pub created_at: String,
     pub last_played: String,
+    pub factions: Vec<FactionSettings>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromForm)]
+pub struct FactionSettings {
+    pub name: String,
+    pub influence: u32,
 }
 
 fn default_display_name() -> String {
@@ -41,6 +48,12 @@ impl Default for GameSettings {
             starting_credits: 1000.0,
             created_at: Utc::now().to_rfc3339(),
             last_played: Utc::now().to_rfc3339(),
+            factions: vec![
+                FactionSettings { name: "Federation".to_string(), influence: 50 },
+                FactionSettings { name: "Empire".to_string(), influence: 50 },
+                FactionSettings { name: "Republic".to_string(), influence: 50 },
+                FactionSettings { name: "Alliance".to_string(), influence: 50 },
+            ],
         }
     }
 }
@@ -59,6 +72,12 @@ impl GameSettings {
             starting_credits,
             created_at: now.clone(),
             last_played: now,
+            factions: vec![
+                FactionSettings { name: "Federation".to_string(), influence: 50 },
+                FactionSettings { name: "Empire".to_string(), influence: 50 },
+                FactionSettings { name: "Republic".to_string(), influence: 50 },
+                FactionSettings { name: "Alliance".to_string(), influence: 50 },
+            ],
         }
     }
 

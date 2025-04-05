@@ -105,7 +105,6 @@ export enum ResourceType {
 export interface Faction {
     name: string;
     influence: number;
-    prefix: string;
 }
 
 export interface GameSettings {

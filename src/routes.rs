@@ -688,7 +688,7 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, x: i32, y: i32, z: i32)
                             let planet_fleet = Fleet {
                                 name: format!("Planet_{}", planet.name),
                                 owner_id: "Planet".to_string(),
-                                ships: Vec::new(),
+                                ships: Vec::new(), // Planet encounters don't have ships
                                 position: planet_pos,
                                 current_system_id: Some(system_id),
                                 last_move_distance: None,
@@ -1280,36 +1280,34 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
     println!("Market generation completed for all systems");
 
     println!("Creating and saving factions");
-    // Create and save factions
-    let major_factions = vec![
-        ("Federation", "United Federation of Planets"),
-        ("Empire", "Galactic Empire"),
-        ("Republic", "Galactic Republic"),
-        ("Alliance", "Rebel Alliance")
-    ];
-
-    for (name, full_name) in major_factions {
-        println!("Creating faction: {}", name);
-        let faction = Faction::new(name.to_string(), full_name.to_string());
+    // Create and save factions from settings
+    for faction_settings in &settings.factions {
+        println!("Creating faction: {}", faction_settings.name);
+        let faction = Faction::new(
+            faction_settings.name.clone(),
+            format!("The {} Empire", faction_settings.name) // Generate a basic description
+        );
         if let Err(e) = save_faction(&faction, &game_id) {
-            println!("Error saving faction {}: {}", name, e);
-            return ApiResponse::error(format!("Failed to save faction {}: {}", name, e));
+            println!("Error saving faction {}: {}", faction_settings.name, e);
+            return ApiResponse::error(format!("Failed to save faction {}: {}", faction_settings.name, e));
         }
 
-        // Create faction fleets
-        let fleet_count = rand::random::<usize>() % 2 + 2; // 2-3 fleets per faction
+        // Create faction fleets - number of fleets scales with influence
+        let fleet_count = 2 + (faction_settings.influence as usize / 30); // 2-5 fleets based on influence
         for fleet_num in 0..fleet_count {
-            println!("Generating fleet {} for faction {}", fleet_num + 1, name);
+            println!("Generating fleet {} for faction {}", fleet_num + 1, faction_settings.name);
+            // Number of ships also scales with influence
+            let ship_count = 1 + (faction_settings.influence as usize / 20); // 1-5 ships based on influence
             if let Ok(fleet) = generate_and_save_fleet(
-                name.to_string(),
+                faction_settings.name.clone(),
                 random_position(
                     settings.map_width as i32,
                     settings.map_height as i32,
                     settings.map_length as i32
                 ),
-                rand::random::<usize>() % 5 + 1, // 1-5 ships
+                ship_count
             ) {
-                println!("Generated fleet {} for faction {}: {}", fleet_num + 1, name, fleet.name);
+                println!("Generated fleet {} for faction {}: {}", fleet_num + 1, faction_settings.name, fleet.name);
             }
         }
     }

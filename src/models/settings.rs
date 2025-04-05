@@ -180,6 +180,33 @@ pub fn load_settings() -> Result<GameSettings, std::io::Error> {
     Ok(settings)
 }
 
+/// Loads game settings for a specific game ID.
+/// 
+/// # Arguments
+/// * `game_id` - The ID of the game to load settings for
+/// 
+/// # Returns
+/// A Result containing either the loaded settings or an error
+pub fn load_settings_for_game(game_id: &str) -> Result<GameSettings, std::io::Error> {
+    let settings_path = Path::new("data").join("game").join(game_id).join("settings.json");
+    
+    if !settings_path.exists() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("No settings found for game {}", game_id)
+        ));
+    }
+
+    let mut file = File::open(settings_path)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    
+    let settings: GameSettings = serde_json::from_str(&contents)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    println!("Successfully loaded settings for game {}", game_id);
+    Ok(settings)
+}
+
 /// Saves the current game settings to the settings.json file.
 /// 
 /// # Arguments

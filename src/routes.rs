@@ -1125,12 +1125,35 @@ pub fn load_game(game_id: String) -> Json<ApiResponse<String>> {
             return Err("Failed to update game world".to_string());
         }
 
-        // Update the game state
+        // Load the player data to get the current credits
+        let player_path = Path::new("data")
+            .join("game")
+            .join(&game_id)
+            .join("players")
+            .join(format!("{}.json", saved_game.settings.player_name));
+
+        let player_credits = if player_path.exists() {
+            let file = std::fs::File::open(&player_path)
+                .map_err(|e| format!("Failed to open player file: {}", e))?;
+            let player: Player = serde_json::from_reader(file)
+                .map_err(|e| format!("Failed to parse player data: {}", e))?;
+            player.credits
+        } else {
+            saved_game.settings.starting_credits
+        };
+
+        // Update the game state with the correct settings and credits
         if let Ok(mut guard) = crate::GAME_STATE.lock() {
             guard.settings = saved_game.settings.clone();
-            guard.credits = saved_game.settings.starting_credits;
+            guard.credits = player_credits;
         } else {
             return Err("Failed to update game state".to_string());
+        }
+
+        // Save the settings to the game directory for the current session
+        let settings_path = Path::new("data").join("game").join("settings.json");
+        if let Err(e) = save_json(&settings_path, &saved_game.settings) {
+            return Err(format!("Failed to save current session settings: {}", e));
         }
 
         Ok("Game loaded successfully".to_string())
@@ -1368,17 +1391,19 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
 
 #[get("/settings")]
 pub fn get_settings() -> Json<ApiResponse<GameSettings>> {
-    match SavedGame::load_current_game() {
-        Ok(Some(saved_game)) => ApiResponse::success(saved_game.settings, "Successfully retrieved settings".to_string()),
-        Ok(None) => ApiResponse::error("No active game found".to_string()),
-        Err(e) => ApiResponse::error(format!("Failed to load settings: {}", e))
+    // First try to load settings from the game directory
+    match load_settings() {
+        Ok(settings) => ApiResponse::success(settings, "Successfully retrieved settings".to_string()),
+        Err(_) => ApiResponse::error("No active game found".to_string())
     }
 }
 
 #[post("/settings", data = "<settings>")]
 pub fn update_settings(settings: Json<GameSettings>) -> Json<ApiResponse<String>> {
     let settings = settings.into_inner();
-    match SavedGame::load_current_game() {
+    
+    // Load the specific saved game using the game_id from the settings
+    match SavedGame::load_game(&settings.game_id) {
         Ok(Some(mut saved_game)) => {
             saved_game.settings = settings;
             match saved_game.save_game() {
@@ -1386,8 +1411,8 @@ pub fn update_settings(settings: Json<GameSettings>) -> Json<ApiResponse<String>
                 Err(e) => ApiResponse::error(format!("Failed to save settings: {}", e))
             }
         }
-        Ok(None) => ApiResponse::error("No active game found".to_string()),
-        Err(e) => ApiResponse::error(format!("Failed to load current game: {}", e))
+        Ok(None) => ApiResponse::error("Game not found".to_string()),
+        Err(e) => ApiResponse::error(format!("Failed to load game: {}", e))
     }
 }
 

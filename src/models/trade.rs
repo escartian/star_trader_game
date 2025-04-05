@@ -71,14 +71,17 @@ pub fn buy_from_planet(
     let mut market = Market::load(system_id, planet_id).map_err(|e| format!("Failed to load market: {}", e))?;
     
     // Check if the player has enough credits
-    let cost = market.buy_resource(resource_type, quantity)?;
-    if player.credits < cost {
+    let cost = market.buy_resource(resource_type, quantity, system_id, planet_id)?;
+    if player.credits < cost as f32 {
         return Err("Insufficient credits".to_string());
     }
 
     // Update player's inventory and credits
-    player.credits -= cost;
-    player.add_resource(Resource::new(resource_type, quantity));
+    player.credits -= cost as f32;
+    player.add_resource(resource_type, quantity);
+
+    // Save the market state
+    market.save(system_id, planet_id).map_err(|e| format!("Failed to save market: {}", e))?;
 
     if PRINT_DEBUG {
         println!(
@@ -100,33 +103,25 @@ pub fn sell_to_planet(
     let mut market = Market::load(system_id, planet_id).map_err(|e| format!("Failed to load market: {}", e))?;
     
     // Check if the player has enough of the resource
-    if let Some(player_resource) = player.resources.iter_mut().find(|r| r.resource_type == resource_type) {
-        if let Some(player_quantity) = player_resource.quantity {
-            if player_quantity >= quantity {
-                // Update player's inventory and credits
-                let earnings = market.sell_resource(resource_type, quantity)?;
-                player.credits += earnings;
-                player.remove_resource(Resource::new(resource_type, quantity), quantity);
-
-                if PRINT_DEBUG {
-                    println!(
-                        "Successfully sold {} {} to {} for {} credits",
-                        quantity, resource_type, planet.name, earnings
-                    );
-                }
-                Ok(())
-            } else {
-                Err(format!(
-                    "Not enough {} in your inventory. Requested: {}, Available: {}",
-                    resource_type, quantity, player_quantity
-                ))
-            }
-        } else {
-            Err(format!("You don't have any {} to sell", resource_type))
-        }
-    } else {
-        Err(format!("You don't have any {} in your inventory", resource_type))
+    if !player.has_resource(resource_type, quantity) {
+        return Err(format!("Not enough {} in your inventory", resource_type));
     }
+
+    // Update player's inventory and credits
+    let earnings = market.sell_resource(resource_type, quantity, system_id, planet_id)?;
+    player.credits += earnings as f32;
+    player.remove_resource(resource_type, quantity);
+
+    // Save the market state
+    market.save(system_id, planet_id).map_err(|e| format!("Failed to save market: {}", e))?;
+
+    if PRINT_DEBUG {
+        println!(
+            "Successfully sold {} {} to {} for {} credits",
+            quantity, resource_type, planet.name, earnings
+        );
+    }
+    Ok(())
 }
 
 pub fn trade_with_fleet(

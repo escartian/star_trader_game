@@ -1,27 +1,27 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use rocket::serde::json::Json;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
     pub success: bool,
     pub message: String,
-    pub data: Option<T>
+    pub data: Option<T>,
 }
 
 impl<T> ApiResponse<T> {
-    pub fn success(data: T, message: impl Into<String>) -> Json<Self> {
-        Json(Self {
+    pub fn success(data: T, message: String) -> Json<Self> {
+        Json(ApiResponse {
             success: true,
-            message: message.into(),
-            data: Some(data)
+            message,
+            data: Some(data),
         })
     }
 
-    pub fn error(message: impl Into<String>) -> Json<Self> {
-        Json(Self {
+    pub fn error(message: String) -> Json<Self> {
+        Json(ApiResponse {
             success: false,
-            message: message.into(),
-            data: None
+            message,
+            data: None,
         })
     }
 }

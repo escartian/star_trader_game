@@ -20,7 +20,11 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
-                if (!selectedPlanet) {
+                if (showMarket || showShipMarket) {
+                    setShowMarket(false);
+                    setShowShipMarket(false);
+                    setSelectedPlanet(null);
+                } else {
                     onClose();
                 }
             }
@@ -31,15 +35,21 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
         return () => {
             document.removeEventListener('keydown', handleEscape);
         };
-    }, [onClose, selectedPlanet]);
+    }, [onClose, showMarket, showShipMarket]);
 
     const handleModalClick = (e: React.MouseEvent) => {
         e.stopPropagation();
     };
 
     const handleOverlayClick = (e: React.MouseEvent) => {
-        if (e.target === e.currentTarget && !selectedPlanet) {
-            onClose();
+        if (e.target === e.currentTarget) {
+            if (showMarket || showShipMarket) {
+                setShowMarket(false);
+                setShowShipMarket(false);
+                setSelectedPlanet(null);
+            } else {
+                onClose();
+            }
         }
     };
 
@@ -53,6 +63,16 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
         setShowShipMarket(true);
     };
 
+    const handleClose = () => {
+        if (showMarket || showShipMarket) {
+            setShowMarket(false);
+            setShowShipMarket(false);
+            setSelectedPlanet(null);
+        } else {
+            onClose();
+        }
+    };
+
     const isStarCentered = system.star.position.x === 0 && 
                           system.star.position.y === 0 && 
                           system.star.position.z === 0;
@@ -62,7 +82,7 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
             <div className="star-system-modal" ref={modalRef} onClick={handleModalClick}>
                 <div className="star-system-modal-header">
                     <h2>{system.star.name}</h2>
-                    <button className="close-button" onClick={onClose} disabled={!!selectedPlanet}>×</button>
+                    <button className="close-button" onClick={handleClose}>×</button>
                 </div>
                 <div className="star-system-content">
                     <div className="system-info">
@@ -79,8 +99,8 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
                         </div>
                     </div>
                     <div className="planets-grid">
-                        {system.planets.map((planet, index) => (
-                            <div key={index} className="planet-card">
+                        {system.planets.map((planet) => (
+                            <div key={planet.name} className="planet-card">
                                 <h3>{planet.name}</h3>
                                 <div className="planet-details">
                                     <p><strong>Biome:</strong> {planet.biome}</p>
@@ -102,25 +122,25 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
                 </div>
                 {showMarket && selectedPlanet && (
                     <MarketModal
-                        planet={selectedPlanet}
-                        systemId={systemIndex}
-                        planetId={system.planets.indexOf(selectedPlanet)}
+                        isOpen={showMarket}
                         onClose={() => {
                             setShowMarket(false);
                             setSelectedPlanet(null);
                         }}
+                        systemId={systemIndex}
+                        planetId={system.planets.indexOf(selectedPlanet)}
+                        planet={selectedPlanet}
                     />
                 )}
                 {showShipMarket && selectedPlanet && (
                     <ShipMarketModal
-                        planet={selectedPlanet}
-                        systemId={systemIndex}
-                        planetId={system.planets.indexOf(selectedPlanet)}
-                        selectedFleet={selectedFleet}
+                        isOpen={showShipMarket}
                         onClose={() => {
                             setShowShipMarket(false);
                             setSelectedPlanet(null);
                         }}
+                        systemId={systemIndex}
+                        planetId={system.planets.indexOf(selectedPlanet)}
                     />
                 )}
             </div>

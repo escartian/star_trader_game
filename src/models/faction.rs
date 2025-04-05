@@ -1,13 +1,21 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::io::Read;
+use std::path::Path;
+use std::fs;
+use std::fs::File;
+use std::collections::HashMap;
+use crate::models::settings::load_settings;
+use crate::models::game_state::game_path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Faction {
     pub name: String,
     pub description: String,
-    pub influence: f32,  // 0.0 to 1.0
-    pub relations: std::collections::HashMap<String, f32>,  // Relations with other factions
+    pub reputation: f32,
+    pub credits: f32,
+    pub fleets: Vec<String>,
+    pub relations: HashMap<String, f32>,
 }
 
 impl fmt::Display for Faction {
@@ -18,11 +26,13 @@ impl fmt::Display for Faction {
 
 impl Faction {
     pub fn new(name: String, description: String) -> Self {
-        Faction {
+        Self {
             name,
             description,
-            influence: 0.01,  // Starting influence
-            relations: std::collections::HashMap::new(),
+            reputation: 0.0,
+            credits: 1000.0,
+            fleets: Vec::new(),
+            relations: HashMap::new(),
         }
     }
 
@@ -36,34 +46,26 @@ impl Faction {
 }
 
 pub fn save_faction(faction: &Faction) -> std::io::Result<()> {
-    let data_path = std::path::Path::new("data")
-        .join("game")
-        .join(crate::constants::GAME_ID)
-        .join("factions")
-        .join(format!("{}.json", faction.name));
-
-    if let Some(parent) = data_path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-
-    let file = std::fs::File::create(data_path)?;
+    let faction_path = game_path(&["factions", &format!("{}.json", faction.name)]);
+    let file = File::create(faction_path)?;
     serde_json::to_writer(file, faction)?;
     Ok(())
 }
 
 pub fn load_faction(faction_name: &str) -> std::io::Result<Option<Faction>> {
-    let data_path = std::path::Path::new("data")
-        .join("game")
-        .join(crate::constants::GAME_ID)
-        .join("factions")
-        .join(format!("{}.json", faction_name));
+    let settings = load_settings().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let faction_path = game_path(&["factions", &format!("{}.json", faction_name)]);
 
-    if !data_path.exists() {
+    if !faction_path.exists() {
         return Ok(None);
     }
 
-    let mut contents = String::new();
-    std::fs::File::open(data_path)?.read_to_string(&mut contents)?;
-    let faction: Faction = serde_json::from_str(&contents)?;
+    let file = File::open(faction_path)?;
+    let faction: Faction = serde_json::from_reader(file)?;
     Ok(Some(faction))
+}
+
+pub fn update_relations(faction1: &mut Faction, faction2: &mut Faction, change: f32) {
+    faction1.reputation += change;
+    faction2.reputation += change;
 } 

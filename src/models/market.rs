@@ -1,130 +1,134 @@
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::path::Path;
-use crate::GAME_ID;
-use crate::models::planet::{PlanetSpecialization, Economy};
+use crate::models::settings::load_settings;
+use crate::models::planet::PlanetSpecialization;
+use crate::models::economy::Economy;
 use crate::models::resource::{Resource, ResourceType};
 use strum::IntoEnumIterator;
 use rand::Rng;
+use crate::models::ship::ship::Ship;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Market {
-    pub planet_name: String,
-    pub system_id: usize,
-    pub planet_id: usize,
-    pub specialization: PlanetSpecialization,
-    pub economy: Economy,
-    pub resources: Vec<Resource>,
+    pub resources: Vec<Resource>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ShipMarket {
+    pub ships: Vec<Ship>
+}
+
+impl Default for Market {
+    fn default() -> Self {
+        Market {
+            resources: Vec::new()
+        }
+    }
+}
+
+impl Default for ShipMarket {
+    fn default() -> Self {
+        ShipMarket {
+            ships: Vec::new()
+        }
+    }
 }
 
 impl Market {
-    pub fn new(planet_name: String, system_id: usize, planet_id: usize, specialization: PlanetSpecialization, economy: Economy) -> Market {
-        let resources = generate_market_resources(&specialization, &economy);
+    pub fn new(specialization: &PlanetSpecialization, economy: &Economy) -> Market {
+        let resources = generate_market_resources(specialization, economy);
         Market {
-            planet_name,
-            system_id,
-            planet_id,
-            specialization,
-            economy,
-            resources,
+            resources
         }
     }
 
     pub fn load(system_id: usize, planet_id: usize) -> std::io::Result<Market> {
+        let settings = load_settings()?;
         let market_dir = Path::new("data")
             .join("game")
-            .join(GAME_ID)
+            .join(&settings.game_id)
             .join("markets");
 
         // Create market directory if it doesn't exist
         if !market_dir.exists() {
-            if let Some(parent) = market_dir.parent() {
-                fs::create_dir_all(parent)?;
-            }
             fs::create_dir_all(&market_dir)?;
         }
 
-        let market_path = market_dir.join(format!("Star_System_{}_Planet_{}_market.json", system_id, planet_id));
+        let market_path = market_dir.join(format!("market_{}_{}.json", system_id, planet_id));
 
         if market_path.exists() {
-            let contents = fs::read_to_string(market_path)?;
-            Ok(serde_json::from_str(&contents)?)
+            let file = File::open(market_path)?;
+            Ok(serde_json::from_reader(file)?)
         } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("Market not found for system {} planet {}", system_id, planet_id),
-            ))
+            // If market doesn't exist, create a new one
+            let planet = crate::models::planet::load_planet(system_id, planet_id)?
+                .ok_or_else(|| std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("Planet not found for system {} planet {}", system_id, planet_id),
+                ))?;
+            
+            let market = Market::new(&planet.specialization, &planet.economy);
+            
+            // Save the new market
+            market.save(system_id, planet_id)?;
+            Ok(market)
         }
     }
 
-    pub fn save(&self) -> std::io::Result<()> {
+    pub fn save(&self, system_id: usize, planet_id: usize) -> std::io::Result<()> {
+        let settings = load_settings()?;
         let market_path = Path::new("data")
             .join("game")
-            .join(GAME_ID)
+            .join(&settings.game_id)
             .join("markets")
-            .join(format!("Star_System_{}_Planet_{}_market.json", self.system_id, self.planet_id));
-        
-        println!("Market::save - Attempting to save market to: {:?}", market_path);
+            .join(format!("market_{}_{}.json", system_id, planet_id));
 
         if let Some(parent) = market_path.parent() {
-            println!("Market::save - Creating parent directory: {:?}", parent);
             fs::create_dir_all(parent)?;
         }
 
-        let market_json = serde_json::to_string(self)?;
-        println!("Market::save - Successfully serialized market to JSON");
-        
-        fs::write(&market_path, market_json)?;
-        println!("Market::save - Successfully wrote market file");
-        
-        Ok(())
+        let market_json = serde_json::to_string_pretty(self)?;
+        fs::write(market_path, market_json)
     }
 
     pub fn needs_update(&self, specialization: &PlanetSpecialization, economy: &Economy) -> bool {
-        self.specialization != *specialization || self.economy != *economy
+        // Since we don't store specialization and economy anymore,
+        // we'll need to regenerate the market each time
+        true
     }
 
     pub fn update(&mut self, specialization: &PlanetSpecialization, economy: &Economy) -> std::io::Result<()> {
-        self.specialization = specialization.clone();
-        self.economy = economy.clone();
         self.resources = generate_market_resources(specialization, economy);
-        self.save()
+        Ok(())
     }
 
-    pub fn buy_resource(&mut self, resource_type: ResourceType, quantity: u32) -> Result<f32, String> {
-        if let Some(resource) = self.resources.iter_mut().find(|r| r.resource_type == resource_type) {
-            if let Some(buy_price) = resource.buy_price() {
-                if let Some(available_quantity) = resource.quantity {
-                    if available_quantity >= quantity {
-                        resource.quantity = Some(available_quantity - quantity);
-                        self.save().map_err(|e| e.to_string())?;
-                        return Ok(quantity as f32 * buy_price);
-                    }
-                    return Err(format!("Not enough {} available. Requested: {}, Available: {}", 
-                        resource_type, quantity, available_quantity));
-                }
-                return Err(format!("{} is currently out of stock", resource_type));
-            }
-            return Err(format!("{} does not buy {} at this time", self.planet_name, resource_type));
+    pub fn buy_resource(&mut self, resource_type: ResourceType, quantity: u32, system_id: usize, planet_id: usize) -> Result<u32, &'static str> {
+        let resource = self.resources.iter_mut().find(|r| r.resource_type == resource_type)
+            .ok_or("Resource not available in market")?;
+        
+        let available_quantity = resource.quantity.unwrap_or(0);
+        if available_quantity < quantity {
+            return Err("Not enough resources available");
         }
-        Err(format!("{} does not trade {} at all", self.planet_name, resource_type))
+        
+        let buy_price = resource.buy.ok_or("Resource cannot be bought")?;
+        let total_cost = (buy_price * quantity as f32) as u32;
+        resource.quantity = Some(available_quantity - quantity);
+        
+        Ok(total_cost)
     }
 
-    pub fn sell_resource(&mut self, resource_type: ResourceType, quantity: u32) -> Result<f32, String> {
-        if let Some(resource) = self.resources.iter_mut().find(|r| r.resource_type == resource_type) {
-            if let Some(sell_price) = resource.sell_price() {
-                if let Some(available_quantity) = resource.quantity {
-                    resource.quantity = Some(available_quantity + quantity);
-                    self.save().map_err(|e| e.to_string())?;
-                    return Ok(quantity as f32 * sell_price);
-                }
-                resource.quantity = Some(quantity);
-                self.save().map_err(|e| e.to_string())?;
-                return Ok(quantity as f32 * sell_price);
-            }
-            return Err(format!("{} does not buy {} at this time", self.planet_name, resource_type));
-        }
-        Err(format!("{} does not trade {} at all", self.planet_name, resource_type))
+    pub fn sell_resource(&mut self, resource_type: ResourceType, quantity: u32, system_id: usize, planet_id: usize) -> Result<u32, &'static str> {
+        let resource = self.resources.iter_mut().find(|r| r.resource_type == resource_type)
+            .ok_or("Resource not available in market")?;
+        
+        let current_quantity = resource.quantity.unwrap_or(0);
+        let sell_price = resource.sell.ok_or("Resource cannot be sold")?;
+        let total_value = (sell_price * quantity as f32) as u32;
+        resource.quantity = Some(current_quantity + quantity);
+        
+        Ok(total_value)
     }
 }
 

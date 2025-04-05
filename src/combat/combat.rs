@@ -1,4 +1,3 @@
-use crate::constants::MAX_COMBAT_TIME;
 use crate::models::fleet::Fleet;
 use crate::models::ship::ship::{Ship, ShipType, ShipSize, ShipEngine};
 use crate::models::position::Position;

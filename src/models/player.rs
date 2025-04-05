@@ -1,85 +1,83 @@
 use serde::Serialize;
 use serde::Deserialize;
 use serde_json::to_writer;
-use crate::constants::INITIAL_CREDIT_COUNT;
+use crate::models::resource::{Resource, ResourceType, generate_resources_no_trade};
+use crate::models::game_state::PLAYER_CACHE;
+use crate::models::game_state::game_path;
 use std::path::Path;
-use crate::models::resource::generate_resources_no_trade;
-use super::resource::Resource;
+use crate::models::settings::load_settings;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
     pub name: String,
     pub resources: Vec<Resource>,
     pub credits: f32,
+    pub fleets: Vec<String>, // Store fleet names
 }
 
 impl Player {
     /// Creates a new Player with the given name, and default resources and credits.
-    pub fn new(player_name: &str) -> Self {
+    /// 
+    /// # Arguments
+    /// * `player_name` - The name of the player
+    /// * `starting_credits` - The amount of credits the player starts with
+    /// 
+    /// # Returns
+    /// A new Player instance with the specified name and starting credits
+    pub fn new(player_name: &str, starting_credits: f32) -> Self {
         Player {
             name: player_name.to_string(),
             resources: generate_resources_no_trade(),
-            credits: INITIAL_CREDIT_COUNT,
-            //faction: Factom::new(),
-            //fleets: vec![],
-            //race: Race::new()
-            //faction_standing : vec![]
-
+            credits: starting_credits,
+            fleets: vec![format!("Fleet_{}_{}", player_name, 1)], // Initialize with first fleet
         }
     }
 
-    pub fn add_resource(&mut self, resource: Resource) {
-        if let Some(existing_resource) = self.resources.iter_mut().find(|r| r.resource_type == resource.resource_type) {
+    pub fn add_resource(&mut self, resource_type: ResourceType, quantity: u32) {
+        if let Some(existing_resource) = self.resources.iter_mut().find(|r| r.resource_type == resource_type) {
             // If the resource exists, add to its quantity
-            if let Some(existing_quantity) = existing_resource.quantity {
-                if let Some(new_quantity) = resource.quantity {
-                    existing_resource.quantity = Some(existing_quantity + new_quantity);
-                }
-            } else {
-                existing_resource.quantity = resource.quantity;
-            }
+            existing_resource.quantity = Some(existing_resource.quantity.unwrap_or(0) + quantity);
         } else {
             // If the resource doesn't exist, add it as new
-            self.resources.push(resource);
+            self.resources.push(Resource::new(resource_type, quantity));
         }
     }
 
-    pub fn remove_resource(&mut self, resource: Resource, quantity: u32) {
-        if quantity == 0 {
-            return;
-        }
-        
-        let resource_type = resource.resource_type;
-        
+    pub fn remove_resource(&mut self, resource_type: ResourceType, quantity: u32) -> bool {
         if let Some(existing_resource) = self.resources.iter_mut().find(|r| r.resource_type == resource_type) {
             if let Some(existing_quantity) = existing_resource.quantity {
                 if existing_quantity >= quantity {
                     existing_resource.quantity = Some(existing_quantity - quantity);
+                    return true;
                 }
             }
         }
+        false
+    }
+
+    pub fn has_resource(&self, resource_type: ResourceType, quantity: u32) -> bool {
+        if let Some(resource) = self.resources.iter().find(|r| r.resource_type == resource_type) {
+            if let Some(existing_quantity) = resource.quantity {
+                return existing_quantity >= quantity;
+            }
+        }
+        false
     }
 
     /** Creates a new player with the specified name and saves their data to a JSON file 
     * within the game directory. If necessary, creates the required directories.
     * Returns the newly created Player object.
     **/
-    pub fn create_player(game_id: &str, player_name: &str) -> Player {
+    pub fn create_player(game_id: &str, player_name: &str, starting_credits: f32) -> Player {
         // Create the path to the player file
         let data_path = Path::new("data")
             .join("game")
             .join(game_id)
             .join("players")
-            .join(player_name)
-            .with_extension("json");
-
-        // Create the necessary directories if they don't exist
-        if let Some(parent) = data_path.parent() {
-            std::fs::create_dir_all(parent).expect("Failed to create directories");
-        }
+            .join(format!("{}.json", player_name));
 
         // Create a new player
-        let player = Player::new(player_name);
+        let player = Player::new(player_name, starting_credits);
 
         // Create the file and handle any errors
         let file = match std::fs::File::create(&data_path) {
@@ -94,5 +92,22 @@ impl Player {
         }
 
         player
+    }
+
+    /// Saves the player's data to a JSON file.
+    /// 
+    /// # Returns
+    /// A Result indicating whether the save was successful
+    pub fn save(&self) -> Result<(), String> {
+        let settings = load_settings().map_err(|e| e.to_string())?;
+        let path = Path::new("data")
+            .join("game")
+            .join(&settings.game_id)
+            .join("players")
+            .join(format!("{}.json", self.name));
+        let file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
+        serde_json::to_writer(&file, self).map_err(|e| e.to_string())?;
+        PLAYER_CACHE.set(self.name.clone(), self.clone());
+        Ok(())
     }
 }

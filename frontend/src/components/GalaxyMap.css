@@ -1,125 +1,510 @@
-.galaxy-map {
-    padding: 20px;
-    background-color: #1a1a1a;
+.galaxy-map-container {
+    padding: 15px;
+    background-color: #0a0a1a;
     min-height: 100vh;
-    color: #fff;
-}
-
-.star-systems-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    padding: 20px;
-}
-
-.star-system {
-    background-color: #2a2a2a;
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 20px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
     position: relative;
-    overflow: hidden;
 }
 
-.star-system::before {
+.galaxy-map-container::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #00ff00, #00cc00);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.star-system:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    border-color: #00ff00;
-}
-
-.star-system:hover::before {
-    opacity: 1;
-}
-
-.star-system-content {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.star-system-content h3 {
-    color: #00ff00;
-    margin: 0;
-    font-size: 1.5em;
-    text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
-}
-
-.star-system-content p {
-    margin: 0;
-    color: #ccc;
-    font-size: 0.9em;
-}
-
-.star-system-content p strong {
-    color: #00ff00;
-}
-
-.loading {
-    text-align: center;
-    padding: 40px;
-    color: #00ff00;
-    font-size: 1.2em;
-}
-
-.error {
-    text-align: center;
-    padding: 40px;
-    color: #ff4444;
-    font-size: 1.2em;
-    background-color: rgba(255, 68, 68, 0.1);
-    border-radius: 8px;
-    margin: 20px;
-}
-
-/* Add a subtle glow effect to the cards */
-.star-system::after {
-    content: '';
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     background: radial-gradient(circle at 50% 50%, rgba(0, 255, 0, 0.1), transparent 70%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
     pointer-events: none;
+    z-index: 0;
 }
 
-.star-system:hover::after {
-    opacity: 1;
-}
-
-/* Add a subtle animation for the position numbers */
-.star-system-content p:last-child {
+.galaxy-map {
     position: relative;
-    padding-left: 20px;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    background: rgba(10, 10, 25, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+    border: 1px solid rgba(0, 255, 0, 0.3);
 }
 
-.star-system-content p:last-child::before {
+.galaxy-map-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.galaxy-map-header {
+    padding: 15px;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(20, 20, 35, 0.5);
+}
+
+.galaxy-map-title {
+    margin: 0;
+    color: #00ff00;
+    font-size: 24px;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.galaxy-map-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.galaxy-map-button {
+    background: rgba(0, 255, 0, 0.1);
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    border-radius: 4px;
+    color: #00ff00;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+}
+
+.galaxy-map-button:hover {
+    background: rgba(0, 255, 0, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.galaxy-map-content {
+    flex: 1;
+    position: relative;
+    overflow: visible;
+    padding: 20px;
+    width: 100%;
+}
+
+.systems-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.system-card {
+    background: rgba(20, 20, 35, 0.8);
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    border-radius: 6px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.system-card::before {
     content: '★';
     position: absolute;
-    left: 0;
-    color: #00ff00;
+    top: 5px;
+    left: 5px;
+    color: rgba(0, 255, 0, 0.5);
+    font-size: 12px;
     animation: twinkle 2s infinite;
+}
+
+.system-card:hover {
+    background: rgba(30, 30, 45, 0.5);
+    border-color: rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 255, 0, 0.2);
+}
+
+.system-card.selected {
+    background: rgba(40, 40, 60, 0.5);
+    border-color: rgba(0, 255, 0, 0.6);
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+}
+
+.system-name {
+    font-size: 18px;
+    color: #00ff00;
+    margin: 0;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+}
+
+.system-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.system-stat {
+    background: rgba(20, 20, 35, 0.5);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    border: 1px solid rgba(0, 255, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.system-stat .stat-label {
+    color: rgba(0, 255, 0, 0.7);
+}
+
+.system-stat .stat-value {
+    color: #00ff00;
+    text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+}
+
+.planets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.planet-item {
+    background: rgba(20, 20, 35, 0.5);
+    border: 1px solid rgba(0, 255, 0, 0.2);
+    border-radius: 4px;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.planet-item:hover {
+    background: rgba(30, 30, 45, 0.5);
+    border-color: rgba(0, 255, 0, 0.4);
+}
+
+.planet-name {
+    color: #00ff00;
+    font-size: 14px;
+    text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+}
+
+.planet-type {
+    color: rgba(0, 255, 0, 0.7);
+    font-size: 14px;
 }
 
 @keyframes twinkle {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+}
+
+/* Custom scrollbar */
+.systems-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.systems-grid::-webkit-scrollbar-track {
+    background: rgba(10, 10, 25, 0.5);
+    border-radius: 4px;
+}
+
+.systems-grid::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 0, 0.3);
+    border-radius: 4px;
+}
+
+.systems-grid::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 0, 0.5);
+}
+
+/* Responsive design */
+@media (max-width: 1600px) {
+    .systems-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .systems-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .systems-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .galaxy-map-header {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+
+    .galaxy-map-controls {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.star-system {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: rgba(30, 30, 45, 0.8);
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    border-radius: 6px;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.star-info-section {
+    background: rgba(20, 20, 35, 0.5);
+    border: 1px solid rgba(0, 255, 0, 0.2);
+    border-radius: 6px;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.star-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.star-info-header h3 {
+    color: #00ff00;
+    margin: 0;
+    font-size: 18px;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+}
+
+.star-info-content {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.star-info-stat {
+    background: rgba(20, 20, 35, 0.5);
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 255, 0, 0.2);
+}
+
+.star-info-stat:first-child {
+    grid-column: span 3;
+}
+
+.star-info-label {
+    color: rgba(0, 255, 0, 0.7);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.star-info-value {
+    color: #00ff00;
+    font-size: 14px;
+    text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+}
+
+.planets-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.planet-card {
+    background: rgba(20, 20, 35, 0.5);
+    border: 1px solid rgba(0, 255, 0, 0.2);
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.planet-header {
+    color: #00ff00;
+    font-size: 16px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+}
+
+.planet-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.planet-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(20, 20, 35, 0.3);
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.planet-stat-label {
+    color: rgba(0, 255, 0, 0.7);
+    font-size: 14px;
+}
+
+.planet-stat-value {
+    color: #00ff00;
+    font-size: 14px;
+    text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+}
+
+.planet-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.planet-button {
+    flex: 1;
+    background: rgba(0, 255, 0, 0.1);
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    border-radius: 4px;
+    color: #00ff00;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.planet-button:hover {
+    background: rgba(0, 255, 0, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+/* Fleet card styles */
+.fleet-card {
+    background: rgba(30, 30, 45, 0.8);
+    border: 1px solid rgba(100, 100, 255, 0.3);
+    border-radius: 6px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.fleet-card:hover {
+    background: rgba(50, 50, 70, 0.5);
+    border-color: rgba(100, 100, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 255, 0.2);
+}
+
+.fleet-card.selected {
+    background: rgba(60, 60, 80, 0.5);
+    border-color: rgba(100, 100, 255, 0.6);
+    box-shadow: 0 0 15px rgba(100, 100, 255, 0.3);
+}
+
+.fleet-name {
+    color: #fff;
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    text-shadow: 0 0 5px rgba(100, 100, 255, 0.3);
+}
+
+.fleet-info {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.fleet-stat {
+    background: rgba(30, 30, 45, 0.5);
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #fff;
+}
+
+.fleet-stat-label {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 4px;
+}
+
+.fleet-stat-value {
+    color: #fff;
+    font-weight: 500;
+}
+
+.ships-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ship-item {
+    background: rgba(30, 30, 45, 0.5);
+    border: 1px solid rgba(100, 100, 255, 0.2);
+    border-radius: 4px;
+    padding: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.ship-item:hover {
+    background: rgba(40, 40, 60, 0.5);
+    border-color: rgba(100, 100, 255, 0.4);
+}
+
+.ship-name {
+    color: #fff;
+    font-size: 14px;
+}
+
+.ship-type {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+}
+
+/* Remove old styles */
+.star-system::after {
+    display: none;
+}
+
+.star-system-content p:last-child::before {
+    display: none;
+}
+
+/* Update loading and error states to match new style */
+.loading {
+    color: #00ff00;
+    text-align: center;
+    padding: 20px;
+    font-size: 18px;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+}
+
+.error {
+    color: #ff4444;
+    text-align: center;
+    padding: 20px;
+    font-size: 18px;
+    background: rgba(255, 68, 68, 0.1);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    border-radius: 6px;
+    margin: 20px;
+    text-shadow: 0 0 5px rgba(255, 68, 68, 0.3);
 }
 
 .star-system-details {

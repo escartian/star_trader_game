@@ -8,7 +8,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Read;
 use rand::random;
-use crate::constants::GAME_ID;
+use crate::models::settings::load_settings;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Fleet {
@@ -53,9 +53,8 @@ impl Fleet {
     }
 
     pub fn load(path: &str) -> std::io::Result<Fleet> {
-        let mut contents = String::new();
-        File::open(path)?.read_to_string(&mut contents)?;
-        let fleet: Fleet = serde_json::from_str(&contents)?;
+        let file = File::open(path)?;
+        let fleet: Fleet = serde_json::from_reader(file)?;
         Ok(fleet)
     }
 
@@ -67,9 +66,10 @@ impl Fleet {
 }
 
 pub fn get_next_fleet_number(owner_id: &str) -> std::io::Result<usize> {
+    let settings = load_settings().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
     let fleets_dir = Path::new("data")
         .join("game")
-        .join(GAME_ID)
+        .join(&settings.game_id)
         .join("fleets");
 
     if !fleets_dir.exists() {
@@ -95,9 +95,10 @@ pub fn get_next_fleet_number(owner_id: &str) -> std::io::Result<usize> {
 }
 
 pub fn list_owner_fleets(owner_id: &str) -> std::io::Result<Vec<Fleet>> {
+    let settings = load_settings().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
     let fleets_dir = Path::new("data")
         .join("game")
-        .join(GAME_ID)
+        .join(&settings.game_id)
         .join("fleets");
 
     if !fleets_dir.exists() {
@@ -111,7 +112,8 @@ pub fn list_owner_fleets(owner_id: &str) -> std::io::Result<Vec<Fleet>> {
         if let Ok(entry) = entry {
             if let Some(file_name) = entry.file_name().to_str() {
                 if file_name.starts_with(&prefix) {
-                    if let Ok(Some(fleet)) = load_fleet(file_name.split('.').next().unwrap_or("")) {
+                    let fleet_name = file_name.trim_end_matches(".json");
+                    if let Ok(Some(fleet)) = load_fleet(fleet_name) {
                         fleets.push(fleet);
                     }
                 }
@@ -123,11 +125,27 @@ pub fn list_owner_fleets(owner_id: &str) -> std::io::Result<Vec<Fleet>> {
 }
 
 pub fn generate_and_save_fleet(owner_id: String, position: Position, ship_count: usize) -> std::io::Result<Fleet> {
+    let settings = load_settings().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
     let fleet_number = get_next_fleet_number(&owner_id)?;
     let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
-    // Generate and save new fleet
+    
+    // Generate new fleet
     let fleet = generate_random_fleet(owner_id, position, ship_count, fleet_number);
-    save_fleet(&fleet)?;
+    
+    // Save the fleet
+    let fleet_path = Path::new("data")
+        .join("game")
+        .join(&settings.game_id)
+        .join("fleets")
+        .join(format!("{}.json", fleet_name));
+
+    if let Some(parent) = fleet_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let file = std::fs::File::create(fleet_path)?;
+    serde_json::to_writer(file, &fleet)?;
+    
     Ok(fleet)
 }
 
@@ -144,43 +162,45 @@ pub fn generate_random_fleet(owner_id: String, position: Position, ship_count: u
     fleet
 }
 
-pub fn save_fleet(fleet: &Fleet) -> std::io::Result<()> {
-    let data_path = Path::new("data")
+pub fn load_fleet(fleet_name: &str) -> Result<Option<Fleet>, String> {
+    let settings = load_settings().map_err(|e| e.to_string())?;
+    let fleet_path = Path::new("data")
         .join("game")
-        .join(GAME_ID)
-        .join("fleets")
-        .join(format!("{}.json", fleet.name));
-
-    // Create the necessary directories if they don't exist
-    if let Some(parent) = data_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-
-    // Write the fleet to a JSON file
-    let file = File::create(data_path)?;
-    serde_json::to_writer(file, fleet)?;
-    
-    Ok(())
-}
-
-pub fn load_fleet(fleet_name: &str) -> std::io::Result<Option<Fleet>> {
-    let data_path = Path::new("data")
-        .join("game")
-        .join(GAME_ID)
+        .join(&settings.game_id)
         .join("fleets")
         .join(format!("{}.json", fleet_name));
 
-    println!("Attempting to load fleet from: {:?}", data_path);
-
-    if !data_path.exists() {
-        println!("Fleet file does not exist at: {:?}", data_path);
+    if !fleet_path.exists() {
         return Ok(None);
     }
 
-    let mut contents = String::new();
-    File::open(data_path)?.read_to_string(&mut contents)?;
+    let file = std::fs::File::open(fleet_path)
+        .map_err(|e| format!("Failed to open fleet file: {}", e))?;
     
-    let fleet: Fleet = serde_json::from_str(&contents)?;
-    println!("Successfully loaded fleet: {}", fleet.name);
+    let fleet: Fleet = serde_json::from_reader(file)
+        .map_err(|e| format!("Failed to parse fleet data: {}", e))?;
+    
     Ok(Some(fleet))
+}
+
+pub fn save_fleet(fleet: &Fleet) -> Result<(), String> {
+    let settings = load_settings().map_err(|e| e.to_string())?;
+    let fleet_path = Path::new("data")
+        .join("game")
+        .join(&settings.game_id)
+        .join("fleets")
+        .join(format!("{}.json", fleet.name));
+
+    if let Some(parent) = fleet_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create fleet directory: {}", e))?;
+    }
+
+    let file = std::fs::File::create(fleet_path)
+        .map_err(|e| format!("Failed to create fleet file: {}", e))?;
+    
+    serde_json::to_writer(file, fleet)
+        .map_err(|e| format!("Failed to write fleet data: {}", e))?;
+    
+    Ok(())
 } 

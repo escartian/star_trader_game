@@ -1,4 +1,6 @@
-import { Player, StarSystem, Fleet, Resource, ResourceType, Ship } from '../types/game';
+import { StarSystem, Player, GameSettings, SavedGame, Fleet, Resource, ResourceType, Market, ShipMarket } from '../types/game';
+import { Ship } from '../types';
+import type { ApiResponse } from '../types/api.js';
 
 // Get the current hostname (excluding port)
 const hostname = window.location.hostname;
@@ -11,21 +13,15 @@ class ApiError extends Error {
     }
 }
 
-interface ApiResponse<T> {
-    success: boolean;
-    message: string;
-    data: T | null;
-}
-
 async function handleApiResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
-    const data = await response.json();
+    const data: ApiResponse<T> = await response.json();
     if (!data.success) {
         throw new Error(data.message);
     }
-    if (data.data === null) {
+    if (!data.data) {
         throw new Error('No data returned from server');
     }
     return data.data;
@@ -35,7 +31,14 @@ export const api = {
     // Player endpoints
     getPlayer: async (name: string): Promise<Player> => {
         const response = await fetch(`${API_BASE_URL}/player/${name}`);
-        return handleApiResponse<Player>(response);
+        if (!response.ok) {
+            throw new Error(`Failed to load player: ${response.status}`);
+        }
+        const data = await response.json();
+        if (!data.success || !data.data) {
+            throw new Error(data.message || 'Failed to load player data');
+        }
+        return data.data;
     },
 
     // Galaxy endpoints
@@ -66,9 +69,16 @@ export const api = {
     },
 
     // Market endpoints
-    getPlanetMarket: async (systemId: number, planetId: number): Promise<Resource[]> => {
+    getPlanetMarket: async (systemId: number, planetId: number): Promise<Market> => {
         const response = await fetch(`${API_BASE_URL}/planet/${systemId}/${planetId}/market`);
-        return handleApiResponse<Resource[]>(response);
+        if (!response.ok) {
+            throw new Error(`Failed to load market: ${response.status}`);
+        }
+        const data = await response.json();
+        if (!data.success || !data.data) {
+            throw new Error(data.message || 'Failed to load market data');
+        }
+        return data.data;
     },
 
     buyResource: async (systemId: number, planetId: number, resourceType: ResourceType, quantity: number): Promise<string> => {
@@ -132,51 +142,57 @@ export const api = {
         return handleApiResponse<string>(response);
     },
 
-    getPlanetShipMarket: async (systemId: number, planetId: number): Promise<Ship[]> => {
-        const response = await fetch(`${API_BASE_URL}/systems/${systemId}/planets/${planetId}/ship-market`);
+    getPlanetShipMarket: async (systemId: number, planetId: number): Promise<ApiResponse<ShipMarket>> => {
+        const response = await fetch(`${API_BASE_URL}/planet/${systemId}/${planetId}/ships`);
         if (!response.ok) {
-            throw new Error('Failed to fetch ship market data');
+            throw new Error(`Failed to load ship market: ${response.status}`);
         }
-        return handleApiResponse<Ship[]>(response);
+        const data = await response.json();
+        if (!data.success || !data.data) {
+            throw new Error(data.message || 'Failed to load ship market data');
+        }
+        return data;
     },
 
-    buyShip: async (systemId: number, planetId: number, shipName: string, fleetName: string, tradeInShipName?: string): Promise<string> => {
-        console.log('Making buy ship request:', {
-            systemId,
-            planetId,
-            shipName,
-            fleetName,
-            tradeInShipName
+    buyShip: async (systemId: number, planetId: number, shipIndex: number, fleetName?: string): Promise<ApiResponse<string>> => {
+        const response = await fetch(`${API_BASE_URL}/planet/${systemId}/${planetId}/buy_ship`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ship_index: shipIndex, fleet_name: fleetName }),
         });
-        
-        const response = await fetch(`${API_BASE_URL}/systems/${systemId}/planets/${planetId}/ship-market/buy`, {
+        return response.json();
+    },
+
+    sellShip: async (systemId: number, planetId: number, shipIndex: number, fleetName: string): Promise<ApiResponse<string>> => {
+        const response = await fetch(`${API_BASE_URL}/planet/${systemId}/${planetId}/sell_ship`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ 
-                ship_name: shipName,
-                fleet_name: fleetName,
-                trade_in_ship: tradeInShipName
-            }),
-        });
-        
-        return handleApiResponse<string>(response);
-    },
-
-    sellShip: async (systemId: number, planetId: number, shipName: string, fleetName: string): Promise<string> => {
-        const response = await fetch(`${API_BASE_URL}/systems/${systemId}/planets/${planetId}/ship-market/sell`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                ship_name: shipName,
+                ship_index: shipIndex,
                 fleet_name: fleetName
             }),
         });
         
-        return handleApiResponse<string>(response);
+        return response.json();
+    },
+
+    tradeInShip: async (systemId: number, planetId: number, shipIndex: number, fleetName: string, tradeInShipIndex: number): Promise<ApiResponse<string>> => {
+        const response = await fetch(`${API_BASE_URL}/planet/${systemId}/${planetId}/trade_in_ship`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ship_index: shipIndex,
+                fleet_name: fleetName,
+                trade_in_ship_index: tradeInShipIndex
+            }),
+        });
+        return response.json();
     },
 
     // Resource trading
@@ -192,11 +208,10 @@ export const api = {
             })
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to buy resource');
-        }
-
         const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to buy resource');
+        }
         return data.message;
     },
 
@@ -212,11 +227,86 @@ export const api = {
             })
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to sell resource');
-        }
-
         const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to sell resource');
+        }
         return data.message;
+    },
+
+    // Game Settings and Save Management
+    listSavedGames: async (): Promise<SavedGame[]> => {
+        const response = await fetch(`${API_BASE_URL}/games`);
+        return handleApiResponse<SavedGame[]>(response);
+    },
+
+    loadGame: async (gameId: string): Promise<void> => {
+        const response = await fetch(`${API_BASE_URL}/games/${gameId}/load`);
+        return handleApiResponse<void>(response);
+    },
+
+    createNewGame: async (settings: GameSettings): Promise<void> => {
+        const response = await fetch(`${API_BASE_URL}/games/new`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(settings),
+        });
+        return handleApiResponse<void>(response);
+    },
+
+    getGameSettings: async (): Promise<GameSettings> => {
+        const response = await fetch(`${API_BASE_URL}/settings`);
+        if (!response.ok) {
+            throw new Error(`Failed to load game settings: ${response.status}`);
+        }
+        const data = await response.json();
+        if (!data.success || !data.data) {
+            throw new Error('Invalid game settings response');
+        }
+        return data.data;
+    },
+
+    updateGameSettings: async (settings: GameSettings): Promise<void> => {
+        const response = await fetch(`${API_BASE_URL}/settings`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(settings),
+        });
+        return handleApiResponse<void>(response);
+    },
+
+    deleteGame: async (gameId: string): Promise<void> => {
+        const response = await fetch(`${API_BASE_URL}/games/${gameId}`, {
+            method: 'DELETE',
+        });
+        return handleApiResponse<void>(response);
+    },
+
+    getPlayerFleets: async (): Promise<ApiResponse<Fleet[]>> => {
+        const response = await fetch(`${API_BASE_URL}/fleet/owners`);
+        if (!response.ok) {
+            throw new Error(`Failed to load fleets: ${response.status}`);
+        }
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to load fleet data');
+        }
+        
+        // Get the current player's name from settings
+        const settings = await api.getGameSettings();
+        const playerFleets = await api.getOwnerFleets(settings.player_name);
+        
+        return {
+            success: true,
+            message: 'Successfully loaded fleets',
+            data: playerFleets
+        };
+    },
+    async clearCaches(): Promise<void> {
+        await fetch(`${API_BASE_URL}/clear-caches`, { method: 'POST' });
     },
 };

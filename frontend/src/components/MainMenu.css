@@ -1,0 +1,164 @@
+.main-menu {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 8px;
+    color: #fff;
+}
+
+.main-menu h1 {
+    text-align: center;
+    color: #00ff00;
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.menu-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.menu-buttons button {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    background: #004400;
+    color: #00ff00;
+    border: 2px solid #00ff00;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.menu-buttons button:hover {
+    background: #006600;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.new-game-settings {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid #00ff00;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.setting-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.setting-group label {
+    font-size: 1.1rem;
+    color: #00ff00;
+}
+
+.setting-group input {
+    background: #001100;
+    border: 1px solid #00ff00;
+    color: #00ff00;
+    padding: 0.5rem;
+    border-radius: 4px;
+    width: 150px;
+}
+
+.map-size-inputs {
+    display: flex;
+    gap: 1rem;
+}
+
+.saved-games {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid #00ff00;
+}
+
+.saved-game-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid #004400;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.game-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.saved-game-item button {
+    padding: 0.5rem 1rem;
+    background: #004400;
+    color: #00ff00;
+    border: 1px solid #00ff00;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.saved-game-item button:hover {
+    background: #006600;
+}
+
+.advanced-settings {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    border: 1px solid #004400;
+}
+
+.faction-settings {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    border: 1px solid #003300;
+}
+
+.faction-settings button {
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #660000;
+    color: #ff0000;
+    border: 1px solid #ff0000;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.faction-settings button:hover {
+    background: #880000;
+}
+
+.game-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.game-actions button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.game-actions button:last-child {
+    background: #660000;
+    color: #ff0000;
+    border: 1px solid #ff0000;
+}
+
+.game-actions button:last-child:hover {
+    background: #880000;
+} 

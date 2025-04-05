@@ -1,8 +1,5 @@
 use std::ptr::null;
 
-use crate::constants::MAP_HEIGHT;
-use crate::constants::MAP_LENGTH;
-use crate::constants::MAP_WIDTH;
 use crate::models::position::Position;
 use crate::models::resource::Resource;
 use crate::models::resource::ResourceType;
@@ -565,6 +562,61 @@ impl Distribution<Ship> for Standard {
 }
 
 impl Ship {
+    /// Creates a new ship with the specified parameters.
+    /// 
+    /// # Arguments
+    /// * `specialization` - The type/role of the ship
+    /// * `size` - The physical size of the ship
+    /// * `engine` - The type of engine installed
+    /// 
+    /// # Returns
+    /// A new `Ship` instance with default values for other fields
+    pub fn new(specialization: ShipType, size: ShipSize, engine: ShipEngine) -> Self {
+        // Calculate base stats based on ship type and size
+        let base_hp = match specialization {
+            ShipType::Fighter => 50,
+            ShipType::Battleship => 200,
+            ShipType::Freighter => 100,
+            ShipType::Explorer => 150,
+            ShipType::Shuttle => 30,
+            ShipType::Capital => 300,
+        };
+
+        let size_multiplier = match size {
+            ShipSize::Tiny => 0.5,
+            ShipSize::Small => 0.75,
+            ShipSize::Medium => 1.0,
+            ShipSize::Large => 1.5,
+            ShipSize::Huge => 2.0,
+            ShipSize::Planetary => 3.0,
+        };
+
+        let hp = (base_hp as f32 * size_multiplier) as i32;
+        let shield_capacity = (hp as f32 * 1.5) as i32;
+        let armor_capacity = (hp as f32 * 2.0) as i32;
+
+        // Generate weapons and cargo based on ship type
+        let weapons = generate_ship_weapons(&specialization);
+        let cargo = generate_ship_resources(&specialization);
+
+        Ship {
+            name: format!("Ship_{}", rand::random::<u32>()),
+            owner: String::new(), // Will be set by fleet
+            position: Position { x: 0, y: 0, z: 0 }, // Will be set by fleet
+            status: ShipStatus::Stationary,
+            hp,
+            combat_state: CombatState::NotInCombat,
+            specialization,
+            size,
+            engine,
+            weapons,
+            cargo,
+            shields: Shield::new(shield_capacity),
+            armor: Armor::new(armor_capacity),
+            price: None,
+        }
+    }
+
     /// Returns the maximum cargo capacity of the ship based on its size.
     /// 
     /// # Returns

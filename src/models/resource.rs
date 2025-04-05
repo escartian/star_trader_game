@@ -133,13 +133,13 @@ pub fn generate_resources_no_trade() -> Vec<Resource> {
     inventory // Return the completed inventory vector
 }
 
-impl<'a> FromParam<'a> for ResourceType {
-    type Error = &'a str;
+impl<'r> FromParam<'r> for ResourceType {
+    type Error = &'r str;
 
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+    fn from_param(param: &'r str) -> Result<Self, Self::Error> {
         match param {
-            "Food" => Ok(ResourceType::Food),
             "Water" => Ok(ResourceType::Water),
+            "Food" => Ok(ResourceType::Food),
             "Fuel" => Ok(ResourceType::Fuel),
             "Minerals" => Ok(ResourceType::Minerals),
             "Metals" => Ok(ResourceType::Metals),

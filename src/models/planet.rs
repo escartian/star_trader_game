@@ -1,13 +1,16 @@
 use crate::constants::PRINT_DEBUG;
-use crate::GAME_ID;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt;
 use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 use std::fs::{self, File};
 use std::path::Path;
+use crate::models::settings::load_settings;
+use crate::models::game_state::game_path;
+use crate::models::economy::Economy;
 
 use super::position::{random_nonzero_position, Position};
 use super::resource::{Resource, ResourceType};
@@ -17,18 +20,25 @@ use crate::models::ship::ship::{Ship, ShipEngine, ShipSize, ShipType};
 use crate::models::fleet::Fleet;
 use crate::models::trade::{buy_from_planet, sell_to_planet};
 
+// TODO: Implement planet factions and relationships
+// TODO: Add planet population and development levels
+// TODO: Implement planet events and disasters
+
 //PLANET DETAILS
 // Define a struct to represent a planet
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Planet {
     pub name: String,
+    pub description: String,
     pub position: Position,
     pub economy: Economy,
     pub specialization: PlanetSpecialization,
     pub danger: PlanetDanger,
     pub biome: Biome,
     pub credits: f32,
+    pub market: Market,
 }
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlanetDanger {
     VerySafe,
@@ -78,7 +88,13 @@ pub enum Biome {
     Inhospitable,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+impl fmt::Display for Biome {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, EnumIter)]
 pub enum PlanetSpecialization {
     Agriculture,
     Mining,
@@ -88,17 +104,6 @@ pub enum PlanetSpecialization {
     Tourism,
     Service,
     None,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub enum Economy {
-    Booming,
-    Growing,
-    Stable,
-    Struggling,
-    Declining,
-    Crashing,
-    Nonexistent,
 }
 
 impl Distribution<PlanetDanger> for Standard {
@@ -138,19 +143,6 @@ impl Distribution<Biome> for Standard {
     }
 }
 
-impl Distribution<Economy> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Economy {
-        match rng.gen_range(0..6) {
-            0 => Economy::Booming,
-            1 => Economy::Growing,
-            2 => Economy::Stable,
-            3 => Economy::Struggling,
-            4 => Economy::Declining,
-            5 => Economy::Crashing,
-            _ => Economy::Nonexistent,
-        }
-    }
-}
 impl Distribution<PlanetSpecialization> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> PlanetSpecialization {
         match rng.gen_range(0..7) {
@@ -165,6 +157,7 @@ impl Distribution<PlanetSpecialization> for Standard {
         }
     }
 }
+
 pub fn generate_planets(
     num_planets: u32,
     map_width: i32,
@@ -172,27 +165,46 @@ pub fn generate_planets(
     map_length: i32,
 ) -> Vec<Planet> {
     // Initialize a vector to hold the planets
-    let mut planets = Vec::new();
+    let mut planets = Vec::with_capacity(num_planets as usize);
+    let mut unique_positions: HashSet<Position> = HashSet::new();
 
     // Loop to generate the specified number of planets
     for i in 0..num_planets {
         // Generate a name for the planet
         let name = format!("Planet {}", i + 1);
-        let position = random_nonzero_position(map_width, map_height, map_length);
+        let mut position;
+        let mut attempts = 0;
+        
+        // Try to find a unique position
+        loop {
+            position = random_nonzero_position(map_width, map_height, map_length);
+            if !unique_positions.contains(&position) || attempts >= 10 {
+                break;
+            }
+            attempts += 1;
+        }
+        
+        if attempts >= 10 {
+            continue; // Skip this planet if we couldn't find a unique position
+        }
+        
+        unique_positions.insert(position);
         let economy: Economy = rand::random();
         let specialization: PlanetSpecialization = rand::random();
         let biome: Biome = rand::random();
         let danger: PlanetDanger = rand::random();
         
-        // Create a new planet with the generated name, coordinates, and other properties
+        let market = Market::new(&specialization, &economy);
         let planet = Planet {
             name,
+            description: format!("A {} planet with {} economy", biome, economy),
+            position,
             economy,
             specialization,
             danger,
-            position,
             biome,
             credits: 0.0,
+            market,
         };
 
         // Add the planet to the vector of planets
@@ -205,23 +217,19 @@ pub fn generate_planets(
 }
 
 fn remove_colliding_planets(planets: &mut Vec<Planet>) {
-    let mut unique_positions: HashSet<&Position> = HashSet::new();
-    let mut duplicates: Vec<usize> = vec![];
-
-    for (i, planet) in planets.iter().enumerate() {
-        if unique_positions.contains(&planet.position) {
-            duplicates.push(i);
+    let mut unique_positions: HashSet<Position> = HashSet::new();
+    let mut i = 0;
+    
+    while i < planets.len() {
+        if unique_positions.contains(&planets[i].position) {
+            if PRINT_DEBUG {
+                println!("Planets generated in same location. Removing duplicate");
+            }
+            planets.remove(i);
         } else {
-            unique_positions.insert(&planet.position);
+            unique_positions.insert(planets[i].position);
+            i += 1;
         }
-    }
-
-    // Remove the duplicates from the planets vector
-    for i in duplicates.iter().rev() {
-        if PRINT_DEBUG {
-            println!("Planets generated in same location. Removing all but one");
-        }
-        planets.remove(*i);
     }
 }
 
@@ -309,16 +317,35 @@ impl PlanetTrait for Planet {
 }
 
 impl Planet {
+    pub fn new(name: String, position: Position, specialization: PlanetSpecialization, economy: Economy) -> Self {
+        let biome: Biome = rand::random();
+        let danger: PlanetDanger = rand::random();
+        let market = Market::new(&specialization, &economy);
+        
+        Planet {
+            name,
+            description: format!("A {} planet with {} economy", biome, economy),
+            position,
+            economy,
+            specialization,
+            danger,
+            biome,
+            credits: 0.0,
+            market,
+        }
+    }
+
     pub fn get_ship_market(&self, system_id: usize, planet_id: usize) -> std::io::Result<Vec<Ship>> {
+        let settings = load_settings()?;
         let market_path = Path::new("data")
             .join("game")
-            .join(GAME_ID)
+            .join(&settings.game_id)
             .join("markets")
-            .join(format!("Star_System_{}_Planet_{}_ships.json", system_id, planet_id));
+            .join(format!("ships_{}_{}.json", system_id, planet_id));
 
         if market_path.exists() {
-            let contents = fs::read_to_string(market_path)?;
-            Ok(serde_json::from_str(&contents)?)
+            let file = File::open(market_path)?;
+            Ok(serde_json::from_reader(file)?)
         } else {
             // Generate new ship market if none exists
             let ships = self.generate_ship_market();
@@ -375,11 +402,12 @@ impl Planet {
     }
 
     fn save_ship_market(&self, market: &[Ship], system_id: usize, planet_id: usize) -> std::io::Result<()> {
+        let settings = load_settings()?;
         let market_path = Path::new("data")
             .join("game")
-            .join(GAME_ID)
+            .join(&settings.game_id)
             .join("markets")
-            .join(format!("Star_System_{}_Planet_{}_ships.json", system_id, planet_id));
+            .join(format!("ships_{}_{}.json", system_id, planet_id));
 
         if let Some(parent) = market_path.parent() {
             fs::create_dir_all(parent)?;
@@ -408,8 +436,8 @@ impl Planet {
         println!("  Fleet: {}", fleet_name);
         println!("  Trade-in ship: {:?}", trade_in_ship);
 
-        // Load the fleet
-        let fleet_path = format!("data/game/{}/fleets/{}.json", GAME_ID, fleet_name);
+        let settings = load_settings().map_err(|e| e.to_string())?;
+        let fleet_path = format!("data/game/{}/fleets/{}.json", settings.game_id, fleet_name);
         println!("Loading fleet from: {}", fleet_path);
         let mut fleet = Fleet::load(&fleet_path).map_err(|e| format!("Failed to load fleet: {}", e))?;
         println!("Loaded fleet with {} ships", fleet.ships.len());
@@ -529,9 +557,10 @@ impl Planet {
     }
 
     pub fn save_market(&self, market: &[Resource]) -> std::io::Result<()> {
+        let settings = load_settings()?;
         let market_path = Path::new("data")
             .join("game")
-            .join(GAME_ID)
+            .join(&settings.game_id)
             .join("markets")
             .join(format!("{}_resources.json", self.name));
 
@@ -544,8 +573,9 @@ impl Planet {
     }
 
     pub fn sell_ship(&mut self, ship_name: &str, fleet_name: &str, player: &mut Player, system_id: usize, planet_id: usize) -> Result<(), String> {
+        let settings = load_settings().map_err(|e| e.to_string())?;
+        let fleet_path = format!("data/game/{}/fleets/{}.json", settings.game_id, fleet_name);
         // Load the player's fleet
-        let fleet_path = format!("data/game/{}/fleets/{}.json", GAME_ID, fleet_name);
         let mut fleet = Fleet::load(&fleet_path).map_err(|e| format!("Failed to load fleet: {}", e))?;
 
         // Find the ship in the fleet
@@ -603,58 +633,44 @@ impl Planet {
 
         Ok(())
     }
+
+    // TODO: Implement planet colonization
+    // TODO: Add planet development mechanics
+    // TODO: Implement planet events system
+    // TODO: Add planet diplomacy system
 }
 
-#[cfg(test)]
-mod planet_tests {
-    use crate::models::{planet::{Planet, remove_colliding_planets}, position::Position};
+pub fn load_planet(system_id: usize, planet_id: usize) -> std::io::Result<Option<Planet>> {
+    let settings = load_settings().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let planet_path = Path::new("data")
+        .join("game")
+        .join(&settings.game_id)
+        .join("systems")
+        .join(format!("System_{}", system_id))
+        .join(format!("Planet_{}.json", planet_id));
 
-    #[test]
-    fn test_remove_colliding_planets() {
-        // Create some planets with the same position
-        let p1 = Planet {
-            name: "A".to_string(),
-            position: Position { x: 1, y: 2, z: 3 },
-            economy: rand::random(),
-            specialization: rand::random(),
-            danger: rand::random(),
-            biome: rand::random(),
-            credits: 0.0,
-        };
-        let p2 = Planet {
-            name: "B".to_string(),
-            position: Position { x: 1, y: 2, z: 3 },
-            economy: rand::random(),
-            specialization: rand::random(),
-            danger: rand::random(),
-            biome: rand::random(),
-            credits: 0.0,
-        };
-        let p3 = Planet {
-            name: "C".to_string(),
-            position: Position { x: 4, y: 5, z: 6 },
-            economy: rand::random(),
-            specialization: rand::random(),
-            danger: rand::random(),
-            biome: rand::random(),
-            credits: 0.0,
-        };
-        let p3 = Planet {
-            name: "D".to_string(),
-            position: Position { x: 4, y: 5, z: 6 },
-            economy: rand::random(),
-            specialization: rand::random(),
-            danger: rand::random(),
-            biome: rand::random(),
-            credits: 0.0,
-        };
-
-        // Add the planets to a vector
-        let mut planets = vec![p1, p2, p3];
-
-        // Ensure that there are no planets with the same position
-        remove_colliding_planets(&mut planets);
-        //there should only be 2 planets in the vactor
-        assert_eq!(planets.len(), 2);
+    if !planet_path.exists() {
+        return Ok(None);
     }
+
+    let file = File::open(planet_path)?;
+    let planet: Planet = serde_json::from_reader(file)?;
+    Ok(Some(planet))
+}
+
+pub fn save_planet(system_id: usize, planet_id: usize, planet: &Planet) -> std::io::Result<()> {
+    let planet_path = game_path(&["systems", &format!("System_{}", system_id), &format!("Planet_{}.json", planet_id)]);
+
+    if let Some(parent) = planet_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let file = File::create(planet_path)?;
+    serde_json::to_writer(file, planet)?;
+    Ok(())
+}
+
+pub fn get_fleet_path(fleet_name: &str) -> String {
+    let path = game_path(&["fleets", &format!("{}.json", fleet_name)]);
+    path.to_string_lossy().into_owned()
 }

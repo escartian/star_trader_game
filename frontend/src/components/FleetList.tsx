@@ -6,32 +6,92 @@ import { CombatModal } from './CombatModal';
 import { EncounterModal } from './EncounterModal';
 import { TraderEncounterModal } from './TraderEncounterModal';
 import './FleetList.css';
-import { HOST_PLAYER_NAME } from '../constants';
 
 export const FleetList: React.FC = () => {
     const [fleets, setFleets] = useState<Fleet[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedFleet, setSelectedFleet] = useState<Fleet | null>(null);
-    const [ownerId, setOwnerId] = useState<string>('');
-    const [fleetOwners, setFleetOwners] = useState<string[]>([]);
+    const [selectedOwner, setSelectedOwner] = useState<string>('');
+    const [owners, setOwners] = useState<string[]>([]);
     const [combatAttacker, setCombatAttacker] = useState<Fleet | null>(null);
     const [combatDefender, setCombatDefender] = useState<Fleet | null>(null);
     const [encounterFleets, setEncounterFleets] = useState<Fleet[]>([]);
     const [currentEncounterIndex, setCurrentEncounterIndex] = useState<number>(0);
     const [targetPosition, setTargetPosition] = useState<{ x: number; y: number; z: number } | null>(null);
 
+    const loadFleets = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const settings = await api.getGameSettings();
+            const fleetsData = await api.getFleets(settings.player_name);
+            console.log('Loaded fleets:', fleetsData);
+            setFleets(fleetsData);
+        } catch (err) {
+            console.error('Failed to load fleets:', err);
+            setError('Failed to load fleets');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        console.log('Component mounted, loading fleet owners...');
-        loadFleetOwners();
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const settings = await api.getGameSettings();
+                const [ownersData, fleetsData] = await Promise.all([
+                    api.getFleetOwners(),
+                    api.getFleets(settings.player_name)
+                ]);
+                console.log('Loaded owners:', ownersData);
+                console.log('Loaded fleets:', fleetsData);
+                
+                // Sort owners to put player first
+                const sortedOwners = ownersData.sort((a, b) => {
+                    if (a === settings.player_name) return -1;
+                    if (b === settings.player_name) return 1;
+                    return a.localeCompare(b);
+                });
+                
+                setOwners(sortedOwners);
+                setFleets(fleetsData);
+                
+                // Set player as default selected owner
+                if (sortedOwners.includes(settings.player_name)) {
+                    setSelectedOwner(settings.player_name);
+                }
+            } catch (err) {
+                console.error('Failed to load fleet data:', err);
+                setError('Failed to load fleet data');
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadData();
     }, []);
 
     useEffect(() => {
-        if (ownerId) {
-            console.log('Owner ID changed, loading fleets for:', ownerId);
+        if (selectedOwner) {
+            const loadFleets = async () => {
+                try {
+                    setLoading(true);
+                    setError(null);
+                    const fleetsData = await api.getFleets(selectedOwner);
+                    console.log('Loaded fleets for owner:', selectedOwner, fleetsData);
+                    setFleets(fleetsData);
+                } catch (err) {
+                    console.error('Failed to load fleets:', err);
+                    setError('Failed to load fleets');
+                } finally {
+                    setLoading(false);
+                }
+            };
             loadFleets();
         }
-    }, [ownerId]);
+    }, [selectedOwner]);
 
     useEffect(() => {
         if (encounterFleets.length > 0 && selectedFleet) {
@@ -41,83 +101,27 @@ export const FleetList: React.FC = () => {
         }
     }, [encounterFleets, selectedFleet]);
 
-    const loadFleetOwners = async () => {
-        try {
-            const owners = await api.getFleetOwners();
-            // Sort owners based on priority: Current Player > Other Human Players > Factions > Factionless
-            const sortedOwners = owners.sort((a, b) => {
-                // Current player always first
-                if (a === HOST_PLAYER_NAME) return -1;
-                if (b === HOST_PLAYER_NAME) return 1;
-                // Human players (non-host) second
-                if (!a.includes('_') && !b.includes('_')) return a.localeCompare(b);
-                // Factions (with underscores) last
-                if (a.includes('_') && !b.includes('_')) return 1;
-                if (!a.includes('_') && b.includes('_')) return -1;
-                // Sort factions alphabetically
-                return a.localeCompare(b);
-
-
-                
-                return 0;
-            });
-            
-            setFleetOwners(sortedOwners);
-            // Set the current player's fleets as default selected owner
-            if (sortedOwners.includes(HOST_PLAYER_NAME)) {
-                setOwnerId(HOST_PLAYER_NAME);
-            } else if (sortedOwners.length > 0) {
-                setOwnerId(sortedOwners[0]);
-            }
-        } catch (err) {
-            console.error('Failed to load fleet owners:', err);
-            setError('Failed to load fleet owners');
-        }
-    };
-
-    const loadFleets = async () => {
-        try {
-            console.log('Loading fleets for owner:', ownerId);
-            setLoading(true);
-            const data = await api.getFleets(ownerId);
-            console.log('Fleets received:', data);
-            setFleets(data);
-            setError(null);
-        } catch (err) {
-            console.error('Error loading fleets:', err);
-            setError('Failed to load fleets');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleFleetSelect = async (fleet: Fleet) => {
         try {
             console.log('Selected fleet:', fleet);
             // Handle different fleet naming schemes
             let fleetNumber: number;
             let fleetOwnerId = fleet.owner_id;
-            let fleetType = '';
 
-            // Determine fleet type from name
-            if (fleet.name.startsWith('Fleet_Pirate_')) {
-                fleetType = 'Pirate';
-            } else if (fleet.name.startsWith('Fleet_Trader_')) {
-                fleetType = 'Trader';
-            } else if (fleet.name.startsWith('Fleet_Military_')) {
-                fleetType = 'Military';
-            } else if (fleet.name.startsWith('Fleet_Mercenary_')) {
-                fleetType = 'Mercenary';
+            // Parse fleet number from the name
+            const parts = fleet.name.split('_');
+            if (parts.length >= 3) {
+                fleetNumber = parseInt(parts[parts.length - 1]);
+            } else {
+                fleetNumber = parseInt(fleet.name.split('_').pop() || '0');
             }
-
-            // Parse fleet number
-            fleetNumber = parseInt(fleet.name.split('_').pop() || '0');
             
-            console.log('Parsed fleet info:', { fleetNumber, fleetType, fleetOwnerId });
+            console.log('Parsed fleet info:', { fleetNumber, fleetOwnerId });
             
             // For special fleet types, use the type as owner ID
-            if (fleetType) {
-                fleetOwnerId = fleetType;
+            if (fleet.owner_id === 'Pirate' || fleet.owner_id === 'Trader' || 
+                fleet.owner_id === 'Military' || fleet.owner_id === 'Mercenary') {
+                fleetOwnerId = fleet.owner_id;
             }
 
             console.log('Fetching fleet details for:', { fleetNumber, fleetOwnerId });
@@ -382,12 +386,12 @@ export const FleetList: React.FC = () => {
         }
     };
 
-    if (loading && !ownerId) {
+    if (loading && !selectedOwner) {
         return <div className="fleet-loading">Loading fleet owners...</div>;
     }
 
-    if (loading && ownerId) {
-        return <div className="fleet-loading">Loading fleets for {ownerId}...</div>;
+    if (loading && selectedOwner) {
+        return <div className="fleet-loading">Loading fleets for {selectedOwner}...</div>;
     }
 
     if (error) {
@@ -403,10 +407,11 @@ export const FleetList: React.FC = () => {
                 <div className="fleet-controls">
                     <select
                         className="faction-select"
-                        value={ownerId}
-                        onChange={(e) => setOwnerId(e.target.value)}
+                        value={selectedOwner}
+                        onChange={(e) => setSelectedOwner(e.target.value)}
+                        disabled={loading}
                     >
-                        {fleetOwners.map((owner) => (
+                        {owners.map((owner) => (
                             <option key={owner} value={owner}>
                                 {owner}
                             </option>
@@ -414,31 +419,41 @@ export const FleetList: React.FC = () => {
                     </select>
                 </div>
             </div>
-            <div className="fleet-grid">
-                {fleets.map((fleet) => (
-                    <div 
-                        key={fleet.name} 
-                        className="fleet-card"
-                        onClick={() => handleFleetSelect(fleet)}
-                    >
-                        <h3>{formatFleetName(fleet.name)}</h3>
-                        <div className="fleet-info">
-                            <p>Position: ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})</p>
-                            <p>Ships: {fleet.ships.length}</p>
-                            <p>Owner: {fleet.owner_id}</p>
+            
+            {loading ? (
+                <div className="fleet-loading">Loading fleets...</div>
+            ) : error ? (
+                <div className="fleet-error">{error}</div>
+            ) : fleets.length === 0 ? (
+                <div className="fleet-empty">No fleets found</div>
+            ) : (
+                <div className="fleet-grid">
+                    {fleets.map((fleet) => (
+                        <div 
+                            key={fleet.name} 
+                            className="fleet-card"
+                            onClick={() => handleFleetSelect(fleet)}
+                        >
+                            <h3>{formatFleetName(fleet.name)}</h3>
+                            <div className="fleet-info">
+                                <p>Position: ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})</p>
+                                <p>Ships: {fleet.ships.length}</p>
+                                <p>Owner: {fleet.owner_id}</p>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {selectedFleet && (
                 <FleetModal 
+                    isOpen={true}
                     fleet={selectedFleet}
                     onClose={handleCloseModal}
                     onMove={handleMoveFleet}
                 />
             )}
-
+            
             {combatAttacker && combatDefender && (
                 <CombatModal
                     attacker={combatAttacker}
@@ -446,7 +461,7 @@ export const FleetList: React.FC = () => {
                     onClose={handleCloseCombatModal}
                 />
             )}
-
+            
             {encounterFleets.length > 0 && selectedFleet && (
                 <EncounterModal
                     fleet={selectedFleet}

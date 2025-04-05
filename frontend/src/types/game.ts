@@ -76,8 +76,9 @@ export interface Star {
 }
 
 export interface StarSystem {
-    star: Star;
+    id: number;
     position: Position;
+    star: Star;
     planets: Planet[];
 }
 
@@ -85,6 +86,7 @@ export interface Player {
     name: string;
     credits: number;
     resources: Resource[];
+    fleets: Fleet[];
 }
 
 export enum ResourceType {
@@ -98,4 +100,40 @@ export enum ResourceType {
     Medicine = 'Medicine',
     Weapons = 'Weapons',
     Electronics = 'Electronics'
+}
+
+export interface Faction {
+    name: string;
+    influence: number;
+    prefix: string;
+}
+
+export interface GameSettings {
+    game_id: string;
+    player_name: string;
+    map_width: number;
+    map_height: number;
+    map_length: number;
+    star_count: number;
+    starting_credits: number;
+    print_debug: boolean;
+    max_combat_time: number;
+    factions: Faction[];
+    created_at: string;
+    last_played: string;
+}
+
+export interface SavedGame {
+    game_id: string;
+    created_at: string;
+    last_played: string;
+    settings: GameSettings;
+}
+
+export interface Market {
+    resources: Resource[];
+}
+
+export interface ShipMarket {
+    ships: Ship[];
 }

@@ -3,7 +3,7 @@ use rand::distributions::{Distribution, Standard};
 use rand::{Rng};
 use serde::{Deserialize, Serialize};
 
-use super::position::Position;
+use super::position::{Position, random_position};
 //STAR DETAILS
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -50,16 +50,17 @@ impl Distribution<StarType> for Standard {
     }
 }
 
-pub fn generate_star() -> Star {
+pub fn generate_star(map_width: i32, map_height: i32, map_length: i32) -> Star {
     let name = generate_star_name();
     let star_type: StarType = rand::random();
+    // For now, always place the star at the center (0,0,0)
+    // In the future, we can add special cases for binary/trinary systems
     let position = Position { x: 0, y: 0, z: 0 };
     Star {
         name,
         star_type,
         position
     }
-
 }
 
 fn generate_star_name() -> String {

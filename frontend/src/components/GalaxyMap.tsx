@@ -5,80 +5,98 @@ import { StarSystemModal } from './StarSystemModal';
 import './GalaxyMap.css';
 
 export const GalaxyMap: React.FC = () => {
-    const [starSystems, setStarSystems] = useState<StarSystem[]>([]);
+    const [systems, setSystems] = useState<StarSystem[]>([]);
     const [selectedSystem, setSelectedSystem] = useState<StarSystem | null>(null);
-    const [selectedSystemIndex, setSelectedSystemIndex] = useState<number | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const loadGalaxyMap = async () => {
+        const loadSystems = async () => {
             try {
                 setLoading(true);
-                const data = await api.getGalaxyMap();
-                setStarSystems(data);
+                setError(null);
+                const systems = await api.getGalaxyMap();
+                setSystems(systems);
             } catch (err) {
-                console.error('Failed to load galaxy map:', err);
-                setError('Failed to load galaxy map');
+                console.error('Error loading star systems:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load star systems');
             } finally {
                 setLoading(false);
             }
         };
 
-        loadGalaxyMap();
+        loadSystems();
     }, []);
 
-    const handleSystemClick = (system: StarSystem, index: number) => {
+    const handleSystemClick = (system: StarSystem) => {
         setSelectedSystem(system);
-        setSelectedSystemIndex(index);
     };
 
-    const handleCloseSystem = () => {
+    const handleCloseModal = () => {
         setSelectedSystem(null);
-        setSelectedSystemIndex(null);
     };
 
     if (loading) {
-        return <div className="loading">Loading galaxy map...</div>;
+        return <div className="galaxy-map">Loading galaxy map...</div>;
     }
 
     if (error) {
-        return <div className="error">{error}</div>;
+        return <div className="galaxy-map error">{error}</div>;
     }
 
     return (
         <div className="galaxy-map">
-            <div className="star-systems-grid">
-                {starSystems.map((system, index) => {
-                    const isStarCentered = system.star.position.x === 0 && 
-                                         system.star.position.y === 0 && 
-                                         system.star.position.z === 0;
-                    
-                    return (
-                        <div
-                            key={index}
-                            className="star-system"
-                            onClick={() => handleSystemClick(system, index)}
-                        >
-                            <div className="star-system-content">
-                                <h3>{system.star.name}</h3>
-                                <p><strong>Type:</strong> {system.star.star_type}</p>
-                                <p><strong>Position:</strong> ({system.position.x}, {system.position.y}, {system.position.z})</p>
-                                {!isStarCentered && (
-                                    <p><strong>Star Position:</strong> ({system.star.position.x}, {system.star.position.y}, {system.star.position.z})</p>
-                                )}
-                                <p><strong>Planets:</strong> {system.planets.length}</p>
+            <div className="galaxy-map-container">
+                <div className="galaxy-map-header">
+                    <h2 className="galaxy-map-title">Galaxy Map</h2>
+                    <div className="galaxy-map-controls">
+                        <button className="galaxy-map-button">Filter Systems</button>
+                        <button className="galaxy-map-button">Sort By</button>
+                    </div>
+                </div>
+                <div className="galaxy-map-content">
+                    <div className="systems-grid">
+                        {systems.map((system) => (
+                            <div
+                                key={system.star.name}
+                                className={`system-card ${selectedSystem?.star.name === system.star.name ? 'selected' : ''}`}
+                                onClick={() => handleSystemClick(system)}
+                            >
+                                <h3 className="system-name">{system.star.name}</h3>
+                                <div className="system-info">
+                                    <div className="system-stat">
+                                        <div className="stat-label">Star Type</div>
+                                        <div className="stat-value">{system.star.star_type}</div>
+                                    </div>
+                                    <div className="system-stat">
+                                        <div className="stat-label">Position</div>
+                                        <div className="stat-value">
+                                            ({system.position.x}, {system.position.y}, {system.position.z})
+                                        </div>
+                                    </div>
+                                    <div className="system-stat">
+                                        <div className="stat-label">Planets</div>
+                                        <div className="stat-value">{system.planets.length}</div>
+                                    </div>
+                                </div>
+                                <div className="planets-list">
+                                    {system.planets.map((planet) => (
+                                        <div key={`${system.star.name}-${planet.name}`} className="planet-item">
+                                            <span className="planet-name">{planet.name}</span>
+                                            <span className="planet-type">{planet.biome}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        ))}
+                    </div>
+                </div>
             </div>
-            {selectedSystem && selectedSystemIndex !== null && (
+            {selectedSystem && (
                 <StarSystemModal
                     system={selectedSystem}
-                    systemIndex={selectedSystemIndex}
-                    onClose={handleCloseSystem}
-                    selectedFleet={null}
+                    systemIndex={systems.findIndex(s => s.star.name === selectedSystem.star.name)}
+                    onClose={handleCloseModal}
                 />
             )}
         </div>

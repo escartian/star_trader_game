@@ -1,16 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Fleet, Ship, Shield, Armor, Weapon, ResourceType } from '../types/game';
 import { api } from '../services/api';
-import { MAP_WIDTH, MAP_HEIGHT, MAP_LENGTH, HOST_PLAYER_NAME } from '../constants';
 import './FleetModal.css';
 
 interface FleetModalProps {
-    fleet: Fleet;
+    isOpen: boolean;
     onClose: () => void;
-    onMove: (fleet: Fleet, x: number, y: number, z: number) => void;
+    fleet: Fleet;
+    onMove: (fleet: Fleet, x: number, y: number, z: number) => Promise<void>;
 }
 
-export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }) => {
+export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, onMove }) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const [targetX, setTargetX] = useState<number>(fleet.position.x);
     const [targetY, setTargetY] = useState<number>(fleet.position.y);
@@ -19,6 +19,23 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
     const [moveStatus, setMoveStatus] = useState<'success' | 'error' | 'info' | null>(null);
     const [encounterFleets, setEncounterFleets] = useState<Fleet[]>([]);
     const [currentEncounterIndex, setCurrentEncounterIndex] = useState(0);
+    const [playerName, setPlayerName] = useState<string>('');
+    const [error, setError] = useState<string>('');
+    const [mapBounds, setMapBounds] = useState<{ min: number; max: number }>({ min: -1000, max: 1000 });
+
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const settings = await api.getGameSettings();
+                setPlayerName(settings.player_name);
+                const maxCoord = Math.floor(settings.map_width);
+                setMapBounds({ min: -maxCoord, max: maxCoord });
+            } catch (err) {
+                setError('Failed to load player settings');
+            }
+        };
+        loadSettings();
+    }, []);
 
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
@@ -103,7 +120,7 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
         setCurrentEncounterIndex(0);
     };
 
-    const handleMove = () => {
+    const handleMove = async () => {
         // Calculate distance
         const dx = targetX - fleet.position.x;
         const dy = targetY - fleet.position.y;
@@ -111,16 +128,16 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         // Check if within game world bounds
-        if (Math.abs(targetX) > MAP_WIDTH || 
-            Math.abs(targetY) > MAP_HEIGHT || 
-            Math.abs(targetZ) > MAP_LENGTH) {
-            setMoveMessage('Target position is outside the game world bounds');
+        if (targetX < mapBounds.min || targetX > mapBounds.max || 
+            targetY < mapBounds.min || targetY > mapBounds.max || 
+            targetZ < mapBounds.min || targetZ > mapBounds.max) {
+            setMoveMessage(`Target position is outside the game world bounds (${mapBounds.min} to ${mapBounds.max})`);
             setMoveStatus('error');
             return;
         }
 
         // Only allow moving player's own fleet
-        if (!fleet.owner_id.includes(HOST_PLAYER_NAME)) {
+        if (!fleet.owner_id.includes(playerName)) {
             setMoveMessage('You can only move your own fleet');
             setMoveStatus('error');
             return;
@@ -128,7 +145,7 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
 
         setMoveMessage(`Distance to travel: ${distance.toFixed(2)} units`);
         setMoveStatus('success');
-        onMove(fleet, targetX, targetY, targetZ);
+        await onMove(fleet, targetX, targetY, targetZ);
     };
 
     const calculateDistance = () => {
@@ -161,6 +178,10 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
         }).join(', ');
     };
 
+    if (!isOpen) return null;
+
+    const isPlayerFleet = fleet.owner_id === playerName;
+
     return (
         <div className="modal-overlay" onClick={handleOverlayClick}>
             <div className="modal-content">
@@ -169,6 +190,7 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
                     <button className="close-button" onClick={onClose}>×</button>
                 </div>
                 <div className="modal-body">
+                    {error && <div className="error">{error}</div>}
                     <div className="fleet-info">
                         <div className="fleet-card">
                             <h4>Fleet Details</h4>
@@ -189,71 +211,58 @@ export const FleetModal: React.FC<FleetModalProps> = ({ fleet, onClose, onMove }
                                 </div>
                             </div>
                         </div>
-                        <div className="fleet-card">
-                            <h4>Movement Controls</h4>
-                            <div className="movement-controls">
-                                <div>
-                                    <label>Target X:</label>
-                                    <input
-                                        type="number"
-                                        value={targetX}
-                                        onChange={(e) => setTargetX(parseInt(e.target.value) || 0)}
-                                    />
-                                </div>
-                                <div>
-                                    <label>Target Y:</label>
-                                    <input
-                                        type="number"
-                                        value={targetY}
-                                        onChange={(e) => setTargetY(parseInt(e.target.value) || 0)}
-                                    />
-                                </div>
-                                <div>
-                                    <label>Target Z:</label>
-                                    <input
-                                        type="number"
-                                        value={targetZ}
-                                        onChange={(e) => setTargetZ(parseInt(e.target.value) || 0)}
-                                    />
-                                </div>
-                                <div className="movement-info">
-                                    {moveMessage && (
-                                        <div className={`move-message ${moveStatus}`}>
-                                            {moveMessage}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="movement-actions">
-                                    <button onClick={handleMove}>Move Fleet</button>
-                                </div>
-                                <div className="test-encounter-buttons">
+                        
+                        {isPlayerFleet && (
+                            <div className="movement-section">
+                                <h4>Movement Controls</h4>
+                                <div className="movement-controls">
+                                    <div className="coordinate-input">
+                                        <label>Target X ({mapBounds.min} to {mapBounds.max}):</label>
+                                        <input
+                                            type="number"
+                                            min={mapBounds.min}
+                                            max={mapBounds.max}
+                                            value={targetX}
+                                            onChange={(e) => setTargetX(parseInt(e.target.value) || 0)}
+                                        />
+                                    </div>
+                                    <div className="coordinate-input">
+                                        <label>Target Y ({mapBounds.min} to {mapBounds.max}):</label>
+                                        <input
+                                            type="number"
+                                            min={mapBounds.min}
+                                            max={mapBounds.max}
+                                            value={targetY}
+                                            onChange={(e) => setTargetY(parseInt(e.target.value) || 0)}
+                                        />
+                                    </div>
+                                    <div className="coordinate-input">
+                                        <label>Target Z ({mapBounds.min} to {mapBounds.max}):</label>
+                                        <input
+                                            type="number"
+                                            min={mapBounds.min}
+                                            max={mapBounds.max}
+                                            value={targetZ}
+                                            onChange={(e) => setTargetZ(parseInt(e.target.value) || 0)}
+                                        />
+                                    </div>
+                                    <div className="movement-info">
+                                        {moveMessage && (
+                                            <div className={`move-message ${moveStatus}`}>
+                                                {moveMessage}
+                                            </div>
+                                        )}
+                                    </div>
                                     <button 
-                                        className="test-encounter-button trader"
-                                        onClick={() => handleTestEncounter('Trader')}
+                                        className="move-button"
+                                        onClick={handleMove}
+                                        disabled={!isPlayerFleet}
                                     >
-                                        Test Trader
-                                    </button>
-                                    <button 
-                                        className="test-encounter-button pirate"
-                                        onClick={() => handleTestEncounter('Pirate')}
-                                    >
-                                        Test Pirate
-                                    </button>
-                                    <button 
-                                        className="test-encounter-button military"
-                                        onClick={() => handleTestEncounter('Military')}
-                                    >
-                                        Test Military
-                                    </button>
-                                    <button 
-                                        className="test-encounter-button mercenary"
-                                        onClick={() => handleTestEncounter('Mercenary')}
-                                    >
-                                        Test Mercenary
+                                        Move Fleet
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     <div className="fleet-card">

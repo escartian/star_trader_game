@@ -2,16 +2,26 @@ use crate::models::planet::Planet;
 use crate::models::ship::ship::Ship;
 use crate::models::resource::Resource;
 use crate::models::galaxy::generate_galaxy;
-use crate::constants::STAR_COUNT;
+use crate::models::settings::GameSettings;
 use std::fs;
-use std::path::Path;
 use std::fs::File;
 use serde_json;
-use serde::{Deserialize, Serialize};
 use std::io::Read;
 use serde_json::to_writer;
 use crate::models::star_system::StarSystem;
-use crate::models::market::Market;
+use crate::models::game_state::game_path;
+use std::path::Path;
+use rand::thread_rng;
+use rand::seq::SliceRandom;
+use rand::Rng;
+use crate::models::planet::PlanetSpecialization;
+use strum_macros::EnumIter;
+use strum::IntoEnumIterator;
+use crate::models::economy::Economy;
+use crate::models::position::random_position;
+use crate::models::star_system::generate_star_system;
+use serde::ser::{Serialize, Serializer, SerializeSeq};
+use serde::{Deserialize};
 
 pub struct GameWorld {
     planets: Vec<Planet>,
@@ -33,7 +43,7 @@ impl GameWorld {
         }
     }
 
-    pub fn update(&mut self, player_state: &PlayerState) {
+    pub fn update(&mut self, _player_state: &PlayerState) {
         /* ... */
     }
 }
@@ -43,162 +53,111 @@ impl GameWorld {
 /// If the necessary directories do not exist, this function will create them.
 ///
 /// # Arguments
+/// - `settings` - Game settings containing map size, star count, etc.
+///
+/// # Returns
+/// A Result containing either the loaded star systems or an error.
+pub fn create_game_world_file(settings: &GameSettings, force_regenerate: bool) -> Result<Vec<StarSystem>, String> {
+    println!("Starting game world creation");
+    let game_path = Path::new("data").join("game").join(&settings.game_id);
+    let game_world_path = game_path.join("GameWorld.json");
+    
+    // Check if we need to regenerate
+    if !force_regenerate && game_world_path.exists() {
+        println!("Game world file exists, loading from disk");
+        let file = File::open(&game_world_path)
+            .map_err(|e| format!("Failed to open game world file: {}", e))?;
+        let world: Vec<StarSystem> = serde_json::from_reader(file)
+            .map_err(|e| format!("Failed to deserialize game world: {}", e))?;
+        println!("Successfully loaded game world with {} systems", world.len());
+        return Ok(world);
+    }
+    
+    println!("Generating new game world");
+    let mut rng = thread_rng();
+    
+    // Create the game directory if it doesn't exist
+    if let Some(parent) = game_world_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create game directory: {}", e))?;
+    }
+    
+    // Create a temporary file for writing
+    let temp_path = game_world_path.with_extension("json.tmp");
+    let file = File::create(&temp_path)
+        .map_err(|e| format!("Failed to create temporary game world file: {}", e))?;
+    
+    // Start writing the array
+    let mut writer = serde_json::Serializer::new(file);
+    let mut ser = writer.serialize_seq(Some(settings.star_count as usize))
+        .map_err(|e| format!("Failed to start serialization: {}", e))?;
+    
+    // Generate and save star systems one at a time
+    for i in 0..settings.star_count {
+        println!("Generating star system {}/{}", i + 1, settings.star_count);
+        let position = random_position(
+            settings.map_width as i32,
+            settings.map_height as i32,
+            settings.map_length as i32
+        );
+        
+        let system = generate_star_system(
+            settings.map_width as i32,
+            settings.map_height as i32,
+            settings.map_length as i32
+        );
+        
+        // Serialize this system directly to the file
+        ser.serialize_element(&system)
+            .map_err(|e| format!("Failed to serialize system {}: {}", i, e))?;
+        
+        println!("Successfully generated star system at position {:?}", position);
+    }
+    
+    // End the sequence
+    ser.end()
+        .map_err(|e| format!("Failed to end serialization: {}", e))?;
+    
+    // Rename the temporary file to the final file
+    fs::rename(&temp_path, &game_world_path)
+        .map_err(|e| format!("Failed to rename game world file: {}", e))?;
+    
+    // Now load the file back to return the systems
+    let file = File::open(&game_world_path)
+        .map_err(|e| format!("Failed to open game world file for reading: {}", e))?;
+    let systems: Vec<StarSystem> = serde_json::from_reader(file)
+        .map_err(|e| format!("Failed to deserialize game world: {}", e))?;
+    
+    println!("Successfully generated galaxy with {} star systems", systems.len());
+    Ok(systems)
+}
+
+/// Loads a game world from the specified game directory.
+///
+/// # Arguments
 /// - `game_id` - A string slice that holds the identifier for the game instance.
 ///
-/// # Errors
-/// This function will panic if it is unable to create the file or write the galaxy map to it.
-pub fn create_game_world_file(game_id: &str, empty_world: bool) -> Vec<StarSystem> {
-    // WORLD GENERATION
-    // Generate the galaxy map
-    println!("Creating Game World File");
-    let galactic_map;
-    if empty_world {   
-        galactic_map = generate_galaxy(STAR_COUNT);
+/// # Returns
+/// A Result containing either the loaded star systems or an error.
+pub fn load_game_world(game_id: &str) -> std::io::Result<Vec<StarSystem>> {
+    let world_file = Path::new("data")
+        .join("game")
+        .join(game_id)
+        .join("GameWorld.json");
         
-        // Create the star_systems directory
-        let systems_dir = Path::new("data")
-            .join("game")
-            .join(game_id)
-            .join("star_systems");
-        
-        if let Some(parent) = systems_dir.parent() {
-            println!("{}", parent.display());
-            fs::create_dir_all(parent).expect("Failed to create directories");
-        }
-        fs::create_dir_all(&systems_dir).expect("Failed to create star_systems directory");
-
-        // Save each star system individually and initialize markets
-        for (index, system) in galactic_map.iter().enumerate() {
-            let system_path = systems_dir.join(format!("system_{}.json", index));
-            let file = File::create(system_path).expect("Failed to create system file");
-            to_writer(file, system).expect("Failed to write system data");
-
-            // Initialize markets for each planet in the system
-            for (planet_id, planet) in system.planets.iter().enumerate() {
-                // Create resource market
-                let market = Market::new(
-                    planet.name.clone(),
-                    index,
-                    planet_id,
-                    planet.specialization.clone(),
-                    planet.economy.clone()
-                );
-                market.save().expect("Failed to save planet market");
-
-                // Generate and save ship market
-                let ships = planet.generate_ship_market();
-                let market_path = Path::new("data")
-                    .join("game")
-                    .join(game_id)
-                    .join("markets")
-                    .join(format!("Star_System_{}_Planet_{}_ships.json", index, planet_id));
-
-                if let Some(parent) = market_path.parent() {
-                    fs::create_dir_all(parent).expect("Failed to create markets directory");
-                }
-
-                let market_json = serde_json::to_string(&ships).expect("Failed to serialize ship market");
-                fs::write(&market_path, market_json).expect("Failed to save ship market");
-            }
-        }
-
-        // Save the full game world for save state
-        let world_path = Path::new("data")
-            .join("game")
-            .join(game_id)
-            .join("GameWorld.json");
-        
-        let file = File::create(world_path).expect("Failed to create game world file");
-        to_writer(file, &galactic_map).expect("Failed to write game world data");
-        
-        println!("Game world files created successfully");
-        return galactic_map;
-    } else {
-        println!("Loading existing game world");
-        let systems_dir = Path::new("data")
-            .join("game")
-            .join(game_id)
-            .join("star_systems");
-
-        if systems_dir.exists() {
-            // Load from individual system files
-            let mut systems = Vec::new();
-            for i in 0..STAR_COUNT {
-                let system_path = systems_dir.join(format!("system_{}.json", i));
-                if system_path.exists() {
-                    let mut contents = String::new();
-                    File::open(system_path).expect("Failed to open system file").read_to_string(&mut contents).expect("Failed to read system file");
-                    let mut system: StarSystem = serde_json::from_str(&contents).expect("Failed to parse system data");
-                    
-                    // Load markets for each planet
-                    for (planet_id, planet) in system.planets.iter_mut().enumerate() {
-                        let mut market = Market::load(i as usize, planet_id).expect("Failed to load planet market");
-                        // Update market if needed based on planet's current state
-                        if market.needs_update(&planet.specialization, &planet.economy) {
-                            market.update(&planet.specialization, &planet.economy).expect("Failed to update market");
-                        }
-
-                        // Check if ship market exists, if not generate it
-                        let ship_market_path = Path::new("data")
-                            .join("game")
-                            .join(game_id)
-                            .join("markets")
-                            .join(format!("Star_System_{}_Planet_{}_ships.json", i, planet_id));
-
-                        if !ship_market_path.exists() {
-                            let ships = planet.generate_ship_market();
-                            if let Some(parent) = ship_market_path.parent() {
-                                fs::create_dir_all(parent).expect("Failed to create markets directory");
-                            }
-                            let market_json = serde_json::to_string(&ships).expect("Failed to serialize ship market");
-                            fs::write(&ship_market_path, market_json).expect("Failed to save ship market");
-                        }
-                    }
-                    
-                    systems.push(system);
-                }
-            }
-            return systems;
-        } else {
-            // Fallback to loading from the full game world file
-            let world_path = Path::new("data")
-                .join("game")
-                .join(game_id)
-                .join("GameWorld.json");
-            let mut contents = String::new();
-            File::open(world_path).expect("Failed to open game world file").read_to_string(&mut contents).expect("Failed to read game world file");
-            let mut systems: Vec<StarSystem> = serde_json::from_str(&contents).expect("Failed to parse game world data");
-            
-            // Load markets for each planet in each system
-            for (system_id, system) in systems.iter_mut().enumerate() {
-                for (planet_id, planet) in system.planets.iter_mut().enumerate() {
-                    let mut market = Market::load(system_id, planet_id).expect("Failed to load planet market");
-                    // Update market if needed based on planet's current state
-                    if market.needs_update(&planet.specialization, &planet.economy) {
-                        market.update(&planet.specialization, &planet.economy).expect("Failed to update market");
-                    }
-
-                    // Check if ship market exists, if not generate it
-                    let ship_market_path = Path::new("data")
-                        .join("game")
-                        .join(game_id)
-                        .join("markets")
-                        .join(format!("Star_System_{}_Planet_{}_ships.json", system_id, planet_id));
-
-                    if !ship_market_path.exists() {
-                        let ships = planet.generate_ship_market();
-                        if let Some(parent) = ship_market_path.parent() {
-                            fs::create_dir_all(parent).expect("Failed to create markets directory");
-                        }
-                        let market_json = serde_json::to_string(&ships).expect("Failed to serialize ship market");
-                        fs::write(&ship_market_path, market_json).expect("Failed to save ship market");
-                    }
-                }
-            }
-            
-            return systems;
-        }
+    if !world_file.exists() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "Game world file not found",
+        ));
     }
+
+    // Open the file for reading
+    let file = File::open(&world_file)?;
+    
+    let mut systems = Vec::new();
+    systems = serde_json::from_reader(file)?;
+    Ok(systems)
 }
 
 impl PlayerState {
@@ -213,12 +172,8 @@ impl PlayerState {
 }
 
 /// Saves a single star system to its individual file
-pub fn save_star_system(game_id: &str, system_id: usize, system: &StarSystem) -> std::io::Result<()> {
-    let system_path = Path::new("data")
-        .join("game")
-        .join(game_id)
-        .join("star_systems")
-        .join(format!("system_{}.json", system_id));
+pub fn save_star_system(_game_id: &str, system_id: usize, system: &StarSystem) -> std::io::Result<()> {
+    let system_path = game_path(&["star_systems", &format!("system_{}.json", system_id)]);
 
     let file = File::create(system_path)?;
     to_writer(file, system)?;
@@ -226,20 +181,36 @@ pub fn save_star_system(game_id: &str, system_id: usize, system: &StarSystem) ->
 }
 
 /// Loads a single star system from its individual file
-pub fn load_star_system(game_id: &str, system_id: usize) -> std::io::Result<Option<StarSystem>> {
-    let system_path = Path::new("data")
-        .join("game")
-        .join(game_id)
-        .join("star_systems")
-        .join(format!("system_{}.json", system_id));
+pub fn load_star_system(_game_id: &str, system_id: usize) -> std::io::Result<Option<StarSystem>> {
+    let system_path = game_path(&["star_systems", &format!("system_{}.json", system_id)]);
 
     if !system_path.exists() {
         return Ok(None);
     }
 
-    let mut contents = String::new();
-    File::open(system_path)?.read_to_string(&mut contents)?;
-    let system: StarSystem = serde_json::from_str(&contents)?;
+    let file = File::open(system_path)?;
+    let system: StarSystem = serde_json::from_reader(file)?;
     Ok(Some(system))
+}
+
+/// Saves a game world to the specified game directory.
+///
+/// # Arguments
+/// - `_game_id` - A string slice that holds the identifier for the game instance.
+/// - `star_systems` - A vector of star systems to save.
+///
+/// # Returns
+/// A Result indicating success or failure.
+pub fn save_game_world(_game_id: &str, star_systems: &[StarSystem]) -> std::io::Result<()> {
+    let world_file = game_path(&["GameWorld.json"]);
+    
+    // Create the game directory if it doesn't exist
+    if let Some(parent) = world_file.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let file = File::create(&world_file)?;
+    to_writer(file, star_systems)?;
+    Ok(())
 }
 

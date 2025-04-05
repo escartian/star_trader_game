@@ -42,14 +42,13 @@ pub fn random_nonzero_position(x_range: i32, y_range: i32, z_range: i32) -> Posi
     Position { x, y, z }
 }
 
-pub fn random_position(x_range: i32, y_range: i32, z_range: i32) -> Position {
+pub fn random_position(map_width: i32, map_height: i32, map_length: i32) -> Position {
     let mut rng = rand::thread_rng();
-
-    let x = rng.gen_range(-x_range..=x_range);
-    let y = rng.gen_range(-y_range..=y_range);
-    let z = rng.gen_range(-z_range..=z_range);
-
-    Position { x, y, z }
+    Position {
+        x: rng.gen_range(-map_width..=map_width),
+        y: rng.gen_range(-map_height..=map_height),
+        z: rng.gen_range(-map_length..=map_length),
+    }
 }
 
 #[cfg(test)]

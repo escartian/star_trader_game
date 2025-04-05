@@ -3,14 +3,21 @@ use std::fs::{self, File};
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use std::io::Write;
 #[macro_use]
 use lazy_static::lazy_static;
-use crate::GAME_ID;
+use crate::models::settings::{GameSettings, load_settings};
 use crate::models::player::Player;
 use crate::models::star_system::StarSystem;
 use crate::models::fleet::Fleet;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+
+#[derive(Clone)]
+pub struct GameState {
+    pub settings: GameSettings,
+    pub credits: f32,
+}
 
 // Cache structure
 #[derive(Clone)]
@@ -49,6 +56,12 @@ impl<T: Clone> Cache<T> {
             data.remove(key);
         }
     }
+
+    pub fn remove_all(&self) {
+        if let Ok(mut data) = self.data.write() {
+            data.clear();
+        }
+    }
 }
 
 // Global caches
@@ -59,7 +72,21 @@ lazy_static! {
 }
 
 pub fn game_path(components: &[&str]) -> PathBuf {
-    let mut path = PathBuf::from("data").join("game").join(GAME_ID);
+    let mut path = PathBuf::from("data").join("game");
+    
+    // Try to get game_id from settings, but don't fail if we can't
+    if let Ok(settings) = load_settings() {
+        path = path.join(&settings.game_id);
+    }
+    
+    for component in components {
+        path = path.join(component);
+    }
+    path
+}
+
+pub fn game_path_with_id(game_id: &str, components: &[&str]) -> PathBuf {
+    let mut path = PathBuf::from("data").join("game").join(game_id);
     for component in components {
         path = path.join(component);
     }
@@ -74,12 +101,15 @@ pub fn ensure_parent_dirs(path: &Path) -> std::io::Result<()> {
 }
 
 pub fn save_json<T: Serialize>(path: &Path, data: &T) -> Result<(), String> {
+    println!("Starting to save JSON to {}", path.display());
     ensure_parent_dirs(path)
         .map_err(|e| format!("Failed to create directories: {}", e))?;
     
+    println!("Creating file at {}", path.display());
     let file = File::create(path)
         .map_err(|e| format!("Failed to create file: {}", e))?;
     
+    println!("Serializing data to JSON");
     serde_json::to_writer(file, data)
         .map_err(|e| format!("Failed to write JSON: {}", e))
 }
@@ -105,6 +135,10 @@ pub fn load_player(name: &str) -> Result<Player, String> {
     }
     
     let path = game_path(&["players", &format!("{}.json", name)]);
+    if !path.exists() {
+        return Err(format!("Player file not found: {}", path.display()));
+    }
+    
     let player: Player = load_json(&path)?;
     PLAYER_CACHE.set(name.to_string(), player.clone());
     Ok(player)
@@ -148,7 +182,66 @@ pub fn load_fleet(name: &str) -> Result<Fleet, String> {
 
 // Helper for trade operations
 pub fn save_trade_state(player: &Player, system: &StarSystem, system_id: usize) -> Result<(), String> {
-    save_player(player)?;
-    save_star_system(system_id, system)?;
+    // Save player state first
+    let player_path = game_path(&["players", &format!("{}.json", player.name)]);
+    save_json(&player_path, player).map_err(|e| format!("Failed to save player state: {}", e))?;
+    
+    // Save star system state
+    let system_path = game_path(&["star_systems", &format!("system_{}.json", system_id)]);
+    save_json(&system_path, system).map_err(|e| format!("Failed to save system state: {}", e))?;
+    
     Ok(())
+}
+
+// Helper to save all star systems to individual files
+pub fn save_star_systems(systems: &[StarSystem]) -> Result<(), String> {
+    println!("Starting to save {} star systems", systems.len());
+    let settings = load_settings().map_err(|e| format!("Failed to load settings: {}", e))?;
+    println!("Loaded settings");
+    let systems_dir = Path::new("data")
+        .join("game")
+        .join(&settings.game_id)
+        .join("star_systems");
+    println!("Creating systems directory at {}", systems_dir.display());
+    if let Err(e) = fs::create_dir_all(&systems_dir) {
+        return Err(format!("Failed to create systems directory: {}", e));
+    }
+    
+    // Process systems in smaller batches
+    const BATCH_SIZE: usize = 2; // Process 2 systems at a time
+    for chunk in systems.chunks(BATCH_SIZE) {
+        for (i, system) in chunk.iter().enumerate() {
+            let system_index = i + (chunk.as_ptr() as usize - systems.as_ptr() as usize) / std::mem::size_of::<StarSystem>();
+            println!("Processing system {}/{} with {} planets", 
+                system_index + 1, systems.len(), system.planets.len());
+            
+            let system_path = systems_dir.join(format!("system_{}.json", system_index));
+            
+            // Use a buffered writer for better performance
+            let file = File::create(&system_path)
+                .map_err(|e| format!("Failed to create file for system {}: {}", system_index, e))?;
+            let mut writer = std::io::BufWriter::new(file);
+            
+            serde_json::to_writer(&mut writer, system)
+                .map_err(|e| format!("Failed to serialize system {}: {}", system_index, e))?;
+            
+            // Ensure the buffer is flushed
+            writer.flush()
+                .map_err(|e| format!("Failed to flush system {}: {}", system_index, e))?;
+            
+            println!("Successfully saved system {}", system_index);
+            
+            // Clear the cache after each system to free memory
+            SYSTEM_CACHE.remove(&system_index.to_string());
+        }
+    }
+    
+    println!("Completed saving all star systems");
+    Ok(())
+}
+
+pub fn clear_caches() {
+    PLAYER_CACHE.remove_all();
+    SYSTEM_CACHE.remove_all();
+    FLEET_CACHE.remove_all();
 } 

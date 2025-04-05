@@ -1,11 +1,14 @@
 .galaxy-map-container {
     padding: 15px;
-    background-color: #0a0a1a;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2a 100%);
     min-height: 100vh;
     width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
     overflow-x: auto;
     overflow-y: auto;
     position: relative;
+    font-family: 'Consolas', 'Courier New', 'Lucida Console', 'Monaco', monospace;
 }
 
 .galaxy-map-container::before {
@@ -46,13 +49,14 @@
     justify-content: space-between;
     align-items: center;
     background: rgba(20, 20, 35, 0.5);
+    backdrop-filter: blur(5px);
 }
 
 .galaxy-map-title {
     margin: 0;
-    color: #00ff00;
+    color: #0f0;
     font-size: 24px;
-    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    font-weight: bold;
 }
 
 .galaxy-map-controls {
@@ -64,16 +68,18 @@
     background: rgba(0, 255, 0, 0.1);
     border: 1px solid rgba(0, 255, 0, 0.3);
     border-radius: 4px;
-    color: #00ff00;
+    color: #0f0;
     padding: 8px 16px;
     cursor: pointer;
     transition: all 0.2s;
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    letter-spacing: 1px;
 }
 
 .galaxy-map-button:hover {
     background: rgba(0, 255, 0, 0.2);
     box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
 }
 
 .galaxy-map-content {
@@ -82,11 +88,13 @@
     overflow: visible;
     padding: 20px;
     width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
 }
 
 .systems-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
     padding: 20px;
     width: 100%;
@@ -97,7 +105,7 @@
     background: rgba(20, 20, 35, 0.8);
     border: 1px solid rgba(0, 255, 0, 0.3);
     border-radius: 6px;
-    padding: 15px;
+    padding: 20px;
     cursor: pointer;
     transition: all 0.3s ease;
     width: 100%;
@@ -134,9 +142,9 @@
 
 .system-name {
     font-size: 18px;
-    color: #00ff00;
+    color: #0f0;
     margin: 0;
-    text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    font-weight: bold;
 }
 
 .system-info {
@@ -159,11 +167,13 @@
 
 .system-stat .stat-label {
     color: rgba(0, 255, 0, 0.7);
+    font-style: italic;
 }
 
 .system-stat .stat-value {
-    color: #00ff00;
+    color: #0f0;
     text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+    font-weight: bold;
 }
 
 .planets-list {
@@ -189,14 +199,16 @@
 }
 
 .planet-name {
-    color: #00ff00;
+    color: #0f0;
     font-size: 14px;
     text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+    font-weight: bold;
 }
 
 .planet-type {
     color: rgba(0, 255, 0, 0.7);
     font-size: 14px;
+    font-style: italic;
 }
 
 @keyframes twinkle {
@@ -226,13 +238,13 @@
 /* Responsive design */
 @media (max-width: 1600px) {
     .systems-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 1200px) {
     .systems-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
     }
 }
 
@@ -287,6 +299,7 @@
     margin: 0;
     font-size: 18px;
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    font-weight: bold;
 }
 
 .star-info-content {
@@ -310,12 +323,14 @@
     color: rgba(0, 255, 0, 0.7);
     font-size: 14px;
     margin-bottom: 4px;
+    font-style: italic;
 }
 
 .star-info-value {
     color: #00ff00;
     font-size: 14px;
     text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+    font-weight: bold;
 }
 
 .planets-section {
@@ -337,6 +352,7 @@
     margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+    font-weight: bold;
 }
 
 .planet-stats {
@@ -357,12 +373,14 @@
 .planet-stat-label {
     color: rgba(0, 255, 0, 0.7);
     font-size: 14px;
+    font-style: italic;
 }
 
 .planet-stat-value {
     color: #00ff00;
     font-size: 14px;
     text-shadow: 0 0 3px rgba(0, 255, 0, 0.3);
+    font-weight: bold;
 }
 
 .planet-actions {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { GameSettings, SavedGame, Faction } from '../types/game';
+import StarBackground from './StarBackground';
 import './MainMenu.css';
 
 interface MainMenuProps {
@@ -95,155 +96,158 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
     };
 
     return (
-        <div className="main-menu">
-            <h1>Star Trader</h1>
-            
-            <div className="menu-buttons">
-                <button onClick={() => setShowNewGame(true)}>New Game</button>
-                {savedGames.length > 0 && (
-                    <button onClick={() => setShowNewGame(false)}>Load Game</button>
-                )}
-            </div>
+        <>
+            <StarBackground />
+            <div className="main-menu">
+                <h1>Star Trader</h1>
+                
+                <div className="menu-buttons">
+                    <button onClick={() => setShowNewGame(true)}>New Game</button>
+                    {savedGames.length > 0 && (
+                        <button onClick={() => setShowNewGame(false)}>Load Game</button>
+                    )}
+                </div>
 
-            {showNewGame ? (
-                <div className="new-game-settings">
-                    <h2>New Game Settings</h2>
-                    <div className="settings-form">
-                        <div className="setting-group">
-                            <label>Game Name:</label>
-                            <input
-                                type="text"
-                                value={settings.display_name}
-                                onChange={(e) => setSettings({
-                                    ...settings,
-                                    display_name: e.target.value
-                                })}
-                            />
-                        </div>
-
-                        <div className="setting-group">
-                            <label>Map Size:</label>
-                            <div className="map-size-inputs">
+                {showNewGame ? (
+                    <div className="new-game-settings">
+                        <h2>New Game Settings</h2>
+                        <div className="settings-form">
+                            <div className="setting-group">
+                                <label>Game Name:</label>
                                 <input
-                                    type="number"
-                                    value={settings.map_width}
+                                    type="text"
+                                    value={settings.display_name}
                                     onChange={(e) => setSettings({
                                         ...settings,
-                                        map_width: parseInt(e.target.value),
-                                        map_height: parseInt(e.target.value),
-                                        map_length: parseInt(e.target.value)
+                                        display_name: e.target.value
                                     })}
-                                    min="50"
-                                    max="500"
                                 />
                             </div>
-                        </div>
 
-                        <div className="setting-group">
-                            <label>Star Systems:</label>
-                            <input
-                                type="number"
-                                value={settings.star_count}
-                                onChange={(e) => setSettings({
-                                    ...settings,
-                                    star_count: parseInt(e.target.value)
-                                })}
-                                min="5"
-                                max="50"
-                            />
-                        </div>
-
-                        <div className="setting-group">
-                            <label>Starting Credits:</label>
-                            <input
-                                type="number"
-                                value={settings.starting_credits}
-                                onChange={(e) => setSettings({
-                                    ...settings,
-                                    starting_credits: parseInt(e.target.value)
-                                })}
-                                min="500"
-                                max="10000"
-                                step="100"
-                            />
-                        </div>
-
-                        <div className="setting-group">
-                            <label>Player Name:</label>
-                            <input
-                                type="text"
-                                value={settings.player_name}
-                                onChange={(e) => setSettings({
-                                    ...settings,
-                                    player_name: e.target.value
-                                })}
-                            />
-                        </div>
-
-                        <div className="setting-group">
-                            <button onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}>
-                                {showAdvancedSettings ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
-                            </button>
-                        </div>
-
-                        {showAdvancedSettings && (
-                            <div className="advanced-settings">
-                                <h3>Faction Settings</h3>
-                                {settings.factions.map((faction, index) => (
-                                    <div key={index} className="faction-settings">
-                                        <div className="setting-group">
-                                            <label>Faction Name:</label>
-                                            <input
-                                                type="text"
-                                                value={faction.name}
-                                                onChange={(e) => updateFaction(index, 'name', e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="setting-group">
-                                            <label>Influence:</label>
-                                            <input
-                                                type="number"
-                                                value={faction.influence}
-                                                onChange={(e) => updateFaction(index, 'influence', parseInt(e.target.value))}
-                                                min="0"
-                                                max="100"
-                                            />
-                                        </div>
-                                        <div className="setting-group">
-                                            <label>Prefix:</label>
-                                            <input
-                                                type="text"
-                                                value={faction.prefix}
-                                                onChange={(e) => updateFaction(index, 'prefix', e.target.value)}
-                                            />
-                                        </div>
-                                        <button onClick={() => removeFaction(index)}>Remove Faction</button>
-                                    </div>
-                                ))}
-                                <button onClick={addFaction}>Add Faction</button>
+                            <div className="setting-group">
+                                <label>Map Size:</label>
+                                <div className="map-size-inputs">
+                                    <input
+                                        type="number"
+                                        value={settings.map_width}
+                                        onChange={(e) => setSettings({
+                                            ...settings,
+                                            map_width: parseInt(e.target.value),
+                                            map_height: parseInt(e.target.value),
+                                            map_length: parseInt(e.target.value)
+                                        })}
+                                        min="50"
+                                        max="500"
+                                    />
+                                </div>
                             </div>
-                        )}
 
-                        <button onClick={handleNewGame}>Start Game</button>
+                            <div className="setting-group">
+                                <label>Star Systems:</label>
+                                <input
+                                    type="number"
+                                    value={settings.star_count}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        star_count: parseInt(e.target.value)
+                                    })}
+                                    min="5"
+                                    max="50"
+                                />
+                            </div>
+
+                            <div className="setting-group">
+                                <label>Starting Credits:</label>
+                                <input
+                                    type="number"
+                                    value={settings.starting_credits}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        starting_credits: parseInt(e.target.value)
+                                    })}
+                                    min="500"
+                                    max="10000"
+                                    step="100"
+                                />
+                            </div>
+
+                            <div className="setting-group">
+                                <label>Player Name:</label>
+                                <input
+                                    type="text"
+                                    value={settings.player_name}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        player_name: e.target.value
+                                    })}
+                                />
+                            </div>
+
+                            <div className="setting-group">
+                                <button onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}>
+                                    {showAdvancedSettings ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
+                                </button>
+                            </div>
+
+                            {showAdvancedSettings && (
+                                <div className="advanced-settings">
+                                    <h3>Faction Settings</h3>
+                                    {settings.factions.map((faction, index) => (
+                                        <div key={index} className="faction-settings">
+                                            <div className="setting-group">
+                                                <label>Faction Name:</label>
+                                                <input
+                                                    type="text"
+                                                    value={faction.name}
+                                                    onChange={(e) => updateFaction(index, 'name', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="setting-group">
+                                                <label>Influence:</label>
+                                                <input
+                                                    type="number"
+                                                    value={faction.influence}
+                                                    onChange={(e) => updateFaction(index, 'influence', parseInt(e.target.value))}
+                                                    min="0"
+                                                    max="100"
+                                                />
+                                            </div>
+                                            <div className="setting-group">
+                                                <label>Prefix:</label>
+                                                <input
+                                                    type="text"
+                                                    value={faction.prefix}
+                                                    onChange={(e) => updateFaction(index, 'prefix', e.target.value)}
+                                                />
+                                            </div>
+                                            <button onClick={() => removeFaction(index)}>Remove Faction</button>
+                                        </div>
+                                    ))}
+                                    <button onClick={addFaction}>Add Faction</button>
+                                </div>
+                            )}
+
+                            <button onClick={handleNewGame}>Start Game</button>
+                        </div>
                     </div>
-                </div>
-            ) : (
-                <div className="saved-games">
-                    <h2>Saved Games</h2>
-                    {savedGames.map((game) => (
-                        <div key={game.game_id} className="saved-game-item">
-                            <div className="game-info">
-                                <span>{game.settings.display_name}</span>
-                                <span>Last played: {new Date(game.last_played).toLocaleDateString()}</span>
+                ) : (
+                    <div className="saved-games">
+                        <h2>Saved Games</h2>
+                        {savedGames.map((game) => (
+                            <div key={game.game_id} className="saved-game-item">
+                                <div className="game-info">
+                                    <span>{game.settings.display_name}</span>
+                                    <span>Last played: {new Date(game.last_played).toLocaleDateString()}</span>
+                                </div>
+                                <div className="game-actions">
+                                    <button onClick={() => handleLoadGame(game.game_id)}>Load</button>
+                                    <button onClick={() => handleDeleteGame(game.game_id)}>Delete</button>
+                                </div>
                             </div>
-                            <div className="game-actions">
-                                <button onClick={() => handleLoadGame(game.game_id)}>Load</button>
-                                <button onClick={() => handleDeleteGame(game.game_id)}>Delete</button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </>
     );
 }; 

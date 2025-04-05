@@ -11,9 +11,9 @@ interface TabBarProps {
 export const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabChange }) => {
     const tabs: { id: TabType; label: string; icon: string }[] = [
         { id: 'galaxy', label: 'Galaxy', icon: '🌌' },
-        { id: 'fleets', label: 'Fleets', icon: '🚀' },
-        { id: 'market', label: 'Market', icon: '💰' },
-        { id: 'research', label: 'Research', icon: '🔬' }
+        { id: 'fleets', label: 'Fleets', icon: '🛸' },
+        { id: 'market', label: 'Market', icon: '⚖' },
+        { id: 'research', label: 'Research', icon: '⚛' }
     ];
 
     return (

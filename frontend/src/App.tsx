@@ -5,6 +5,7 @@ import { FleetList } from './components/FleetList';
 import { TabBar, TabType } from './components/TabBar';
 import { Player, GameSettings } from './types/game';
 import { api } from './services/api';
+import CanvasBackground from './components/CanvasBackground';
 import './App.css';
 
 function App() {
@@ -83,9 +84,10 @@ function App() {
 
     return (
         <div className="app">
+            <CanvasBackground />
             {isInGame && (
                 <>
-                    <header className="app-header">
+            <header className="app-header">
                         <div className="header-left">
                             <button className="main-menu-button" onClick={handleReturnToMainMenu}>
                                 Main Menu

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './CanvasBackground.css';
 
 interface Star {
@@ -24,6 +24,7 @@ interface Comet {
 
 const CanvasBackground: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [cometCount, setCometCount] = useState(2);
     const starsRef = useRef<Star[]>([]);
     const cometsRef = useRef<Comet[]>([]);
     const animationFrameRef = useRef<number | undefined>(undefined);
@@ -361,6 +362,18 @@ const CanvasBackground: React.FC = () => {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
             }
+        };
+    }, []);
+
+    useEffect(() => {
+        const handleCometCountUpdate = (event: CustomEvent) => {
+            setCometCount(event.detail.count);
+        };
+
+        window.addEventListener('updateCometCount', handleCometCountUpdate as EventListener);
+
+        return () => {
+            window.removeEventListener('updateCometCount', handleCometCountUpdate as EventListener);
         };
     }, []);
 

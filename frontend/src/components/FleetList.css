@@ -3,11 +3,11 @@
     width: 100%;
     margin: 0 auto;
     position: relative;
-    z-index: 1;
+    z-index: 2;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 60px); /* Account for tab bar */
-    margin-top: 60px; /* Add margin to account for tab bar height */
+    height: calc(100vh - 120px); /* Account for header and tab bar */
+    margin-top: 120px; /* Account for header (60px) and tab bar (60px) */
     overflow-y: auto;
 }
 
@@ -22,6 +22,10 @@
     border-radius: 8px;
     box-shadow: 0 0 15px rgba(0, 255, 0, 0.1);
     width: 100%;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    backdrop-filter: blur(5px);
 }
 
 .fleet-header h2 {
@@ -41,6 +45,10 @@
     border-radius: 8px;
     border: 1px solid rgba(0, 255, 0, 0.1);
     width: 100%;
+    position: sticky;
+    top: 70px;
+    z-index: 2;
+    backdrop-filter: blur(5px);
 }
 
 .fleet-controls {
@@ -83,108 +91,60 @@
 .fleet-error {
     text-align: center;
     padding: 40px;
-    font-size: 18px;
-    color: #ff3333;
-    background: rgba(255, 0, 0, 0.1);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 0, 0, 0.2);
-    text-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+    color: #ff4444;
+    font-size: 20px;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
 }
 
 .fleet-empty {
     text-align: center;
     padding: 40px;
-    font-size: 18px;
     color: #00ff00;
-    background: rgba(0, 20, 0, 0.4);
-    border-radius: 8px;
-    border: 1px solid rgba(0, 255, 0, 0.1);
-    text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    font-size: 20px;
+    opacity: 0.7;
 }
 
 .fleet-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
-    padding-bottom: 20px; /* Add padding at bottom for better scrolling */
-    overflow-y: visible; /* Allow grid to scroll within container */
+    padding: 20px;
+    margin-top: 20px;
 }
 
 .fleet-card {
-    background: rgba(0, 20, 0, 0.7);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+    background: rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(0, 255, 0, 0.2);
-    transition: all 0.3s ease;
+    border-radius: 8px;
+    padding: 20px;
     cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    min-height: 180px;
-    display: flex;
-    flex-direction: column;
-}
-
-.fleet-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #00ff00, transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.fleet-card::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #00ff00, transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .fleet-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 255, 0, 0.2);
-    border-color: #00ff00;
-    background: rgba(0, 40, 0, 0.8);
-}
-
-.fleet-card:hover::before,
-.fleet-card:hover::after {
-    opacity: 1;
+    background: rgba(0, 255, 0, 0.05);
+    border-color: rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.1);
 }
 
 .fleet-card h3 {
     margin: 0 0 15px 0;
     color: #00ff00;
     font-size: 20px;
-    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
-    letter-spacing: 1px;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
 }
 
 .fleet-info {
-    display: grid;
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .fleet-info p {
     margin: 0;
-    color: #b4ffb4;
-    font-size: 15px;
-    display: flex;
-    justify-content: space-between;
-    text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
-}
-
-.fleet-info p span {
-    color: #00ff9d;
+    color: rgba(0, 255, 0, 0.8);
+    font-size: 14px;
 }
 
 .fleet-details {
@@ -404,17 +364,40 @@
 
 @media (max-width: 768px) {
     .fleet-container {
+        height: calc(100vh - 180px); /* Account for taller header and tab bar */
+        margin-top: 180px; /* Account for taller header (120px) and tab bar (60px) */
         padding: 10px;
     }
-    
-    .fleet-grid {
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 15px;
+
+    .fleet-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+        padding: 10px;
     }
-    
-    .fleet-card {
-        padding: 15px;
-        min-height: 160px;
+
+    .fleet-header h2 {
+        font-size: 24px;
+    }
+
+    .search-controls {
+        flex-direction: column;
+        gap: 10px;
+        top: 120px;
+    }
+
+    .fleet-controls {
+        flex-direction: column;
+    }
+
+    .faction-select {
+        width: 100%;
+    }
+
+    .fleet-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 10px;
     }
 }
 

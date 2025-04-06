@@ -35,6 +35,11 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
 
     useEffect(() => {
         loadSavedGames();
+        // Set initial comet count to 4 since menu is visible
+        const event = new CustomEvent('updateCometCount', {
+            detail: { count: 4 }
+        });
+        window.dispatchEvent(event);
     }, []);
 
     const loadSavedGames = async () => {
@@ -223,7 +228,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
                                             </button>
                                         </div>
                                     ))}
-                                    <button 
+                                    <button
                                         onClick={addFaction}
                                         className="add-faction-button"
                                         disabled={settings.factions.length >= 6}

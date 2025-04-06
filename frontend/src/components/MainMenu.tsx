@@ -12,6 +12,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
     const [savedGames, setSavedGames] = useState<SavedGame[]>([]);
     const [showNewGame, setShowNewGame] = useState(false);
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+    const [isMenuHidden, setIsMenuHidden] = useState(false);
     const [settings, setSettings] = useState<GameSettings>({
         game_id: Date.now().toString(),
         display_name: 'New Game',
@@ -41,6 +42,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
         });
         window.dispatchEvent(event);
     }, []);
+
+    const toggleMenu = () => {
+        setIsMenuHidden(!isMenuHidden);
+        // Update comet count based on menu visibility
+        const event = new CustomEvent('updateCometCount', {
+            detail: { count: !isMenuHidden ? 2 : 4 }
+        });
+        window.dispatchEvent(event);
+    };
 
     const loadSavedGames = async () => {
         try {
@@ -103,7 +113,13 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
     return (
         <>
             <CanvasBackground />
-            <div className="main-menu">
+            <button 
+                className={`toggle-menu-button ${isMenuHidden ? 'visible' : ''}`}
+                onClick={toggleMenu}
+            >
+                {isMenuHidden ? 'Show Menu' : 'Hide Menu'}
+            </button>
+            <div className={`main-menu ${isMenuHidden ? 'hidden' : ''}`}>
                 <h1>Star Trader</h1>
                 
                 <div className="menu-buttons">

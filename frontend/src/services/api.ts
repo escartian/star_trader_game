@@ -64,8 +64,35 @@ export const api = {
     },
 
     moveFleet: async (ownerId: string, fleetNumber: number, x: number, y: number, z: number): Promise<string> => {
-        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move/${x}/${y}/${z}`);
-        return handleApiResponse<string>(response);
+        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ x, y, z }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to move fleet: ${response.statusText}`);
+        }
+
+        return await response.text();
+    },
+
+    moveFleetWithinSystem: async (ownerId: string, fleetNumber: number, x: number, y: number, z: number): Promise<string> => {
+        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move_within_system`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ x, y, z }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to move fleet within system: ${response.statusText}`);
+        }
+
+        return await response.text();
     },
 
     // Market endpoints

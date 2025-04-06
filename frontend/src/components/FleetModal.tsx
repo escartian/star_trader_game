@@ -7,18 +7,23 @@ interface FleetModalProps {
     isOpen: boolean;
     onClose: () => void;
     fleet: Fleet;
-    onMove: (fleet: Fleet, x: number, y: number, z: number) => Promise<void>;
+    onMove: (fleet: Fleet, x: number, y: number, z: number, local: boolean) => Promise<void>;
 }
 
 export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, onMove }) => {
+    console.log('=== FleetModal Render Debug ===');
+    console.log('Fleet data received:', JSON.stringify(fleet, null, 2));
+    console.log('Has position:', !!fleet?.position);
+    console.log('Has ships:', !!fleet?.ships);
+    console.log('Fleet type:', fleet?.owner_id);
+
     const modalRef = useRef<HTMLDivElement>(null);
-    const [targetX, setTargetX] = useState<number>(fleet.position.x);
-    const [targetY, setTargetY] = useState<number>(fleet.position.y);
-    const [targetZ, setTargetZ] = useState<number>(fleet.position.z);
+    const [currentFleet, setCurrentFleet] = useState<Fleet>(fleet);
+    const [targetX, setTargetX] = useState<number>(fleet?.position?.x || 0);
+    const [targetY, setTargetY] = useState<number>(fleet?.position?.y || 0);
+    const [targetZ, setTargetZ] = useState<number>(fleet?.position?.z || 0);
     const [moveMessage, setMoveMessage] = useState<string>('');
     const [moveStatus, setMoveStatus] = useState<'success' | 'error' | 'info' | null>(null);
-    const [encounterFleets, setEncounterFleets] = useState<Fleet[]>([]);
-    const [currentEncounterIndex, setCurrentEncounterIndex] = useState(0);
     const [playerName, setPlayerName] = useState<string>('');
     const [error, setError] = useState<string>('');
     const [mapBounds, setMapBounds] = useState<{ min: number; max: number }>({ min: -1000, max: 1000 });
@@ -65,66 +70,18 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
         }
     };
 
-    const handleTestEncounter = (type: 'Pirate' | 'Trader' | 'Military' | 'Mercenary') => {
-        // Create a test encounter fleet
-        const testFleet: Fleet = {
-            name: `Fleet_${type}_1`,
-            owner_id: type,
-            ships: [
-                {
-                    name: `${type} Ship`,
-                    owner: type,
-                    specialization: type.toLowerCase() as any,
-                    position: fleet.position,
-                    cargo: [
-                        {
-                            resource_type: ResourceType.Minerals,
-                            quantity: 100,
-                            buy: 50,
-                            sell: 40
-                        },
-                        {
-                            resource_type: ResourceType.Luxury,
-                            quantity: 50,
-                            buy: 100,
-                            sell: 80
-                        }
-                    ],
-                    shields: { capacity: 100, current: 100, regen: 5 },
-                    weapons: [{ PhotonSingularityBeam: { damage: 50 } }],
-                    armor: { capacity: 50, current: 50, regen: 3 },
-                    status: "Stationary",
-                    hp: 100,
-                    combat_state: "NotInCombat",
-                    size: "Medium",
-                    engine: "Basic"
-                }
-            ],
-            position: fleet.position,
-            current_system_id: fleet.current_system_id,
-            last_move_distance: null
-        };
-
-        // Create encounter response format
-        const encounterResponse = {
-            status: "encounter",
-            message: "Encounter detected during movement",
-            encounters: [testFleet],
-            current_position: fleet.position,
-            target_position: fleet.position,
-            remaining_distance: 0
-        };
-
-        // Simulate the encounter by directly setting the encounter fleets
-        setEncounterFleets([testFleet]);
-        setCurrentEncounterIndex(0);
-    };
-
     const handleMove = async () => {
+        // Check if we have position data
+        if (!currentFleet.position) {
+            setMoveMessage('Cannot move fleet: position data is missing');
+            setMoveStatus('error');
+            return;
+        }
+
         // Calculate distance
-        const dx = targetX - fleet.position.x;
-        const dy = targetY - fleet.position.y;
-        const dz = targetZ - fleet.position.z;
+        const dx = targetX - currentFleet.position.x;
+        const dy = targetY - currentFleet.position.y;
+        const dz = targetZ - currentFleet.position.z;
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         // Check if within game world bounds
@@ -136,31 +93,56 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
             return;
         }
 
-        // Only allow moving player's own fleet
-        if (!fleet.owner_id.includes(playerName)) {
-            setMoveMessage('You can only move your own fleet');
+        try {
+            // This is a move (either in system or deep space)
+            const isLocalMove = !!currentFleet.current_system_id;
+            setMoveMessage(`Moving ${isLocalMove ? 'within star system' : 'through deep space'} (${distance.toFixed(2)} units)`);
+            setMoveStatus('info');
+            
+            // Call the move function
+            await onMove(currentFleet, targetX, targetY, targetZ, isLocalMove);
+            
+            // Update the current fleet's position
+            const updatedFleet = {
+                ...currentFleet,
+                position: { x: targetX, y: targetY, z: targetZ }
+            };
+            setCurrentFleet(updatedFleet);
+            
+            setMoveMessage('Move completed successfully');
+            setMoveStatus('success');
+
+            // Fetch updated fleet data
+            try {
+                const fleetNumber = parseInt(currentFleet.name.split('_').pop() || '0');
+                const fleetData = await api.getFleet(currentFleet.owner_id, fleetNumber);
+                if (fleetData) {
+                    console.log('Updated fleet data after move:', fleetData);
+                    setCurrentFleet(fleetData);
+                }
+            } catch (err) {
+                console.error('Failed to fetch updated fleet data:', err);
+            }
+        } catch (err) {
+            console.error('Move failed:', err);
+            setMoveMessage('Failed to move fleet');
             setMoveStatus('error');
-            return;
         }
-
-        setMoveMessage(`Distance to travel: ${distance.toFixed(2)} units`);
-        setMoveStatus('success');
-        await onMove(fleet, targetX, targetY, targetZ);
     };
 
-    const calculateDistance = () => {
-        const dx = targetX - fleet.position.x;
-        const dy = targetY - fleet.position.y;
-        const dz = targetZ - fleet.position.z;
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    };
-
-    // Update distance whenever target coordinates change
+    // Update currentFleet when fleet prop changes
     useEffect(() => {
-        const distance = calculateDistance();
-        setMoveMessage(`Distance to travel: ${distance.toFixed(2)} units`);
-        setMoveStatus('info');
-    }, [targetX, targetY, targetZ]);
+        console.log('Fleet prop changed, updating currentFleet');
+        if (fleet) {
+            console.log('New fleet data:', JSON.stringify(fleet, null, 2));
+            setCurrentFleet(fleet);
+            if (fleet.position) {
+                setTargetX(fleet.position.x);
+                setTargetY(fleet.position.y);
+                setTargetZ(fleet.position.z);
+            }
+        }
+    }, [fleet]);
 
     const renderShield = (shield: Shield) => {
         return `${shield.current}/${shield.capacity} (${shield.regen}/s)`;
@@ -180,158 +162,121 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
 
     if (!isOpen) return null;
 
-    const isPlayerFleet = fleet.owner_id === playerName;
+    const isPlayerFleet = currentFleet.owner_id === playerName;
 
     return (
-        <div className="modal-overlay" onClick={handleOverlayClick}>
-            <div className="modal-content">
+        <div className="fleet-modal-container" onClick={handleOverlayClick}>
+            <div className="fleet-modal-content" ref={modalRef}>
                 <div className="modal-header">
-                    <h2>{fleet.name}</h2>
+                    <h2>{currentFleet.name}</h2>
                     <button className="close-button" onClick={onClose}>×</button>
                 </div>
                 <div className="modal-body">
                     {error && <div className="error">{error}</div>}
-                    <div className="fleet-info">
-                        <div className="fleet-card">
-                            <h4>Fleet Details</h4>
-                            <div className="fleet-stats">
-                                <div className="stat-item">
-                                    <span className="stat-label">Owner:</span>
-                                    <span className="stat-value">{fleet.owner_id}</span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-label">Current Position:</span>
-                                    <span className="stat-value">
-                                        ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})
-                                    </span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-label">Ships:</span>
-                                    <span className="stat-value">{fleet.ships.length}</span>
-                                </div>
+                    
+                    <div className="fleet-card">
+                        <div className="fleet-stats">
+                            <div className="stat-item">
+                                <span className="stat-label">Owner:</span>
+                                <span className="stat-value">{currentFleet.owner_id}</span>
+                            </div>
+                            <div className="stat-item">
+                                <span className="stat-label">Current Position:</span>
+                                <span className="stat-value">
+                                    {currentFleet?.position ? 
+                                        `(${currentFleet.position.x.toFixed(2)}, ${currentFleet.position.y.toFixed(2)}, ${currentFleet.position.z.toFixed(2)})` : 
+                                        'Unknown'
+                                    }
+                                </span>
+                            </div>
+                            <div className="stat-item">
+                                <span className="stat-label">Location:</span>
+                                <span className="stat-value">
+                                    {currentFleet.current_system_id ? `In Star System ${currentFleet.current_system_id}` : 'Deep Space'}
+                                </span>
+                            </div>
+                            <div className="stat-item">
+                                <span className="stat-label">Ships:</span>
+                                <span className="stat-value">{currentFleet.ships.length}</span>
                             </div>
                         </div>
-                        
-                        {isPlayerFleet && (
-                            <div className="movement-section">
-                                <h4>Movement Controls</h4>
-                                <div className="movement-controls">
-                                    <div className="coordinate-input">
-                                        <label>Target X ({mapBounds.min} to {mapBounds.max}):</label>
-                                        <input
-                                            type="number"
-                                            min={mapBounds.min}
-                                            max={mapBounds.max}
-                                            value={targetX}
-                                            onChange={(e) => setTargetX(parseInt(e.target.value) || 0)}
-                                        />
-                                    </div>
-                                    <div className="coordinate-input">
-                                        <label>Target Y ({mapBounds.min} to {mapBounds.max}):</label>
-                                        <input
-                                            type="number"
-                                            min={mapBounds.min}
-                                            max={mapBounds.max}
-                                            value={targetY}
-                                            onChange={(e) => setTargetY(parseInt(e.target.value) || 0)}
-                                        />
-                                    </div>
-                                    <div className="coordinate-input">
-                                        <label>Target Z ({mapBounds.min} to {mapBounds.max}):</label>
-                                        <input
-                                            type="number"
-                                            min={mapBounds.min}
-                                            max={mapBounds.max}
-                                            value={targetZ}
-                                            onChange={(e) => setTargetZ(parseInt(e.target.value) || 0)}
-                                        />
-                                    </div>
-                                    <div className="movement-info">
-                                        {moveMessage && (
-                                            <div className={`move-message ${moveStatus}`}>
-                                                {moveMessage}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button 
-                                        className="move-button"
-                                        onClick={handleMove}
-                                        disabled={!isPlayerFleet}
-                                    >
-                                        Move Fleet
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
+                    
+                    {isPlayerFleet && (
+                        <div className="movement-section">
+                            <div className="movement-controls">
+                                <div className="coordinate-input">
+                                    <label>Target X ({mapBounds.min} to {mapBounds.max}):</label>
+                                    <input
+                                        type="number"
+                                        min={mapBounds.min}
+                                        max={mapBounds.max}
+                                        value={targetX}
+                                        onChange={(e) => setTargetX(Number(e.target.value))}
+                                    />
+                                </div>
+                                <div className="coordinate-input">
+                                    <label>Target Y ({mapBounds.min} to {mapBounds.max}):</label>
+                                    <input
+                                        type="number"
+                                        min={mapBounds.min}
+                                        max={mapBounds.max}
+                                        value={targetY}
+                                        onChange={(e) => setTargetY(Number(e.target.value))}
+                                    />
+                                </div>
+                                <div className="coordinate-input">
+                                    <label>Target Z ({mapBounds.min} to {mapBounds.max}):</label>
+                                    <input
+                                        type="number"
+                                        min={mapBounds.min}
+                                        max={mapBounds.max}
+                                        value={targetZ}
+                                        onChange={(e) => setTargetZ(Number(e.target.value))}
+                                    />
+                                </div>
+                                <button 
+                                    className="move-button" 
+                                    onClick={handleMove}
+                                >
+                                    Move Fleet
+                                </button>
+                                {moveMessage && (
+                                    <div className={`move-message ${moveStatus}`}>
+                                        {moveMessage}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
-                    <div className="fleet-card">
-                        <h4>Ships</h4>
-                        <div className="ship-list">
-                            {fleet.ships.map((ship, index) => (
+                    <div className="ships-section">
+                        <div className="ships-list">
+                            {currentFleet.ships.map((ship, index) => (
                                 <div key={index} className="ship-card">
-                                    <h4>{ship.name}</h4>
+                                    <h5>{ship.name}</h5>
                                     <div className="ship-stats">
                                         <div className="stat-item">
                                             <span className="stat-label">Type:</span>
                                             <span className="stat-value">{ship.specialization}</span>
                                         </div>
                                         <div className="stat-item">
-                                            <span className="stat-label">Position:</span>
-                                            <span className="stat-value">
-                                                ({ship.position.x}, {ship.position.y}, {ship.position.z})
-                                            </span>
+                                            <span className="stat-label">HP:</span>
+                                            <span className="stat-value">{ship.hp}</span>
                                         </div>
                                         <div className="stat-item">
                                             <span className="stat-label">Shields:</span>
-                                            <span className="stat-value">
-                                                {renderShield(ship.shields)}
-                                            </span>
-                                        </div>
-                                        <div className="stat-item">
-                                            <span className="stat-label">Weapons:</span>
-                                            <span className="stat-value">
-                                                {renderWeapon(ship.weapons)}
-                                            </span>
+                                            <span className="stat-value">{renderShield(ship.shields)}</span>
                                         </div>
                                         <div className="stat-item">
                                             <span className="stat-label">Armor:</span>
                                             <span className="stat-value">{renderArmor(ship.armor)}</span>
                                         </div>
-                                    </div>
-                                    {ship.cargo.length > 0 && (
-                                        <div className="cargo-list">
-                                            {ship.cargo.map((cargo, cargoIndex) => (
-                                                <div key={cargoIndex} className="cargo-item">
-                                                    <h4>{cargo.resource_type}</h4>
-                                                    <div className="cargo-stats">
-                                                        <div className="stat-item">
-                                                            <span className="stat-label">Quantity:</span>
-                                                            <span className="stat-value">
-                                                                {cargo.quantity || 0}
-                                                            </span>
-                                                        </div>
-                                                        {cargo.buy && (
-                                                            <div className="stat-item">
-                                                                <span className="stat-label">Buy Price:</span>
-                                                                <span className="stat-value">
-                                                                    {cargo.buy} credits
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        {cargo.sell && (
-                                                            <div className="stat-item">
-                                                                <span className="stat-label">Sell Price:</span>
-                                                                <span className="stat-value">
-                                                                    {cargo.sell} credits
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                        <div className="stat-item">
+                                            <span className="stat-label">Weapons:</span>
+                                            <span className="stat-value">{renderWeapon(ship.weapons)}</span>
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
                             ))}
                         </div>

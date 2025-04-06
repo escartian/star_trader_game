@@ -35,6 +35,7 @@ pub fn generate_galaxy(
     
     let mut star_systems = Vec::with_capacity(star_count as usize);
     let mut unique_positions: HashSet<Position> = HashSet::with_capacity(star_count as usize);
+    let mut existing_names: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut attempts = 0;
     let max_attempts = star_count * 2;
 
@@ -45,7 +46,7 @@ pub fn generate_galaxy(
         if !unique_positions.contains(&position) {
             println!("Found unique position for star system: {:?}", position);
             unique_positions.insert(position.clone());
-            let system = generate_star_system(map_width, map_height, map_length);
+            let system = generate_star_system(map_width, map_height, map_length, &mut existing_names);
             println!("Successfully generated star system at position {:?}", position);
             star_systems.push(system);
         } else {

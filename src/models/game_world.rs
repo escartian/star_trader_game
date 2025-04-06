@@ -93,6 +93,7 @@ pub fn create_game_world_file(settings: &GameSettings, force_regenerate: bool) -
         .map_err(|e| format!("Failed to start serialization: {}", e))?;
     
     // Generate and save star systems one at a time
+    let mut existing_names = std::collections::HashSet::new();
     for i in 0..settings.star_count {
         println!("Generating star system {}/{}", i + 1, settings.star_count);
         let position = random_position(
@@ -104,8 +105,12 @@ pub fn create_game_world_file(settings: &GameSettings, force_regenerate: bool) -
         let system = generate_star_system(
             settings.map_width as i32,
             settings.map_height as i32,
-            settings.map_length as i32
+            settings.map_length as i32,
+            &mut existing_names
         );
+        
+        // Add the star name to our tracking set
+        existing_names.insert(system.star.name.clone());
         
         // Serialize this system directly to the file
         ser.serialize_element(&system)

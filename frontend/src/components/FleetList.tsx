@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Fleet, Ship } from '../types/game';
+import { Fleet, Ship, MoveFleetResponse } from '../types/game';
 import { api } from '../services/api';
 import { FleetModal } from './FleetModal';
 import { CombatModal } from './CombatModal';
@@ -103,8 +103,21 @@ export const FleetList: React.FC = () => {
 
     const handleFleetSelect = async (fleet: Fleet) => {
         try {
-            console.log('Selected fleet:', fleet);
-            // Handle different fleet naming schemes
+            console.log('=== Fleet Selection Debug ===');
+            console.log('Initial fleet data:', JSON.stringify(fleet, null, 2));
+            console.log('Has position:', !!fleet.position);
+            console.log('Has ships:', !!fleet.ships);
+            console.log('Fleet type:', fleet.owner_id);
+            
+            // Use the fleet directly if it has all required properties
+            if (fleet.position && fleet.ships) {
+                console.log('Using existing fleet data - all properties present');
+                setSelectedFleet(fleet);
+                return;
+            }
+
+            console.log('Missing some properties, fetching detailed fleet data');
+            // Only fetch fleet details if we're missing required properties
             let fleetNumber: number;
             let fleetOwnerId = fleet.owner_id;
 
@@ -122,18 +135,33 @@ export const FleetList: React.FC = () => {
             if (fleet.owner_id === 'Pirate' || fleet.owner_id === 'Trader' || 
                 fleet.owner_id === 'Military' || fleet.owner_id === 'Mercenary') {
                 fleetOwnerId = fleet.owner_id;
+                console.log('Special fleet type detected:', fleetOwnerId);
             }
 
             console.log('Fetching fleet details for:', { fleetNumber, fleetOwnerId });
             const fleetData = await api.getFleet(fleetOwnerId, fleetNumber);
             if (fleetData) {
-                console.log('Fleet details received:', fleetData);
+                console.log('Received fleet data:', JSON.stringify(fleetData, null, 2));
+                console.log('Has position:', !!fleetData.position);
+                console.log('Has ships:', !!fleetData.ships);
                 setSelectedFleet(fleetData);
+            } else {
+                console.error('No fleet data received from API');
             }
         } catch (err) {
             console.error('Failed to load fleet details:', err);
         }
     };
+
+    // Add logging to useEffect that handles selectedFleet changes
+    useEffect(() => {
+        if (selectedFleet) {
+            console.log('=== Selected Fleet Updated ===');
+            console.log('Current selected fleet:', JSON.stringify(selectedFleet, null, 2));
+            console.log('Has position:', !!selectedFleet.position);
+            console.log('Has ships:', !!selectedFleet.ships);
+        }
+    }, [selectedFleet]);
 
     const handleCloseModal = () => {
         setSelectedFleet(null);
@@ -166,7 +194,7 @@ export const FleetList: React.FC = () => {
                 const { x, y, z } = targetPosition;
                 if (selectedFleet) {
                     // Recursively call handleMoveFleet to continue the path
-                    await handleMoveFleet(selectedFleet, x, y, z);
+                    await handleMoveFleet(selectedFleet, x, y, z, false);
                 }
             }
             
@@ -284,10 +312,14 @@ export const FleetList: React.FC = () => {
         }
     };
 
-    const handleMoveFleet = async (fleet: Fleet, targetX: number, targetY: number, targetZ: number) => {
-        console.log('Starting fleet move:', { fleet: fleet.name, owner: fleet.owner_id, targetPosition: { x: targetX, y: targetY, z: targetZ } });
-        
+    const handleMoveFleet = async (fleet: Fleet, targetX: number, targetY: number, targetZ: number, local: boolean) => {
         try {
+            console.log('Moving fleet:', {
+                fleet: fleet.name,
+                target: { x: targetX, y: targetY, z: targetZ },
+                local
+            });
+
             // Parse fleet number based on fleet type
             let fleetNumber: number;
             let fleetOwnerId = fleet.owner_id;
@@ -302,63 +334,85 @@ export const FleetList: React.FC = () => {
                 fleetNumber = parseInt(fleet.name.split('_').pop() || '0');
             }
 
-            // Set the selected fleet before making the API call
-            setSelectedFleet(fleet);
-
-            console.log('Parsed fleet info:', { fleetNumber, fleetOwnerId });
-
-            // Call moveFleet API
+            // Call appropriate move API based on whether this is a local move
             console.log('Calling moveFleet API...');
-            const response = await api.moveFleet(fleetOwnerId, fleetNumber, targetX, targetY, targetZ);
+            const responseText = local 
+                ? await api.moveFleetWithinSystem(fleetOwnerId, fleetNumber, targetX, targetY, targetZ)
+                : await api.moveFleet(fleetOwnerId, fleetNumber, targetX, targetY, targetZ);
+            
+            const response = JSON.parse(responseText) as MoveFleetResponse;
             console.log('Move fleet API response:', response);
 
-            try {
-                // Try to parse encounters from response
-                const responseData = response && typeof response === 'string' && response !== 'Fleet moved successfully' 
-                    ? JSON.parse(response) 
-                    : null;
-                
-                if (responseData?.status === "encounter") {
-                    console.log('Encounters found:', responseData.encounters);
-                    setEncounterFleets(responseData.encounters);
-                    
-                    // Update fleet position to current position from response
-                    const updatedFleet = {
-                        ...fleet,
-                        position: responseData.current_position,
-                        last_move_distance: responseData.remaining_distance
-                    };
-                    setFleets(prevFleets => 
-                        prevFleets.map(f => f.name === fleet.name ? updatedFleet : f)
-                    );
-                    setSelectedFleet(updatedFleet);
-                    
-                    // Store target position for after encounters
-                    setTargetPosition(responseData.target_position);
-                    return;
-                }
-            } catch (parseError) {
-                console.log('No encounters in response:', parseError);
-            }
+            // Create updated fleet with new position and system ID
+            const updatedFleet: Fleet = {
+                ...fleet,
+                position: response.current_position,
+                current_system_id: response.current_system_id
+            };
 
-            // If we get here, either there were no encounters or the response was just a success message
-            console.log('No encounters, proceeding with move...');
-            
-            // Update the fleet's position
-            const updatedFleet = await api.getFleet(fleetOwnerId, fleetNumber);
-            if (updatedFleet) {
-                console.log('Fleet updated successfully:', updatedFleet);
-                setFleets(prevFleets => 
-                    prevFleets.map(f => f.name === fleet.name ? updatedFleet : f)
-                );
+            // Update the selected fleet if it's the one being moved
+            if (selectedFleet && selectedFleet.name === fleet.name) {
+                console.log('Updating selected fleet with new position:', updatedFleet);
                 setSelectedFleet(updatedFleet);
             }
-            
-            // Refresh fleets
-            loadFleets();
-            
-        } catch (error) {
-            console.error('Error moving fleet:', error);
+
+            // Update the fleet in the fleets list
+            setFleets(prevFleets => 
+                prevFleets.map(f => 
+                    f.name === fleet.name ? updatedFleet : f
+                )
+            );
+
+            // Handle system transitions and encounters
+            if (response.status === 'transition') {
+                console.log('System transition detected:', response);
+                if (response.encounters.length > 0) {
+                    // Handle hostile encounters
+                    console.log('Hostile encounters during transition:', response.encounters);
+                    setEncounterFleets(response.encounters);
+                    setCurrentEncounterIndex(0);
+                    setTargetPosition({ x: targetX, y: targetY, z: targetZ });
+                } else {
+                    // Handle peaceful system transition
+                    console.log('Peaceful system transition');
+                    const systemName = response.current_system_id !== null 
+                        ? `System #${response.current_system_id}`
+                        : 'deep space';
+                    setEncounterFleets([{
+                        name: `System_Transition`,
+                        owner_id: 'System',
+                        ships: [],
+                        position: response.current_position,
+                        current_system_id: response.current_system_id,
+                        transition_message: `Fleet has entered ${systemName}`
+                    }]);
+                    setCurrentEncounterIndex(0);
+                }
+            } else {
+                console.log('Move completed successfully');
+                // Refresh fleets to ensure consistency
+                loadFleets();
+            }
+
+            // Fetch the latest fleet data
+            try {
+                const latestFleetData = await api.getFleet(fleetOwnerId, fleetNumber);
+                if (latestFleetData) {
+                    console.log('Latest fleet data after move:', latestFleetData);
+                    if (selectedFleet && selectedFleet.name === fleet.name) {
+                        setSelectedFleet(latestFleetData);
+                    }
+                    setFleets(prevFleets => 
+                        prevFleets.map(f => 
+                            f.name === fleet.name ? latestFleetData : f
+                        )
+                    );
+                }
+            } catch (err) {
+                console.error('Failed to fetch latest fleet data:', err);
+            }
+        } catch (err) {
+            console.error('Failed to move fleet:', err);
         }
     };
 
@@ -436,7 +490,9 @@ export const FleetList: React.FC = () => {
                         >
                             <h3>{formatFleetName(fleet.name)}</h3>
                             <div className="fleet-info">
-                                <p>Position: ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})</p>
+                                <p>Position: {fleet.position ? 
+                                    `(${fleet.position.x}, ${fleet.position.y}, ${fleet.position.z})` : 
+                                    'Unknown'}</p>
                                 <p>Ships: {fleet.ships.length}</p>
                                 <p>Owner: {fleet.owner_id}</p>
                             </div>

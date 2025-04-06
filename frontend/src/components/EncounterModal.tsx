@@ -31,6 +31,8 @@ export const EncounterModal: React.FC<EncounterModalProps> = ({
     const [searchResults, setSearchResults] = useState<CargoItem[]>([]);
     const [tradeType, setTradeType] = useState<'buy' | 'sell' | null>(null);
 
+    const isSystemTransition = encounteredFleet.owner_id === 'System';
+
     const handleTrade = async () => {
         if (!selectedResource || quantity <= 0 || !tradeType) {
             setError('Please select a resource, enter a valid quantity, and choose trade type');
@@ -290,59 +292,48 @@ export const EncounterModal: React.FC<EncounterModalProps> = ({
     };
 
     return (
-        <div className="modal-overlay" onClick={handleOverlayClick}>
-            <div className="modal-content encounter-modal">
-                <div className="modal-header">
-                    <h2>Space Encounter</h2>
-                    <button className="close-button" onClick={onClose}>×</button>
+        <div className="encounter-modal">
+            <div className="encounter-content">
+                <div className="encounter-header">
+                    <h2>{isSystemTransition ? 'System Transition' : 'Fleet Encounter'}</h2>
+                    <button className="close-button" onClick={onClose}>&times;</button>
                 </div>
-                <div className="modal-body">
-                    <div className="encounter-info">
-                        <h3>You've encountered {encounteredFleet.name}</h3>
-                        <div className="fleet-details">
-                            <div className="fleet-card">
-                                <h4>Your Fleet</h4>
-                                <div className="fleet-stats">
-                                    <div className="stat-item">
-                                        <span className="stat-label">Ships:</span>
-                                        <span className="stat-value">{fleet.ships.length}</span>
-                                    </div>
-                                    <div className="stat-item">
-                                        <span className="stat-label">Position:</span>
-                                        <span className="stat-value">
-                                            ({fleet.position.x}, {fleet.position.y}, {fleet.position.z})
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="fleet-card">
-                                <h4>Encountered Fleet</h4>
-                                <div className="fleet-stats">
-                                    <div className="stat-item">
-                                        <span className="stat-label">Ships:</span>
-                                        <span className="stat-value">{encounteredFleet.ships.length}</span>
-                                    </div>
-                                    <div className="stat-item">
-                                        <span className="stat-label">Position:</span>
-                                        <span className="stat-value">
-                                            ({encounteredFleet.position.x}, {encounteredFleet.position.y}, {encounteredFleet.position.z})
-                                        </span>
-                                    </div>
-                                </div>
+                
+                <div className="encounter-body">
+                    {isSystemTransition ? (
+                        // System transition message
+                        <div className="transition-message">
+                            <p>{encounteredFleet.transition_message}</p>
+                            <div className="encounter-actions">
+                                <button onClick={onClose} className="continue-button">
+                                    Continue
+                                </button>
                             </div>
                         </div>
-                    </div>
-
-                    {renderEncounterContent()}
-
-                    <div className="action-buttons">
-                        <button className="action-button attack-button" onClick={handleAttack}>
-                            Attack
-                        </button>
-                        <button className="action-button ignore-button" onClick={handleIgnore}>
-                            Ignore
-                        </button>
-                    </div>
+                    ) : (
+                        // Regular fleet encounter
+                        <>
+                            <div className="encounter-description">
+                                <p>Your fleet has encountered a hostile fleet!</p>
+                                <div className="fleet-details">
+                                    <h3>Encountered Fleet:</h3>
+                                    <p>Type: {encounteredFleet.owner_id}</p>
+                                    <p>Ships: {encounteredFleet.ships.length}</p>
+                                </div>
+                            </div>
+                            <div className="encounter-actions">
+                                <button 
+                                    onClick={() => onCombat(fleet, encounteredFleet)}
+                                    className="combat-button"
+                                >
+                                    Engage in Combat
+                                </button>
+                                <button onClick={onClose} className="retreat-button">
+                                    Retreat
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

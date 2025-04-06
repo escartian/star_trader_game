@@ -6,11 +6,7 @@ mod combat;
 mod encounters;
 
 use rocket::{get, routes, Request, Response};
-use rocket_dyn_templates::{Template, tera::Tera, context};
 use std::sync::atomic::Ordering;
-
-//use serde ::{Deserialize, Serialize};
-//use serde_json::{to_writer, Result};
 
 use rocket::catchers;
 use serde_json::to_writer;
@@ -24,9 +20,7 @@ use std::string::String;
 
 use crate::routes::*;
 
-//use crate::combat::combat::{auto_resolve_ship_combat, CombatResult};
 use crate::models::player::Player;
-//use crate::models::ship::ship::Ship;
 use crate::models::star_system::StarSystem;
 use crate::models::trader::Trader;
 use lazy_static::lazy_static;
@@ -107,30 +101,32 @@ async fn main() {
     let _ = rocket::build()
         .mount("/", FileServer::from("frontend/build"))
         .mount("/api", routes![
-            get_player, 
-            get_galaxy_map, 
-            get_star_system, 
-            get_fleet, 
-            get_owner_fleets,
-            get_planet_market,
-            buy_from_planet,
-            sell_to_planet,
-            move_fleet,
-            get_fleet_owners,
-            initiate_combat,
-            check_for_encounter,
-            trade_with_trader,
-            get_planet_ship_market,
-            buy_ship,
-            sell_ship,
-            trade_in_ship,
-            list_games,
-            load_game,
-            create_new_game,
-            get_settings,
-            update_settings,
-            delete_game,
-            clear_caches,
+            routes::get_player,
+            routes::get_galaxy_map,
+            routes::get_star_system,
+            routes::get_owner_fleets,
+            routes::get_fleet,
+            routes::move_fleet,
+            routes::move_within_system,
+            routes::get_fleet_owners,
+            routes::initiate_combat,
+            routes::check_for_encounter,
+            routes::trade_with_trader,
+            routes::get_planet_market,
+            routes::get_planet_ship_market,
+            routes::buy_from_planet,
+            routes::sell_to_planet,
+            routes::list_games,
+            routes::load_game,
+            routes::create_new_game,
+            routes::get_settings,
+            routes::update_settings,
+            routes::delete_game,
+            routes::buy_ship,
+            routes::sell_ship,
+            routes::trade_in_ship,
+            routes::get_player_fleets,
+            routes::clear_caches,
         ])
         .attach(cors)
         .register("/", catchers![internal_error])

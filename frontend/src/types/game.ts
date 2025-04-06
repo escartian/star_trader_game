@@ -56,7 +56,8 @@ export interface Fleet {
     ships: Ship[];
     position: Position;
     current_system_id: number | null;
-    last_move_distance: number | null;
+    last_move_distance?: number;
+    transition_message?: string;
 }
 
 export interface Planet {
@@ -136,4 +137,14 @@ export interface Market {
 
 export interface ShipMarket {
     ships: Ship[];
+}
+
+export interface MoveFleetResponse {
+    status: string;
+    message: string;
+    encounters: Fleet[];
+    current_position: Position;
+    target_position: Position;
+    remaining_distance: number;
+    current_system_id: number | null;
 }

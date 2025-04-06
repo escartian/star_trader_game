@@ -50,8 +50,8 @@ impl Distribution<StarType> for Standard {
     }
 }
 
-pub fn generate_star(map_width: i32, map_height: i32, map_length: i32) -> Star {
-    let name = generate_star_name();
+pub fn generate_star(map_width: i32, map_height: i32, map_length: i32, existing_names: &std::collections::HashSet<String>) -> Star {
+    let name = generate_star_name(existing_names);
     let star_type: StarType = rand::random();
     // For now, always place the star at the center (0,0,0)
     // In the future, we can add special cases for binary/trinary systems
@@ -63,78 +63,47 @@ pub fn generate_star(map_width: i32, map_height: i32, map_length: i32) -> Star {
     }
 }
 
-fn generate_star_name() -> String {
+fn generate_star_name(existing_names: &std::collections::HashSet<String>) -> String {
     let mut rng = rand::thread_rng();
+    let mut attempts = 0;
+    const MAX_ATTEMPTS: u32 = 100;
 
     // Star type prefixes
     let star_type_prefixes = vec![
-        "Alpha",
-        "Beta",
-        "Gamma",
-        "Delta",
-        "Epsilon",
-        "Zeta",
-        "Eta",
-        "Theta",
-        "Iota",
-        "Kappa",
-        "Lambda",
-        "Mu",
-        "Nu",
-        "Xi",
-        "Omicron",
-        "Pi",
-        "Rho",
-        "Sigma",
-        "Tau",
-        "Upsilon",
-        "Phi",
-        "Chi",
-        "Psi",
-        "Omega",
+        "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta",
+        "Iota", "Kappa", "Lambda", "Mu", "Nu", "Xi", "Omicron", "Pi",
+        "Rho", "Sigma", "Tau", "Upsilon", "Phi", "Chi", "Psi", "Omega",
     ];
 
     // Star type suffixes
     let star_type_suffixes = vec![
-        "Cerberus",
-        "Phoenix",
-        "Manticore",
-        "Chimera",
-        "Griffin",
-        "Basilisk",
-        "Hydra",
-        "Minotaur",
-        "Kraken",
-        "Sphinx",
+        "Cerberus", "Phoenix", "Manticore", "Chimera", "Griffin",
+        "Basilisk", "Hydra", "Minotaur", "Kraken", "Sphinx",
     ];
 
     // Star names
     let star_names = vec![
-        "Achernar",
-        "Aldebaran",
-        "Algol",
-        "Altair",
-        "Antares",
-        "Arcturus",
-        "Betelgeuse",
-        "Canopus",
-        "Capella",
-        "Castor",
-        "Deneb",
-        "Fomalhaut",
-        "Pollux",
-        "Procyon",
-        "Regulus",
-        "Rigel",
-        "Sirius",
-        "Spica",
-        "Vega",
-        "Zubenelgenubi",
+        "Achernar", "Aldebaran", "Algol", "Altair", "Antares",
+        "Arcturus", "Betelgeuse", "Canopus", "Capella", "Castor",
+        "Deneb", "Fomalhaut", "Pollux", "Procyon", "Regulus",
+        "Rigel", "Sirius", "Spica", "Vega", "Zubenelgenubi",
     ];
 
-    let star_type_prefix = star_type_prefixes[rng.gen_range(0..star_type_prefixes.len())];
-    let star_type_suffix = star_type_suffixes[rng.gen_range(0..star_type_suffixes.len())];
-    let star_name = star_names[rng.gen_range(0..star_names.len())];
-
-    format!("{} {} {}", star_type_prefix, star_name, star_type_suffix)
+    loop {
+        let star_type_prefix = star_type_prefixes[rng.gen_range(0..star_type_prefixes.len())];
+        let star_type_suffix = star_type_suffixes[rng.gen_range(0..star_type_suffixes.len())];
+        let star_name = star_names[rng.gen_range(0..star_names.len())];
+        
+        let generated_name = format!("{} {} {}", star_type_prefix, star_name, star_type_suffix);
+        
+        if !existing_names.contains(&generated_name) {
+            return generated_name;
+        }
+        
+        attempts += 1;
+        if attempts >= MAX_ATTEMPTS {
+            // If we can't generate a unique name after many attempts, add a random number
+            return format!("{} {}", generated_name, rng.gen_range(1000..9999));
+        }
+    }
 }

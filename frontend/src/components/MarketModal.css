@@ -9,6 +9,7 @@
     overflow-y: auto;
     position: relative;
     box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+    margin-top: 200px;
 }
 
 .market-modal-header {

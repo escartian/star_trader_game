@@ -22,36 +22,96 @@ interface Comet {
     color: string;
 }
 
-const CanvasBackground: React.FC = () => {
+
+interface CanvasBackgroundProps {
+    show?: boolean;
+}
+
+const CanvasBackground: React.FC<CanvasBackgroundProps> = ({ show = true }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [cometCount, setCometCount] = useState(2);
     const starsRef = useRef<Star[]>([]);
     const cometsRef = useRef<Comet[]>([]);
     const animationFrameRef = useRef<number | undefined>(undefined);
 
-    // Initialize stars with scientifically accurate colors
+    // Initialize stars with scientifically accurate density
     const initStars = (width: number, height: number) => {
         const stars: Star[] = [];
         const starCount = Math.floor((width * height) / 2000);
 
-        // Scientifically accurate star colors based on temperature (Kelvin)
+        // Extended scientifically accurate star colors based on temperature and composition
         const colors = [
-            '#9db4ff', // O-type (30,000-50,000K) - Blue-white
-            '#aabfff', // B-type (10,000-30,000K) - Blue-white
-            '#cad7ff', // A-type (7,500-10,000K) - White
-            '#f8f7ff', // F-type (6,000-7,500K) - Yellow-white
-            '#fff4ea', // G-type (5,200-6,000K) - Yellow (Sun-like)
-            '#ffd2a1', // K-type (3,700-5,200K) - Orange
-            '#ffcc6f'  // M-type (2,400-3,700K) - Red
+            // Blue sequence (hottest)
+            '#a5beff', // O-type (40,000-50,000K) - Bright blue-white
+            '#9db4ff', // O-type (35,000-40,000K) - Blue-white
+            '#93a7ff', // B-type (25,000-35,000K) - Deep blue-white
+            '#8b9fff', // B-type (20,000-25,000K) - Blue-white
+            '#a5c0ff', // B-type (15,000-20,000K) - Light blue-white
+            
+            // White sequence
+            '#cad7ff', // A-type (9,000-10,000K) - Blue-tinted white
+            '#e8eeff', // A-type (8,000-9,000K) - Pure white
+            '#f8f7ff', // F-type (7,000-8,000K) - Yellow-white
+            
+            // Yellow sequence
+            '#fff4ea', // G-type (5,700-6,000K) - Yellow-white (Sun-like)
+            '#fff2e6', // G-type (5,200-5,700K) - Light yellow
+            
+            // Orange sequence
+            '#ffd7b5', // K-type (4,500-5,200K) - Light orange
+            '#ffd2a1', // K-type (4,000-4,500K) - Orange
+            '#ffcc8f', // K-type (3,700-4,000K) - Deep orange
+            
+            // Red sequence
+            '#ffcc6f', // M-type (3,000-3,700K) - Orange-red
+            '#ffc469', // M-type (2,700-3,000K) - Light red
+            '#ffb56b', // M-type (2,400-2,700K) - Deep red
+
+            // Special types
+            '#ffefc1', // Carbon stars (2,400-3,000K) - Yellowish
+            '#ffcb8f', // S-type stars (2,400-3,500K) - Orange-yellow
+            '#ff9e80', // R Coronae Borealis (6,000-7,000K) - Reddish-orange
+            
+            // Binary star combinations (rarer)
+            '#fff4ea80', // Binary G-type overlay
+            '#ffd2a180', // Binary K-type overlay
+            '#ffcc6f80'  // Binary M-type overlay
         ];
 
+        // Distribution weights to match realistic stellar distribution
+        const weights = [
+            0.01, 0.01, 0.02, 0.02, 0.02, // Blue sequence (rare)
+            0.05, 0.05, 0.10,             // White sequence
+            0.15, 0.15,                   // Yellow sequence (common)
+            0.15, 0.10, 0.05,             // Orange sequence
+            0.05, 0.03, 0.02,             // Red sequence
+            0.01, 0.01, 0.01,             // Special types (very rare)
+            0.02, 0.02, 0.01              // Binary combinations (rare)
+        ];
+
+        // Generate cumulative weights for weighted random selection
+        const cumWeights = weights.reduce((acc, w, i) => {
+            acc[i] = (acc[i-1] || 0) + w;
+            return acc;
+        }, [] as number[]);
+
         for (let i = 0; i < starCount; i++) {
-            const color = colors[Math.floor(Math.random() * colors.length)];
+            // Weighted random selection
+            const rand = Math.random();
+            const colorIndex = cumWeights.findIndex(w => rand <= w);
+            const color = colors[colorIndex];
+
+            // Adjust size and brightness based on star type
+            const isHot = colorIndex < 5;  // Blue sequence
+            const isBinary = colorIndex > 18;  // Binary stars
+            const sizeMultiplier = isHot ? 1.4 : (isBinary ? 1.2 : 1);
+            const brightnessMultiplier = isHot ? 1.3 : (isBinary ? 1.1 : 1);
+
             stars.push({
                 x: Math.random() * width,
                 y: Math.random() * height,
-                size: Math.random() * 1.5 + 0.5,
-                brightness: Math.random() * 0.7 + 0.3,
+                size: (Math.random() * 1.5 + 0.5) * sizeMultiplier,
+                brightness: (Math.random() * 0.7 + 0.3) * brightnessMultiplier,
                 twinkleSpeed: Math.random() * 0.03 + 0.02,
                 twinkleOffset: Math.random() * Math.PI * 2,
                 color
@@ -297,52 +357,14 @@ const CanvasBackground: React.FC = () => {
 
         // Set canvas size and handle resizing
         const resizeCanvas = () => {
-            const oldWidth = canvas.width;
-            const oldHeight = canvas.height;
-            
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
 
-            // Scientifically accurate star colors based on temperature (Kelvin)
-            const colors = [
-                '#9db4ff', // O-type (30,000-50,000K) - Blue-white
-                '#aabfff', // B-type (10,000-30,000K) - Blue-white
-                '#cad7ff', // A-type (7,500-10,000K) - White
-                '#f8f7ff', // F-type (6,000-7,500K) - Yellow-white
-                '#fff4ea', // G-type (5,200-6,000K) - Yellow (Sun-like)
-                '#ffd2a1', // K-type (3,700-5,200K) - Orange
-                '#ffcc6f'  // M-type (2,400-3,700K) - Red
-            ];
-
-            const newWidth = canvas.width;
-            const newHeight = canvas.height;
-            const newStarCount = Math.floor((newWidth * newHeight) / 1000);
-
-            // Regenerate entire star field to maintain even density
-            starsRef.current = Array(newStarCount).fill(null).map(() => {
-                const color = colors[Math.floor(Math.random() * colors.length)];
-                return {
-                    x: Math.random() * newWidth,
-                    y: Math.random() * newHeight,
-                    size: Math.random() * 1.5 + 0.5,
-                    brightness: Math.random() * 0.7 + 0.3,
-                    twinkleSpeed: Math.random() * 0.03 + 0.02,
-                    twinkleOffset: Math.random() * Math.PI * 2,
-                    color
-                };
-            });
-
-            // Adjust existing stars' positions if they're now outside the canvas
-            starsRef.current = starsRef.current.map(star => {
-                if (star.x > newWidth || star.y > newHeight) {
-                    return {
-                        ...star,
-                        x: Math.random() * newWidth,
-                        y: Math.random() * newHeight
-                    };
-                }
-                return star;
-            });
+            // Reinitialize stars with the same enhanced color distribution
+            starsRef.current = initStars(canvas.width, canvas.height);
         };
 
         // Set initial size and generate stars
@@ -377,7 +399,7 @@ const CanvasBackground: React.FC = () => {
         };
     }, []);
 
-    return (
+    return show ? (
         <canvas
             ref={canvasRef}
             className="canvas-background"
@@ -390,7 +412,7 @@ const CanvasBackground: React.FC = () => {
                 zIndex: 0
             }}
         />
-    );
+    ) : null;
 };
 
 export default CanvasBackground; 

@@ -64,6 +64,7 @@ export const api = {
     },
 
     moveFleet: async (ownerId: string, fleetNumber: number, x: number, y: number, z: number): Promise<string> => {
+        console.log(`Moving fleet ${ownerId}_${fleetNumber} to (${x}, ${y}, ${z}) in deep space`);
         const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move`, {
             method: 'POST',
             headers: {
@@ -72,15 +73,18 @@ export const api = {
             body: JSON.stringify({ x, y, z }),
         });
 
+        const responseText = await response.text();
         if (!response.ok) {
+            console.error('Move fleet failed:', responseText);
             throw new Error(`Failed to move fleet: ${response.statusText}`);
         }
 
-        return await response.text();
+        return responseText;
     },
 
-    moveFleetWithinSystem: async (ownerId: string, fleetNumber: number, x: number, y: number, z: number): Promise<string> => {
-        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move_within_system`, {
+    moveLocal: async (ownerId: string, fleetNumber: number, x: number, y: number, z: number): Promise<string> => {
+        console.log(`Moving fleet ${ownerId}_${fleetNumber} to (${x}, ${y}, ${z}) within system`);
+        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move_local`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -88,11 +92,13 @@ export const api = {
             body: JSON.stringify({ x, y, z }),
         });
 
+        const responseText = await response.text();
         if (!response.ok) {
-            throw new Error(`Failed to move fleet within system: ${response.statusText}`);
+            console.error('Move local failed:', responseText);
+            throw new Error(`Failed to move fleet: ${response.statusText}`);
         }
 
-        return await response.text();
+        return responseText;
     },
 
     // Market endpoints
@@ -313,25 +319,30 @@ export const api = {
         return handleApiResponse<void>(response);
     },
 
-    getPlayerFleets: async (): Promise<ApiResponse<Fleet[]>> => {
-        const response = await fetch(`${API_BASE_URL}/fleet/owners`);
-        if (!response.ok) {
-            throw new Error(`Failed to load fleets: ${response.status}`);
+    getPlayerFleets: async (ownerId?: string): Promise<ApiResponse<Fleet[]>> => {
+        try {
+            // If no ownerId is provided, get it from settings
+            const targetOwnerId = ownerId || (await api.getGameSettings()).player_name;
+            if (!targetOwnerId) {
+                throw new Error('No player name available');
+            }
+            
+            console.log(`api.getPlayerFleets called for owner: ${targetOwnerId}`);
+            const playerFleets = await api.getOwnerFleets(targetOwnerId);
+            return {
+                success: true,
+                message: 'Successfully loaded fleets',
+                data: playerFleets
+            };
+        } catch (error) {
+            console.error('Failed to get fleets:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error loading fleets';
+            return {
+                success: false,
+                message: errorMessage,
+                data: []
+            };
         }
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.message || 'Failed to load fleet data');
-        }
-        
-        // Get the current player's name from settings
-        const settings = await api.getGameSettings();
-        const playerFleets = await api.getOwnerFleets(settings.player_name);
-        
-        return {
-            success: true,
-            message: 'Successfully loaded fleets',
-            data: playerFleets
-        };
     },
     async clearCaches(): Promise<void> {
         await fetch(`${API_BASE_URL}/clear-caches`, { method: 'POST' });

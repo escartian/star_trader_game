@@ -21,13 +21,26 @@ export const FleetList: React.FC = () => {
     const [targetPosition, setTargetPosition] = useState<{ x: number; y: number; z: number } | null>(null);
 
     const loadFleets = async () => {
+        if (!selectedOwner) {
+            console.log('No owner selected, cannot load fleets.');
+            setFleets([]); // Clear fleets if no owner is selected
+            setLoading(false);
+            return;
+        }
         try {
             setLoading(true);
             setError(null);
-            const settings = await api.getGameSettings();
-            const fleetsData = await api.getFleets(settings.player_name);
-            console.log('Loaded fleets:', fleetsData);
-            setFleets(fleetsData);
+            // Pass the selectedOwner to getPlayerFleets
+            const fleetsResponse = await api.getPlayerFleets(selectedOwner); 
+            if (fleetsResponse.success && fleetsResponse.data) {
+                 console.log(`Loaded ${fleetsResponse.data.length} fleets for ${selectedOwner}:`, fleetsResponse.data);
+                 setFleets(fleetsResponse.data);
+            } else {
+                 console.error(`Failed to load fleets for ${selectedOwner}:`, fleetsResponse.message);
+                 setError(`Failed to load fleets: ${fleetsResponse.message}`);
+                 setFleets([]); // Clear fleets on error
+            }
+           
         } catch (err) {
             console.error('Failed to load fleets:', err);
             setError('Failed to load fleets');
@@ -42,27 +55,25 @@ export const FleetList: React.FC = () => {
                 setLoading(true);
                 setError(null);
                 const settings = await api.getGameSettings();
-                const [ownersData, fleetsData] = await Promise.all([
-                    api.getFleetOwners(),
-                    api.getFleets(settings.player_name)
-                ]);
-                console.log('Loaded owners:', ownersData);
-                console.log('Loaded fleets:', fleetsData);
-                
-                // Sort owners to put player first
-                const sortedOwners = ownersData.sort((a, b) => {
-                    if (a === settings.player_name) return -1;
-                    if (b === settings.player_name) return 1;
-                    return a.localeCompare(b);
-                });
-                
-                setOwners(sortedOwners);
-                setFleets(fleetsData);
-                
-                // Set player as default selected owner
-                if (sortedOwners.includes(settings.player_name)) {
-                    setSelectedOwner(settings.player_name);
+                if (settings && settings.player_name) {
+                    setSelectedOwner(settings.player_name); // Default to player
+                    // Now load fleets for the player
+                     const fleetsResponse = await api.getPlayerFleets(settings.player_name);
+                     if (fleetsResponse.success && fleetsResponse.data) {
+                         console.log('Initial fleets loaded:', fleetsResponse.data);
+                         setFleets(fleetsResponse.data);
+                     } else {
+                         setError(`Initial fleet load failed: ${fleetsResponse.message}`);
+                         setFleets([]);
+                     }
+                } else {
+                     setError('Failed to get player name from settings.');
                 }
+                // Fetch owners after getting settings
+                const ownersData = await api.getFleetOwners();
+                console.log('Loaded owners:', ownersData);
+                setOwners(ownersData);
+
             } catch (err) {
                 console.error('Failed to load fleet data:', err);
                 setError('Failed to load fleet data');
@@ -312,107 +323,115 @@ export const FleetList: React.FC = () => {
         }
     };
 
-    const handleMoveFleet = async (fleet: Fleet, targetX: number, targetY: number, targetZ: number, local: boolean) => {
+    const handleMoveFleet = async (fleet: Fleet, targetX: number, targetY: number, targetZ: number, isLocalMove: boolean) => {
+        console.log('=== FleetList: Starting Fleet Movement ===');
+        console.log('Fleet:', {
+            name: fleet.name,
+            currentPosition: fleet.position,
+            systemId: fleet.current_system_id
+        });
+        console.log('Target Position:', { x: targetX, y: targetY, z: targetZ });
+
         try {
-            console.log('Moving fleet:', {
-                fleet: fleet.name,
-                target: { x: targetX, y: targetY, z: targetZ },
-                local
+            // Extract owner_id and fleet_number from fleet name
+            const parts = fleet.name.split('_');
+            const owner_id = encodeURIComponent(parts[1]); // Encode the owner_id
+            const fleet_number = parseInt(parts[2]);
+
+            // First try the requested move type
+            let endpoint = isLocalMove ? 'move_local' : 'move';
+            console.log('Attempting move with endpoint:', endpoint);
+            
+            const response = await fetch(`/api/fleet/${owner_id}/${fleet_number}/${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    x: targetX,
+                    y: targetY,
+                    z: targetZ
+                }),
             });
 
-            // Parse fleet number based on fleet type
-            let fleetNumber: number;
-            let fleetOwnerId = fleet.owner_id;
+            console.log('Move API Response Status:', response.status);
+            const data = await response.json();
+            console.log('Move API Response Data:', data);
 
-            // Handle special fleet types
-            if (fleet.owner_id === 'Pirate' || fleet.owner_id === 'Trader' || 
-                fleet.owner_id === 'Military' || fleet.owner_id === 'Mercenary') {
-                fleetNumber = parseInt(fleet.name.split('_').pop() || '0');
-                fleetOwnerId = fleet.owner_id;
-            } else {
-                // Regular player fleet
-                fleetNumber = parseInt(fleet.name.split('_').pop() || '0');
+            if (!data.success) {
+                // If the move failed because we need to use move_local, try that instead
+                if (data.message && data.message.includes('Use /move_local instead')) {
+                    console.log('Retrying with move_local endpoint...');
+                    const localResponse = await fetch(`/api/fleet/${owner_id}/${fleet_number}/move_local`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            x: targetX,
+                            y: targetY,
+                            z: targetZ
+                        }),
+                    });
+                    
+                    console.log('Move_local API Response Status:', localResponse.status);
+                    const localData = await localResponse.json();
+                    console.log('Move_local API Response Data:', localData);
+
+                    if (!localData.success) {
+                        throw new Error(localData.message || 'Failed to move fleet locally');
+                    }
+
+                    // Update the fleet position based on the local move response
+                    const updatedFleet = {
+                        ...fleet,
+                        position: {
+                            x: localData.data.current_position.x,
+                            y: localData.data.current_position.y,
+                            z: localData.data.current_position.z
+                        },
+                        current_system_id: localData.data.current_system_id
+                    };
+                    console.log('Updated Fleet after local move:', updatedFleet);
+
+                    // Update the fleet in the list
+                    setFleets(fleets.map(f => f.name === fleet.name ? updatedFleet : f));
+                    
+                    // Update the selected fleet if it's the same fleet
+                    if (selectedFleet && selectedFleet.name === fleet.name) {
+                        setSelectedFleet(updatedFleet);
+                    }
+                    
+                    console.log('Fleet list and selected fleet updated successfully after local move');
+                    return;
+                }
+                throw new Error(data.message || 'Failed to move fleet');
             }
 
-            // Call appropriate move API based on whether this is a local move
-            console.log('Calling moveFleet API...');
-            const responseText = local 
-                ? await api.moveFleetWithinSystem(fleetOwnerId, fleetNumber, targetX, targetY, targetZ)
-                : await api.moveFleet(fleetOwnerId, fleetNumber, targetX, targetY, targetZ);
-            
-            const response = JSON.parse(responseText) as MoveFleetResponse;
-            console.log('Move fleet API response:', response);
-
-            // Create updated fleet with new position and system ID
-            const updatedFleet: Fleet = {
+            // Update the fleet position based on the response
+            const updatedFleet = {
                 ...fleet,
-                position: response.current_position,
-                current_system_id: response.current_system_id
+                position: {
+                    x: data.data.current_position.x,
+                    y: data.data.current_position.y,
+                    z: data.data.current_position.z
+                },
+                current_system_id: data.data.current_system_id
             };
+            console.log('Updated Fleet after move:', updatedFleet);
 
-            // Update the selected fleet if it's the one being moved
+            // Update the fleet in the list
+            setFleets(fleets.map(f => f.name === fleet.name ? updatedFleet : f));
+            
+            // Update the selected fleet if it's the same fleet
             if (selectedFleet && selectedFleet.name === fleet.name) {
-                console.log('Updating selected fleet with new position:', updatedFleet);
                 setSelectedFleet(updatedFleet);
             }
-
-            // Update the fleet in the fleets list
-            setFleets(prevFleets => 
-                prevFleets.map(f => 
-                    f.name === fleet.name ? updatedFleet : f
-                )
-            );
-
-            // Handle system transitions and encounters
-            if (response.status === 'transition') {
-                console.log('System transition detected:', response);
-                if (response.encounters.length > 0) {
-                    // Handle hostile encounters
-                    console.log('Hostile encounters during transition:', response.encounters);
-                    setEncounterFleets(response.encounters);
-                    setCurrentEncounterIndex(0);
-                    setTargetPosition({ x: targetX, y: targetY, z: targetZ });
-                } else {
-                    // Handle peaceful system transition
-                    console.log('Peaceful system transition');
-                    const systemName = response.current_system_id !== null 
-                        ? `System #${response.current_system_id}`
-                        : 'deep space';
-                    setEncounterFleets([{
-                        name: `System_Transition`,
-                        owner_id: 'System',
-                        ships: [],
-                        position: response.current_position,
-                        current_system_id: response.current_system_id,
-                        transition_message: `Fleet has entered ${systemName}`
-                    }]);
-                    setCurrentEncounterIndex(0);
-                }
-            } else {
-                console.log('Move completed successfully');
-                // Refresh fleets to ensure consistency
-                loadFleets();
-            }
-
-            // Fetch the latest fleet data
-            try {
-                const latestFleetData = await api.getFleet(fleetOwnerId, fleetNumber);
-                if (latestFleetData) {
-                    console.log('Latest fleet data after move:', latestFleetData);
-                    if (selectedFleet && selectedFleet.name === fleet.name) {
-                        setSelectedFleet(latestFleetData);
-                    }
-                    setFleets(prevFleets => 
-                        prevFleets.map(f => 
-                            f.name === fleet.name ? latestFleetData : f
-                        )
-                    );
-                }
-            } catch (err) {
-                console.error('Failed to fetch latest fleet data:', err);
-            }
-        } catch (err) {
-            console.error('Failed to move fleet:', err);
+            
+            console.log('Fleet list and selected fleet updated successfully');
+        } catch (error) {
+            console.error('Error moving fleet:', error);
+            throw error;
         }
     };
 

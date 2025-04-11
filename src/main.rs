@@ -107,7 +107,7 @@ async fn main() {
             routes::get_owner_fleets,
             routes::get_fleet,
             routes::move_fleet,
-            routes::move_within_system,
+            routes::move_local,
             routes::get_fleet_owners,
             routes::initiate_combat,
             routes::check_for_encounter,

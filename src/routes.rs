@@ -7,7 +7,7 @@ use std::io::Read;
 use crate::models::star_system::StarSystem;
 use rocket::catch;
 use rocket::serde::json::Json;
-use crate::models::fleet::{Fleet, generate_and_save_fleet, list_owner_fleets};
+use crate::models::fleet::{Fleet, generate_and_save_fleet, list_owner_fleets, save_fleet as save_fleet_model};
 use crate::models::resource::{Resource, ResourceType};
 use crate::models::player::Player;
 use rand::{Rng, thread_rng};
@@ -80,7 +80,7 @@ pub fn get_player(name: &str) -> Json<ApiResponse<Player>> {
 // Returns a serialized JSON string representation of the galaxy map
 #[get("/galaxy_map")]
 pub fn get_galaxy_map() -> Json<ApiResponse<Vec<StarSystem>>> {
-    let settings = load_settings().expect("Failed to load settings");
+    let _settings = load_settings().expect("Failed to load settings");
     let game_world_path = game_path(&["GameWorld.json"]);
 
     // Try to load from GameWorld.json
@@ -94,7 +94,7 @@ pub fn get_galaxy_map() -> Json<ApiResponse<Vec<StarSystem>>> {
 
 // Returns a star system with the given id from the galaxy map as a serialized JSON string
 #[get("/star_system/<system_id>")]
-pub fn get_star_system(system_id: usize) -> Json<StarSystem> {
+pub fn get_star_system(system_id: usize) -> Json<ApiResponse<StarSystem>> {
     let settings = load_settings().expect("Failed to load settings");
     let system_path = Path::new("data")
         .join("game")
@@ -103,7 +103,7 @@ pub fn get_star_system(system_id: usize) -> Json<StarSystem> {
         .join(format!("Star_System_{}.json", system_id));
 
     match load_json::<StarSystem>(&system_path) {
-        Ok(system) => Json(system),
+        Ok(system) => ApiResponse::success(system, "Successfully retrieved star system".to_string()),
         Err(e) => {
             println!("Error loading star system: {}", e);
             // If loading fails, try splitting GameWorld and loading again
@@ -111,7 +111,10 @@ pub fn get_star_system(system_id: usize) -> Json<StarSystem> {
                 println!("Error splitting game world: {}", e);
             }
             // Try loading again
-            Json(load_json::<StarSystem>(&system_path).unwrap_or_default())
+            match load_json::<StarSystem>(&system_path) {
+                Ok(system) => ApiResponse::success(system, "Successfully retrieved star system".to_string()),
+                Err(e) => ApiResponse::error(format!("Failed to load star system: {}", e))
+            }
         }
     }
 }
@@ -578,135 +581,291 @@ pub struct MoveFleetData {
     z: i32,
 }
 
+// Helper function to check if a position is within the LOCAL system map boundaries
+fn is_within_local_bounds(pos: &Position, settings: &GameSettings) -> bool {
+    
+    let max_coord = (settings.map_width as i32) ;
+    let min_coord = -(settings.map_width as i32);
+    pos.x >= min_coord && pos.x <= max_coord &&
+    pos.y >= min_coord && pos.y <= max_coord &&
+    pos.z >= min_coord && pos.z <= max_coord
+}
+
+// --- Galaxy Map Movement ---
 #[post("/fleet/<owner_id>/<fleet_number>/move", format = "json", data = "<data>")]
 pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetData>) -> Json<ApiResponse<MoveFleetResponse>> {
-    println!("Starting fleet move operation:");
+    println!("--- Starting GALAXY MAP move operation ---");
     println!("  Fleet: Fleet_{}_{}", owner_id, fleet_number);
-    println!("  Target position: ({}, {}, {})", data.x, data.y, data.z);
+    println!("  Target Galaxy Position: ({}, {}, {})", data.x, data.y, data.z);
     
     let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
 
     let result: Result<MoveFleetResponse, String> = (|| {
-        let settings = SavedGame::load_current_game()
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "No active game found".to_string())?
-            .settings;
+        let settings = load_settings().map_err(|e| e.to_string())?;
             
         let mut fleet = crate::models::fleet::load_fleet(&fleet_name)
             .map_err(|e| e.to_string())?
             .ok_or_else(|| "Fleet not found".to_string())?;
-            
-        println!("Successfully loaded fleet: {}", fleet.name);
-        println!("Current position: ({}, {}, {})", fleet.position.x, fleet.position.y, fleet.position.z);
-        println!("Current system: {:?}", fleet.current_system_id);
         
-        let new_position = Position { x: data.x, y: data.y, z: data.z };
-        
-        // Get bounds from settings - use full range
-        let max_coord = settings.map_width as i32;
-        let min_coord = -(settings.map_width as i32);
-        
-        if data.x < min_coord || data.x > max_coord || 
-           data.y < min_coord || data.y > max_coord || 
-           data.z < min_coord || data.z > max_coord {
-            return Err(format!("Target position ({}, {}, {}) is outside the game world bounds ({} to {})", 
-                data.x, data.y, data.z, min_coord, max_coord));
-        }
-        
-        // Calculate movement distance and direction
-        let dx = (new_position.x - fleet.position.x) as f64;
-        let dy = (new_position.y - fleet.position.y) as f64;
-        let dz = (new_position.z - fleet.position.z) as f64;
-        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
-        println!("Movement distance: {}", distance);
-        
-        // Check for encounters along the path
-        let mut encounters = Vec::new();
-        
-        // Calculate path steps
-        let steps = (distance / 5.0).ceil() as i32; // Check every 5 units
+        // Check if fleet's current position matches any system center
         let game_world = get_global_game_world();
-        
-        println!("Checking {} steps for system transitions", steps);
-        
-        for step in 0..=steps {
-            let t = step as f64 / steps as f64;
-            let current_position = Position {
-                x: fleet.position.x + (dx * t) as i32,
-                y: fleet.position.y + (dy * t) as i32,
-                z: fleet.position.z + (dz * t) as i32,
-            };
-            
-            // Check for star system transitions
-            let (new_system_id, is_transition) = fleet.check_star_system_transition(&current_position, &game_world);
-            
-            println!("Step {}/{}: Position ({}, {}, {}), System transition: {}, New system: {:?}", 
-                step, steps, current_position.x, current_position.y, current_position.z, is_transition, new_system_id);
-            
-            // If we're entering a system, generate an encounter
-            if is_transition && new_system_id.is_some() {
-                println!("Fleet entered system {} at position ({}, {}, {})", 
-                    new_system_id.unwrap(), current_position.x, current_position.y, current_position.z);
-                let encounter_fleet = generate_encounter_fleet(current_position.clone());
-                encounters.push(encounter_fleet);
-                
-                // Update fleet's system ID
-                fleet.current_system_id = new_system_id;
-                
-                // Update fleet position and save
-                fleet.position = current_position.clone();
-                fleet.last_move_distance = Some(distance * t);
-                
-                if let Err(e) = crate::models::fleet::save_fleet(&fleet) {
-                    println!("Error saving fleet position: {}", e);
-                    return Err("Error saving fleet".to_string());
+        for (system_id, system) in game_world.iter().enumerate() {
+            if fleet.position.x == system.position.x &&
+               fleet.position.y == system.position.y &&
+               fleet.position.z == system.position.z {
+                // If fleet is at a system center but not marked as in that system, update it
+                if fleet.current_system_id != Some(system_id) {
+                    println!("Fleet {} is at system {} center but not marked as in system. Updating.", 
+                            fleet.name, system_id);
+                    fleet.current_system_id = Some(system_id);
+                    save_fleet_model(&fleet)?;
                 }
-                
-                return Ok(MoveFleetResponse {
-                    status: "transition".to_string(),
-                    message: "Fleet entered star system".to_string(),
-                    encounters,
-                    current_position,
-                    target_position: new_position,
-                    remaining_distance: distance * (1.0 - t),
-                    current_system_id: new_system_id,
-                });
-            } else if is_transition {
-                // Just leaving a system, update system ID
-                fleet.current_system_id = None;
+                return Err(format!("Fleet '{}' is in System {}. Use /move_local instead.", 
+                                fleet.name, system_id));
             }
         }
         
-        // If we reach here, complete the move
-        fleet.position = new_position.clone();
+        // Verification: Ensure fleet is actually in Deep Space
+        if fleet.current_system_id.is_some() {
+            return Err(format!("Fleet '{}' is in System {}. Use /move_local instead.", 
+                                fleet.name, fleet.current_system_id.unwrap()));
+        }
+
+        let start_pos = fleet.position.clone();
+        println!("Verified Start Pos: ({}, {}, {}), SystemID: None", start_pos.x, start_pos.y, start_pos.z);
+
+        let target_pos = Position { x: data.x, y: data.y, z: data.z };
+        
+        // Bounds Check (Galaxy Map)
+        let max_coord = settings.map_width as i32;
+        let min_coord = -max_coord;
+        if target_pos.x < min_coord || target_pos.x > max_coord || 
+           target_pos.y < min_coord || target_pos.y > max_coord || 
+           target_pos.z < min_coord || target_pos.z > max_coord {
+            return Err(format!("Target position is outside galaxy bounds [{} to {}]. Please choose a valid destination.", 
+                min_coord, max_coord));
+        }
+        
+        // Movement & System Entry Check
+        let dx = (target_pos.x - start_pos.x) as f64;
+        let dy = (target_pos.y - start_pos.y) as f64;
+        let dz = (target_pos.z - start_pos.z) as f64;
+        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+        println!("Galaxy move distance: {:.2}", distance);
+
+        let steps = (distance / 1.0).ceil().max(1.0) as i32;
+        println!("Checking {} steps for system center match", steps);
+
+        let mut prev_position = start_pos.clone(); // Track previous position for direction
+
+        for step in 1..=steps { 
+            let t = step as f64 / steps as f64;
+            let current_position = Position {
+                x: start_pos.x + (dx * t) as i32,
+                y: start_pos.y + (dy * t) as i32,
+                z: start_pos.z + (dz * t) as i32,
+            };
+            println!("  Step {}/{}: Checking Pos ({},{},{})", step, steps, current_position.x, current_position.y, current_position.z);
+
+            // Check if this exact position matches any system center
+            for (system_id, system) in game_world.iter().enumerate() {
+                if current_position.x == system.position.x &&
+                   current_position.y == system.position.y &&
+                   current_position.z == system.position.z {
+                    
+                    // --- System Entry Found --- 
+                    println!("MATCH! Position matches center of System {}", system_id);
+                    let distance_traveled = distance * t;
+                    let remaining_distance = distance * (1.0 - t);
+
+                    // Calculate entry point based on approach direction
+                    let approach_dx = (current_position.x - prev_position.x) as f64;
+                    let approach_dy = (current_position.y - prev_position.y) as f64;
+                    let approach_dz = (current_position.z - prev_position.z) as f64;
+                    let approach_mag = (approach_dx*approach_dx + approach_dy*approach_dy + approach_dz*approach_dz).sqrt();
+
+                    let entry_point = if approach_mag > 1e-6 { // Avoid division by zero
+                        let norm_dx = approach_dx / approach_mag;
+                        let norm_dy = approach_dy / approach_mag;
+                        let norm_dz = approach_dz / approach_mag;
+                        // Calculate point on the boundary cube edge
+                        let scale = settings.map_width as f64;
+                        Position {
+                            x: (norm_dx * scale).round().clamp(min_coord as f64, max_coord as f64) as i32,
+                            y: (norm_dy * scale).round().clamp(min_coord as f64, max_coord as f64) as i32,
+                            z: (norm_dz * scale).round().clamp(min_coord as f64, max_coord as f64) as i32,
+                        }
+                    } else {
+                        // If no movement (or tiny movement), default to a boundary point, e.g., (max, 0, 0)
+                        // This case should be rare if distance > 0
+                         Position { x: max_coord, y: 0, z: 0 } 
+                    };
+                    println!("Calculated local entry point: ({},{},{})", entry_point.x, entry_point.y, entry_point.z);
+
+                    fleet.position = entry_point.clone(); // Set position to local map entry point
+                    fleet.current_system_id = Some(system_id);
+                    fleet.last_move_distance = Some(distance_traveled);
+                    
+                    for ship in &mut fleet.ships {
+                        ship.position = entry_point.clone(); // Update ships too
+                    }
+
+                    save_fleet_model(&fleet)?;
+                    println!("Saved fleet state at system entry.");
+
+                    return Ok(MoveFleetResponse {
+                        status: "transition_entry".to_string(),
+                        message: format!("Fleet entered System {} map", system_id),
+                        encounters: vec![], 
+                        current_position: entry_point.clone(), // Return the local entry point
+                        target_position: target_pos, 
+                        remaining_distance: remaining_distance,
+                        current_system_id: Some(system_id),
+                    });
+                }
+            }
+            prev_position = current_position; // Update previous position for next step
+        }
+
+        // No System Entry Detected 
+        println!("No system center match found along path. Completing move in deep space.");
+        fleet.position = target_pos.clone();
+        fleet.current_system_id = None;
         fleet.last_move_distance = Some(distance);
-        
-        // Update all ships in the fleet to the new position
+
         for ship in &mut fleet.ships {
-            ship.position = new_position.clone();
+            ship.position = target_pos.clone();
         }
-        
-        // Save the updated fleet
-        if let Err(e) = crate::models::fleet::save_fleet(&fleet) {
-            println!("Error saving fleet: {}", e);
-            return Err("Error saving fleet".to_string());
-        }
-        
-        println!("Fleet move completed successfully");
+
+        save_fleet_model(&fleet)?;
+        println!("Saved fleet state after deep space move.");
+
         Ok(MoveFleetResponse {
             status: "success".to_string(),
-            message: "Fleet moved successfully".to_string(),
-            encounters: Vec::new(),
-            current_position: new_position.clone(),
-            target_position: new_position,
+            message: "Fleet moved successfully in deep space".to_string(),
+            encounters: Vec::new(), 
+            current_position: target_pos.clone(),
+            target_position: target_pos,
             remaining_distance: 0.0,
-            current_system_id: fleet.current_system_id,
+            current_system_id: None,
         })
     })();
 
     match result {
-        Ok(response) => ApiResponse::success(response, "Fleet movement completed successfully".to_string()),
+        Ok(response) => {
+            let message = response.message.clone();
+            ApiResponse::success(response, message)
+        },
         Err(e) => ApiResponse::error(e)
+    }
+}
+
+// --- Local System Map Movement ---
+#[post("/fleet/<owner_id>/<fleet_number>/move_local", format = "json", data = "<data>")]
+pub fn move_local(owner_id: String, fleet_number: usize, data: Json<MoveFleetData>) -> Json<ApiResponse<MoveFleetResponse>> {
+    println!("--- Starting LOCAL move operation ---");
+    println!("  Fleet: Fleet_{}_{}", owner_id, fleet_number);
+    println!("  Target Local Position: ({}, {}, {})", data.x, data.y, data.z);
+    
+    let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
+    let game_world = get_global_game_world();
+    let settings = match load_settings() {
+        Ok(s) => s,
+        Err(e) => return ApiResponse::error(format!("Failed to load settings: {}", e)),
+    };
+    
+    // Load fleet
+    let mut fleet = match load_fleet(&fleet_name) {
+        Ok(f) => f,
+        Err(e) => return ApiResponse::error(format!("Failed to load fleet: {}", e)),
+    };
+
+    // Check if fleet is in a system
+    let start_system_id = match fleet.current_system_id {
+        Some(id) => id,
+        None => return ApiResponse::error("Cannot move locally: fleet is not in a star system".to_string()),
+    };
+
+    // Load the system
+    let system = match load_star_system(start_system_id) {
+        Ok(s) => s,
+        Err(e) => return ApiResponse::error(format!("Failed to load star system: {}", e)),
+    };
+
+    let target_local_pos = Position { x: data.x, y: data.y, z: data.z };
+
+    // Check if target is within local bounds
+    if is_within_local_bounds(&target_local_pos, &settings) {
+        println!("Target is within local bounds. Moving locally.");
+        println!("Current fleet position: ({}, {}, {})", fleet.position.x, fleet.position.y, fleet.position.z);
+        println!("Target position: ({}, {}, {})", target_local_pos.x, target_local_pos.y, target_local_pos.z);
+        
+        let start_local_pos = fleet.position.clone();
+        let local_dx = (target_local_pos.x - start_local_pos.x) as f64;
+        let local_dy = (target_local_pos.y - start_local_pos.y) as f64;
+        let local_dz = (target_local_pos.z - start_local_pos.z) as f64;
+        let local_distance = (local_dx*local_dx + local_dy*local_dy + local_dz*local_dz).sqrt();
+        println!("Movement distance: {}", local_distance);
+
+        fleet.position = target_local_pos.clone();
+        fleet.last_move_distance = Some(local_distance); 
+
+        for ship in &mut fleet.ships {
+            ship.position = target_local_pos.clone();
+        }
+        println!("Saving fleet with new position: ({}, {}, {})", fleet.position.x, fleet.position.y, fleet.position.z);
+        save_fleet_model(&fleet).unwrap();
+        println!("Fleet saved successfully");
+
+        ApiResponse::success(MoveFleetResponse {
+            status: "success".to_string(),
+            message: "Fleet moved successfully within system".to_string(),
+            encounters: Vec::new(), 
+            current_position: target_local_pos.clone(),
+            target_position: target_local_pos,
+            remaining_distance: 0.0,
+            current_system_id: Some(start_system_id),
+        }, "Fleet moved successfully within system".to_string())
+    } else {
+        // System Exit Triggered
+        println!("Target is outside local bounds. Triggering system exit.");
+        
+        // Calculate the exit direction vector
+        let exit_dx = target_local_pos.x as f64;
+        let exit_dy = target_local_pos.y as f64;
+        let exit_dz = target_local_pos.z as f64;
+        let exit_mag = (exit_dx * exit_dx + exit_dy * exit_dy + exit_dz * exit_dz).sqrt();
+        
+        // Normalize the direction vector and scale to a reasonable exit distance
+        let scale = 100.0; // Exit distance from system
+        let normalized_dx = exit_dx / exit_mag;
+        let normalized_dy = exit_dy / exit_mag;
+        let normalized_dz = exit_dz / exit_mag;
+        
+        // Calculate the galaxy position based on system position and normalized exit vector
+        let galaxy_x = system.position.x + (normalized_dx * scale).round() as i32;
+        let galaxy_y = system.position.y + (normalized_dy * scale).round() as i32;
+        let galaxy_z = system.position.z + (normalized_dz * scale).round() as i32;
+        
+        // Update fleet position and system ID
+        fleet.position = Position { x: galaxy_x, y: galaxy_y, z: galaxy_z };
+        fleet.current_system_id = None;
+        
+        for ship in &mut fleet.ships {
+            ship.position = fleet.position.clone();
+        }
+        
+        save_fleet_model(&fleet).unwrap();
+        
+        ApiResponse::success(MoveFleetResponse {
+            status: "transition_exit".to_string(),
+            message: "Fleet exited the star system".to_string(),
+            encounters: Vec::new(),
+            current_position: fleet.position.clone(),
+            target_position: fleet.position.clone(),
+            remaining_distance: 0.0,
+            current_system_id: None,
+        }, "Fleet exited the star system".to_string())
     }
 }
 
@@ -778,7 +937,7 @@ pub fn initiate_combat(attacker_id: String, attacker_number: usize, defender_id:
                     Ok(Some(fleet)) => {
                         println!("Found attacker fleet: {}", fleet.name);
                         attacker_result = Ok(fleet);
-                        break;
+                break; 
                     }
                     Ok(None) => continue,
                     Err(e) => {
@@ -1698,50 +1857,4 @@ pub fn remove_credits(name: &str, amount: Json<f32>) -> Json<ApiResponse<String>
 pub fn clear_caches() -> Json<ApiResponse<String>> {
     crate::models::game_state::clear_caches();
     ApiResponse::success("Caches cleared successfully".to_string(), "Success".to_string())
-}
-
-#[post("/fleet/<owner_id>/<fleet_number>/move_within_system", format = "json", data = "<data>")]
-pub fn move_within_system(owner_id: String, fleet_number: usize, data: Json<MoveFleetData>) -> Json<ApiResponse<String>> {
-    println!("Starting fleet move within system operation:");
-    println!("  Fleet: Fleet_{}_{}", owner_id, fleet_number);
-    println!("  Target position: ({}, {}, {})", data.x, data.y, data.z);
-    
-    let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
-
-    let result: Result<String, String> = (|| {
-        let settings = SavedGame::load_current_game()
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "No active game found".to_string())?
-            .settings;
-            
-        let mut fleet = crate::models::fleet::load_fleet(&fleet_name)
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "Fleet not found".to_string())?;
-            
-        println!("Successfully loaded fleet: {}", fleet.name);
-        
-        // Get the current system
-        let game_world = get_global_game_world();
-        let system = match fleet.current_system_id {
-            Some(id) if id < game_world.len() => &game_world[id],
-            _ => return Err("Fleet is not in a star system".to_string())
-        };
-        
-        // Try to move within the system
-        fleet.move_within_system(data.x, data.y, data.z, system)?;
-        
-        // Save the updated fleet
-        if let Err(e) = crate::models::fleet::save_fleet(&fleet) {
-            println!("Error saving fleet: {}", e);
-            return Err("Error saving fleet".to_string());
-        }
-        
-        println!("Fleet move within system completed successfully");
-        Ok("Fleet moved successfully".to_string())
-    })();
-
-    match result {
-        Ok(message) => ApiResponse::success(message, "Fleet movement completed successfully".to_string()),
-        Err(e) => ApiResponse::error(e)
-    }
 } 

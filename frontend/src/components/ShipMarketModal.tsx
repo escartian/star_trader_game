@@ -82,7 +82,7 @@ export const ShipMarketModal: React.FC<ShipMarketModalProps> = ({ isOpen, onClos
                 }
 
                 // Load player's fleets
-                const fleetsResponse = await api.getPlayerFleets();
+                const fleetsResponse = await api.getPlayerFleets(settings.player_name);
                 if (fleetsResponse.success && fleetsResponse.data) {
                     setFleets(fleetsResponse.data);
 
@@ -274,7 +274,7 @@ export const ShipMarketModal: React.FC<ShipMarketModalProps> = ({ isOpen, onClos
             
             try {
                 // Get updated fleets
-                const fleetsResponse = await api.getPlayerFleets();
+                const fleetsResponse = await api.getPlayerFleets(settings.player_name);
                 if (fleetsResponse.success && fleetsResponse.data) {
                     setFleets(fleetsResponse.data);
                     console.log('Updated fleets:', fleetsResponse.data.length);
@@ -346,7 +346,7 @@ export const ShipMarketModal: React.FC<ShipMarketModalProps> = ({ isOpen, onClos
             const settings = await api.getGameSettings();
             const [playerResponse, fleetsResponse] = await Promise.all([
                 api.getPlayer(settings.player_name),
-                api.getPlayerFleets()
+                api.getPlayerFleets(settings.player_name)
             ]);
 
             if (playerResponse) {

@@ -9,6 +9,8 @@ use std::fs::File;
 use std::io::Read;
 use rand::random;
 use crate::models::settings::load_settings;
+use crate::encounters::EncounterFleet;
+use crate::models::settings::GameSettings;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Fleet {
@@ -291,4 +293,31 @@ pub fn save_fleet(fleet: &Fleet) -> Result<(), String> {
         .map_err(|e| format!("Failed to write fleet data: {}", e))?;
     
     Ok(())
+}
+
+#[derive(Serialize)]
+pub struct MoveFleetResponse {
+    pub status: String,
+    pub message: String,
+    pub encounters: Vec<EncounterFleet>,
+    pub current_position: Position,
+    pub target_position: Position,
+    pub remaining_distance: f64,
+    pub current_system_id: Option<usize>,
+}
+
+#[derive(Deserialize)]
+pub struct MoveFleetData {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+
+pub fn is_within_local_bounds(position: &Position, settings: &GameSettings) -> bool {
+    let max_coord = settings.map_width as i32;
+    let min_coord = -max_coord;
+    
+    position.x >= min_coord && position.x <= max_coord &&
+    position.y >= min_coord && position.y <= max_coord &&
+    position.z >= min_coord && position.z <= max_coord
 } 

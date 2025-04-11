@@ -1,5 +1,6 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use crate::models::settings::GameSettings;
 
 //how to create an instance of type Position
 //let pos = Position { x: 3, y: 4, z: 0 };
@@ -21,6 +22,14 @@ impl Position {
         let z_dist = (self.z - other.z) as f64;
 
         ((x_dist * x_dist) + (y_dist * y_dist) + (z_dist * z_dist)).sqrt()
+    }
+
+    pub fn is_within_local_bounds(&self, settings: &GameSettings) -> bool {
+        let max_coord = (settings.map_width as i32);
+        let min_coord = -(settings.map_width as i32);
+        self.x >= min_coord && self.x <= max_coord &&
+        self.y >= min_coord && self.y <= max_coord &&
+        self.z >= min_coord && self.z <= max_coord
     }
 }
 

@@ -7,7 +7,7 @@ use std::io::Read;
 use crate::models::star_system::StarSystem;
 use rocket::catch;
 use rocket::serde::json::Json;
-use crate::models::fleet::{Fleet, generate_and_save_fleet, list_owner_fleets, save_fleet as save_fleet_model};
+use crate::models::fleet::{Fleet, generate_and_save_fleet, list_owner_fleets, save_fleet as save_fleet_model, MoveFleetResponse, MoveFleetData};
 use crate::models::resource::{Resource, ResourceType};
 use crate::models::player::Player;
 use rand::{Rng, thread_rng};
@@ -18,14 +18,14 @@ use crate::encounters::generate_encounter_fleet;
 use rocket::post;
 use serde::Deserialize;
 use crate::models::ship::ship::{Ship, ShipType, ShipSize, ShipEngine};
-use crate::models::market::{Market, ShipMarket};
+use crate::models::market::{Market, ShipMarket, regenerate_system_markets, calculate_ship_price};
 use crate::models::response::ApiResponse;
 use crate::models::game_state::{load_player, load_star_system, save_trade_state, game_path, ensure_parent_dirs, save_json, load_json, load_fleet};
-use crate::models::trade::trade_with_fleet;
+use crate::models::trade::{ResourceTradeData, ShipTradeData, ShipTradeInData, trade_with_fleet};
 use crate::models::settings::{GameSettings, SavedGame, load_settings};
 use chrono::Utc;
 use std::collections::HashMap;
-use crate::models::faction::Faction;
+use crate::models::faction::{Faction, save_faction};
 use crate::models::planet::PlanetSpecialization;
 use crate::models::economy::Economy;
 use std::error::Error;
@@ -35,27 +35,18 @@ use rocket::State;
 use rocket::http::Status;
 use rocket::serde::Serialize;
 use crate::encounters::EncounterFleet;
-
-#[derive(Serialize)]
-pub struct MoveFleetResponse {
-    pub status: String,
-    pub message: String,
-    pub encounters: Vec<EncounterFleet>,
-    pub current_position: Position,
-    pub target_position: Position,
-    pub remaining_distance: f64,
-    pub current_system_id: Option<usize>,
-}
+use crate::models::planet::{load_planet_market, load_planet_ship_market};
+use crate::models::fleet::is_within_local_bounds;
 
 #[catch(500)]
 pub fn internal_error(_req: &Request) -> Json<ApiResponse<String>> {
     ApiResponse::error("An internal server error occurred. Please try again later.".to_string())
 }
 
-// TODO: Implement multiplayer support
-// TODO: Add game session management
-// TODO: Implement player authentication
-// TODO: Add game state persistence
+// Possible future features::
+// TODO: 
+// Implement multiplayer support
+// Implement player authentication
 // TODO: Implement game events system
 
 /// Handles the root route (`/`) and renders the index page
@@ -106,13 +97,16 @@ pub fn get_star_system(system_id: usize) -> Json<ApiResponse<StarSystem>> {
         Ok(system) => ApiResponse::success(system, "Successfully retrieved star system".to_string()),
         Err(e) => {
             println!("Error loading star system: {}", e);
-            // If loading fails, try splitting GameWorld and loading again
-            if let Err(e) = split_game_world_into_systems() {
-                println!("Error splitting game world: {}", e);
-            }
-            // Try loading again
-            match load_json::<StarSystem>(&system_path) {
-                Ok(system) => ApiResponse::success(system, "Successfully retrieved star system".to_string()),
+            // Try loading from the game world file
+            let game_world_path = game_path(&["GameWorld.json"]);
+            match load_json::<Vec<StarSystem>>(&game_world_path) {
+                Ok(systems) => {
+                    if system_id < systems.len() {
+                        ApiResponse::success(systems[system_id].clone(), "Successfully retrieved star system from game world".to_string())
+                    } else {
+                        ApiResponse::error(format!("System ID {} not found in game world", system_id))
+                    }
+                },
                 Err(e) => ApiResponse::error(format!("Failed to load star system: {}", e))
             }
         }
@@ -221,226 +215,9 @@ pub fn get_fleet(owner_id: String, fleet_number: usize) -> Json<ApiResponse<Flee
     }
 }
 
-fn generate_market_resources(specialization: &PlanetSpecialization, economy: &Economy) -> Vec<Resource> {
-    let mut resources = Vec::new();
-    let mut rng = rand::thread_rng();
-    
-    // Base price multiplier based on economy
-    let economy_multiplier = match economy {
-        Economy::Booming => 1.5,
-        Economy::Growing => 1.2,
-        Economy::Stable => 1.0,
-        Economy::Struggling => 0.8,
-        Economy::Declining => 0.6,
-        Economy::Crashing => 0.4,
-        Economy::Nonexistent => 0.2,
-    };
-
-    // Generate market resources based on specialization
-    for resource_type in ResourceType::iter() {
-        let (buy_price, sell_price) = match resource_type {
-            // Essential resources that all planets should trade
-            ResourceType::Water | ResourceType::Food | ResourceType::Fuel => {
-                let base_buy = 1.3;  // Higher buy price
-                let base_sell = 0.7; // Lower sell price
-                (Some(base_buy), Some(base_sell))
-            },
-            // Common resources that most planets trade
-            ResourceType::Minerals | ResourceType::Metals | ResourceType::Electronics => {
-                let base_buy = 1.2;  // Higher buy price
-                let base_sell = 0.8; // Lower sell price
-                (Some(base_buy), Some(base_sell))
-            },
-            // Luxury goods that most planets trade but with higher prices
-            ResourceType::LuxuryGoods => {
-                let base_buy = 1.5;  // Higher buy price
-                let base_sell = 1.0; // Lower sell price
-                (Some(base_buy), Some(base_sell))
-            },
-            // Narcotics - restricted based on specialization and economy
-            ResourceType::Narcotics => {
-                match (specialization, economy) {
-                    (PlanetSpecialization::Research, _) => (Some(1.8), Some(1.2)),  // Higher buy, lower sell
-                    (_, Economy::Crashing | Economy::Nonexistent) => (Some(2.0), Some(1.5)),  // Higher buy, lower sell
-                    _ => (None, None),
-                }
-            },
-        };
-
-        // Apply economy multiplier to prices
-        let buy = buy_price.map(|p| p * economy_multiplier);
-        let sell = sell_price.map(|p| p * economy_multiplier);
-
-        // Generate random quantity if the planet trades this resource
-        let quantity = if buy.is_some() || sell.is_some() {
-            Some(rng.gen_range(10..100))
-        } else {
-            None
-        };
-
-        resources.push(Resource {
-            resource_type,
-            buy,
-            sell,
-            quantity,
-        });
-    }
-
-    resources
-}
-
-fn generate_market_for_planet(planet_name: &str, system_id: usize, planet_id: usize, specialization: &PlanetSpecialization, economy: &Economy) -> Market {
-    Market {
-        resources: generate_market_resources(specialization, economy)
-    }
-}
-
-fn generate_ship_market() -> ShipMarket {
-    println!("Starting ship market generation");
-    let mut rng = rand::thread_rng();
-    let ship_count = rng.gen_range(3..=8); // Generate 3-8 ships
-    println!("Generating {} ships", ship_count);
-    let mut ships = Vec::with_capacity(ship_count);
-
-    for i in 0..ship_count {
-        println!("Generating ship {}/{}", i + 1, ship_count);
-        let mut ship: Ship = rand::random();
-        println!("Generated ship: {}", ship.name);
-        ship.price = Some(calculate_ship_price(&ship));
-        ships.push(ship);
-    }
-
-    println!("Completed ship market generation with {} ships", ships.len());
-    ShipMarket { ships }
-}
-
-fn calculate_ship_price(ship: &Ship) -> f32 {
-    let base_price = match ship.size {
-        ShipSize::Tiny => 1000.0,
-        ShipSize::Small => 2500.0,
-        ShipSize::Medium => 5000.0,
-        ShipSize::Large => 10000.0,
-        ShipSize::Huge => 20000.0,
-        ShipSize::Planetary => 50000.0,
-    };
-
-    let specialization_multiplier = match ship.specialization {
-        ShipType::Fighter => 1.1,
-        ShipType::Battleship => 1.8,
-        ShipType::Freighter => 1.3,
-        ShipType::Explorer => 1.5,
-        ShipType::Shuttle => 0.7,
-        ShipType::Capital => 2.5,
-    };
-
-    let engine_multiplier = match ship.engine {
-        ShipEngine::Basic => 0.8,
-        ShipEngine::Advanced => 1.2,
-        ShipEngine::Experimental => 1.5,
-    };
-
-    let condition_multiplier = (ship.hp as f32 / 100.0).max(0.5);
-
-    base_price * specialization_multiplier * engine_multiplier * condition_multiplier
-}
-
-fn regenerate_system_markets(system_id: usize) -> Result<(), Box<dyn Error>> {
-    println!("Starting market regeneration for system {}", system_id);
-    let settings = load_settings()?;
-    let game_path = Path::new("data").join("game").join(&settings.game_id);
-    let markets_path = game_path.join("markets");
-    
-    if !markets_path.exists() {
-        println!("Creating markets directory at {}", markets_path.display());
-        fs::create_dir_all(&markets_path)?;
-    }
-
-    println!("Loading game world for system {}", system_id);
-    let game_world = get_global_game_world();
-    let system = game_world.get(system_id)
-        .ok_or_else(|| Box::new(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("System {} not found in game world", system_id)
-        )))?;
-
-    // Validate the system data
-    if system.planets.len() > 20 { // Reasonable upper limit for planets per system
-        return Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("Invalid number of planets ({}) in system {}", system.planets.len(), system_id)
-        )));
-    }
-
-    println!("Found system with {} planets", system.planets.len());
-    for (planet_id, planet) in system.planets.iter().enumerate() {
-        println!("Generating market for planet {}: {}", planet_id, planet.name);
-        // Generate and save planet market
-        let market = generate_market_for_planet(&planet.name, system_id, planet_id, &planet.specialization, &planet.economy);
-        let market_path = markets_path.join(format!("market_{}_{}.json", system_id, planet_id));
-        println!("Saving planet market to {}", market_path.display());
-        if let Err(e) = save_json(&market_path, &market) {
-            println!("Error saving planet market: {}", e);
-            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to save planet market: {}", e))));
-        }
-        println!("Successfully saved planet market");
-
-        // Generate and save ship market
-        println!("Generating ship market for planet {}", planet.name);
-        let ship_market = generate_ship_market();
-        let ship_market_path = markets_path.join(format!("ships_{}_{}.json", system_id, planet_id));
-        println!("Saving ship market to {}", ship_market_path.display());
-        if let Err(e) = save_json(&ship_market_path, &ship_market) {
-            println!("Error saving ship market: {}", e);
-            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to save ship market: {}", e))));
-        }
-        println!("Successfully saved ship market");
-    }
-    println!("Completed market regeneration for system {}", system_id);
-    Ok(())
-}
-
 #[get("/planet/<system_id>/<planet_id>/market")]
 pub fn get_planet_market(system_id: usize, planet_id: usize) -> Json<ApiResponse<Market>> {
-    println!("Loading market for system {} planet {}", system_id, planet_id);
-    let result: Result<Market, String> = (|| {
-        let settings = load_settings().map_err(|e| e.to_string())?;
-        let market_path = Path::new("data")
-            .join("game")
-            .join(&settings.game_id)
-            .join("markets")
-            .join(format!("market_{}_{}.json", system_id, planet_id));
-
-        println!("Looking for market file at: {}", market_path.display());
-
-        // If market doesn't exist, regenerate it
-        if !market_path.exists() {
-            println!("Market file not found, regenerating...");
-            if let Err(e) = regenerate_system_markets(system_id) {
-                println!("Error regenerating markets: {}", e);
-                return Err(format!("Failed to regenerate markets: {}", e));
-            }
-        }
-
-        // Try loading the market
-        match load_json::<Market>(&market_path) {
-            Ok(market) => {
-                println!("Successfully loaded market for system {} planet {}", system_id, planet_id);
-                Ok(market)
-            },
-            Err(e) => {
-                println!("Error loading market: {}", e);
-                // If loading fails, try regenerating
-                if let Err(e) = regenerate_system_markets(system_id) {
-                    println!("Error regenerating markets: {}", e);
-                    return Err(format!("Failed to regenerate markets: {}", e));
-                }
-                // Try loading again
-                load_json::<Market>(&market_path).map_err(|e| e.to_string())
-            }
-        }
-    })();
-
-    match result {
+    match load_planet_market(system_id, planet_id) {
         Ok(market) => ApiResponse::success(market, "Successfully retrieved market".to_string()),
         Err(e) => ApiResponse::error(e)
     }
@@ -448,56 +225,10 @@ pub fn get_planet_market(system_id: usize, planet_id: usize) -> Json<ApiResponse
 
 #[get("/planet/<system_id>/<planet_id>/ships")]
 pub fn get_planet_ship_market(system_id: usize, planet_id: usize) -> Json<ApiResponse<ShipMarket>> {
-    println!("Loading ship market for system {} planet {}", system_id, planet_id);
-    let result: Result<ShipMarket, String> = (|| {
-        let settings = load_settings().map_err(|e| e.to_string())?;
-        let market_path = Path::new("data")
-            .join("game")
-            .join(&settings.game_id)
-            .join("markets")
-            .join(format!("ships_{}_{}.json", system_id, planet_id));
-
-        println!("Looking for ship market file at: {}", market_path.display());
-
-        // If market doesn't exist, regenerate it
-        if !market_path.exists() {
-            println!("Ship market file not found, regenerating...");
-            if let Err(e) = regenerate_system_markets(system_id) {
-                println!("Error regenerating markets: {}", e);
-                return Err(format!("Failed to regenerate markets: {}", e));
-            }
-        }
-
-        // Try loading the market
-        match load_json::<ShipMarket>(&market_path) {
-            Ok(market) => {
-                println!("Successfully loaded ship market for system {} planet {}", system_id, planet_id);
-                Ok(market)
-            },
-            Err(e) => {
-                println!("Error loading ship market: {}", e);
-                // If loading fails, try regenerating
-                if let Err(e) = regenerate_system_markets(system_id) {
-                    println!("Error regenerating markets: {}", e);
-                    return Err(format!("Failed to regenerate markets: {}", e));
-                }
-                // Try loading again
-                load_json::<ShipMarket>(&market_path).map_err(|e| e.to_string())
-            }
-        }
-    })();
-
-    match result {
+    match load_planet_ship_market(system_id, planet_id) {
         Ok(market) => ApiResponse::success(market, "Successfully retrieved ship market".to_string()),
         Err(e) => ApiResponse::error(e)
     }
-}
-
-#[derive(Deserialize)]
-pub struct ResourceTradeData {
-    resource_type: ResourceType,
-    quantity: u32,
-    fleet_name: Option<String>  // Optional for future fleet-based trading
 }
 
 #[post("/planet/<system_id>/<planet_id>/buy", format = "json", data = "<data>")]
@@ -574,22 +305,7 @@ pub fn sell_to_planet(system_id: usize, planet_id: usize, data: Json<ResourceTra
     }
 }
 
-#[derive(Deserialize)]
-pub struct MoveFleetData {
-    x: i32,
-    y: i32,
-    z: i32,
-}
 
-// Helper function to check if a position is within the LOCAL system map boundaries
-fn is_within_local_bounds(pos: &Position, settings: &GameSettings) -> bool {
-    
-    let max_coord = (settings.map_width as i32) ;
-    let min_coord = -(settings.map_width as i32);
-    pos.x >= min_coord && pos.x <= max_coord &&
-    pos.y >= min_coord && pos.y <= max_coord &&
-    pos.z >= min_coord && pos.z <= max_coord
-}
 
 // --- Galaxy Map Movement ---
 #[post("/fleet/<owner_id>/<fleet_number>/move", format = "json", data = "<data>")]
@@ -793,13 +509,11 @@ pub fn move_local(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
     };
 
     let target_local_pos = Position { x: data.x, y: data.y, z: data.z };
-
     // Check if target is within local bounds
     if is_within_local_bounds(&target_local_pos, &settings) {
         println!("Target is within local bounds. Moving locally.");
         println!("Current fleet position: ({}, {}, {})", fleet.position.x, fleet.position.y, fleet.position.z);
         println!("Target position: ({}, {}, {})", target_local_pos.x, target_local_pos.y, target_local_pos.z);
-        
         let start_local_pos = fleet.position.clone();
         let local_dx = (target_local_pos.x - start_local_pos.x) as f64;
         let local_dy = (target_local_pos.y - start_local_pos.y) as f64;
@@ -1259,22 +973,6 @@ pub fn load_game(game_id: String) -> Json<ApiResponse<String>> {
     }
 }
 
-fn save_faction(faction: &Faction, game_id: &str) -> std::io::Result<()> {
-    let faction_path = Path::new("data")
-        .join("game")
-        .join(game_id)
-        .join("factions")
-        .join(format!("{}.json", faction.name));
-
-    if let Some(parent) = faction_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-
-    let file = File::create(faction_path)?;
-    serde_json::to_writer(file, faction)?;
-    Ok(())
-}
-
 #[post("/games/new", data = "<settings>")]
 pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>> {
     println!("Starting create_new_game with settings: {:?}", settings);
@@ -1381,7 +1079,7 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
             faction_settings.name.clone(),
             format!("The {} Empire", faction_settings.name) // Generate a basic description
         );
-        if let Err(e) = save_faction(&faction, &game_id) {
+        if let Err(e) = save_faction(&faction) {
             println!("Error saving faction {}: {}", faction_settings.name, e);
             return ApiResponse::error(format!("Failed to save faction {}: {}", faction_settings.name, e));
         }
@@ -1531,12 +1229,6 @@ pub fn delete_game(game_id: String) -> Json<ApiResponse<String>> {
     ApiResponse::success("Game deleted successfully".to_string(), "Success".to_string())
 }
 
-#[derive(Deserialize)]
-pub struct ShipTradeData {
-    ship_index: usize,
-    fleet_name: Option<String>
-}
-
 #[post("/planet/<system_id>/<planet_id>/buy_ship", format = "json", data = "<data>")]
 pub fn buy_ship(system_id: usize, planet_id: usize, data: Json<ShipTradeData>) -> Json<ApiResponse<String>> {
     let result: Result<String, String> = (|| {
@@ -1656,12 +1348,7 @@ pub fn sell_ship(system_id: usize, planet_id: usize, data: Json<ShipTradeData>) 
     }
 }
 
-#[derive(Deserialize)]
-pub struct ShipTradeInData {
-    ship_index: usize,
-    fleet_name: Option<String>,
-    trade_in_ship_index: Option<usize>
-}
+
 
 #[post("/planet/<system_id>/<planet_id>/trade_in_ship", format = "json", data = "<data>")]
 pub fn trade_in_ship(system_id: usize, planet_id: usize, data: Json<ShipTradeInData>) -> Json<ApiResponse<String>> {
@@ -1792,26 +1479,6 @@ pub fn get_player_fleets() -> Json<ApiResponse<Vec<Fleet>>> {
     }
 
     ApiResponse::success(fleets, "Successfully loaded fleets".to_string())
-}
-
-fn split_game_world_into_systems() -> Result<(), Box<dyn Error>> {
-    let settings = load_settings()?;
-    let game_path = Path::new("data").join("game").join(&settings.game_id);
-    let star_systems_path = game_path.join("star_systems");
-    
-    if !star_systems_path.exists() {
-        fs::create_dir_all(&star_systems_path)?;
-    }
-
-    let game_world_path = game_path.join("GameWorld.json");
-    let game_world: Vec<StarSystem> = load_json(&game_world_path)?;
-
-    for (system_id, system) in game_world.iter().enumerate() {
-        let system_path = star_systems_path.join(format!("Star_System_{}.json", system_id));
-        save_json(&system_path, system)?;
-    }
-
-    Ok(())
 }
 
 #[post("/player/<name>/add_credits", format = "json", data = "<amount>")]

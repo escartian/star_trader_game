@@ -11,11 +11,11 @@ use std::path::Path;
 use crate::models::settings::load_settings;
 use crate::models::game_state::game_path;
 use crate::models::economy::Economy;
+use crate::models::market::{Market, ShipMarket};
 
 use super::position::{random_nonzero_position, Position};
 use super::resource::{Resource, ResourceType};
 use super::player::Player;
-use super::market::Market;
 use crate::models::ship::ship::{Ship, ShipEngine, ShipSize, ShipType};
 use crate::models::fleet::Fleet;
 use crate::models::trade::{buy_from_planet, sell_to_planet};
@@ -673,4 +673,38 @@ pub fn save_planet(system_id: usize, planet_id: usize, planet: &Planet) -> std::
 pub fn get_fleet_path(fleet_name: &str) -> String {
     let path = game_path(&["fleets", &format!("{}.json", fleet_name)]);
     path.to_string_lossy().into_owned()
+}
+
+pub fn load_planet_market(system_id: usize, planet_id: usize) -> Result<Market, String> {
+    let settings = load_settings().map_err(|e| e.to_string())?;
+    let market_path = Path::new("data")
+        .join("game")
+        .join(&settings.game_id)
+        .join("markets")
+        .join(format!("market_{}_{}.json", system_id, planet_id));
+
+    if !market_path.exists() {
+        return Err("Market not found".to_string());
+    }
+
+    let file = File::open(market_path).map_err(|e| e.to_string())?;
+    let market: Market = serde_json::from_reader(file).map_err(|e| e.to_string())?;
+    Ok(market)
+}
+
+pub fn load_planet_ship_market(system_id: usize, planet_id: usize) -> Result<ShipMarket, String> {
+    let settings = load_settings().map_err(|e| e.to_string())?;
+    let market_path = Path::new("data")
+        .join("game")
+        .join(&settings.game_id)
+        .join("markets")
+        .join(format!("ships_{}_{}.json", system_id, planet_id));
+
+    if !market_path.exists() {
+        return Err("Ship market not found".to_string());
+    }
+
+    let file = File::open(market_path).map_err(|e| e.to_string())?;
+    let market: ShipMarket = serde_json::from_reader(file).map_err(|e| e.to_string())?;
+    Ok(market)
 }

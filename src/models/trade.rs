@@ -2,9 +2,12 @@ use crate::models::resource::{Resource, ResourceType};
 use crate::models::player::Player;
 use crate::models::market::Market;
 use crate::models::fleet::Fleet;
-use crate::models::planet::Planet;
 use crate::models::trader::Trader;
 use crate::constants::PRINT_DEBUG;
+use serde::Deserialize;
+use crate::models::planet::Planet;
+use crate::models::ship::ship::Ship;
+use std::error::Error;
 
 #[derive(Debug, PartialEq)]
 pub enum TradeAction {
@@ -20,6 +23,26 @@ pub enum TradeResult {
     InvalidResource,
     TransactionFailed,
     TraderNotFound,
+}
+
+#[derive(Deserialize)]
+pub struct ResourceTradeData {
+    pub resource_type: ResourceType,
+    pub quantity: u32,
+    pub fleet_name: Option<String>  // Optional for future fleet-based trading
+}
+
+#[derive(Deserialize)]
+pub struct ShipTradeData {
+    pub ship_index: usize,
+    pub fleet_name: Option<String>
+}
+
+#[derive(Deserialize)]
+pub struct ShipTradeInData {
+    pub ship_index: usize,
+    pub fleet_name: Option<String>,
+    pub trade_in_ship_index: Option<usize>
 }
 
 pub fn trade_with_trader(player: &mut Player, trader: &mut Trader, action: TradeAction) -> TradeResult {

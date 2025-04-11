@@ -2,7 +2,7 @@ use crate::models::planet::Planet;
 use crate::models::ship::ship::Ship;
 use crate::models::resource::Resource;
 use crate::models::galaxy::generate_galaxy;
-use crate::models::settings::GameSettings;
+use crate::models::settings::{GameSettings, load_settings};
 use std::fs;
 use std::fs::File;
 use serde_json;
@@ -22,6 +22,9 @@ use crate::models::position::random_position;
 use crate::models::star_system::generate_star_system;
 use serde::ser::{Serialize, Serializer, SerializeSeq};
 use serde::{Deserialize};
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+use std::error::Error;
 
 pub struct GameWorld {
     planets: Vec<Planet>,
@@ -216,6 +219,44 @@ pub fn save_game_world(_game_id: &str, star_systems: &[StarSystem]) -> std::io::
 
     let file = File::create(&world_file)?;
     to_writer(file, star_systems)?;
+    Ok(())
+}
+
+lazy_static! {
+    pub static ref GLOBAL_GAME_WORLD: Mutex<Vec<StarSystem>> = {
+        println!("Initializing empty game world");
+        Mutex::new(Vec::new())
+    };
+}
+
+pub fn get_global_game_world() -> Vec<StarSystem> {
+    if let Ok(guard) = GLOBAL_GAME_WORLD.lock() {
+        guard.clone()
+    } else {
+        Vec::new()
+    }
+}
+
+pub fn split_game_world_into_systems() -> Result<(), Box<dyn Error>> {
+    let settings = load_settings()?;
+    let game_path = Path::new("data").join("game").join(&settings.game_id);
+    let star_systems_path = game_path.join("star_systems");
+
+    // Create star_systems directory if it doesn't exist
+    if !star_systems_path.exists() {
+        fs::create_dir_all(&star_systems_path)?;
+    }
+
+    // Load the game world
+    let game_world = get_global_game_world();
+
+    // Save each system to its own file
+    for (system_id, system) in game_world.iter().enumerate() {
+        let system_path = star_systems_path.join(format!("Star_System_{}.json", system_id));
+        let file = File::create(system_path)?;
+        serde_json::to_writer(file, system)?;
+    }
+
     Ok(())
 }
 

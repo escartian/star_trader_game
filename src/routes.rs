@@ -317,34 +317,16 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
     let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
 
     let result: Result<MoveFleetResponse, String> = (|| {
-        let settings = load_settings().map_err(|e| e.to_string())?;
+        let settings = load_settings().map_err(|e| e.to_string())?;        
             
         let mut fleet = crate::models::fleet::load_fleet(&fleet_name)
             .map_err(|e| e.to_string())?
             .ok_or_else(|| "Fleet not found".to_string())?;
         
-        // Check if fleet's current position matches any system center
-        let game_world = get_global_game_world();
-        for (system_id, system) in game_world.iter().enumerate() {
-            if fleet.position.x == system.position.x &&
-               fleet.position.y == system.position.y &&
-               fleet.position.z == system.position.z {
-                // If fleet is at a system center but not marked as in that system, update it
-                if fleet.current_system_id != Some(system_id) {
-                    println!("Fleet {} is at system {} center but not marked as in system. Updating.", 
-                            fleet.name, system_id);
-                    fleet.current_system_id = Some(system_id);
-                    save_fleet_model(&fleet)?;
-                }
-                return Err(format!("Fleet '{}' is in System {}. Use /move_local instead.", 
-                                fleet.name, system_id));
-            }
-        }
-        
-        // Verification: Ensure fleet is actually in Deep Space
+        // Check if fleet is in a system
         if fleet.current_system_id.is_some() {
             return Err(format!("Fleet '{}' is in System {}. Use /move_local instead.", 
-                                fleet.name, fleet.current_system_id.unwrap()));
+                            fleet.name, fleet.current_system_id.unwrap()));
         }
 
         let start_pos = fleet.position.clone();
@@ -370,41 +352,38 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
         println!("Galaxy move distance: {:.2}", distance);
 
         let steps = (distance / 1.0).ceil().max(1.0) as i32;
-        println!("Checking {} steps for system center match", steps);
+        println!("Checking {} steps for system entry", steps);
 
-        let mut prev_position = start_pos.clone(); // Track previous position for direction
+        let mut prev_position = start_pos.clone();
+        let game_world = get_global_game_world();
 
-        for step in 1..=steps { 
+        for step in 1..=steps {
             let t = step as f64 / steps as f64;
             let current_position = Position {
                 x: start_pos.x + (dx * t) as i32,
                 y: start_pos.y + (dy * t) as i32,
                 z: start_pos.z + (dz * t) as i32,
             };
-            println!("  Step {}/{}: Checking Pos ({},{},{})", step, steps, current_position.x, current_position.y, current_position.z);
 
-            // Check if this exact position matches any system center
-            for (system_id, system) in game_world.iter().enumerate() {
-                if current_position.x == system.position.x &&
-                   current_position.y == system.position.y &&
-                   current_position.z == system.position.z {
+            // Check for system transition at this position
+            let (new_system_id, is_transition) = fleet.check_star_system_transition(&current_position, &game_world);
+            
+            if is_transition {
+                if let Some(system_id) = new_system_id {
+                    println!("Fleet entered System {} at position ({}, {}, {})", 
+                            system_id, current_position.x, current_position.y, current_position.z);
                     
-                    // --- System Entry Found --- 
-                    println!("MATCH! Position matches center of System {}", system_id);
-                    let distance_traveled = distance * t;
-                    let remaining_distance = distance * (1.0 - t);
-
-                    // Calculate entry point based on approach direction
+                    // Calculate the entry point on the system boundary
+                    let system = &game_world[system_id];
                     let approach_dx = (current_position.x - prev_position.x) as f64;
                     let approach_dy = (current_position.y - prev_position.y) as f64;
                     let approach_dz = (current_position.z - prev_position.z) as f64;
-                    let approach_mag = (approach_dx*approach_dx + approach_dy*approach_dy + approach_dz*approach_dz).sqrt();
-
-                    let entry_point = if approach_mag > 1e-6 { // Avoid division by zero
+                    let approach_mag = (approach_dx * approach_dx + approach_dy * approach_dy + approach_dz * approach_dz).sqrt();
+                    
+                    let entry_point = if approach_mag > 1e-6 {
                         let norm_dx = approach_dx / approach_mag;
                         let norm_dy = approach_dy / approach_mag;
                         let norm_dz = approach_dz / approach_mag;
-                        // Calculate point on the boundary cube edge
                         let scale = settings.map_width as f64;
                         Position {
                             x: (norm_dx * scale).round().clamp(min_coord as f64, max_coord as f64) as i32,
@@ -412,39 +391,34 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
                             z: (norm_dz * scale).round().clamp(min_coord as f64, max_coord as f64) as i32,
                         }
                     } else {
-                        // If no movement (or tiny movement), default to a boundary point, e.g., (max, 0, 0)
-                        // This case should be rare if distance > 0
-                         Position { x: max_coord, y: 0, z: 0 } 
+                        Position { x: max_coord, y: 0, z: 0 }
                     };
-                    println!("Calculated local entry point: ({},{},{})", entry_point.x, entry_point.y, entry_point.z);
 
-                    fleet.position = entry_point.clone(); // Set position to local map entry point
+                    fleet.position = entry_point.clone();
                     fleet.current_system_id = Some(system_id);
-                    fleet.last_move_distance = Some(distance_traveled);
+                    fleet.last_move_distance = Some(distance * t);
                     
                     for ship in &mut fleet.ships {
-                        ship.position = entry_point.clone(); // Update ships too
+                        ship.position = entry_point.clone();
                     }
 
                     save_fleet_model(&fleet)?;
-                    println!("Saved fleet state at system entry.");
 
                     return Ok(MoveFleetResponse {
                         status: "transition_entry".to_string(),
                         message: format!("Fleet entered System {} map", system_id),
-                        encounters: vec![], 
-                        current_position: entry_point.clone(), // Return the local entry point
-                        target_position: target_pos, 
-                        remaining_distance: remaining_distance,
+                        encounters: vec![],
+                        current_position: entry_point,
+                        target_position: target_pos,
+                        remaining_distance: distance * (1.0 - t),
                         current_system_id: Some(system_id),
                     });
                 }
             }
-            prev_position = current_position; // Update previous position for next step
+            prev_position = current_position;
         }
 
-        // No System Entry Detected 
-        println!("No system center match found along path. Completing move in deep space.");
+        // No system entry detected, complete the move in deep space
         fleet.position = target_pos.clone();
         fleet.current_system_id = None;
         fleet.last_move_distance = Some(distance);
@@ -454,12 +428,11 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
         }
 
         save_fleet_model(&fleet)?;
-        println!("Saved fleet state after deep space move.");
 
         Ok(MoveFleetResponse {
             status: "success".to_string(),
             message: "Fleet moved successfully in deep space".to_string(),
-            encounters: Vec::new(), 
+            encounters: vec![],
             current_position: target_pos.clone(),
             target_position: target_pos,
             remaining_distance: 0.0,
@@ -544,22 +517,16 @@ pub fn move_local(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
         // System Exit Triggered
         println!("Target is outside local bounds. Triggering system exit.");
         
-        // Calculate the exit direction vector
-        let exit_dx = target_local_pos.x as f64;
-        let exit_dy = target_local_pos.y as f64;
-        let exit_dz = target_local_pos.z as f64;
-        let exit_mag = (exit_dx * exit_dx + exit_dy * exit_dy + exit_dz * exit_dz).sqrt();
+        // Calculate exit position to be within ±1 of the system's position
+        let mut rng = rand::thread_rng();
+        let offset_x = rng.gen_range(-1..=1);
+        let offset_y = rng.gen_range(-1..=1);
+        let offset_z = rng.gen_range(-1..=1);
         
-        // Normalize the direction vector and scale to a reasonable exit distance
-        let scale = 100.0; // Exit distance from system
-        let normalized_dx = exit_dx / exit_mag;
-        let normalized_dy = exit_dy / exit_mag;
-        let normalized_dz = exit_dz / exit_mag;
-        
-        // Calculate the galaxy position based on system position and normalized exit vector
-        let galaxy_x = system.position.x + (normalized_dx * scale).round() as i32;
-        let galaxy_y = system.position.y + (normalized_dy * scale).round() as i32;
-        let galaxy_z = system.position.z + (normalized_dz * scale).round() as i32;
+        // Calculate the galaxy position based on system position and small offset
+        let galaxy_x = system.position.x + offset_x;
+        let galaxy_y = system.position.y + offset_y;
+        let galaxy_z = system.position.z + offset_z;
         
         // Update fleet position and system ID
         fleet.position = Position { x: galaxy_x, y: galaxy_y, z: galaxy_z };

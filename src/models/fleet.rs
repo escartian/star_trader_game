@@ -89,21 +89,22 @@ impl Fleet {
                 if distance > system.radius {
                     println!("  >>> Result: Leaving System {} <<< Return: (None, true)", system_id);
                     return (None, true); // Left the system
+                } else {
+                    // If we didn't leave, we are still inside the current system. No transition.
+                    println!("  >>> Result: Still inside System {} <<< Return: (Some({}), false)", system_id, system_id);
+                    return (Some(system_id), false); // Still inside the same system, no transition
                 }
             } else {
-                 println!("  Warning: Fleet system ID {} is out of bounds for game_world (len {}). Treating as None.", system_id, game_world.len());
-                 // Fall through to check for entry into other systems below
+                println!("  Warning: Fleet system ID {} is out of bounds for game_world (len {}). Treating as None.", system_id, game_world.len());
+                // Fall through to check for entry into other systems below
             }
-             // If we didn't leave, we are still inside the current system. No transition.
-             println!("  >>> Result: Still inside System {} <<< Return: (Some({}), false)", system_id, system_id);
-            return (Some(system_id), false); // Still inside the same system, no transition
         }
 
         // If we're not in a system (current_system_id is None), check if we're entering one
         println!("  Fleet is in Deep Space (System ID None). Checking for entry into any system.");
         for (index, system) in game_world.iter().enumerate() {
-             println!("  Checking against System {}: Center({},{},{}), Radius: {}", 
-                     index, system.position.x, system.position.y, system.position.z, system.radius);
+            println!("  Checking against System {}: Center({},{},{}), Radius: {}", 
+                    index, system.position.x, system.position.y, system.position.z, system.radius);
             let dx = (position.x - system.position.x) as f64;
             let dy = (position.y - system.position.y) as f64;
             let dz = (position.z - system.position.z) as f64;

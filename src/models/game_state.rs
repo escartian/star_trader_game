@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fs::{self, File};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Mutex};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use std::io::Write;
@@ -12,11 +12,39 @@ use crate::models::star_system::StarSystem;
 use crate::models::fleet::Fleet;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use crate::models::market::Market;
 
 #[derive(Clone)]
 pub struct GameState {
-    pub settings: GameSettings,
+    pub current_game_id: Option<String>,
     pub credits: f32,
+}
+
+lazy_static! {
+    pub static ref GAME_STATE: Mutex<GameState> = {
+        println!("Initializing game state");
+        Mutex::new(GameState {
+            current_game_id: None,
+            credits: 0.0,
+        })
+    };
+}
+
+pub fn get_game_state() -> Result<GameState, String> {
+    if let Ok(guard) = GAME_STATE.lock() {
+        Ok((*guard).clone())
+    } else {
+        Err("Failed to lock game state".to_string())
+    }
+}
+
+pub fn save_game_state(state: GameState) -> Result<(), String> {
+    if let Ok(mut guard) = GAME_STATE.lock() {
+        *guard = state;
+        Ok(())
+    } else {
+        Err("Failed to lock game state".to_string())
+    }
 }
 
 // Cache structure
@@ -69,14 +97,17 @@ lazy_static! {
     pub static ref PLAYER_CACHE: Cache<Player> = Cache::new(30); // 30 seconds TTL
     pub static ref SYSTEM_CACHE: Cache<StarSystem> = Cache::new(60); // 60 seconds TTL
     pub static ref FLEET_CACHE: Cache<Fleet> = Cache::new(30); // 30 seconds TTL
+    pub static ref MARKET_CACHE: Cache<Market> = Cache::new(30); // 30 seconds TTL
 }
 
 pub fn game_path(components: &[&str]) -> PathBuf {
     let mut path = PathBuf::from("data").join("game");
     
-    // Try to get game_id from settings, but don't fail if we can't
-    if let Ok(settings) = load_settings() {
-        path = path.join(&settings.game_id);
+    // Try to get game_id from game state, but don't fail if we can't
+    if let Ok(state) = get_game_state() {
+        if let Some(game_id) = state.current_game_id {
+            path = path.join(game_id);
+        }
     }
     
     for component in components {
@@ -244,4 +275,5 @@ pub fn clear_caches() {
     PLAYER_CACHE.remove_all();
     SYSTEM_CACHE.remove_all();
     FLEET_CACHE.remove_all();
+    MARKET_CACHE.remove_all();
 } 

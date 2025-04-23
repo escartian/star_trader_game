@@ -48,7 +48,7 @@ pub struct Ship {
 }
 
 /// Represents the current operational status of a ship
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum ShipStatus {
     /// Ship is landed on a planet with rough terrain
     OnPlanetRough,
@@ -69,7 +69,7 @@ pub enum ShipStatus {
 }
 
 /// Represents the current combat stance of a ship
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum CombatState {
     /// Ship is not engaged in combat
     NotInCombat,

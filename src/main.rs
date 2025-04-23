@@ -1,9 +1,8 @@
-mod constants;
-mod models;
-mod routes;
-mod engine;
-mod combat;
-mod encounters;
+pub mod constants;
+pub mod models;
+pub mod routes;
+pub mod combat;
+pub mod encounters;
 
 use rocket::{get, routes, Request, Response};
 use std::sync::atomic::Ordering;
@@ -38,21 +37,11 @@ use crate::models::position::random_position;
 use rocket_cors::{AllowedOrigins, CorsOptions, AllowedHeaders};
 use rocket::fs::FileServer;
 
-use crate::models::game_state::GameState;
-
 lazy_static! {
     static ref EMPTY_WORLD: Vec<StarSystem> = Vec::new();
     static ref GLOBAL_GAME_WORLD: Mutex<Vec<StarSystem>> = {
         println!("Initializing empty game world");
         Mutex::new(Vec::new())
-    };
-
-    static ref GAME_STATE: Mutex<GameState> = {
-        println!("Initializing game state");
-        Mutex::new(GameState {
-            settings: GameSettings::default(),
-            credits: 0.0,
-        })
     };
 }
 
@@ -61,17 +50,6 @@ pub(crate) fn get_global_game_world() -> Vec<StarSystem> {
         guard.clone()
     } else {
         Vec::new()
-    }
-}
-
-pub(crate) fn get_game_state() -> GameState {
-    if let Ok(guard) = GAME_STATE.lock() {
-        guard.clone()
-    } else {
-        GameState {
-            settings: GameSettings::default(),
-            credits: 0.0,
-        }
     }
 }
 
@@ -107,7 +85,6 @@ async fn main() {
             routes::get_owner_fleets,
             routes::get_fleet,
             routes::move_fleet,
-            routes::move_local,
             routes::get_fleet_owners,
             routes::initiate_combat,
             routes::check_for_encounter,

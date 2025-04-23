@@ -64,7 +64,7 @@ export const api = {
     },
 
     moveFleet: async (ownerId: string, fleetNumber: number, x: number, y: number, z: number): Promise<string> => {
-        console.log(`Moving fleet ${ownerId}_${fleetNumber} to (${x}, ${y}, ${z}) in deep space`);
+        console.log(`Moving fleet ${ownerId}_${fleetNumber} to (${x}, ${y}, ${z})`);
         const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move`, {
             method: 'POST',
             headers: {
@@ -74,31 +74,22 @@ export const api = {
         });
 
         const responseText = await response.text();
-        if (!response.ok) {
-            console.error('Move fleet failed:', responseText);
-            throw new Error(`Failed to move fleet: ${response.statusText}`);
+        console.log('Move fleet response:', responseText);
+        
+        try {
+            const data = JSON.parse(responseText);
+            if (!data.success) {
+                console.error('Move fleet failed:', data.message);
+                throw new Error(data.message || 'Failed to move fleet');
+            }
+            return responseText;
+        } catch (error) {
+            if (error instanceof Error) {
+                throw error;
+            }
+            console.error('Error parsing move fleet response:', error);
+            throw new Error('Invalid response from server');
         }
-
-        return responseText;
-    },
-
-    moveLocal: async (ownerId: string, fleetNumber: number, x: number, y: number, z: number): Promise<string> => {
-        console.log(`Moving fleet ${ownerId}_${fleetNumber} to (${x}, ${y}, ${z}) within system`);
-        const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move_local`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ x, y, z }),
-        });
-
-        const responseText = await response.text();
-        if (!response.ok) {
-            console.error('Move local failed:', responseText);
-            throw new Error(`Failed to move fleet: ${response.statusText}`);
-        }
-
-        return responseText;
     },
 
     // Market endpoints

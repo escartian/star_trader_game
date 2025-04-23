@@ -180,12 +180,22 @@ impl SavedGame {
 /// # Returns
 /// A Result containing either the loaded settings or an error
 pub fn load_settings() -> Result<GameSettings, std::io::Error> {
-    let settings_path = Path::new("data").join("game").join("settings.json");
+    let state = crate::models::game_state::get_game_state()
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    
+    let game_id = state.current_game_id.ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "No active game. Please create or load a game first."
+        )
+    })?;
+    
+    let settings_path = Path::new("data").join("game").join(&game_id).join("settings.json");
     
     if !settings_path.exists() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            "No game settings found. Please create a new game first."
+            format!("No settings found for game {}", game_id)
         ));
     }
 
@@ -195,7 +205,7 @@ pub fn load_settings() -> Result<GameSettings, std::io::Error> {
     
     let settings: GameSettings = serde_json::from_str(&contents)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-    println!("Successfully loaded settings");
+    println!("Successfully loaded settings for game {}", game_id);
     Ok(settings)
 }
 

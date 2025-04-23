@@ -272,6 +272,13 @@ pub fn regenerate_system_markets(system_id: usize) -> Result<(), Box<dyn Error>>
 
     println!("Loading game world for system {}", system_id);
     let game_world = get_global_game_world();
+    if game_world.is_empty() {
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "Game world is empty. Please ensure the game world is properly loaded."
+        )));
+    }
+
     let system = game_world.get(system_id)
         .ok_or_else(|| Box::new(std::io::Error::new(
             std::io::ErrorKind::NotFound,

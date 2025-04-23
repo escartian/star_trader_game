@@ -30,6 +30,7 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
     const [error, setError] = useState<string>('');
     const [mapBounds, setMapBounds] = useState<{ min: number; max: number }>({ min: -1000, max: 1000 });
     const [currentSystemName, setCurrentSystemName] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(true);
 
     // Add effect to clear move message after delay
     useEffect(() => {
@@ -45,12 +46,17 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
     useEffect(() => {
         const loadSettings = async () => {
             try {
+                setIsLoading(true);
                 const settings = await api.getGameSettings();
                 setPlayerName(settings.player_name);
                 const maxCoord = Math.floor(settings.map_width);
                 setMapBounds({ min: -maxCoord, max: maxCoord });
+                console.log('Loaded map bounds:', { min: -maxCoord, max: maxCoord });
             } catch (err) {
+                console.error('Failed to load player settings:', err);
                 setError('Failed to load player settings');
+            } finally {
+                setIsLoading(false);
             }
         };
         loadSettings();
@@ -144,35 +150,60 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
         });
         console.log('Target Position:', { x: targetX, y: targetY, z: targetZ });
 
-        // Check if this is a local move (fleet is in a system AND target is within bounds)
-        const isLocalMove = currentFleet.current_system_id !== null && 
-                          currentFleet.current_system_id !== undefined &&
-                          Math.abs(targetX) <= mapBounds.max &&
-                          Math.abs(targetY) <= mapBounds.max &&
-                          Math.abs(targetZ) <= mapBounds.max;
-        
-        console.log('Movement Type:', isLocalMove ? 'Local' : 'Deep Space');
-        console.log('Map Bounds:', mapBounds);
-        console.log('Is within bounds:', {
-            x: Math.abs(targetX) <= mapBounds.max,
-            y: Math.abs(targetY) <= mapBounds.max,
-            z: Math.abs(targetZ) <= mapBounds.max
-        });
-
-        const moveMessage = isLocalMove 
-            ? `Moving within ${currentSystemName}`
-            : 'Moving through Deep Space';
-
-        setMoveMessage(moveMessage);
-
         try {
-            console.log('Initiating move...');
-            await onMove(currentFleet, targetX, targetY, targetZ, isLocalMove);
-            console.log('Move completed successfully');
-            setMoveStatus('success');
-        } catch (err) {
-            console.error('Move failed:', err);
-            setMoveMessage('Failed to move fleet');
+            // Extract owner_id and fleet_number from fleet name
+            const parts = currentFleet.name.split('_');
+            const owner_id = encodeURIComponent(parts[1]);
+            const fleet_number = parseInt(parts[2]);
+
+            console.log('Sending move request:', {
+                owner_id,
+                fleet_number,
+                target: { x: targetX, y: targetY, z: targetZ }
+            });
+
+            const response = await api.moveFleet(owner_id, fleet_number, targetX, targetY, targetZ);
+            console.log('Move response:', response);
+            
+            const responseData = JSON.parse(response);
+            console.log('Parsed move response:', responseData);
+            
+            if (!responseData.success) {
+                setMoveMessage(responseData.message || 'Move failed');
+                setMoveStatus('error');
+                return;
+            }
+
+            const data = responseData.data;
+            console.log('Move data:', data);
+            
+            if (data.status === 'success') {
+                setMoveMessage('Fleet moved successfully');
+                setMoveStatus('success');
+                if (onMove) {
+                    onMove(currentFleet, targetX, targetY, targetZ, false);
+                }
+            } else if (data.status === 'transition_entry') {
+                setMoveMessage(`Fleet entered System ${data.current_system_id}`);
+                setMoveStatus('info');
+                if (onMove) {
+                    onMove(currentFleet, targetX, targetY, targetZ, false);
+                }
+            } else if (data.status === 'transition_exit') {
+                setMoveMessage('Fleet exited the star system');
+                setMoveStatus('info');
+                if (onMove) {
+                    onMove(currentFleet, targetX, targetY, targetZ, false);
+                }
+            } else {
+                console.error('Unexpected move response status:', data.status);
+                setMoveMessage(data.message || 'Move failed');
+                setMoveStatus('error');
+            }
+        } catch (error) {
+            console.error('Move failed:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Move failed';
+            setMoveMessage(errorMessage);
             setMoveStatus('error');
         }
     };
@@ -238,75 +269,82 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
                     
                     {isPlayerFleet && (
                         <div className="movement-section">
-                            {currentFleet.current_system_id !== null && currentFleet.current_system_id !== undefined && (
-                                <div className="system-bounds-info">
-                                    <p>
-                                        <strong>System Movement Guide:</strong>
-                                        <br />
-                                        • You are currently in {currentSystemName || `Star System ${currentFleet.current_system_id}`}
-                                        <br />
-                                        • To move within the system, use coordinates between {mapBounds.min} and {mapBounds.max}
-                                        <br />
-                                        • To exit the system, set coordinates beyond these bounds
-                                        <br />
-                                        • When exiting, your fleet will transition to the galaxy map near this system's location
-                                    </p>
-                                </div>
-                            )}
-                            <div className="movement-controls">
-                                <div className="coordinate-input">
-                                    <label>Target X {currentFleet.current_system_id !== null ? 
-                                        `(System bounds: ${mapBounds.min} to ${mapBounds.max}, exceed to exit)` : 
-                                        `(${mapBounds.min} to ${mapBounds.max})`}:
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={targetX}
-                                        onChange={(e) => setTargetX(Number(e.target.value))}
-                                    />
-                                </div>
-                                <div className="coordinate-input">
-                                    <label>Target Y {currentFleet.current_system_id !== null ? 
-                                        `(System bounds: ${mapBounds.min} to ${mapBounds.max}, exceed to exit)` : 
-                                        `(${mapBounds.min} to ${mapBounds.max})`}:
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={targetY}
-                                        onChange={(e) => setTargetY(Number(e.target.value))}
-                                    />
-                                </div>
-                                <div className="coordinate-input">
-                                    <label>Target Z {currentFleet.current_system_id !== null ? 
-                                        `(System bounds: ${mapBounds.min} to ${mapBounds.max}, exceed to exit)` : 
-                                        `(${mapBounds.min} to ${mapBounds.max})`}:
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={targetZ}
-                                        onChange={(e) => setTargetZ(Number(e.target.value))}
-                                    />
-                                </div>
-                                <button 
-                                    className="move-button" 
-                                    onClick={() => {
-                                        console.log('Move button clicked');
-                                        handleMove();
-                                    }}
-                                >
-                                    {currentFleet.current_system_id !== null && 
-                                     (Math.abs(targetX) > mapBounds.max || 
-                                      Math.abs(targetY) > mapBounds.max || 
-                                      Math.abs(targetZ) > mapBounds.max) 
-                                        ? "Exit System" 
-                                        : "Move Fleet"}
-                                </button>
-                                {moveMessage && (
-                                    <div className={`move-message ${moveStatus}`}>
-                                        {moveMessage}
+                            {isLoading ? (
+                                <div className="loading-message">Loading map settings...</div>
+                            ) : (
+                                <>
+                                    {currentFleet.current_system_id !== null && currentFleet.current_system_id !== undefined && (
+                                        <div className="system-bounds-info">
+                                            <p>
+                                                <strong>System Movement Guide:</strong>
+                                                <br />
+                                                • You are currently in {currentSystemName || `Star System ${currentFleet.current_system_id}`}
+                                                <br />
+                                                • To move within the system, use coordinates between {mapBounds.min} and {mapBounds.max}
+                                                <br />
+                                                • To exit the system, set coordinates beyond these bounds
+                                                <br />
+                                                • When exiting, your fleet will transition to the galaxy map near this system's location
+                                            </p>
+                                        </div>
+                                    )}
+                                    <div className="movement-controls">
+                                        <div className="coordinate-input">
+                                            <label>Target X {currentFleet.current_system_id !== null ? 
+                                                `(System bounds: ${mapBounds.min} to ${mapBounds.max}, exceed to exit)` : 
+                                                `(${mapBounds.min} to ${mapBounds.max})`}:
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={targetX}
+                                                onChange={(e) => setTargetX(Number(e.target.value))}
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                        <div className="coordinate-input">
+                                            <label>Target Y {currentFleet.current_system_id !== null ? 
+                                                `(System bounds: ${mapBounds.min} to ${mapBounds.max}, exceed to exit)` : 
+                                                `(${mapBounds.min} to ${mapBounds.max})`}:
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={targetY}
+                                                onChange={(e) => setTargetY(Number(e.target.value))}
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                        <div className="coordinate-input">
+                                            <label>Target Z {currentFleet.current_system_id !== null ? 
+                                                `(System bounds: ${mapBounds.min} to ${mapBounds.max}, exceed to exit)` : 
+                                                `(${mapBounds.min} to ${mapBounds.max})`}:
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={targetZ}
+                                                onChange={(e) => setTargetZ(Number(e.target.value))}
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                        <button 
+                                            className="move-button" 
+                                            onClick={handleMove}
+                                            disabled={isLoading}
+                                        >
+                                            {currentFleet.current_system_id !== null && 
+                                             (Math.abs(targetX) > mapBounds.max || 
+                                              Math.abs(targetY) > mapBounds.max || 
+                                              Math.abs(targetZ) > mapBounds.max) 
+                                                ? "Exit System" 
+                                                : "Move Fleet"}
+                                        </button>
+                                        {moveMessage && (
+                                            <div className={`move-message ${moveStatus}`}>
+                                                {moveMessage}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
+                                </>
+                            )}
                         </div>
                     )}
 

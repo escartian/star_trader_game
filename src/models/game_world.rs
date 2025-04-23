@@ -73,71 +73,53 @@ pub fn create_game_world_file(settings: &GameSettings, force_regenerate: bool) -
         let world: Vec<StarSystem> = serde_json::from_reader(file)
             .map_err(|e| format!("Failed to deserialize game world: {}", e))?;
         println!("Successfully loaded game world with {} systems", world.len());
+        
+        // Update the global game world
+        if let Ok(mut guard) = GLOBAL_GAME_WORLD.lock() {
+            *guard = world.clone();
+        }
+        
         return Ok(world);
     }
     
     println!("Generating new game world");
     let mut rng = thread_rng();
-    
-    // Create the game directory if it doesn't exist
-    if let Some(parent) = game_world_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create game directory: {}", e))?;
-    }
-    
-    // Create a temporary file for writing
-    let temp_path = game_world_path.with_extension("json.tmp");
-    let file = File::create(&temp_path)
-        .map_err(|e| format!("Failed to create temporary game world file: {}", e))?;
-    
-    // Start writing the array
-    let mut writer = serde_json::Serializer::new(file);
-    let mut ser = writer.serialize_seq(Some(settings.star_count as usize))
-        .map_err(|e| format!("Failed to start serialization: {}", e))?;
-    
-    // Generate and save star systems one at a time
     let mut existing_names = std::collections::HashSet::new();
+    let mut world = Vec::with_capacity(settings.star_count as usize);
+    
+    // Generate star systems
     for i in 0..settings.star_count {
         println!("Generating star system {}/{}", i + 1, settings.star_count);
-        let position = random_position(
-            settings.map_width as i32,
-            settings.map_height as i32,
-            settings.map_length as i32
-        );
-        
         let system = generate_star_system(
             settings.map_width as i32,
             settings.map_height as i32,
             settings.map_length as i32,
             &mut existing_names
         );
-        
-        // Add the star name to our tracking set
-        existing_names.insert(system.star.name.clone());
-        
-        // Serialize this system directly to the file
-        ser.serialize_element(&system)
-            .map_err(|e| format!("Failed to serialize system {}: {}", i, e))?;
-        
-        println!("Successfully generated star system at position {:?}", position);
+        println!("Successfully generated star system at position {:?}", system.position);
+        world.push(system);
     }
     
-    // End the sequence
-    ser.end()
-        .map_err(|e| format!("Failed to end serialization: {}", e))?;
+    println!("Successfully generated galaxy with {} star systems", world.len());
     
-    // Rename the temporary file to the final file
-    fs::rename(&temp_path, &game_world_path)
-        .map_err(|e| format!("Failed to rename game world file: {}", e))?;
+    // Save the game world
+    if let Some(parent) = game_world_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create game directory: {}", e))?;
+    }
     
-    // Now load the file back to return the systems
-    let file = File::open(&game_world_path)
-        .map_err(|e| format!("Failed to open game world file for reading: {}", e))?;
-    let systems: Vec<StarSystem> = serde_json::from_reader(file)
-        .map_err(|e| format!("Failed to deserialize game world: {}", e))?;
+    let file = File::create(&game_world_path)
+        .map_err(|e| format!("Failed to create game world file: {}", e))?;
     
-    println!("Successfully generated galaxy with {} star systems", systems.len());
-    Ok(systems)
+    serde_json::to_writer(file, &world)
+        .map_err(|e| format!("Failed to serialize game world: {}", e))?;
+    
+    // Update the global game world
+    if let Ok(mut guard) = GLOBAL_GAME_WORLD.lock() {
+        *guard = world.clone();
+    }
+    
+    Ok(world)
 }
 
 /// Loads a game world from the specified game directory.

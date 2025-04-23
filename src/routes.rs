@@ -1,4 +1,5 @@
-use crate::get_global_game_world;
+use crate::models::game_world::get_global_game_world;
+use crate::models::game_state::GAME_STATE;
 use std::fs::File;
 use std::path::Path;
 use rocket::Request;
@@ -305,76 +306,145 @@ pub fn sell_to_planet(system_id: usize, planet_id: usize, data: Json<ResourceTra
     }
 }
 
-
-
-// --- Galaxy Map Movement ---
 #[post("/fleet/<owner_id>/<fleet_number>/move", format = "json", data = "<data>")]
 pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetData>) -> Json<ApiResponse<MoveFleetResponse>> {
-    println!("--- Starting GALAXY MAP move operation ---");
+    println!("--- Starting Fleet Movement Operation ---");
     println!("  Fleet: Fleet_{}_{}", owner_id, fleet_number);
-    println!("  Target Galaxy Position: ({}, {}, {})", data.x, data.y, data.z);
+    println!("  Target Position: ({}, {}, {})", data.x, data.y, data.z);
     
     let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
 
     let result: Result<MoveFleetResponse, String> = (|| {
         let settings = load_settings().map_err(|e| e.to_string())?;        
+        let game_world = get_global_game_world();
             
         let mut fleet = crate::models::fleet::load_fleet(&fleet_name)
             .map_err(|e| e.to_string())?
             .ok_or_else(|| "Fleet not found".to_string())?;
         
-        // Check if fleet is in a system
-        if fleet.current_system_id.is_some() {
-            return Err(format!("Fleet '{}' is in System {}. Use /move_local instead.", 
-                            fleet.name, fleet.current_system_id.unwrap()));
-        }
-
-        let start_pos = fleet.position.clone();
-        println!("Verified Start Pos: ({}, {}, {}), SystemID: None", start_pos.x, start_pos.y, start_pos.z);
-
         let target_pos = Position { x: data.x, y: data.y, z: data.z };
+        let start_pos = fleet.position.clone();
         
-        // Bounds Check (Galaxy Map)
-        let max_coord = settings.map_width as i32;
-        let min_coord = -max_coord;
-        if target_pos.x < min_coord || target_pos.x > max_coord || 
-           target_pos.y < min_coord || target_pos.y > max_coord || 
-           target_pos.z < min_coord || target_pos.z > max_coord {
+        // Galaxy bounds check
+        let galaxy_max = settings.map_width as i32;
+        let galaxy_min = -galaxy_max;
+
+        if target_pos.x < galaxy_min || target_pos.x > galaxy_max || 
+           target_pos.y < galaxy_min || target_pos.y > galaxy_max || 
+           target_pos.z < galaxy_min || target_pos.z > galaxy_max {
             return Err(format!("Target position is outside galaxy bounds [{} to {}]. Please choose a valid destination.", 
-                min_coord, max_coord));
+                galaxy_min, galaxy_max));
         }
-        
-        // Movement & System Entry Check
+
+        // Determine if this is a local move or deep space move
+        if let Some(system_id) = fleet.current_system_id {
+            // We're in a system, check if target is within system bounds
+            let system = &game_world[system_id];
+            let system_max = 100; // Local system bounds
+            let system_min = -system_max;
+            
+            // Check if target is outside system bounds
+            if target_pos.x < system_min || target_pos.x > system_max ||
+               target_pos.y < system_min || target_pos.y > system_max ||
+               target_pos.z < system_min || target_pos.z > system_max {
+                println!("Target is outside system bounds. Triggering system exit.");
+                
+                // Calculate exit position based on movement direction
+                let dx = target_pos.x - start_pos.x;
+                let dy = target_pos.y - start_pos.y;
+                let dz = target_pos.z - start_pos.z;
+                
+                // Get the sign of each direction component (-1, 0, or 1)
+                let dir_x = if dx != 0 { dx / dx.abs() } else { 0 };
+                let dir_y = if dy != 0 { dy / dy.abs() } else { 0 };
+                let dir_z = if dz != 0 { dz / dz.abs() } else { 0 };
+                
+                // Calculate exit point just outside the system boundary
+                let exit_x = system.position.x + dir_x * (system_max + 1);
+                let exit_y = system.position.y + dir_y * (system_max + 1);
+                let exit_z = system.position.z + dir_z * (system_max + 1);
+                
+                println!("Calculated exit position: ({}, {}, {})", exit_x, exit_y, exit_z);
+                
+                fleet.position = Position { x: exit_x, y: exit_y, z: exit_z };
+                fleet.current_system_id = None;
+                fleet.last_move_distance = Some(1.0);
+                
+                for ship in &mut fleet.ships {
+                    ship.position = fleet.position.clone();
+                }
+                
+                save_fleet_model(&fleet)?;
+                
+                return Ok(MoveFleetResponse {
+                    status: "transition_exit".to_string(),
+                    message: "Fleet exited the star system".to_string(),
+                    encounters: Vec::new(),
+                    current_position: fleet.position.clone(),
+                    target_position: fleet.position.clone(),
+                    remaining_distance: 0.0,
+                    current_system_id: None,
+                });
+            } else {
+                // Local move within system
+                println!("Performing local move within system {}", system_id);
+                
+                let local_dx = (target_pos.x - start_pos.x) as f64;
+                let local_dy = (target_pos.y - start_pos.y) as f64;
+                let local_dz = (target_pos.z - start_pos.z) as f64;
+                let local_distance = (local_dx*local_dx + local_dy*local_dy + local_dz*local_dz).sqrt();
+                
+                fleet.position = target_pos.clone();
+                fleet.last_move_distance = Some(local_distance);
+                fleet.current_system_id = Some(system_id);
+
+                for ship in &mut fleet.ships {
+                    ship.position = target_pos.clone();
+                }
+                
+                save_fleet_model(&fleet)?;
+
+                return Ok(MoveFleetResponse {
+                    status: "success".to_string(),
+                    message: "Fleet moved successfully within system".to_string(),
+                    encounters: Vec::new(),
+                    current_position: target_pos.clone(),
+                    target_position: target_pos,
+                    remaining_distance: 0.0,
+                    current_system_id: Some(system_id),
+                });
+            }
+        }
+
+        // Deep space movement
         let dx = (target_pos.x - start_pos.x) as f64;
         let dy = (target_pos.y - start_pos.y) as f64;
         let dz = (target_pos.z - start_pos.z) as f64;
         let distance = (dx * dx + dy * dy + dz * dz).sqrt();
-        println!("Galaxy move distance: {:.2}", distance);
-
-        let steps = (distance / 1.0).ceil().max(1.0) as i32;
-        println!("Checking {} steps for system entry", steps);
-
+        let mut current_position = start_pos.clone();
         let mut prev_position = start_pos.clone();
-        let game_world = get_global_game_world();
-
-        for step in 1..=steps {
-            let t = step as f64 / steps as f64;
-            let current_position = Position {
-                x: start_pos.x + (dx * t) as i32,
-                y: start_pos.y + (dy * t) as i32,
-                z: start_pos.z + (dz * t) as i32,
+        let step_size = 1.0;
+        
+        for t in (0..=(distance as i32)).map(|i| i as f64 / distance) {
+            prev_position = current_position.clone();
+            current_position = Position {
+                x: (start_pos.x as f64 + dx * t).round() as i32,
+                y: (start_pos.y as f64 + dy * t).round() as i32,
+                z: (start_pos.z as f64 + dz * t).round() as i32,
             };
 
-            // Check for system transition at this position
-            let (new_system_id, is_transition) = fleet.check_star_system_transition(&current_position, &game_world);
-            
-            if is_transition {
-                if let Some(system_id) = new_system_id {
+            // Check for system entry
+            for (index, system) in game_world.iter().enumerate() {
+                let system_dx = (current_position.x - system.position.x) as f64;
+                let system_dy = (current_position.y - system.position.y) as f64;
+                let system_dz = (current_position.z - system.position.z) as f64;
+                let system_distance = (system_dx * system_dx + system_dy * system_dy + system_dz * system_dz).sqrt();
+                
+                if system_distance <= 1.0 {
                     println!("Fleet entered System {} at position ({}, {}, {})", 
-                            system_id, current_position.x, current_position.y, current_position.z);
+                            index, current_position.x, current_position.y, current_position.z);
                     
-                    // Calculate the entry point on the system boundary
-                    let system = &game_world[system_id];
+                    // Calculate entry point
                     let approach_dx = (current_position.x - prev_position.x) as f64;
                     let approach_dy = (current_position.y - prev_position.y) as f64;
                     let approach_dz = (current_position.z - prev_position.z) as f64;
@@ -384,18 +454,17 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
                         let norm_dx = approach_dx / approach_mag;
                         let norm_dy = approach_dy / approach_mag;
                         let norm_dz = approach_dz / approach_mag;
-                        let scale = settings.map_width as f64;
                         Position {
-                            x: (norm_dx * scale).round().clamp(min_coord as f64, max_coord as f64) as i32,
-                            y: (norm_dy * scale).round().clamp(min_coord as f64, max_coord as f64) as i32,
-                            z: (norm_dz * scale).round().clamp(min_coord as f64, max_coord as f64) as i32,
+                            x: (system.position.x as f64 - norm_dx).round() as i32,
+                            y: (system.position.y as f64 - norm_dy).round() as i32,
+                            z: (system.position.z as f64 - norm_dz).round() as i32,
                         }
                     } else {
-                        Position { x: max_coord, y: 0, z: 0 }
+                        Position { x: system.position.x - 1, y: system.position.y, z: system.position.z }
                     };
 
                     fleet.position = entry_point.clone();
-                    fleet.current_system_id = Some(system_id);
+                    fleet.current_system_id = Some(index);
                     fleet.last_move_distance = Some(distance * t);
                     
                     for ship in &mut fleet.ships {
@@ -406,12 +475,12 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
 
                     return Ok(MoveFleetResponse {
                         status: "transition_entry".to_string(),
-                        message: format!("Fleet entered System {} map", system_id),
+                        message: format!("Fleet entered System {} map", index),
                         encounters: vec![],
                         current_position: entry_point,
                         target_position: target_pos,
                         remaining_distance: distance * (1.0 - t),
-                        current_system_id: Some(system_id),
+                        current_system_id: Some(index),
                     });
                 }
             }
@@ -429,7 +498,7 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
 
         save_fleet_model(&fleet)?;
 
-        Ok(MoveFleetResponse {
+        return Ok(MoveFleetResponse {
             status: "success".to_string(),
             message: "Fleet moved successfully in deep space".to_string(),
             encounters: vec![],
@@ -437,7 +506,7 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
             target_position: target_pos,
             remaining_distance: 0.0,
             current_system_id: None,
-        })
+        });
     })();
 
     match result {
@@ -446,107 +515,6 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
             ApiResponse::success(response, message)
         },
         Err(e) => ApiResponse::error(e)
-    }
-}
-
-// --- Local System Map Movement ---
-#[post("/fleet/<owner_id>/<fleet_number>/move_local", format = "json", data = "<data>")]
-pub fn move_local(owner_id: String, fleet_number: usize, data: Json<MoveFleetData>) -> Json<ApiResponse<MoveFleetResponse>> {
-    println!("--- Starting LOCAL move operation ---");
-    println!("  Fleet: Fleet_{}_{}", owner_id, fleet_number);
-    println!("  Target Local Position: ({}, {}, {})", data.x, data.y, data.z);
-    
-    let fleet_name = format!("Fleet_{}_{}", owner_id, fleet_number);
-    let game_world = get_global_game_world();
-    let settings = match load_settings() {
-        Ok(s) => s,
-        Err(e) => return ApiResponse::error(format!("Failed to load settings: {}", e)),
-    };
-    
-    // Load fleet
-    let mut fleet = match load_fleet(&fleet_name) {
-        Ok(f) => f,
-        Err(e) => return ApiResponse::error(format!("Failed to load fleet: {}", e)),
-    };
-
-    // Check if fleet is in a system
-    let start_system_id = match fleet.current_system_id {
-        Some(id) => id,
-        None => return ApiResponse::error("Cannot move locally: fleet is not in a star system".to_string()),
-    };
-
-    // Load the system
-    let system = match load_star_system(start_system_id) {
-        Ok(s) => s,
-        Err(e) => return ApiResponse::error(format!("Failed to load star system: {}", e)),
-    };
-
-    let target_local_pos = Position { x: data.x, y: data.y, z: data.z };
-    // Check if target is within local bounds
-    if is_within_local_bounds(&target_local_pos, &settings) {
-        println!("Target is within local bounds. Moving locally.");
-        println!("Current fleet position: ({}, {}, {})", fleet.position.x, fleet.position.y, fleet.position.z);
-        println!("Target position: ({}, {}, {})", target_local_pos.x, target_local_pos.y, target_local_pos.z);
-        let start_local_pos = fleet.position.clone();
-        let local_dx = (target_local_pos.x - start_local_pos.x) as f64;
-        let local_dy = (target_local_pos.y - start_local_pos.y) as f64;
-        let local_dz = (target_local_pos.z - start_local_pos.z) as f64;
-        let local_distance = (local_dx*local_dx + local_dy*local_dy + local_dz*local_dz).sqrt();
-        println!("Movement distance: {}", local_distance);
-
-        fleet.position = target_local_pos.clone();
-        fleet.last_move_distance = Some(local_distance); 
-
-        for ship in &mut fleet.ships {
-            ship.position = target_local_pos.clone();
-        }
-        println!("Saving fleet with new position: ({}, {}, {})", fleet.position.x, fleet.position.y, fleet.position.z);
-        save_fleet_model(&fleet).unwrap();
-        println!("Fleet saved successfully");
-
-        ApiResponse::success(MoveFleetResponse {
-            status: "success".to_string(),
-            message: "Fleet moved successfully within system".to_string(),
-            encounters: Vec::new(), 
-            current_position: target_local_pos.clone(),
-            target_position: target_local_pos,
-            remaining_distance: 0.0,
-            current_system_id: Some(start_system_id),
-        }, "Fleet moved successfully within system".to_string())
-    } else {
-        // System Exit Triggered
-        println!("Target is outside local bounds. Triggering system exit.");
-        
-        // Calculate exit position to be within ±1 of the system's position
-        let mut rng = rand::thread_rng();
-        let offset_x = rng.gen_range(-1..=1);
-        let offset_y = rng.gen_range(-1..=1);
-        let offset_z = rng.gen_range(-1..=1);
-        
-        // Calculate the galaxy position based on system position and small offset
-        let galaxy_x = system.position.x + offset_x;
-        let galaxy_y = system.position.y + offset_y;
-        let galaxy_z = system.position.z + offset_z;
-        
-        // Update fleet position and system ID
-        fleet.position = Position { x: galaxy_x, y: galaxy_y, z: galaxy_z };
-        fleet.current_system_id = None;
-        
-        for ship in &mut fleet.ships {
-            ship.position = fleet.position.clone();
-        }
-        
-        save_fleet_model(&fleet).unwrap();
-        
-        ApiResponse::success(MoveFleetResponse {
-            status: "transition_exit".to_string(),
-            message: "Fleet exited the star system".to_string(),
-            encounters: Vec::new(),
-            current_position: fleet.position.clone(),
-            target_position: fleet.position.clone(),
-            remaining_distance: 0.0,
-            current_system_id: None,
-        }, "Fleet exited the star system".to_string())
     }
 }
 
@@ -879,67 +847,6 @@ pub fn list_games() -> Json<ApiResponse<Vec<SavedGame>>> {
     }
 }
 
-#[get("/games/<game_id>/load")]
-pub fn load_game(game_id: String) -> Json<ApiResponse<String>> {
-    let result: Result<String, String> = (|| {
-        // Load the saved game
-        let saved_game = SavedGame::load_game(&game_id)
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "Game not found".to_string())?;
-        
-        // Load the game world
-        let game_world = match crate::models::game_world::load_game_world(&game_id) {
-            Ok(world) => world,
-            Err(e) => return Err(format!("Failed to load game world: {}", e)),
-        };
-
-        // Update the global game world
-        if let Ok(mut guard) = crate::GLOBAL_GAME_WORLD.lock() {
-            *guard = game_world;
-        } else {
-            return Err("Failed to update game world".to_string());
-        }
-
-        // Load the player data to get the current credits
-        let player_path = Path::new("data")
-            .join("game")
-            .join(&game_id)
-            .join("players")
-            .join(format!("{}.json", saved_game.settings.player_name));
-
-        let player_credits = if player_path.exists() {
-            let file = std::fs::File::open(&player_path)
-                .map_err(|e| format!("Failed to open player file: {}", e))?;
-            let player: Player = serde_json::from_reader(file)
-                .map_err(|e| format!("Failed to parse player data: {}", e))?;
-            player.credits
-        } else {
-            saved_game.settings.starting_credits
-        };
-
-        // Update the game state with the correct settings and credits
-        if let Ok(mut guard) = crate::GAME_STATE.lock() {
-            guard.settings = saved_game.settings.clone();
-            guard.credits = player_credits;
-        } else {
-            return Err("Failed to update game state".to_string());
-        }
-
-        // Save the settings to the game directory for the current session
-        let settings_path = Path::new("data").join("game").join("settings.json");
-        if let Err(e) = save_json(&settings_path, &saved_game.settings) {
-            return Err(format!("Failed to save current session settings: {}", e));
-        }
-
-        Ok("Game loaded successfully".to_string())
-    })();
-
-    match result {
-        Ok(message) => ApiResponse::success(message, "Success".to_string()),
-        Err(e) => ApiResponse::error(e)
-    }
-}
-
 #[post("/games/new", data = "<settings>")]
 pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>> {
     println!("Starting create_new_game with settings: {:?}", settings);
@@ -992,16 +899,21 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
         return ApiResponse::error("Failed to save settings".to_string());
     }
 
-    // Also save settings to the root game directory for backward compatibility
-    let root_settings_path = Path::new("data").join("game").join("settings.json");
-    if let Err(e) = save_json(&root_settings_path, &settings) {
-        println!("Error saving root settings: {}", e);
-        return ApiResponse::error("Failed to save root settings".to_string());
+    // Update game state with current game ID
+    let mut state = match crate::models::game_state::get_game_state() {
+        Ok(state) => state,
+        Err(e) => return ApiResponse::error(format!("Failed to get game state: {}", e)),
+    };
+    state.current_game_id = Some(game_id.clone());
+    state.credits = settings.starting_credits;
+    if let Err(e) = crate::models::game_state::save_game_state(state) {
+        println!("Error updating game state: {}", e);
+        return ApiResponse::error("Failed to update game state".to_string());
     }
 
     println!("Creating game world");
-    // Create the game world
-    let game_world = match crate::models::game_world::create_game_world_file(&settings, false) {
+    // Create the game world with force_regenerate=true to ensure we create a new one
+    let game_world = match crate::models::game_world::create_game_world_file(&settings, true) {
         Ok(world) => world,
         Err(e) => return ApiResponse::error(format!("Failed to create game world: {}", e)),
     };
@@ -1014,22 +926,30 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
 
     println!("Updating global game world");
     // Update the global game world
-    let game_world_clone = game_world.clone();
-    println!("Game world cloned, size: {}", game_world_clone.len());
-    
     if let Ok(mut guard) = crate::GLOBAL_GAME_WORLD.lock() {
         println!("Acquired GLOBAL_GAME_WORLD lock");
-        *guard = game_world;
+        *guard = game_world.clone();
         println!("Updated GLOBAL_GAME_WORLD with {} systems", guard.len());
     } else {
         println!("Failed to acquire GLOBAL_GAME_WORLD lock");
         return ApiResponse::error("Failed to update game world".to_string());
     }
 
-    println!("Starting market generation for {} systems", game_world_clone.len());
+    // Ensure the game world is properly initialized in memory
+    let game_world = if let Ok(guard) = crate::GLOBAL_GAME_WORLD.lock() {
+        guard.clone()
+    } else {
+        return ApiResponse::error("Failed to access game world".to_string());
+    };
+
+    println!("Starting market generation for {} systems", game_world.len());
     // Now that everything is set up, generate markets for all star systems
-    for (system_id, system) in game_world_clone.iter().enumerate() {
-        println!("Generating markets for system {} at position {:?}", system_id, system.position);
+    for (system_id, _) in game_world.iter().enumerate() {
+        println!("Generating markets for system {} at position {:?}", system_id, game_world[system_id].position);
+        // Ensure the game world is loaded in memory
+        if let Ok(mut guard) = crate::GLOBAL_GAME_WORLD.lock() {
+            *guard = game_world.clone();
+        }
         if let Err(e) = regenerate_system_markets(system_id) {
             println!("Error generating markets for system {}: {}", system_id, e);
             return ApiResponse::error(format!("Failed to generate markets for system {}: {}", system_id, e));
@@ -1144,6 +1064,61 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
 
     println!("Game creation completed successfully");
     ApiResponse::success("Game created successfully".to_string(), "Success".to_string())
+}
+
+#[get("/games/<game_id>/load")]
+pub fn load_game(game_id: String) -> Json<ApiResponse<String>> {
+    let result: Result<String, String> = (|| {
+        // Load the saved game
+        let saved_game = SavedGame::load_game(&game_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "Game not found".to_string())?;
+        
+        // Load the game world
+        let game_world = match crate::models::game_world::load_game_world(&game_id) {
+            Ok(world) => world,
+            Err(e) => return Err(format!("Failed to load game world: {}", e)),
+        };
+
+        // Update the global game world
+        if let Ok(mut guard) = crate::GLOBAL_GAME_WORLD.lock() {
+            *guard = game_world;
+        } else {
+            return Err("Failed to update game world".to_string());
+        }
+
+        // Load the player data to get the current credits
+        let player_path = Path::new("data")
+            .join("game")
+            .join(&game_id)
+            .join("players")
+            .join(format!("{}.json", saved_game.settings.player_name));
+
+        let player_credits = if player_path.exists() {
+            let file = std::fs::File::open(&player_path)
+                .map_err(|e| format!("Failed to open player file: {}", e))?;
+            let player: Player = serde_json::from_reader(file)
+                .map_err(|e| format!("Failed to parse player data: {}", e))?;
+            player.credits
+        } else {
+            saved_game.settings.starting_credits
+        };
+
+        // Update the game state with the current game ID and credits
+        let mut state = crate::models::game_state::get_game_state()
+            .map_err(|e| format!("Failed to get game state: {}", e))?;
+        state.current_game_id = Some(game_id.clone());
+        state.credits = player_credits;
+        crate::models::game_state::save_game_state(state)
+            .map_err(|e| format!("Failed to save game state: {}", e))?;
+
+        Ok("Game loaded successfully".to_string())
+    })();
+
+    match result {
+        Ok(message) => ApiResponse::success(message, "Success".to_string()),
+        Err(e) => ApiResponse::error(e)
+    }
 }
 
 #[get("/settings")]
@@ -1314,8 +1289,6 @@ pub fn sell_ship(system_id: usize, planet_id: usize, data: Json<ShipTradeData>) 
         Err(e) => ApiResponse::error(e)
     }
 }
-
-
 
 #[post("/planet/<system_id>/<planet_id>/trade_in_ship", format = "json", data = "<data>")]
 pub fn trade_in_ship(system_id: usize, planet_id: usize, data: Json<ShipTradeInData>) -> Json<ApiResponse<String>> {
@@ -1489,6 +1462,9 @@ pub fn remove_credits(name: &str, amount: Json<f32>) -> Json<ApiResponse<String>
 
 #[post("/clear-caches")]
 pub fn clear_caches() -> Json<ApiResponse<String>> {
-    crate::models::game_state::clear_caches();
+    // Clear all relevant caches
+    crate::models::game_state::SYSTEM_CACHE.remove_all();
+    crate::models::game_state::FLEET_CACHE.remove_all();
+    crate::models::game_state::MARKET_CACHE.remove_all();
     ApiResponse::success("Caches cleared successfully".to_string(), "Success".to_string())
 } 

@@ -231,7 +231,7 @@ pub fn save_fleet(fleet: &Fleet) -> Result<(), String> {
     let file = std::fs::File::create(fleet_path)
         .map_err(|e| format!("Failed to create fleet file: {}", e))?;
     
-    serde_json::to_writer_pretty(file, fleet)
+    serde_json::to_writer(file, fleet)
         .map_err(|e| format!("Failed to write fleet data: {}", e))?;
     
     Ok(())

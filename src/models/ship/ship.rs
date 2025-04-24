@@ -129,6 +129,17 @@ pub enum ShipEngine {
 }
 
 impl Distribution<ShipEngine> for Standard {
+    /// Generates a random `ShipEngine` variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `rng` - The random number generator to use. This is an object that implements
+    ///           the `Rng` trait, which provides functionality for generating random
+    ///           numbers.
+    ///
+    /// # Returns
+    ///
+    /// A randomly chosen `ShipEngine` variant
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ShipEngine {
         match rng.gen_range(0..3) {
             0 => ShipEngine::Basic,
@@ -139,6 +150,19 @@ impl Distribution<ShipEngine> for Standard {
 }
 
 impl Distribution<ShipSize> for Standard {
+/*************  ✨ Windsurf Command ⭐  *************/
+    /// Generates a random `ShipSize` variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `rng` - The random number generator to use. This is an object that implements
+    ///           the `Rng` trait, which provides functionality for generating random
+    ///           numbers.
+    ///
+    /// # Returns
+    ///
+    /// A randomly chosen `ShipSize` variant
+/*******  53fab63a-0acf-4917-9851-3e20669cdaef  *******/
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ShipSize {
         match rng.gen_range(0..6) {
             0 => ShipSize::Tiny,
@@ -152,6 +176,17 @@ impl Distribution<ShipSize> for Standard {
 }
 
 impl Distribution<ShipType> for Standard {
+    /// Generates a random `ShipType` variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `rng` - The random number generator to use. This is an object that implements
+    ///           the `Rng` trait, which provides functionality for generating random
+    ///           numbers.
+    ///
+    /// # Returns
+    ///
+    /// A randomly chosen `ShipType` variant
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ShipType {
         match rng.gen_range(0..5) {
             0 => ShipType::Fighter,
@@ -163,6 +198,15 @@ impl Distribution<ShipType> for Standard {
         }
     }
 }
+/// Generates a set of weapons for a ship based on its specialization.
+///
+/// # Arguments
+///
+/// * `specialization` - The type of ship to generate weapons for
+///
+/// # Returns
+///
+/// A vector of weapons for the given ship specialization.
 fn generate_ship_weapons(specialization: &ShipType) -> Vec<Weapon> {
     let mut weapons = Vec::new();
 

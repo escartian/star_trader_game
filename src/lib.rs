@@ -10,4 +10,5 @@ pub use constants::*;
 #[cfg(test)]
 mod tests {
     mod test_fleet_movement;
+    mod test_position;
 } 

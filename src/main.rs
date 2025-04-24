@@ -4,35 +4,16 @@ pub mod routes;
 pub mod combat;
 pub mod encounters;
 
-use rocket::{get, routes, Request, Response};
-use std::sync::atomic::Ordering;
-
+use rocket::routes;
 use rocket::catchers;
-use serde_json::to_writer;
 
-use std::fs;
 use std::env;
 
-use std::fs::File;
-use std::path::Path;
-use std::string::String;
-
-use crate::routes::*;
-
-use crate::models::player::Player;
-use crate::models::star_system::StarSystem;
-use crate::models::trader::Trader;
 use lazy_static::lazy_static;
-use std::io::Read;
 use std::sync::Mutex;
 
-use crate::models::settings::{GameSettings, load_settings, save_settings};
-use crate::models::game_world;
-use crate::models::game_world::create_game_world_file;
-use crate::models::faction::{Faction, save_faction};
-use crate::models::fleet::generate_and_save_fleet;
-use crate::models::position::Position;
-use crate::models::position::random_position;
+use crate::routes::*;
+use crate::models::star_system::StarSystem;
 
 use rocket_cors::{AllowedOrigins, CorsOptions, AllowedHeaders};
 use rocket::fs::FileServer;

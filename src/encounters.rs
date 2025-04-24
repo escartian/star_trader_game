@@ -6,9 +6,9 @@ use crate::models::ship::shield::Shield;
 use crate::models::position::Position;
 use rand::Rng;
 use crate::models::resource::{ResourceType, Resource};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
-#[derive(Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncounterFleet {
     pub name: String,
     pub owner_id: String,

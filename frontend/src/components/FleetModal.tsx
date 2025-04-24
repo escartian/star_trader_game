@@ -129,7 +129,8 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
             currentFleet: !!currentFleet,
             targetX: targetX,
             targetY: targetY,
-            targetZ: targetZ
+            targetZ: targetZ,
+            mapBounds
         });
 
         if (!currentFleet || targetX === undefined || targetY === undefined || targetZ === undefined) {
@@ -139,6 +140,15 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
                 targetY: targetY === undefined,
                 targetZ: targetZ === undefined
             });
+            return;
+        }
+
+        // Validate coordinates against map bounds
+        if (targetX < mapBounds.min || targetX > mapBounds.max ||
+            targetY < mapBounds.min || targetY > mapBounds.max ||
+            targetZ < mapBounds.min || targetZ > mapBounds.max) {
+            setMoveMessage(`Target position is outside galaxy bounds [${mapBounds.min} to ${mapBounds.max}]. Please choose coordinates within the galaxy boundaries.`);
+            setMoveStatus('error');
             return;
         }
 

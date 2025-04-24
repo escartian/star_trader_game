@@ -4,9 +4,8 @@ use std::sync::{Arc, RwLock, Mutex};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use std::io::Write;
-#[macro_use]
 use lazy_static::lazy_static;
-use crate::models::settings::{GameSettings, load_settings};
+use crate::models::settings::load_settings;
 use crate::models::player::Player;
 use crate::models::star_system::StarSystem;
 use crate::models::fleet::Fleet;
@@ -122,6 +121,14 @@ pub fn game_path_with_id(game_id: &str, components: &[&str]) -> PathBuf {
         path = path.join(component);
     }
     path
+}
+
+pub fn game_data_path(game_id: &str, path: &[&str]) -> std::path::PathBuf {
+    let mut full_path = std::path::PathBuf::from("data").join("game").join(game_id);
+    for component in path {
+        full_path = full_path.join(component);
+    }
+    full_path
 }
 
 pub fn ensure_parent_dirs(path: &Path) -> std::io::Result<()> {

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Fleet, Ship, Shield, Armor, Weapon, ResourceType } from '../types/game';
+import { Fleet, Ship, Shield, Armor, Weapon, ResourceType, StarSystem, Position } from '../types/game';
 import { api } from '../services/api';
 import './FleetModal.css';
 
@@ -30,6 +30,10 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
     const [error, setError] = useState<string>('');
     const [mapBounds, setMapBounds] = useState<{ min: number; max: number }>({ min: -1000, max: 1000 });
     const [currentSystemName, setCurrentSystemName] = useState<string>('');
+    const [currentSystemCenter, setCurrentSystemCenter] = useState<Position | null>(null);
+    const [allSystems, setAllSystems] = useState<StarSystem[]>([]);
+    const [moveSpace, setMoveSpace] = useState<'galaxy' | 'system'>(fleet?.current_system_id !== null && fleet?.current_system_id !== undefined ? 'system' : 'galaxy');
+    const [targetSystemId, setTargetSystemId] = useState<number | undefined>(fleet?.current_system_id ?? undefined);
     const [isLoading, setIsLoading] = useState(true);
 
     // Add effect to clear move message after delay
@@ -52,6 +56,9 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
                 const maxCoord = Math.floor(settings.map_width);
                 setMapBounds({ min: -maxCoord, max: maxCoord });
                 console.log('Loaded map bounds:', { min: -maxCoord, max: maxCoord });
+                // Load systems for dropdown
+                const systems = await api.getGalaxyMap();
+                setAllSystems(systems);
             } catch (err) {
                 console.error('Failed to load player settings:', err);
                 setError('Failed to load player settings');
@@ -68,15 +75,39 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
                 try {
                     const system = await api.getStarSystem(currentFleet.current_system_id);
                     setCurrentSystemName(system.star.name);
+                    setCurrentSystemCenter(system.position);
                 } catch (err) {
                     console.error('Error loading star system:', err);
+                    setCurrentSystemCenter(null);
                 }
             } else {
                 setCurrentSystemName('');
+                setCurrentSystemCenter(null);
             }
         };
         loadSystemName();
     }, [currentFleet?.current_system_id]);
+
+    // Keep inputs in sync with move mode and current fleet location
+    useEffect(() => {
+        if (!currentFleet) return;
+        if (moveSpace === 'system') {
+            if (currentFleet.local_position) {
+                setTargetX(currentFleet.local_position.x);
+                setTargetY(currentFleet.local_position.y);
+                setTargetZ(currentFleet.local_position.z);
+            } else if (currentSystemCenter) {
+                setTargetX(currentFleet.position.x - currentSystemCenter.x);
+                setTargetY(currentFleet.position.y - currentSystemCenter.y);
+                setTargetZ(currentFleet.position.z - currentSystemCenter.z);
+            }
+        } else {
+            setTargetX(currentFleet.position.x);
+            setTargetY(currentFleet.position.y);
+            setTargetZ(currentFleet.position.z);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [moveSpace, currentFleet, currentSystemCenter]);
 
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
@@ -143,14 +174,7 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
             return;
         }
 
-        // Validate coordinates against map bounds
-        if (targetX < mapBounds.min || targetX > mapBounds.max ||
-            targetY < mapBounds.min || targetY > mapBounds.max ||
-            targetZ < mapBounds.min || targetZ > mapBounds.max) {
-            setMoveMessage(`Target position is outside galaxy bounds [${mapBounds.min} to ${mapBounds.max}]. Please choose coordinates within the galaxy boundaries.`);
-            setMoveStatus('error');
-            return;
-        }
+        // Do not block deep-space exits on the client. Backend interprets direction and exits system.
 
         console.log('=== Starting Fleet Movement ===');
         console.log('Fleet:', {
@@ -166,13 +190,57 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
             const owner_id = encodeURIComponent(parts[1]);
             const fleet_number = parseInt(parts[2]);
 
+            // Compute target coordinates depending on mode
+            let sendX = targetX;
+            let sendY = targetY;
+            let sendZ = targetZ;
+            let sendSystemId: number | undefined = undefined;
+
+            if (moveSpace === 'system') {
+                // Resolve target system: dropdown uses system.id, otherwise use current_system_id (id or index)
+                const resolvedIdOrIdx =
+                    targetSystemId !== undefined ? targetSystemId : currentFleet.current_system_id ?? undefined;
+
+                if (resolvedIdOrIdx === undefined) {
+                    setMoveMessage('Select a target system or move in Galaxy mode');
+                    setMoveStatus('error');
+                    return;
+                }
+
+                // Find system by id first, then fallback to treating the value as an index
+                const system = allSystems.find(s => s.id === resolvedIdOrIdx) ?? allSystems[resolvedIdOrIdx];
+                if (!system) {
+                    setMoveMessage(`Target system ${resolvedIdOrIdx} not found`);
+                    setMoveStatus('error');
+                    return;
+                }
+                // Clamp local inputs to system cube bounds ±map_width
+                const clampedLocalX = Math.max(mapBounds.min, Math.min(mapBounds.max, targetX));
+                const clampedLocalY = Math.max(mapBounds.min, Math.min(mapBounds.max, targetY));
+                const clampedLocalZ = Math.max(mapBounds.min, Math.min(mapBounds.max, targetZ));
+                // Convert local (in-system) coords → galaxy coords
+                sendX = system.position.x + clampedLocalX;
+                sendY = system.position.y + clampedLocalY;
+                sendZ = system.position.z + clampedLocalZ;
+                // Always send stable system id
+                sendSystemId = system.id;
+            }
+
             console.log('Sending move request:', {
                 owner_id,
                 fleet_number,
-                target: { x: targetX, y: targetY, z: targetZ }
+                target: { x: sendX, y: sendY, z: sendZ },
+                space: moveSpace,
+                system_id: sendSystemId,
             });
 
-            const response = await api.moveFleet(owner_id, fleet_number, targetX, targetY, targetZ);
+            const response = await api.moveFleet(owner_id, fleet_number, {
+                x: sendX,
+                y: sendY,
+                z: sendZ,
+                space: moveSpace,
+                system_id: sendSystemId,
+            });
             console.log('Move response:', response);
             
             const responseData = JSON.parse(response);
@@ -190,21 +258,31 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
             if (data.status === 'success') {
                 setMoveMessage('Fleet moved successfully');
                 setMoveStatus('success');
-                if (onMove) {
-                    onMove(currentFleet, targetX, targetY, targetZ, false);
-                }
+                // Update local state using server-reported galaxy position
+                setCurrentFleet((prev) => ({
+                    ...prev,
+                    position: data.current_position,
+                    current_system_id: data.current_system_id,
+                    local_position: data.local_current_position ?? prev.local_position,
+                }));
             } else if (data.status === 'transition_entry') {
                 setMoveMessage(`Fleet entered System ${data.current_system_id}`);
                 setMoveStatus('info');
-                if (onMove) {
-                    onMove(currentFleet, targetX, targetY, targetZ, false);
-                }
+                setCurrentFleet((prev) => ({
+                    ...prev,
+                    position: data.current_position,
+                    current_system_id: data.current_system_id,
+                    local_position: data.local_current_position ?? prev.local_position,
+                }));
             } else if (data.status === 'transition_exit') {
                 setMoveMessage('Fleet exited the star system');
                 setMoveStatus('info');
-                if (onMove) {
-                    onMove(currentFleet, targetX, targetY, targetZ, false);
-                }
+                setCurrentFleet((prev) => ({
+                    ...prev,
+                    position: data.current_position,
+                    current_system_id: data.current_system_id,
+                    local_position: data.local_current_position ?? prev.local_position,
+                }));
             } else {
                 console.error('Unexpected move response status:', data.status);
                 setMoveMessage(data.message || 'Move failed');
@@ -257,10 +335,21 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
                             <div className="stat-item">
                                 <span className="stat-label">Current Position:</span>
                                 <span className="stat-value">
-                                    {currentFleet?.position ? 
-                                        `(${currentFleet.position.x.toFixed(2)}, ${currentFleet.position.y.toFixed(2)}, ${currentFleet.position.z.toFixed(2)})` : 
-                                        'Unknown'
-                                    }
+                                    {currentFleet?.position ? (
+                                            currentFleet.current_system_id !== null && currentFleet.current_system_id !== undefined && currentSystemCenter ? (
+                                                <>
+                                                    <span>{`Gal: (${currentSystemCenter.x}, ${currentSystemCenter.y}, ${currentSystemCenter.z})`}</span>
+                                                    {currentFleet.local_position && (
+                                                        <>
+                                                            <br />
+                                                            <span>{`Local: (${currentFleet.local_position.x}, ${currentFleet.local_position.y}, ${currentFleet.local_position.z})`}</span>
+                                                        </>
+                                                    )}
+                                                </>
+                                            ) : (
+                                            <span>{`Gal: (${currentFleet.position.x}, ${currentFleet.position.y}, ${currentFleet.position.z})`}</span>
+                                        )
+                                    ) : 'Unknown'}
                                 </span>
                             </div>
                             <div className="stat-item">
@@ -283,55 +372,86 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
                                 <div className="loading-message">Loading map settings...</div>
                             ) : (
                                 <>
+                                    <div className="movement-mode" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                                        <label>
+                                            Move Mode:
+                                            <select value={moveSpace} onChange={(e) => setMoveSpace(e.target.value as 'galaxy' | 'system')}>
+                                                <option value="galaxy">Galaxy (deep space)</option>
+                                                <option value="system">Within system</option>
+                                            </select>
+                                        </label>
+                                        {moveSpace === 'system' && (
+                                            <label>
+                                                Target System:
+                                                <select
+                                                    value={targetSystemId ?? ''}
+                                                    onChange={(e) => setTargetSystemId(e.target.value ? Number(e.target.value) : undefined)}
+                                                >
+                                                    <option value="">Select system</option>
+                                                    {allSystems.map((s, idx) => (
+                                                        <option key={idx} value={idx}>
+                                                            {s.star.name} (#{idx})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                        )}
+                                    </div>
                                     {currentFleet.current_system_id !== null && currentFleet.current_system_id !== undefined && (
                                         <div className="system-bounds-info">
                                             <p>
-                                                <strong>System Movement Guide:</strong>
+                                                <strong>Movement Guide:</strong>
                                                 <br />
-                                                • You are currently in {currentSystemName || `Star System ${currentFleet.current_system_id}`}
+                                                • You are currently in {currentSystemName || `Star System ${currentFleet.current_system_id}`}.
                                                 <br />
-                                                • To move within the system, use coordinates between {mapBounds.min} and {mapBounds.max}
+                                                • Use <em>Move Mode = Within system</em> to move to in-system coordinates (shown below).
                                                 <br />
-                                                • To exit the system, set coordinates beyond these bounds
+                                                • Use <em>Move Mode = Galaxy (deep space)</em> to leave this system or travel between systems using galaxy coordinates.
                                                 <br />
-                                                • When exiting, your fleet will transition to the galaxy map near this system's location
+                                                • Selecting a <em>Target System</em> in Within‑system mode will auto-travel to that system first (deep space), then apply the in‑system move.
                                             </p>
                                         </div>
                                     )}
                                     <div className="movement-controls">
                                         <div className="coordinate-input">
-                                            <label>Target X {currentFleet.current_system_id !== null ? 
-                                                `(System bounds: ${mapBounds.min} to ${mapBounds.max}, exceed to exit)` : 
-                                                `(${mapBounds.min} to ${mapBounds.max})`}:
-                                            </label>
+                                            <label>Target X {moveSpace === 'system' ? `(in-system coords)` : `(galaxy coords)`}:</label>
                                             <input
                                                 type="number"
                                                 value={targetX}
-                                                onChange={(e) => setTargetX(Number(e.target.value))}
+                                                min={mapBounds.min}
+                                                max={mapBounds.max}
+                                                onChange={(e) => {
+                                                    const v = Number(e.target.value);
+                                                    setTargetX(Math.max(mapBounds.min, Math.min(mapBounds.max, v)));
+                                                }}
                                                 disabled={isLoading}
                                             />
                                         </div>
                                         <div className="coordinate-input">
-                                            <label>Target Y {currentFleet.current_system_id !== null ? 
-                                                `(System bounds: ${mapBounds.min} to ${mapBounds.max}, exceed to exit)` : 
-                                                `(${mapBounds.min} to ${mapBounds.max})`}:
-                                            </label>
+                                            <label>Target Y {moveSpace === 'system' ? `(in-system coords)` : `(galaxy coords)`}:</label>
                                             <input
                                                 type="number"
                                                 value={targetY}
-                                                onChange={(e) => setTargetY(Number(e.target.value))}
+                                                min={mapBounds.min}
+                                                max={mapBounds.max}
+                                                onChange={(e) => {
+                                                    const v = Number(e.target.value);
+                                                    setTargetY(Math.max(mapBounds.min, Math.min(mapBounds.max, v)));
+                                                }}
                                                 disabled={isLoading}
                                             />
                                         </div>
                                         <div className="coordinate-input">
-                                            <label>Target Z {currentFleet.current_system_id !== null ? 
-                                                `(System bounds: ${mapBounds.min} to ${mapBounds.max}, exceed to exit)` : 
-                                                `(${mapBounds.min} to ${mapBounds.max})`}:
-                                            </label>
+                                            <label>Target Z {moveSpace === 'system' ? `(in-system coords)` : `(galaxy coords)`}:</label>
                                             <input
                                                 type="number"
                                                 value={targetZ}
-                                                onChange={(e) => setTargetZ(Number(e.target.value))}
+                                                min={mapBounds.min}
+                                                max={mapBounds.max}
+                                                onChange={(e) => {
+                                                    const v = Number(e.target.value);
+                                                    setTargetZ(Math.max(mapBounds.min, Math.min(mapBounds.max, v)));
+                                                }}
                                                 disabled={isLoading}
                                             />
                                         </div>
@@ -340,13 +460,11 @@ export const FleetModal: React.FC<FleetModalProps> = ({ isOpen, onClose, fleet, 
                                             onClick={handleMove}
                                             disabled={isLoading}
                                         >
-                                            {currentFleet.current_system_id !== null && 
-                                             (Math.abs(targetX) > mapBounds.max || 
-                                              Math.abs(targetY) > mapBounds.max || 
-                                              Math.abs(targetZ) > mapBounds.max) 
-                                                ? "Exit System" 
-                                                : "Move Fleet"}
+                                            {moveSpace === 'galaxy' ? 'Move Fleet (Galaxy)' : 'Move Fleet (System)'}
                                         </button>
+                                        {moveSpace === 'galaxy' && (
+                                            <div className="hint">{`Galaxy bounds: ${mapBounds.min}-${mapBounds.max}`}</div>
+                                        )}
                                         {moveMessage && (
                                             <div className={`move-message ${moveStatus}`}>
                                                 {moveMessage}

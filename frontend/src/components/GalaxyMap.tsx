@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { StarSystem, Planet } from '../types/game';
+import { StarSystem, Planet, Fleet } from '../types/game';
 import { api } from '../services/api';
 import { StarSystemModal } from './StarSystemModal';
 import './GalaxyMap.css';
 
-export const GalaxyMap: React.FC = () => {
+interface GalaxyMapProps {
+    selectedFleet?: Fleet | null;
+}
+
+export const GalaxyMap: React.FC<GalaxyMapProps> = ({ selectedFleet = null }) => {
     const [systems, setSystems] = useState<StarSystem[]>([]);
     const [selectedSystem, setSelectedSystem] = useState<StarSystem | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [filterText, setFilterText] = useState<string>('');
+    const [sortKey, setSortKey] = useState<'name' | 'planets'>('name');
+    const [galaxyBound, setGalaxyBound] = useState<number | null>(null);
 
     useEffect(() => {
         const loadSystems = async () => {
@@ -17,6 +24,9 @@ export const GalaxyMap: React.FC = () => {
                 setError(null);
                 const systems = await api.getGalaxyMap();
                 setSystems(systems);
+                // Also load settings for bounds display
+                const settings = await api.getGameSettings();
+                setGalaxyBound(Math.floor(settings.map_width));
             } catch (err) {
                 console.error('Error loading star systems:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load star systems');
@@ -44,19 +54,45 @@ export const GalaxyMap: React.FC = () => {
         return <div className="galaxy-map error">{error}</div>;
     }
 
+    const visibleSystems = systems
+        .filter(s => !filterText || s.star.name.toLowerCase().includes(filterText.toLowerCase()))
+        .sort((a, b) => sortKey === 'name' ? a.star.name.localeCompare(b.star.name) : b.planets.length - a.planets.length);
+
+    const handleClear = () => {
+        setFilterText('');
+        setSortKey('name');
+    };
+
     return (
         <div className="galaxy-map">
             <div className="galaxy-map-container">
                 <div className="galaxy-map-header">
                     <h2 className="galaxy-map-title">Galaxy Map</h2>
                     <div className="galaxy-map-controls">
-                        <button className="galaxy-map-button">Filter Systems</button>
-                        <button className="galaxy-map-button">Sort By</button>
+                        {galaxyBound !== null && (
+                            <span className="galaxy-bounds">{`Galaxy bounds: -${galaxyBound} .. +${galaxyBound}`}</span>
+                        )}
+                        <input
+                            placeholder="Filter by name..."
+                            value={filterText}
+                            onChange={(e) => setFilterText(e.target.value)}
+                            className="galaxy-map-filter"
+                        />
+                        <select value={sortKey} onChange={(e) => setSortKey(e.target.value as 'name' | 'planets')}>
+                            <option value="name">Sort: Name</option>
+                            <option value="planets">Sort: # Planets</option>
+                        </select>
+                        <button className="galaxy-map-button" onClick={handleClear}>Clear</button>
                     </div>
                 </div>
                 <div className="galaxy-map-content">
+                    {selectedFleet && (
+                        <div className="selected-fleet-banner" style={{ marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span>Selected Fleet: {selectedFleet.name}</span>
+                        </div>
+                    )}
                     <div className="systems-grid">
-                        {systems.map((system) => (
+                        {visibleSystems.map((system) => (
                             <div
                                 key={system.star.name}
                                 className={`system-card ${selectedSystem?.star.name === system.star.name ? 'selected' : ''}`}
@@ -96,6 +132,7 @@ export const GalaxyMap: React.FC = () => {
                 <StarSystemModal
                     system={selectedSystem}
                     systemIndex={systems.findIndex(s => s.star.name === selectedSystem.star.name)}
+                    selectedFleet={selectedFleet}
                     onClose={handleCloseModal}
                 />
             )}

@@ -63,14 +63,19 @@ export const api = {
         return handleApiResponse<Fleet | null>(response);
     },
 
-    moveFleet: async (ownerId: string, fleetNumber: number, x: number, y: number, z: number): Promise<string> => {
-        console.log(`Moving fleet ${ownerId}_${fleetNumber} to (${x}, ${y}, ${z})`);
+    moveFleet: async (
+        ownerId: string,
+        fleetNumber: number,
+        payload: { x: number; y: number; z: number; space?: 'galaxy' | 'system'; system_id?: number; planet_id?: number }
+    ): Promise<string> => {
+        const { x, y, z, space, system_id, planet_id } = payload;
+        console.log(`Moving fleet ${ownerId}_${fleetNumber} with intent`, payload);
         const response = await fetch(`${API_BASE_URL}/fleet/${ownerId}/${fleetNumber}/move`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ x, y, z }),
+            body: JSON.stringify({ x, y, z, space, system_id, planet_id }),
         });
 
         const responseText = await response.text();

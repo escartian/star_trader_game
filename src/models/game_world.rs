@@ -21,9 +21,8 @@ use crate::models::economy::Economy;
 use crate::models::position::random_position;
 use crate::models::star_system::generate_star_system;
 use serde::ser::{Serialize, Serializer, SerializeSeq};
-use serde::{Deserialize};
-use std::sync::Mutex;
-use lazy_static::lazy_static;
+use serde::Deserialize;
+use crate::constants::GLOBAL_GAME_WORLD;
 use std::error::Error;
 
 pub struct GameWorld {
@@ -90,12 +89,13 @@ pub fn create_game_world_file(settings: &GameSettings, force_regenerate: bool) -
     // Generate star systems
     for i in 0..settings.star_count {
         println!("Generating star system {}/{}", i + 1, settings.star_count);
-        let system = generate_star_system(
+        let mut system = generate_star_system(
             settings.map_width as i32,
             settings.map_height as i32,
             settings.map_length as i32,
             &mut existing_names
         );
+        system.id = i as usize;
         println!("Successfully generated star system at position {:?}", system.position);
         world.push(system);
     }
@@ -204,15 +204,9 @@ pub fn save_game_world(_game_id: &str, star_systems: &[StarSystem]) -> std::io::
     Ok(())
 }
 
-lazy_static! {
-    pub static ref GLOBAL_GAME_WORLD: Mutex<Vec<StarSystem>> = {
-        println!("Initializing empty game world");
-        Mutex::new(Vec::new())
-    };
-}
-
+/// Retrieves the global game world initialized at crate root.
 pub fn get_global_game_world() -> Vec<StarSystem> {
-    if let Ok(guard) = GLOBAL_GAME_WORLD.lock() {
+    if let Ok(guard) = crate::GLOBAL_GAME_WORLD.lock() {
         guard.clone()
     } else {
         Vec::new()

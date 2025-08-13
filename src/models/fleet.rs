@@ -19,6 +19,8 @@ pub struct Fleet {
     pub owner_id: String,
     pub ships: Vec<Ship>,
     pub position: Position,
+    #[serde(default)]
+    pub local_position: Option<Position>,
     pub current_system_id: Option<usize>, // Optional because fleet might be between systems
     pub last_move_distance: Option<f64>,
 }
@@ -32,6 +34,29 @@ pub struct MoveFleetResponse {
     pub target_position: Position,
     pub remaining_distance: f64,
     pub current_system_id: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub breakdown: Option<DistanceBreakdown>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local_current_position: Option<Position>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local_target_position: Option<Position>,
+}
+
+#[derive(Serialize, Debug, Default, Clone)]
+pub struct DistanceBreakdown {
+    pub in_system_exit: f64,
+    pub deep_space: f64,
+    pub in_system_entry: f64,
+    pub total_raw: f64,
+    pub scale_factor: f64,
+    pub total_scaled: f64,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum MovementSpace {
+    Galaxy,
+    System,
 }
 
 #[derive(Deserialize)]
@@ -39,6 +64,12 @@ pub struct MoveFleetData {
     pub x: i32,
     pub y: i32,
     pub z: i32,
+    #[serde(default)]
+    pub space: Option<MovementSpace>,
+    #[serde(default)]
+    pub system_id: Option<usize>,
+    #[serde(default)]
+    pub planet_id: Option<usize>,
 }
 
 impl Fleet {
@@ -55,6 +86,7 @@ impl Fleet {
             owner_id,
             ships: Vec::new(),
             position,
+            local_position: None,
             current_system_id: None,
             last_move_distance: None,
         }

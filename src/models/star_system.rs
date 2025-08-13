@@ -8,6 +8,8 @@ use super::{star::{generate_star, Star}, position::Position};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StarSystem {
+    #[serde(default)]
+    pub id: usize,
     pub star: Star,
     //this is used to maintain position of the StarSystem in the galaxy
     pub position: Position,
@@ -42,6 +44,7 @@ pub fn generate_star_system_default() -> StarSystem {
     let position = random_position(1000, 1000, 1000); // Default to 1000x1000x1000 if no dimensions provided
 
     let star_system = StarSystem { 
+        id: 0, // placeholder; caller should assign real id when saving
         star, 
         position, 
         planets,
@@ -70,6 +73,7 @@ pub fn generate_star_system(map_width: i32, map_height: i32, map_length: i32, ex
     let position = random_position(map_width, map_height, map_length);
 
     let star_system = StarSystem { 
+        id: 0,
         star, 
         position, 
         planets

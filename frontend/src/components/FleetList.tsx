@@ -7,7 +7,11 @@ import { EncounterModal } from './EncounterModal';
 import { TraderEncounterModal } from './TraderEncounterModal';
 import './FleetList.css';
 
-export const FleetList: React.FC = () => {
+interface FleetListProps {
+    onFleetSelected?: (fleet: Fleet | null) => void;
+}
+
+export const FleetList: React.FC<FleetListProps> = ({ onFleetSelected }) => {
     const [fleets, setFleets] = useState<Fleet[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -124,6 +128,7 @@ export const FleetList: React.FC = () => {
             if (fleet.position && fleet.ships) {
                 console.log('Using existing fleet data - all properties present');
                 setSelectedFleet(fleet);
+                onFleetSelected?.(fleet);
                 return;
             }
 
@@ -156,6 +161,7 @@ export const FleetList: React.FC = () => {
                 console.log('Has position:', !!fleetData.position);
                 console.log('Has ships:', !!fleetData.ships);
                 setSelectedFleet(fleetData);
+                onFleetSelected?.(fleetData);
             } else {
                 console.error('No fleet data received from API');
             }
@@ -175,6 +181,7 @@ export const FleetList: React.FC = () => {
     }, [selectedFleet]);
 
     const handleCloseModal = () => {
+        // Close the local modal but keep the globally selected fleet
         setSelectedFleet(null);
     };
 
@@ -338,96 +345,38 @@ export const FleetList: React.FC = () => {
             const owner_id = encodeURIComponent(parts[1]); // Encode the owner_id
             const fleet_number = parseInt(parts[2]);
 
-            // First try the requested move type
-            let endpoint = isLocalMove ? 'move_local' : 'move';
-            console.log('Attempting move with endpoint:', endpoint);
-            
-            const response = await fetch(`/api/fleet/${owner_id}/${fleet_number}/${endpoint}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    x: targetX,
-                    y: targetY,
-                    z: targetZ
-                }),
-            });
-
-            console.log('Move API Response Status:', response.status);
-            const data = await response.json();
-            console.log('Move API Response Data:', data);
-
-            if (!data.success) {
-                // If the move failed because we need to use move_local, try that instead
-                if (data.message && data.message.includes('Use /move_local instead')) {
-                    console.log('Retrying with move_local endpoint...');
-                    const localResponse = await fetch(`/api/fleet/${owner_id}/${fleet_number}/move_local`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            x: targetX,
-                            y: targetY,
-                            z: targetZ
-                        }),
-                    });
-                    
-                    console.log('Move_local API Response Status:', localResponse.status);
-                    const localData = await localResponse.json();
-                    console.log('Move_local API Response Data:', localData);
-
-                    if (!localData.success) {
-                        throw new Error(localData.message || 'Failed to move fleet locally');
-                    }
-
-                    // Update the fleet position based on the local move response
-                    const updatedFleet = {
-                        ...fleet,
-                        position: {
-                            x: localData.data.current_position.x,
-                            y: localData.data.current_position.y,
-                            z: localData.data.current_position.z
-                        },
-                        current_system_id: localData.data.current_system_id
-                    };
-                    console.log('Updated Fleet after local move:', updatedFleet);
-
-                    // Update the fleet in the list
-                    setFleets(fleets.map(f => f.name === fleet.name ? updatedFleet : f));
-                    
-                    // Update the selected fleet if it's the same fleet
-                    if (selectedFleet && selectedFleet.name === fleet.name) {
-                        setSelectedFleet(updatedFleet);
-                    }
-                    
-                    console.log('Fleet list and selected fleet updated successfully after local move');
-                    return;
+            // Build move intent using the same API as the modal
+            const payload: any = { x: targetX, y: targetY, z: targetZ };
+            if (isLocalMove) {
+                payload.space = 'system';
+                // Use stable system id; if missing, treat as galaxy move
+                if (fleet.current_system_id !== null && fleet.current_system_id !== undefined) {
+                    payload.system_id = fleet.current_system_id;
                 }
-                throw new Error(data.message || 'Failed to move fleet');
+            } else {
+                payload.space = 'galaxy';
             }
 
-            // Update the fleet position based on the response
+            const responseText = await api.moveFleet(owner_id, fleet_number, payload);
+            const parsed = JSON.parse(responseText);
+            console.log('Move API Response Data:', parsed);
+            if (!parsed.success) {
+                throw new Error(parsed.message || 'Failed to move fleet');
+            }
+
+            const resp = parsed.data;
             const updatedFleet = {
                 ...fleet,
-                position: {
-                    x: data.data.current_position.x,
-                    y: data.data.current_position.y,
-                    z: data.data.current_position.z
-                },
-                current_system_id: data.data.current_system_id
-            };
-            console.log('Updated Fleet after move:', updatedFleet);
+                position: resp.current_position,
+                current_system_id: resp.current_system_id,
+                local_position: resp.local_current_position ?? fleet.local_position,
+            } as Fleet;
 
-            // Update the fleet in the list
+            console.log('Updated Fleet after move:', updatedFleet);
             setFleets(fleets.map(f => f.name === fleet.name ? updatedFleet : f));
-            
-            // Update the selected fleet if it's the same fleet
             if (selectedFleet && selectedFleet.name === fleet.name) {
                 setSelectedFleet(updatedFleet);
             }
-            
             console.log('Fleet list and selected fleet updated successfully');
         } catch (error) {
             console.error('Error moving fleet:', error);
@@ -548,3 +497,5 @@ export const FleetList: React.FC = () => {
         </div>
     );
 };
+
+export default FleetList;

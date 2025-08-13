@@ -9,22 +9,13 @@ use rocket::catchers;
 
 use std::env;
 
-use lazy_static::lazy_static;
-use std::sync::Mutex;
-
 use crate::routes::*;
 use crate::models::star_system::StarSystem;
 
 use rocket_cors::{AllowedOrigins, CorsOptions, AllowedHeaders};
 use rocket::fs::FileServer;
 
-lazy_static! {
-    static ref EMPTY_WORLD: Vec<StarSystem> = Vec::new();
-    static ref GLOBAL_GAME_WORLD: Mutex<Vec<StarSystem>> = {
-        println!("Initializing empty game world");
-        Mutex::new(Vec::new())
-    };
-}
+use crate::constants::GLOBAL_GAME_WORLD;
 
 pub(crate) fn get_global_game_world() -> Vec<StarSystem> {
     if let Ok(guard) = GLOBAL_GAME_WORLD.lock() {

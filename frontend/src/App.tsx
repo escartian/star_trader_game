@@ -3,7 +3,7 @@ import { MainMenu } from './components/MainMenu';
 import { GalaxyMap } from './components/GalaxyMap';
 import { FleetList } from './components/FleetList';
 import { TabBar, TabType } from './components/TabBar';
-import { Player, GameSettings } from './types/game';
+import { Player, GameSettings, Fleet } from './types/game';
 import { api } from './services/api';
 import './App.css';
 
@@ -11,6 +11,7 @@ function App() {
     const [isInGame, setIsInGame] = useState(false);
     const [player, setPlayer] = useState<Player | null>(null);
     const [activeTab, setActiveTab] = useState<TabType>('galaxy');
+  const [selectedFleet, setSelectedFleet] = useState<Fleet | null>(null);
 
     useEffect(() => {
         if (isInGame) {
@@ -69,9 +70,9 @@ function App() {
 
         switch (activeTab) {
             case 'galaxy':
-                return <GalaxyMap />;
+                return <GalaxyMap selectedFleet={selectedFleet} />;
             case 'fleets':
-                return <FleetList />;
+                return <FleetList onFleetSelected={setSelectedFleet} />;
             case 'market':
                 return <div>Market View (Coming Soon)</div>;
             case 'research':

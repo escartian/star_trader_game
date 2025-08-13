@@ -55,6 +55,7 @@ export interface Fleet {
     owner_id: string;
     ships: Ship[];
     position: Position;
+    local_position?: Position;
     current_system_id: number | null;
     last_move_distance?: number;
     transition_message?: string;
@@ -147,4 +148,6 @@ export interface MoveFleetResponse {
     target_position: Position;
     remaining_distance: number;
     current_system_id: number | null;
+    local_current_position?: Position;
+    local_target_position?: Position;
 }

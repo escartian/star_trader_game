@@ -521,7 +521,7 @@ Error responses include:
    ```
 4. Start the development servers:
    - Backend: `cargo run`
-   - Frontend - go to frontend directory:  `npm start`
+   - Frontend - go to frontend directory:  `npm run dev`
 
 Runs the app in the development mode.
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.

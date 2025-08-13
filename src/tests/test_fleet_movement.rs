@@ -101,7 +101,7 @@ fn setup() {
 // This function creates the fleet structure but doesn't save it.
 // Name/position/system are set by the caller.
 fn create_test_fleet_structure() -> Fleet {
-    let mut fleet = Fleet::new("temp_owner".to_string(), Position { x: -999, y: -999, z: -999 }, 0); // Temporary details
+    let mut fleet = Fleet::new("temp_owner".to_string(), Position { x: -99, y: -99, z: -99 }, 0); // Temporary details
     let mut capital_ship = Ship::new(ShipType::Capital, ShipSize::Tiny, ShipEngine::Experimental);
     capital_ship.name = "Gamma 285-type".to_string();
     capital_ship.owner = "test_player".to_string();

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StarSystem, Planet, Fleet } from '../types/game';
+import { api } from '../services/api';
 import './StarSystemModal.css';
 import { MarketModal } from './MarketModal';
 import { ShipMarketModal } from './ShipMarketModal';
@@ -63,6 +64,50 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
         setShowShipMarket(true);
     };
 
+    const handleSendFleetToSystem = async () => {
+        try {
+            if (!selectedFleet) return;
+            const parts = selectedFleet.name.split('_');
+            const owner_id = encodeURIComponent(parts[1]);
+            const fleet_number = parseInt(parts[2]);
+            // Use explicit galaxy intent to ensure deep space travel to system
+            await api.moveFleet(owner_id, fleet_number, {
+                x: system.position.x,
+                y: system.position.y,
+                z: system.position.z,
+                system_id: systemIndex,
+            });
+            onClose();
+        } catch (e) {
+            console.error('Failed to send fleet to system:', e);
+        }
+    };
+
+    const handleSendFleetToPlanet = async (planet: Planet) => {
+        try {
+            if (!selectedFleet) return;
+            const parts = selectedFleet.name.split('_');
+            const owner_id = encodeURIComponent(parts[1]);
+            const fleet_number = parseInt(parts[2]);
+            // If fleet is already in this system, move directly to the planet.
+            // Otherwise, initiate deep-space travel by moving "out of the system"
+            // Use one-call planet intent so backend handles traversal and entry
+            // For planet moves, send galaxy coordinates derived from in-system position
+            // and include stable system id when available
+            await api.moveFleet(owner_id, fleet_number, {
+                x: planet.position.x,
+                y: planet.position.y,
+                z: planet.position.z,
+                space: 'system',
+                system_id: system.id ?? systemIndex,
+                planet_id: system.planets.indexOf(planet),
+            });
+            onClose();
+        } catch (e) {
+            console.error('Failed to send fleet to planet:', e);
+        }
+    };
+
     const handleClose = () => {
         if (showMarket || showShipMarket) {
             setShowMarket(false);
@@ -98,6 +143,11 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
                             <h3>Planets ({system.planets.length})</h3>
                         </div>
                     </div>
+                    {selectedFleet && (
+                        <div className="system-actions" style={{ margin: '8px 0' }}>
+                            <button onClick={handleSendFleetToSystem}>Send Selected Fleet Here</button>
+                        </div>
+                    )}
                     <div className="planets-grid">
                         {system.planets.map((planet) => (
                             <div key={planet.name} className="planet-card">
@@ -107,6 +157,7 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
                                     <p><strong>Economy:</strong> {planet.economy}</p>
                                     <p><strong>Specialization:</strong> {planet.specialization}</p>
                                     <p><strong>Danger Level:</strong> {planet.danger}</p>
+                                    <p><strong>Local Position:</strong> ({planet.position.x}, {planet.position.y}, {planet.position.z})</p>
                                 </div>
                                 <div className="planet-actions">
                                     <button onClick={() => handleShowMarket(planet)}>
@@ -115,6 +166,11 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
                                     <button onClick={() => handleShowShipMarket(planet)}>
                                         Ship Market
                                     </button>
+                                    {selectedFleet && (
+                                        <button onClick={() => handleSendFleetToPlanet(planet)}>
+                                            Send Selected Fleet To Planet
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ))}

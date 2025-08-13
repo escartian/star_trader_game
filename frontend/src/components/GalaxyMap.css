@@ -600,7 +600,6 @@
 .market-table th,
 .market-table td {
     padding: 12px;
-    text-align: left;
     border-bottom: 1px solid #333;
 }
 
@@ -611,6 +610,27 @@
 
 .market-table tr:hover {
     background: #2a2a2a;
+}
+
+/* Column alignment helpers for consistent numeric alignment */
+.market-table .numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums; /* Align digits evenly */
+}
+.market-table .col-resource { text-align: left; }
+.market-table .col-available { width: 90px; }
+.market-table .col-buy { width: 130px; }
+.market-table .col-sell { width: 140px; }
+.market-table .col-stock { width: 110px; }
+
+/* Compare highlights */
+.market-table .best-buy {
+    background: rgba(0, 255, 0, 0.12);
+    color: #aaffaa;
+}
+.market-table .best-sell {
+    background: rgba(255, 180, 0, 0.15);
+    color: #ffdd99;
 }
 
 .market-table button {

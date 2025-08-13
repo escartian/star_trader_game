@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StarSystem, Planet, Fleet } from '../types/game';
+import { StarSystem, Planet, Fleet, GameSettings } from '../types/game';
 import { api } from '../services/api';
 import { StarSystemModal } from './StarSystemModal';
 import './GalaxyMap.css';
@@ -16,6 +16,8 @@ export const GalaxyMap: React.FC<GalaxyMapProps> = ({ selectedFleet = null }) =>
     const [filterText, setFilterText] = useState<string>('');
     const [sortKey, setSortKey] = useState<'name' | 'planets'>('name');
     const [galaxyBound, setGalaxyBound] = useState<number | null>(null);
+    const [playerFleets, setPlayerFleets] = useState<Fleet[]>([]);
+    const [selectedPlayerFleet, setSelectedPlayerFleet] = useState<Fleet | null>(selectedFleet);
 
     useEffect(() => {
         const loadSystems = async () => {
@@ -24,9 +26,14 @@ export const GalaxyMap: React.FC<GalaxyMapProps> = ({ selectedFleet = null }) =>
                 setError(null);
                 const systems = await api.getGalaxyMap();
                 setSystems(systems);
-                // Also load settings for bounds display
+                // Also load settings for bounds display + player fleets
                 const settings = await api.getGameSettings();
                 setGalaxyBound(Math.floor(settings.map_width));
+                const fleets = await api.getOwnerFleets(settings.player_name);
+                setPlayerFleets(fleets);
+                if (!selectedPlayerFleet && fleets.length > 0) {
+                    setSelectedPlayerFleet(fleets[0]);
+                }
             } catch (err) {
                 console.error('Error loading star systems:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load star systems');
@@ -86,11 +93,20 @@ export const GalaxyMap: React.FC<GalaxyMapProps> = ({ selectedFleet = null }) =>
                     </div>
                 </div>
                 <div className="galaxy-map-content">
-                    {selectedFleet && (
-                        <div className="selected-fleet-banner" style={{ marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <span>Selected Fleet: {selectedFleet.name}</span>
-                        </div>
-                    )}
+                    <div className="selected-fleet-banner" style={{ marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span>Selected Fleet:</span>
+                        <select
+                            value={selectedPlayerFleet ? selectedPlayerFleet.name : ''}
+                            onChange={(e) => {
+                                const f = playerFleets.find(fl => fl.name === e.target.value) || null;
+                                setSelectedPlayerFleet(f);
+                            }}
+                        >
+                            {playerFleets.map(fl => (
+                                <option key={fl.name} value={fl.name}>{fl.name}</option>
+                            ))}
+                        </select>
+                    </div>
                     <div className="systems-grid">
                         {visibleSystems.map((system) => (
                             <div
@@ -128,11 +144,11 @@ export const GalaxyMap: React.FC<GalaxyMapProps> = ({ selectedFleet = null }) =>
                     </div>
                 </div>
             </div>
-            {selectedSystem && (
+            {selectedSystem && selectedPlayerFleet && (
                 <StarSystemModal
                     system={selectedSystem}
                     systemIndex={systems.findIndex(s => s.star.name === selectedSystem.star.name)}
-                    selectedFleet={selectedFleet}
+                selectedFleet={selectedPlayerFleet}
                     onClose={handleCloseModal}
                 />
             )}

@@ -110,7 +110,15 @@ export const api = {
         return data.data;
     },
 
-    buyResource: async (systemId: number, planetId: number, resourceType: ResourceType, quantity: number): Promise<string> => {
+    buyResource: async (
+        systemId: number,
+        planetId: number,
+        resourceType: ResourceType,
+        quantity: number,
+        fleetName?: string,
+        distributionMode?: 'first' | 'even' | 'specific',
+        allocations?: { ship_index: number; quantity: number }[],
+    ): Promise<string> => {
         const response = await fetch(`${API_BASE_URL}/planet/${systemId}/${planetId}/buy`, {
             method: 'POST',
             headers: {
@@ -118,14 +126,25 @@ export const api = {
             },
             body: JSON.stringify({
                 resource_type: resourceType,
-                quantity: quantity
+                quantity: quantity,
+                fleet_name: fleetName,
+                distribution_mode: distributionMode,
+                allocations: allocations,
             }),
         });
         
         return handleApiResponse<string>(response);
     },
 
-    sellResource: async (systemId: number, planetId: number, resourceType: ResourceType, quantity: number): Promise<string> => {
+    sellResource: async (
+        systemId: number,
+        planetId: number,
+        resourceType: ResourceType,
+        quantity: number,
+        fleetName?: string,
+        distributionMode?: 'first' | 'even' | 'specific',
+        allocations?: { ship_index: number; quantity: number }[],
+    ): Promise<string> => {
         const response = await fetch(`${API_BASE_URL}/planet/${systemId}/${planetId}/sell`, {
             method: 'POST',
             headers: {
@@ -133,7 +152,10 @@ export const api = {
             },
             body: JSON.stringify({
                 resource_type: resourceType,
-                quantity: quantity
+                quantity: quantity,
+                fleet_name: fleetName,
+                distribution_mode: distributionMode,
+                allocations: allocations,
             }),
         });
         

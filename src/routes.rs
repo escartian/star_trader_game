@@ -240,18 +240,118 @@ pub fn buy_from_planet(system_id: usize, planet_id: usize, data: Json<ResourceTr
         let planet = system.planets.get_mut(planet_id)
             .ok_or_else(|| "Planet not found".to_string())?;
         
-        // Calculate total cost and update market quantities
+        // 1) Capacity pre-check: if buying into a fleet, ensure enough cargo space
+        if let Some(fleet_name) = &data.fleet_name {
+            if let Ok(Some(fleet)) = crate::models::fleet::load_fleet(fleet_name) {
+                let mode = data.distribution_mode.clone().unwrap_or_else(|| "first".to_string());
+                let mut capacity_available: u32 = 0;
+                match mode.as_str() {
+                    "specific" => {
+                        if let Some(allocs) = &data.allocations {
+                            for alloc in allocs {
+                                if let Some(ship) = fleet.ships.get(alloc.ship_index) {
+                                    let space = ship.get_cargo_capacity().saturating_sub(ship.get_current_cargo());
+                                    capacity_available = capacity_available.saturating_add(space);
+                                }
+                            }
+                        }
+                    }
+                    "even" => {
+                        for ship in &fleet.ships {
+                            let space = ship.get_cargo_capacity().saturating_sub(ship.get_current_cargo());
+                            capacity_available = capacity_available.saturating_add(space);
+                        }
+                    }
+                    _ => {
+                        if let Some(ship) = fleet.ships.first() {
+                            capacity_available = ship.get_cargo_capacity().saturating_sub(ship.get_current_cargo());
+                        }
+                    }
+                }
+                if capacity_available < data.quantity {
+                    return Err(format!(
+                        "Not enough cargo capacity in selected ship(s). Required {}, available {}",
+                        data.quantity, capacity_available
+                    ));
+                }
+            }
+        }
+
+        // 2) Calculate total cost and update market quantities
         let total_cost = market.buy_resource(data.resource_type, data.quantity, system_id, planet_id)
             .map_err(|e| e.to_string())?;
         
-        // Check if player has enough credits
+        // 3) Check if player has enough credits
         if player.credits < total_cost as f32 {
             return Err("Insufficient credits".to_string());
         }
         
-        // Update player's inventory and credits
+        // 4) Update player's credits
         player.credits -= total_cost as f32;
-        player.add_resource(data.resource_type, data.quantity);
+
+        // 5) Add resources to a concrete fleet's cargo when provided, enforcing capacity
+        if let Some(fleet_name) = &data.fleet_name {
+            if let Ok(Some(mut fleet)) = crate::models::fleet::load_fleet(fleet_name) {
+                let mode = data.distribution_mode.clone().unwrap_or_else(|| "first".to_string());
+                let mut remaining = data.quantity;
+                match mode.as_str() {
+                    "specific" => {
+                        if let Some(allocs) = &data.allocations {
+                            for alloc in allocs {
+                                if remaining == 0 { break; }
+                                if let Some(ship) = fleet.ships.get_mut(alloc.ship_index) {
+                                    let cap = ship.get_cargo_capacity();
+                                    let used = ship.get_current_cargo();
+                                    let space = cap.saturating_sub(used);
+                                    let desired = alloc.quantity.min(remaining);
+                                    let add_q = desired.min(space);
+                                    let mut found = false;
+                                    for c in &mut ship.cargo { if c.resource_type == data.resource_type { c.quantity = Some(c.quantity.unwrap_or(0) + add_q); found = true; break; } }
+                                    if !found { ship.cargo.push(Resource { resource_type: data.resource_type, buy: None, sell: None, quantity: Some(add_q) }); }
+                                    remaining -= add_q;
+                                }
+                            }
+                        }
+                    },
+                    "even" => {
+                        // Round-robin place items respecting capacity
+                        while remaining > 0 {
+                            let mut progressed = false;
+                            for ship in &mut fleet.ships {
+                                if remaining == 0 { break; }
+                                let cap = ship.get_cargo_capacity();
+                                let used = ship.get_current_cargo();
+                                let space = cap.saturating_sub(used);
+                                if space == 0 { continue; }
+                                let add_q = 1u32.min(remaining).min(space);
+                                let mut found=false; for c in &mut ship.cargo { if c.resource_type==data.resource_type { c.quantity=Some(c.quantity.unwrap_or(0)+add_q); found=true; break; } }
+                                if !found { ship.cargo.push(Resource{resource_type:data.resource_type,buy:None,sell:None,quantity:Some(add_q)}); }
+                                remaining -= add_q; progressed = true;
+                            }
+                            if !progressed { break; }
+                        }
+                    },
+                    _ => {
+                        if let Some(ship) = fleet.ships.first_mut() {
+                            let cap = ship.get_cargo_capacity();
+                            let used = ship.get_current_cargo();
+                            let space = cap.saturating_sub(used);
+                            let add_q = remaining.min(space);
+                            if add_q > 0 {
+                                let mut found = false; for c in &mut ship.cargo { if c.resource_type==data.resource_type { c.quantity=Some(c.quantity.unwrap_or(0)+add_q); found=true; break; } }
+                                if !found { ship.cargo.push(Resource{resource_type:data.resource_type,buy:None,sell:None,quantity:Some(add_q)}); }
+                                remaining -= add_q;
+                            }
+                        }
+                    }
+                }
+                if remaining > 0 { return Err("Not enough cargo capacity to store purchased goods".to_string()); }
+                crate::models::fleet::save_fleet(&fleet).map_err(|e| e.to_string())?;
+            }
+        } else {
+            // Fallback to player inventory
+            player.add_resource(data.resource_type, data.quantity);
+        }
         
         // Save both player and market state
         player.save().map_err(|e| e.to_string())?;
@@ -277,9 +377,49 @@ pub fn sell_to_planet(system_id: usize, planet_id: usize, data: Json<ResourceTra
         let planet = system.planets.get_mut(planet_id)
             .ok_or_else(|| "Planet not found".to_string())?;
         
-        // Check if player has enough resources
-        if !player.has_resource(data.resource_type, data.quantity) {
-            return Err("Not enough resources in inventory".to_string());
+        // Determine source of inventory: fleet cargo takes precedence when provided
+        if let Some(fleet_name) = &data.fleet_name {
+            if let Ok(Some(mut fleet)) = crate::models::fleet::load_fleet(fleet_name) {
+                let mode = data.distribution_mode.clone().unwrap_or_else(|| "first".to_string());
+                let mut remaining = data.quantity;
+                match mode.as_str() {
+                    "specific" => {
+                        if let Some(allocs) = &data.allocations {
+                            for alloc in allocs { if remaining==0 { break; }
+                                if let Some(ship) = fleet.ships.get_mut(alloc.ship_index) {
+                                    let mut need = alloc.quantity.min(remaining);
+                                    for cargo in &mut ship.cargo { if cargo.resource_type==data.resource_type { let have=cargo.quantity.unwrap_or(0); let take=have.min(need); cargo.quantity=Some(have-take); need-=take; break; } }
+                                    remaining -= alloc.quantity.min(alloc.quantity - need);
+                                }
+                            }
+                        }
+                    },
+                    "even" => {
+                        // One pass to take proportionally as evenly as possible
+                        let mut idx = 0usize;
+                        while remaining>0 && !fleet.ships.is_empty() {
+                            if idx>=fleet.ships.len() { idx=0; }
+                            let ship=&mut fleet.ships[idx];
+                            let mut took = false;
+                            for cargo in &mut ship.cargo { if cargo.resource_type==data.resource_type { let have=cargo.quantity.unwrap_or(0); if have>0 { cargo.quantity=Some(have-1); remaining-=1; took=true; } break; } }
+                            if !took { idx+=1; } else { idx+=1; }
+                        }
+                    },
+                    _ => {
+                        for ship in &mut fleet.ships { for cargo in &mut ship.cargo { if cargo.resource_type==data.resource_type { let have=cargo.quantity.unwrap_or(0); if have>=remaining { cargo.quantity=Some(have-remaining); remaining=0; break; } else { cargo.quantity=Some(0); remaining-=have; } } } if remaining==0 { break; } }
+                    }
+                }
+                if remaining > 0 { return Err("Not enough resources in fleet cargo".to_string()); }
+                crate::models::fleet::save_fleet(&fleet).map_err(|e| e.to_string())?;
+            } else {
+                return Err("Fleet not found for selling".to_string());
+            }
+        } else {
+            // Fallback to player inventory
+            if !player.has_resource(data.resource_type, data.quantity) {
+                return Err("Not enough resources in inventory".to_string());
+            }
+            player.remove_resource(data.resource_type, data.quantity);
         }
         
         // Calculate total value and update market quantities
@@ -288,7 +428,6 @@ pub fn sell_to_planet(system_id: usize, planet_id: usize, data: Json<ResourceTra
         
         // Update player's inventory and credits
         player.credits += total_value as f32;
-        player.remove_resource(data.resource_type, data.quantity);
         
         // Save both player and market state
         player.save().map_err(|e| e.to_string())?;

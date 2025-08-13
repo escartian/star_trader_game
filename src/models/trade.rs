@@ -29,7 +29,17 @@ pub enum TradeResult {
 pub struct ResourceTradeData {
     pub resource_type: ResourceType,
     pub quantity: u32,
-    pub fleet_name: Option<String>  // Optional for future fleet-based trading
+    pub fleet_name: Option<String>,  // Optional: target fleet whose cargo is affected
+    #[serde(default)]
+    pub distribution_mode: Option<String>, // "first" | "even" | "specific"
+    #[serde(default)]
+    pub allocations: Option<Vec<ShipAllocation>>, // for mode="specific"
+}
+
+#[derive(Deserialize)]
+pub struct ShipAllocation {
+    pub ship_index: usize,
+    pub quantity: u32,
 }
 
 #[derive(Deserialize)]

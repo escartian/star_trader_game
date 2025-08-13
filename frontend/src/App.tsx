@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MainMenu } from './components/MainMenu';
 import { GalaxyMap } from './components/GalaxyMap';
+import MarketView from './components/Market';
 import { FleetList } from './components/FleetList';
 import { TabBar, TabType } from './components/TabBar';
 import { Player, GameSettings, Fleet } from './types/game';
@@ -74,7 +75,7 @@ function App() {
             case 'fleets':
                 return <FleetList onFleetSelected={setSelectedFleet} />;
             case 'market':
-                return <div>Market View (Coming Soon)</div>;
+                return <MarketView selectedFleet={selectedFleet} />;
             case 'research':
                 return <div>Research View (Coming Soon)</div>;
             default:

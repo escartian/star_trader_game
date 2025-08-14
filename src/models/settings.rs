@@ -19,7 +19,7 @@ pub struct GameSettings {
     pub map_height: u32,
     pub map_length: u32,
     pub star_count: u32,
-    pub starting_credits: f32,
+    pub starting_credits: f64,
     pub created_at: String,
     pub last_played: String,
     pub factions: Vec<FactionSettings>,
@@ -59,7 +59,7 @@ impl Default for GameSettings {
 }
 
 impl GameSettings {
-    pub fn new(display_name: String, player_name: String, map_width: u32, map_height: u32, map_length: u32, star_count: u32, starting_credits: f32) -> Self {
+    pub fn new(display_name: String, player_name: String, map_width: u32, map_height: u32, map_length: u32, star_count: u32, starting_credits: f64) -> Self {
         let now = Utc::now().to_rfc3339();
         Self {
             game_id: uuid::Uuid::new_v4().to_string(),

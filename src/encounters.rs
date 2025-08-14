@@ -70,7 +70,7 @@ pub fn generate_encounter_fleet(position: Position) -> EncounterFleet {
 }
 
 /// Calculates the base price for a ship based on its attributes
-fn calculate_ship_price(ship: &Ship) -> f32 {
+fn calculate_ship_price(ship: &Ship) -> f64 {
     let base_price = match ship.size {
         ShipSize::Tiny => 1000.0,
         ShipSize::Small => 2500.0,

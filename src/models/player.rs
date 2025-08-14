@@ -11,7 +11,7 @@ use crate::models::settings::load_settings;
 pub struct Player {
     pub name: String,
     pub resources: Vec<Resource>,
-    pub credits: f32,
+    pub credits: f64,
     pub fleets: Vec<String>, // Store fleet names
 }
 
@@ -24,7 +24,7 @@ impl Player {
     /// 
     /// # Returns
     /// A new Player instance with the specified name and starting credits
-    pub fn new(player_name: &str, starting_credits: f32) -> Self {
+    pub fn new(player_name: &str, starting_credits: f64) -> Self {
         Player {
             name: player_name.to_string(),
             resources: generate_resources_no_trade(),
@@ -68,7 +68,7 @@ impl Player {
     * within the game directory. If necessary, creates the required directories.
     * Returns the newly created Player object.
     **/
-    pub fn create_player(game_id: &str, player_name: &str, starting_credits: f32) -> Player {
+    pub fn create_player(game_id: &str, player_name: &str, starting_credits: f64) -> Player {
         // Create the path to the player file
         let data_path = Path::new("data")
             .join("game")

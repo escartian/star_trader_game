@@ -183,9 +183,10 @@ export const StarSystemModal: React.FC<StarSystemModalProps> = ({ system, system
                             setShowMarket(false);
                             setSelectedPlanet(null);
                         }}
-                        systemId={systemIndex}
+                        systemId={system.id ?? systemIndex}
                         planetId={system.planets.indexOf(selectedPlanet)}
                         planet={selectedPlanet}
+                        selectedFleet={selectedFleet || undefined}
                     />
                 )}
                 {showShipMarket && selectedPlanet && (

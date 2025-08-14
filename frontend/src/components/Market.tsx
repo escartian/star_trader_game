@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../services/api';
 import { Fleet, Position, ResourceType, StarSystem, Player, Resource } from '../types/game';
+import { MarketModal } from './MarketModal';
 import { ShipMarketModal } from './ShipMarketModal';
 
 type MarketTab = 'trade' | 'compare';
@@ -371,13 +372,13 @@ export const MarketView: React.FC<MarketViewProps> = ({ selectedFleet }) => {
                             )}
                             {/* No extra UI for selected ship; uses the top Ship selector. */}
                             <div style={{ display: 'flex', gap: 8 }}>
-                                <button
+                                <button className="buy-button"
                                     onClick={() => selected && handleBuy(selected.resource_type as unknown as ResourceType)}
                                     disabled={!selected || !selected.buy || (distMode === 'selected' && viewShipIndex < 0)}
                                 >
                                     Buy ({totalBuy} cr)
                                 </button>
-                                <button
+                                <button className="sell-button"
                                     onClick={() => selected && handleSell(selected.resource_type as unknown as ResourceType)}
                                     disabled={!selected || !selected.sell || (distMode === 'selected' && viewShipIndex < 0)}
                                 >
@@ -540,7 +541,28 @@ export const MarketView: React.FC<MarketViewProps> = ({ selectedFleet }) => {
                 <button className={active==='compare' ? 'active' : ''} onClick={() => setActive('compare')}>Compare</button>
             </div>
             {error && <div className="error">{error}</div>}
-            {active === 'trade' && renderTrade()}
+            {active === 'trade' && (
+                planetAtFleet && system ? (
+                    <MarketModal
+                        isOpen={true}
+                        onClose={() => {}}
+                        systemId={system.id}
+                        planetId={planetIndex ?? 0}
+                        planet={planetAtFleet}
+                        selectedFleet={selectedFleet || undefined}
+                        embedded={true}
+                        showHeaderCredits={false}
+                        onPlayerRefresh={(p)=> setTimeout(async ()=>{
+                            try{
+                                const settings=await api.getGameSettings();
+                                const updated=await api.getPlayer(settings.player_name);
+                                // locally reflect new credits by updating player state if we have one
+                                // this component tracks `player` in MarketView only for legacy header; embedded modal shows credits too
+                            }catch(e){/* ignore */}
+                        },0)}
+                    />
+                ) : renderTrade()
+            )}
             {active === 'compare' && renderCompare()}
             {showShipModal && planetIndex != null && system && (
             <ShipMarketModal

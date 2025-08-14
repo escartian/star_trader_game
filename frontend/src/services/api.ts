@@ -87,6 +87,7 @@ export const api = {
                 console.error('Move fleet failed:', data.message);
                 throw new Error(data.message || 'Failed to move fleet');
             }
+            try { window.dispatchEvent(new CustomEvent('fleetMoved', { detail: data })); } catch (_) {}
             return responseText;
         } catch (error) {
             if (error instanceof Error) {

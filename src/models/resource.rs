@@ -23,16 +23,16 @@ pub enum ResourceType {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Resource {
     pub resource_type: ResourceType,
-    pub buy: Option<f32>,
-    pub sell: Option<f32>,
+    pub buy: Option<f64>,
+    pub sell: Option<f64>,
     pub quantity: Option<u32>,
 }
 impl Resource {
-    pub fn buy_price(&self) -> Option<f32> {
+    pub fn buy_price(&self) -> Option<f64> {
         self.buy
     }
 
-    pub fn sell_price(&self) -> Option<f32> {
+    pub fn sell_price(&self) -> Option<f64> {
         self.sell
     }
 
@@ -60,15 +60,15 @@ pub fn generate_resources() -> Vec<Resource> {
 
     // Loop through each resource type and generate a random Resource object for it
     for resource_type in resource_types {
-        let buy_price: Option<f32> = if rng.gen_bool(0.7) {
+        let buy_price: Option<f64> = if rng.gen_bool(0.7) {
             // Generate a random buy price with a 70% chance
-            Some(rng.gen_range(0.5..8.0))
+            Some(rng.gen_range(0.5..8.0) as f64)
         } else {
             None // 30% chance of no buy price
         };
-        let sell_price: Option<f32> = if rng.gen_bool(0.7) {
+        let sell_price: Option<f64> = if rng.gen_bool(0.7) {
             // Generate a random sell price with a 70% chance
-            Some(rng.gen_range(1.0..10.0))
+            Some(rng.gen_range(1.0..10.0) as f64)
         } else {
             None // 30% chance of no sell price
         };

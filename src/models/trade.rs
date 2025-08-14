@@ -105,12 +105,12 @@ pub fn buy_from_planet(
     
     // Check if the player has enough credits
     let cost = market.buy_resource(resource_type, quantity, system_id, planet_id)?;
-    if player.credits < cost as f32 {
+    if player.credits < cost {
         return Err("Insufficient credits".to_string());
     }
 
     // Update player's inventory and credits
-    player.credits -= cost as f32;
+    player.credits -= cost;
     player.add_resource(resource_type, quantity);
 
     // Save the market state
@@ -142,7 +142,7 @@ pub fn sell_to_planet(
 
     // Update player's inventory and credits
     let earnings = market.sell_resource(resource_type, quantity, system_id, planet_id)?;
-    player.credits += earnings as f32;
+    player.credits += earnings;
     player.remove_resource(resource_type, quantity);
 
     // Save the market state
@@ -189,7 +189,7 @@ pub fn trade_with_fleet(
             match trade_type {
                 "buy" => {
                     // Calculate total cost
-                    let total_cost = (resource.buy.unwrap_or(0.0) * quantity as f32) as f32;
+                    let total_cost = (resource.buy.unwrap_or(0.0) * quantity as f64);
                     
                     // Check if player has enough credits
                     if player.credits < total_cost {
@@ -266,7 +266,7 @@ pub fn trade_with_fleet(
                             }
 
                             // Calculate total earnings
-                            let total_earnings = (resource.sell.unwrap_or(0.0) * quantity as f32) as f32;
+                            let total_earnings = (resource.sell.unwrap_or(0.0) * quantity as f64);
                             
                             // Update player's credits and cargo
                             player.credits += total_earnings;

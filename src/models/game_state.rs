@@ -16,7 +16,7 @@ use crate::models::market::Market;
 #[derive(Clone)]
 pub struct GameState {
     pub current_game_id: Option<String>,
-    pub credits: f32,
+    pub credits: f64,
 }
 
 lazy_static! {

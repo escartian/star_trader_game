@@ -36,6 +36,7 @@
 
 .market-spec,
 .market-econ,
+.planet-coords,
 .player-credits {
     background: rgba(0, 255, 0, 0.1);
     padding: 4px 8px;
@@ -177,27 +178,33 @@
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    letter-spacing: 1px;
+    box-shadow: 0 0 12px rgba(0,255,255,0.08) inset, 0 0 8px rgba(0,255,255,0.12);
 }
 
 .buy-button {
-    background: #00ff00;
-    text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    background: linear-gradient(180deg, #00ff88, #00cc66);
+    color: #001a00;
+    text-shadow: 0 0 6px rgba(0, 255, 120, 0.5);
+    border: 1px solid rgba(0,255,120,0.6);
 }
 
 .sell-button {
-    background: #ff4444;
+    background: linear-gradient(180deg, #ff3355, #cc0022);
     color: #fff;
+    text-shadow: 0 0 6px rgba(255, 70, 70, 0.6);
+    border: 1px solid rgba(255,80,80,0.6);
 }
 
-.buy-button:hover {
-    background: #00cc00;
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+.buy-button:hover:not(:disabled) {
+    background: linear-gradient(180deg, #00ffaa, #00dd77);
+    box-shadow: 0 0 12px rgba(0, 255, 170, 0.5), 0 0 20px rgba(0, 255, 120, 0.25);
     transform: translateY(-2px);
 }
 
-.sell-button:hover {
-    background: #ff3333;
-    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+.sell-button:hover:not(:disabled) {
+    background: linear-gradient(180deg, #ff5577, #dd0033);
+    box-shadow: 0 0 12px rgba(255, 100, 100, 0.5), 0 0 20px rgba(255, 70, 70, 0.25);
     transform: translateY(-2px);
 }
 

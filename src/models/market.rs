@@ -107,7 +107,7 @@ impl Market {
         Ok(())
     }
 
-    pub fn buy_resource(&mut self, resource_type: ResourceType, quantity: u32, system_id: usize, planet_id: usize) -> Result<u32, &'static str> {
+    pub fn buy_resource(&mut self, resource_type: ResourceType, quantity: u32, _system_id: usize, _planet_id: usize) -> Result<f64, &'static str> {
         let resource = self.resources.iter_mut().find(|r| r.resource_type == resource_type)
             .ok_or("Resource not available in market")?;
         
@@ -117,19 +117,19 @@ impl Market {
         }
         
         let buy_price = resource.buy.ok_or("Resource cannot be bought")?;
-        let total_cost = (buy_price * quantity as f32) as u32;
+        let total_cost = ((buy_price * quantity as f64) * 100.0).round() / 100.0;
         resource.quantity = Some(available_quantity - quantity);
         
         Ok(total_cost)
     }
 
-    pub fn sell_resource(&mut self, resource_type: ResourceType, quantity: u32, system_id: usize, planet_id: usize) -> Result<u32, &'static str> {
+    pub fn sell_resource(&mut self, resource_type: ResourceType, quantity: u32, _system_id: usize, _planet_id: usize) -> Result<f64, &'static str> {
         let resource = self.resources.iter_mut().find(|r| r.resource_type == resource_type)
             .ok_or("Resource not available in market")?;
         
         let current_quantity = resource.quantity.unwrap_or(0);
         let sell_price = resource.sell.ok_or("Resource cannot be sold")?;
-        let total_value = (sell_price * quantity as f32) as u32;
+        let total_value = ((sell_price * quantity as f64) * 100.0).round() / 100.0;
         resource.quantity = Some(current_quantity + quantity);
         
         Ok(total_value)
@@ -141,7 +141,7 @@ pub fn generate_market_resources(specialization: &PlanetSpecialization, economy:
     let mut rng = rand::thread_rng();
     
     // Base price multiplier based on economy
-    let economy_multiplier = match economy {
+    let economy_multiplier: f64 = match economy {
         Economy::Booming => 1.5,
         Economy::Growing => 1.2,
         Economy::Stable => 1.0,
@@ -153,30 +153,30 @@ pub fn generate_market_resources(specialization: &PlanetSpecialization, economy:
 
     // Generate market resources based on specialization
     for resource_type in ResourceType::iter() {
-        let (buy_price, sell_price) = match resource_type {
+        let (buy_price, sell_price): (Option<f64>, Option<f64>) = match resource_type {
             // Essential resources that all planets should trade
             ResourceType::Water | ResourceType::Food | ResourceType::Fuel => {
-                let base_buy = 1.3;  // Higher buy price
-                let base_sell = 0.7; // Lower sell price
+                let base_buy = 1.3_f64;  // Higher buy price
+                let base_sell = 0.7_f64; // Lower sell price
                 (Some(base_buy), Some(base_sell))
             },
             // Common resources that most planets trade
             ResourceType::Minerals | ResourceType::Metals | ResourceType::Electronics => {
-                let base_buy = 1.2;  // Higher buy price
-                let base_sell = 0.8; // Lower sell price
+                let base_buy = 1.2_f64;  // Higher buy price
+                let base_sell = 0.8_f64; // Lower sell price
                 (Some(base_buy), Some(base_sell))
             },
             // Luxury goods that most planets trade but with higher prices
             ResourceType::LuxuryGoods => {
-                let base_buy = 1.5;  // Higher buy price
-                let base_sell = 1.0; // Lower sell price
+                let base_buy = 1.5_f64;  // Higher buy price
+                let base_sell = 1.0_f64; // Lower sell price
                 (Some(base_buy), Some(base_sell))
             },
             // Narcotics - restricted based on specialization and economy
             ResourceType::Narcotics => {
                 match (specialization, economy) {
-                    (PlanetSpecialization::Research, _) => (Some(1.8), Some(1.2)),  // Higher buy, lower sell
-                    (_, Economy::Crashing | Economy::Nonexistent) => (Some(2.0), Some(1.5)),  // Higher buy, lower sell
+                    (PlanetSpecialization::Research, _) => (Some(1.8_f64), Some(1.2_f64)),  // Higher buy, lower sell
+                    (_, Economy::Crashing | Economy::Nonexistent) => (Some(2.0_f64), Some(1.5_f64)),  // Higher buy, lower sell
                     _ => (None, None),
                 }
             },
@@ -229,7 +229,7 @@ pub fn generate_ship_market() -> ShipMarket {
     ShipMarket { ships }
 }
 
-pub fn calculate_ship_price(ship: &Ship) -> f32 {
+pub fn calculate_ship_price(ship: &Ship) -> f64 {
     let base_price = match ship.size {
         ShipSize::Tiny => 1000.0,
         ShipSize::Small => 2500.0,
@@ -254,7 +254,7 @@ pub fn calculate_ship_price(ship: &Ship) -> f32 {
         ShipEngine::Experimental => 1.5,
     };
 
-    let condition_multiplier = (ship.hp as f32 / 100.0).max(0.5);
+    let condition_multiplier = (ship.hp as f64 / 100.0).max(0.5);
 
     base_price * specialization_multiplier * engine_multiplier * condition_multiplier
 }

@@ -20,6 +20,45 @@ function App() {
         }
     }, [isInGame]);
 
+    useEffect(() => {
+        const onCreditsUpdated = async (e: Event) => {
+            try {
+                const settings = await api.getGameSettings();
+                const refreshed = await api.getPlayer(settings.player_name);
+                setPlayer(prev => prev ? { ...prev, credits: refreshed.credits, resources: refreshed.resources } : prev);
+            } catch {
+                // fallback to event detail if available
+                const ce = e as CustomEvent<number>;
+                setPlayer(prev => prev ? { ...prev, credits: typeof ce.detail === 'number' ? ce.detail : prev.credits } : prev);
+            }
+        };
+        window.addEventListener('creditsUpdated', onCreditsUpdated as EventListener);
+        return () => window.removeEventListener('creditsUpdated', onCreditsUpdated as EventListener);
+    }, []);
+
+  // Keep fleets/selectedFleet in sync after backend-confirmed moves
+  useEffect(() => {
+    const onFleetMoved = async (_e: Event) => {
+      try {
+        const settings = await api.getGameSettings();
+        const fleetsResp = await api.getPlayerFleets(settings.player_name);
+        if (fleetsResp.success) {
+          // Update player fleets list for header/consumers
+          setPlayer(prev => prev ? { ...prev, fleets: fleetsResp.data } : prev);
+          // Preserve the same fleet selection by name if possible
+          setSelectedFleet(prev => {
+            const name = prev?.name;
+            return fleetsResp.data.find(f => f.name === name) || fleetsResp.data[0] || null;
+          });
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('fleetMoved', onFleetMoved as EventListener);
+    return () => window.removeEventListener('fleetMoved', onFleetMoved as EventListener);
+  }, []);
+
     const loadPlayerInfo = async () => {
         try {
             const settings = await api.getGameSettings();

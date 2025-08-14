@@ -280,8 +280,8 @@ fn generate_planet_market(specialization: &PlanetSpecialization, economy: &Econo
         };
 
         // Apply economy multiplier to prices
-        let buy_price = buy_price.map(|p| p * economy_multiplier);
-        let sell_price = sell_price.map(|p| p * economy_multiplier);
+        let buy_price = buy_price.map(|p| (p * economy_multiplier).into());
+        let sell_price = sell_price.map(|p| (p * economy_multiplier).into());
 
         // Generate random quantity if the planet trades this resource
         let quantity = if buy_price.is_some() || sell_price.is_some() {
@@ -509,7 +509,7 @@ impl Planet {
         };
 
         // Calculate final price after trade-in
-        let final_price = ship_price - trade_in_value;
+        let final_price: f64 = ship_price as f64 - trade_in_value as f64;
         println!("Final price after trade-in: {} (original: {}, trade-in: {})", 
             final_price, ship_price, trade_in_value);
 
@@ -533,7 +533,7 @@ impl Planet {
         // If there was a trade-in, add the traded ship to the market
         if let Some(mut market_ship) = trade_in_ship {
             println!("Adding trade-in ship to market");
-            market_ship.price = Some(trade_in_value);
+            market_ship.price = Some(trade_in_value as f64);
             market_ship.owner = "".to_string(); // Clear owner as it's now in the market
             ship_market.push(market_ship);
             println!("Market now has {} ships", ship_market.len());
@@ -611,9 +611,9 @@ impl Planet {
             ShipEngine::Experimental => 1.5,
         };
 
-        let condition_multiplier = (ship.hp as f32 / 100.0).max(0.5);
+        let condition_multiplier = (ship.hp as f64 / 100.0).max(0.5);
 
-        let ship_value = base_value * specialization_multiplier * engine_multiplier * condition_multiplier;
+        let ship_value = (base_value * specialization_multiplier * engine_multiplier * condition_multiplier) as f64;
 
         // Update player's credits
         player.credits += ship_value;

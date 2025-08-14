@@ -700,21 +700,25 @@
 }
 
 .buy-button {
-    background: #00ff00;
-    color: #000;
+    background: linear-gradient(180deg, #00ff88, #00cc66);
+    border: 1px solid rgba(0,255,120,0.6);
+    color: #001a00;
+    text-shadow: 0 0 6px rgba(0, 255, 120, 0.5);
 }
 
 .sell-button {
-    background: #ff4444;
+    background: linear-gradient(180deg, #ff3355, #cc0022);
+    border: 1px solid rgba(255,80,80,0.6);
     color: #fff;
+    text-shadow: 0 0 6px rgba(255, 70, 70, 0.6);
 }
 
 .buy-button:hover:not(:disabled) {
-    background: #00cc00;
+    background: linear-gradient(180deg, #00ffaa, #00dd77);
 }
 
 .sell-button:hover:not(:disabled) {
-    background: #cc0000;
+    background: linear-gradient(180deg, #ff5577, #dd0033);
 }
 
 .buy-button:disabled,

@@ -36,7 +36,7 @@ impl Distribution<TraderPersonality> for Standard {
 pub struct Trader {
     pub name: String,
     pub position: Position,
-    pub credits: f32,
+    pub credits: f64,
     pub inventory: Vec<(String, u32)>, // (resource_type, quantity)
     pub personality: TraderPersonality,
     pub resources: Vec<Resource>,
@@ -85,7 +85,7 @@ impl Trader {
         "Quote not found".to_string()
     }
 
-    pub fn new(name: String, position: Position, credits: f32) -> Self {
+    pub fn new(name: String, position: Position, credits: f64) -> Self {
         let mut rng = rand::thread_rng();
         Trader {
             name,
@@ -123,7 +123,7 @@ impl Trader {
                 {
                     // Check if the player has enough quantity to sell
                     if player_resource.quantity >= Some(quantity) {
-                        let cost = quantity as f32 * sell_price;
+                        let cost = quantity as f64 * sell_price;
                         player.credits -= cost;
                         //self.personality.on_sell_successful(&resource_type);
                         //self.personality.on_buy_attempt(&resource_type);
@@ -192,7 +192,7 @@ impl Trader {
                 //self.calculate_price(resource_type, quantity);
 
 
-                let cost = quantity as f32 * buy_price;
+                let cost = quantity as f64 * buy_price;
 
                 // Check if the player has enough credits to buy
                 if player.credits >= cost {
@@ -287,7 +287,7 @@ impl Trader {
                 {
                     // Check if the player has enough quantity to sell
                     if player_resource.quantity >= Some(quantity) {
-                        let cost = quantity as f32 * sell_price;
+                        let cost = quantity as f64 * sell_price;
                         trader.credits -= cost;
                         //self.personality.on_sell_successful(&resource_type);
                         //self.personality.on_buy_attempt(&resource_type);
@@ -349,7 +349,7 @@ impl Trader {
             // Check if the trader has a buy price for this resource
             if let Some(buy_price) = resource.buy_price() {
                 // Calculate the total cost of the purchase
-                let cost = quantity as f32 * buy_price;
+                let cost = quantity as f64 * buy_price;
 
                 // Check if the player has enough credits to buy
                 if trader.credits >= cost {

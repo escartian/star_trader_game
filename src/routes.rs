@@ -56,7 +56,26 @@ pub fn index() -> Json<ApiResponse<String>> {
 #[get("/player/<name>")]
 pub fn get_player(name: &str) -> Json<ApiResponse<Player>> {
     let result: Result<Player, String> = (|| {
-        let player = load_player(name)?;
+        let mut player = load_player(name)?;
+        // Mirror summed cargo across all owned fleets into player.resources
+        let fleets = list_owner_fleets(name).map_err(|e| e.to_string())?;
+        use std::collections::HashMap;
+        let mut totals: HashMap<ResourceType, u32> = HashMap::new();
+        for fleet in &fleets {
+            for ship in &fleet.ships {
+                for cargo in &ship.cargo {
+                    let qty = cargo.quantity.unwrap_or(0);
+                    *totals.entry(cargo.resource_type).or_insert(0) += qty;
+                }
+            }
+        }
+        // Build a complete resource list, ensuring all types exist with a quantity
+        let updated: Vec<Resource> = ResourceType::iter()
+            .map(|rt| Resource { resource_type: rt, buy: None, sell: None, quantity: Some(*totals.get(&rt).unwrap_or(&0)) })
+            .collect();
+        player.resources = updated;
+        // Best effort save so totals persist; ignore save error to not fail GET
+        let _ = player.save();
         Ok(player)
     })();
 
@@ -239,10 +258,25 @@ pub fn buy_from_planet(system_id: usize, planet_id: usize, data: Json<ResourceTr
         
         let planet = system.planets.get_mut(planet_id)
             .ok_or_else(|| "Planet not found".to_string())?;
+
+        // Enforce fleet selection and co-location for trading
+        let fleet_name = data.fleet_name.clone().ok_or_else(|| "Select a fleet to trade at this planet".to_string())?;
+        if let Ok(Some(fleet_for_check)) = crate::models::fleet::load_fleet(&fleet_name) {
+            // Validate system id
+            if fleet_for_check.current_system_id != Some(system_id) {
+                return Err("Fleet must be in this system to trade".to_string());
+            }
+            // Validate strict local position
+            let lp = fleet_for_check.local_position.as_ref().ok_or_else(|| "Fleet must be at this planet to trade".to_string())?;
+            if lp.x != planet.position.x || lp.y != planet.position.y || lp.z != planet.position.z {
+                return Err("Fleet must be at this planet to trade".to_string());
+            }
+        } else {
+            return Err("Fleet not found for trading".to_string());
+        }
         
         // 1) Capacity pre-check: if buying into a fleet, ensure enough cargo space
-        if let Some(fleet_name) = &data.fleet_name {
-            if let Ok(Some(fleet)) = crate::models::fleet::load_fleet(fleet_name) {
+        if let Ok(Some(fleet)) = crate::models::fleet::load_fleet(&fleet_name) {
                 let mode = data.distribution_mode.clone().unwrap_or_else(|| "first".to_string());
                 let mut capacity_available: u32 = 0;
                 match mode.as_str() {
@@ -274,7 +308,6 @@ pub fn buy_from_planet(system_id: usize, planet_id: usize, data: Json<ResourceTr
                         data.quantity, capacity_available
                     ));
                 }
-            }
         }
 
         // 2) Calculate total cost and update market quantities
@@ -282,16 +315,15 @@ pub fn buy_from_planet(system_id: usize, planet_id: usize, data: Json<ResourceTr
             .map_err(|e| e.to_string())?;
         
         // 3) Check if player has enough credits
-        if player.credits < total_cost as f32 {
+        if player.credits < total_cost {
             return Err("Insufficient credits".to_string());
         }
         
         // 4) Update player's credits
-        player.credits -= total_cost as f32;
+        player.credits -= total_cost;
 
         // 5) Add resources to a concrete fleet's cargo when provided, enforcing capacity
-        if let Some(fleet_name) = &data.fleet_name {
-            if let Ok(Some(mut fleet)) = crate::models::fleet::load_fleet(fleet_name) {
+        if let Ok(Some(mut fleet)) = crate::models::fleet::load_fleet(&fleet_name) {
                 let mode = data.distribution_mode.clone().unwrap_or_else(|| "first".to_string());
                 let mut remaining = data.quantity;
                 match mode.as_str() {
@@ -347,10 +379,6 @@ pub fn buy_from_planet(system_id: usize, planet_id: usize, data: Json<ResourceTr
                 }
                 if remaining > 0 { return Err("Not enough cargo capacity to store purchased goods".to_string()); }
                 crate::models::fleet::save_fleet(&fleet).map_err(|e| e.to_string())?;
-            }
-        } else {
-            // Fallback to player inventory
-            player.add_resource(data.resource_type, data.quantity);
         }
         
         // Save both player and market state
@@ -376,10 +404,23 @@ pub fn sell_to_planet(system_id: usize, planet_id: usize, data: Json<ResourceTra
         
         let planet = system.planets.get_mut(planet_id)
             .ok_or_else(|| "Planet not found".to_string())?;
+
+        // Enforce fleet selection and co-location for selling
+        let fleet_name = data.fleet_name.clone().ok_or_else(|| "Select a fleet to trade at this planet".to_string())?;
+        if let Ok(Some(fleet_for_check)) = crate::models::fleet::load_fleet(&fleet_name) {
+            if fleet_for_check.current_system_id != Some(system_id) {
+                return Err("Fleet must be in this system to trade".to_string());
+            }
+            let lp = fleet_for_check.local_position.as_ref().ok_or_else(|| "Fleet must be at this planet to trade".to_string())?;
+            if lp.x != planet.position.x || lp.y != planet.position.y || lp.z != planet.position.z {
+                return Err("Fleet must be at this planet to trade".to_string());
+            }
+        } else {
+            return Err("Fleet not found for trading".to_string());
+        }
         
         // Determine source of inventory: fleet cargo takes precedence when provided
-        if let Some(fleet_name) = &data.fleet_name {
-            if let Ok(Some(mut fleet)) = crate::models::fleet::load_fleet(fleet_name) {
+        if let Ok(Some(mut fleet)) = crate::models::fleet::load_fleet(&fleet_name) {
                 let mode = data.distribution_mode.clone().unwrap_or_else(|| "first".to_string());
                 let mut remaining = data.quantity;
                 match mode.as_str() {
@@ -414,20 +455,14 @@ pub fn sell_to_planet(system_id: usize, planet_id: usize, data: Json<ResourceTra
             } else {
                 return Err("Fleet not found for selling".to_string());
             }
-        } else {
-            // Fallback to player inventory
-            if !player.has_resource(data.resource_type, data.quantity) {
-                return Err("Not enough resources in inventory".to_string());
-            }
-            player.remove_resource(data.resource_type, data.quantity);
-        }
+        
         
         // Calculate total value and update market quantities
         let total_value = market.sell_resource(data.resource_type, data.quantity, system_id, planet_id)
             .map_err(|e| e.to_string())?;
         
         // Update player's inventory and credits
-        player.credits += total_value as f32;
+        player.credits += total_value;
         
         // Save both player and market state
         player.save().map_err(|e| e.to_string())?;
@@ -600,8 +635,14 @@ fn handle_system_movement(
 
     // Local move within system (galaxy coordinates updated directly)
     println!("Performing local move within system {}", system_id);
-    
-    let local_distance = distance(&fleet.position, &target_pos);
+    // Compute distance in LOCAL coordinates (use stored local_position when present)
+    let curr_local = if let Some(lp) = &fleet.local_position {
+        Position { x: lp.x, y: lp.y, z: lp.z }
+    } else {
+        Position { x: fleet.position.x - system.position.x, y: fleet.position.y - system.position.y, z: fleet.position.z - system.position.z }
+    };
+    let target_local = Position { x: target_pos.x - system.position.x, y: target_pos.y - system.position.y, z: target_pos.z - system.position.z };
+    let local_distance = distance(&curr_local, &target_local);
     
     // Persist fleet galaxy position at system center and record local position when inside a system
     let local_p = Position { x: target_pos.x - system.position.x, y: target_pos.y - system.position.y, z: target_pos.z - system.position.z };
@@ -1212,7 +1253,7 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
         Err(e) => return ApiResponse::error(format!("Failed to get game state: {}", e)),
     };
     state.current_game_id = Some(game_id.clone());
-    state.credits = settings.starting_credits;
+    state.credits = settings.starting_credits as f64;
     if let Err(e) = crate::models::game_state::save_game_state(state) {
         println!("Error updating game state: {}", e);
         return ApiResponse::error("Failed to update game state".to_string());
@@ -1326,7 +1367,7 @@ pub fn create_new_game(settings: Json<GameSettings>) -> Json<ApiResponse<String>
 
     println!("Creating player");
     // Create a new player with starting credits
-    let player = Player::new(&settings.player_name, settings.starting_credits);
+    let player = Player::new(&settings.player_name, settings.starting_credits as f64);
     
     println!("Saving player");
     // Save the player
@@ -1455,7 +1496,7 @@ pub fn load_game(game_id: String) -> Json<ApiResponse<String>> {
                 .map_err(|e| format!("Failed to parse player data: {}", e))?;
             player.credits
         } else {
-            saved_game.settings.starting_credits
+            saved_game.settings.starting_credits as f64
         };
 
         // Update the game state with the current game ID and credits
@@ -1776,7 +1817,7 @@ pub fn get_player_fleets() -> Json<ApiResponse<Vec<Fleet>>> {
 }
 
 #[post("/player/<name>/add_credits", format = "json", data = "<amount>")]
-pub fn add_credits(name: &str, amount: Json<f32>) -> Json<ApiResponse<String>> {
+pub fn add_credits(name: &str, amount: Json<f64>) -> Json<ApiResponse<String>> {
     let result: Result<String, String> = (|| {
         let mut player = load_player(name).map_err(|e| e.to_string())?;
         player.credits += *amount;
@@ -1794,7 +1835,7 @@ pub fn add_credits(name: &str, amount: Json<f32>) -> Json<ApiResponse<String>> {
 }
 
 #[post("/player/<name>/remove_credits", format = "json", data = "<amount>")]
-pub fn remove_credits(name: &str, amount: Json<f32>) -> Json<ApiResponse<String>> {
+pub fn remove_credits(name: &str, amount: Json<f64>) -> Json<ApiResponse<String>> {
     let result: Result<String, String> = (|| {
         let mut player = load_player(name).map_err(|e| e.to_string())?;
         if player.credits < *amount {
@@ -1938,8 +1979,12 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
                 // Consider we are in the target system only if the stored id matches
                 let in_target_via_id = initial_fleet.current_system_id == Some(resolved_index);
                 if in_target_via_id {
-                    // Only in-system segment
-                    let in_exit = distance(&initial_fleet.position, &planet_galaxy_pos);
+                    // Only in-system segment (measure in LOCAL coordinates)
+                    let local_curr = if let Some(lp) = &initial_fleet.local_position {
+                        Position { x: lp.x, y: lp.y, z: lp.z }
+                    } else { Position { x: initial_fleet.position.x - system.position.x, y: initial_fleet.position.y - system.position.y, z: initial_fleet.position.z - system.position.z } };
+                    let local_tgt = planet.position.clone();
+                    let in_exit = distance(&local_curr, &local_tgt);
                     let (_r, mut f) = handle_system_movement(initial_fleet, planet_galaxy_pos.clone(), system, resolved_index)?;
                     // Ensure last_move_distance reflects the in-system segment deterministically
                     f.last_move_distance = Some(in_exit);
@@ -2000,8 +2045,10 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
                 let target_half = settings.map_width as i32; // systems same size as galaxy
                 let in_target_via_id = initial_fleet.current_system_id == Some(resolved_index);
                 if in_target_via_id {
-                    // Pure in-system
-                    let in_exit = distance(&initial_fleet.position, &target_pos);
+                    // Pure in-system (measure in LOCAL coordinates)
+                    let local_curr = if let Some(lp) = &initial_fleet.local_position { Position { x: lp.x, y: lp.y, z: lp.z } } else { Position { x: initial_fleet.position.x - system.position.x, y: initial_fleet.position.y - system.position.y, z: initial_fleet.position.z - system.position.z } };
+                    let local_tgt = Position { x: target_pos.x - system.position.x, y: target_pos.y - system.position.y, z: target_pos.z - system.position.z };
+                    let in_exit = distance(&local_curr, &local_tgt);
                     let (r, mut f) = handle_system_movement(initial_fleet, target_pos, system, resolved_index)?;
                     // Ensure last_move_distance reflects the in-system segment deterministically
                     f.last_move_distance = Some(in_exit);
@@ -2062,7 +2109,9 @@ pub fn move_fleet(owner_id: String, fleet_number: usize, data: Json<MoveFleetDat
                 let target_half = settings.map_width as i32; // systems same size as galaxy
                 let in_target_via_id = initial_fleet.current_system_id == Some(resolved_index);
                 if in_target_via_id {
-                    let in_exit = distance(&initial_fleet.position, &target_pos);
+                    let local_curr = if let Some(lp) = &initial_fleet.local_position { Position { x: lp.x, y: lp.y, z: lp.z } } else { Position { x: initial_fleet.position.x - system.position.x, y: initial_fleet.position.y - system.position.y, z: initial_fleet.position.z - system.position.z } };
+                    let local_tgt = Position { x: target_pos.x - system.position.x, y: target_pos.y - system.position.y, z: target_pos.z - system.position.z };
+                    let in_exit = distance(&local_curr, &local_tgt);
                     let (r, mut f) = handle_system_movement(initial_fleet, target_pos, system, resolved_index)?;
                     // Ensure last_move_distance reflects the in-system segment deterministically
                     f.last_move_distance = Some(in_exit);

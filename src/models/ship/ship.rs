@@ -44,7 +44,7 @@ pub struct Ship {
     /// The armor system of the ship
     pub armor: Armor,
     /// The current market price of the ship (if available for sale)
-    pub price: Option<f32>,
+    pub price: Option<f64>,
 }
 
 /// Represents the current operational status of a ship

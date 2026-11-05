@@ -92,3 +92,11 @@ reduced where they collide. Select a star and choose **Open selected system** to
 trade station. The local map uses kilometers and has its own camera. **← Galaxy**
 or Escape returns to the same galaxy view and selection. Local destinations are
 fixed fixtures; playable travel and docking are still planned.
+
+Use **Depth slice** to filter dense maps by X/Y/Z coordinate and thickness in
+light-years. Hidden systems remain in the system list; **Focus selection** reveals
+them. A system's trade port now has an original Blender model and transparent
+map illustration, plus a larger preview when selected. See [art sources](assets/README.md).
+
+Development checks: `./tools/check.sh` runs source-length checks (500-line limit),
+rustfmt, strict Clippy and tests. See [coding standard](docs/CODING_STANDARD.md).

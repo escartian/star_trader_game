@@ -46,7 +46,10 @@ is available, treat feasibility as unresolved rather than marking this phase com
   and gesture-conflict verification remain open.
 - [x] Show actual 3D distance and a selected route, independent of camera angle.
   Distance uses world positions; the overlap fixture covers distinct depths.
-- [ ] Add an adjustable depth slice if dense-fixture testing demonstrates the need.
+- [x] Add an adjustable depth slice for dense/overlapping fixtures.
+  Choose X/Y/Z, center and thickness in light-years. Bounds/count are visible;
+  outside stars are hidden and excluded from picking. Focus reveals a hidden
+  selection without changing thickness; returning from local view preserves the slice.
 - [x] Switch between galaxy and local system views while preserving selection.
   Open selected system shows fixed planets/stations in local kilometers. The Galaxy
   breadcrumb/Escape returns without changing galaxy camera, selection or candidates.
@@ -57,7 +60,9 @@ See [map design](docs/MAP_DESIGN.md).
 
 Map presentation now includes a static procedural nebula/starfield, soft star
 halos and symbolic sizes/colors driven by explicit star kinds. This introduces
-no assets, dependencies, simulation randomness or continuous animation.
+no simulation randomness or continuous animation. The trade port now uses an
+original Blender-authored transparent sprite; editable source/export script are kept
+in assets/ and tools/art/. PNG decoding is isolated in the local artwork module.
 Phase 2 remains incomplete: device interaction and manual acceptance scenarios
 still require work. Local-system navigation is implemented with fixed destinations;
 travel/docking remain simulation work in phase 3. Phase 1 platform blockers remain
@@ -171,3 +176,10 @@ multiple galaxies, MMO-scale hosting, modding infrastructure and a custom engine
 3. Draw the fixture's 3D stars through an orthographic camera; select by mouse/touch.
 4. Build the minimal Android/iOS shells before adding a large dependency graph.
 5. Add camera controls and route inspection; then implement the local session.
+
+## Engineering checks
+
+Follow [coding standard](docs/CODING_STANDARD.md) and run `./tools/check.sh` before
+commits. Maintained source files are checked against the 500-line limit; map
+state, rendering, panels, assets, slice filtering and tests have separate modules.
+Clippy denies warnings. The same command is configured for GitHub CI.

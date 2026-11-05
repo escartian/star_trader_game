@@ -1,13 +1,18 @@
 mod camera;
 mod fixtures;
 mod local;
+mod market;
+mod panels;
+mod render;
+mod slice;
 mod visuals;
 
 use camera::Camera;
-use egui::{Color32, Pos2, Rect, Sense, Stroke, Vec2};
+use egui::{Pos2, Rect};
 use fixtures::Scene;
 use game_core::{StarSystem, SystemId};
 use glam::DVec3;
+use slice::DepthSlice;
 
 pub struct Map {
     session_systems: Vec<StarSystem>,
@@ -19,6 +24,7 @@ pub struct Map {
     session_selection: Option<SystemId>,
     pan_tool: bool,
     local: Option<local::LocalView>,
+    slice: DepthSlice,
 }
 
 fn position(system: &StarSystem) -> DVec3 {
@@ -29,12 +35,18 @@ fn position(system: &StarSystem) -> DVec3 {
     )
 }
 
-fn pick(systems: &[StarSystem], camera: &Camera, rect: Rect, pointer: Pos2) -> Vec<SystemId> {
+fn pick(
+    systems: &[StarSystem],
+    camera: &Camera,
+    rect: Rect,
+    pointer: Pos2,
+    slice: &DepthSlice,
+) -> Vec<SystemId> {
     systems
         .iter()
         .filter(|s| {
             let point = camera.project(position(s), rect);
-            rect.contains(point) && pointer.distance(point) <= 24.0
+            slice.contains(s.position) && rect.contains(point) && pointer.distance(point) <= 24.0
         })
         .map(|s| s.id)
         .collect()
@@ -53,6 +65,7 @@ impl Map {
             session_selection: selected,
             pan_tool: false,
             local: None,
+            slice: DepthSlice::default(),
         }
     }
 
@@ -78,11 +91,14 @@ impl Map {
             self.camera.pitch = 0.0;
         }
         self.candidates.clear();
+        self.slice = DepthSlice::default();
     }
 
     fn focus_selection(&mut self) {
         if let Some(system) = self.systems.iter().find(|s| Some(s.id) == self.selected) {
             self.camera.focus_on(position(system));
+            self.slice.reveal(system.position);
+            self.candidates.clear();
         }
     }
 
@@ -119,6 +135,8 @@ impl Map {
                 ui.horizontal_wrapped(|ui| {
                     if ui.button("Reset").clicked() {
                         self.camera = Camera::default();
+                        self.slice = DepthSlice::default();
+                        self.candidates.clear();
                     }
                     if ui.button("Focus selection (F)").clicked() {
                         self.focus_selection();
@@ -142,344 +160,27 @@ impl Map {
                     self.focus_selection();
                 }
                 ui.label("Tap to select • drag to orbit • Pan tool to move • wheel/slider to zoom");
-                let height = (ui.available_height() * 0.65).clamp(220.0, 540.0);
-                let (response, painter) = ui.allocate_painter(
-                    Vec2::new(ui.available_width(), height),
-                    Sense::click_and_drag(),
-                );
-                let rect = response.rect;
-                // Every background, glow and label shares the map's clip rectangle.
-                let painter = painter.with_clip_rect(rect.intersect(ui.clip_rect()));
-                visuals::background(&painter, rect, "GALAXY / light-years");
-                if response.dragged_by(egui::PointerButton::Middle)
-                    || (self.pan_tool && response.dragged_by(egui::PointerButton::Primary))
-                {
-                    self.camera.pan += ui.input(|i| i.pointer.delta());
-                } else if response.dragged_by(egui::PointerButton::Primary)
-                    || response.dragged_by(egui::PointerButton::Secondary)
-                {
-                    let delta = ui.input(|i| i.pointer.delta());
-                    self.camera.yaw += f64::from(delta.x) * 0.008;
-                    self.camera.pitch =
-                        (self.camera.pitch + f64::from(delta.y) * 0.008).clamp(-1.57, 1.57);
+                if self.slice.ui(ui) {
+                    self.candidates.clear();
                 }
-                if response.hovered() {
-                    self.camera.zoom = (self.camera.zoom
-                        * (ui.input(|i| i.smooth_scroll_delta.y) * 0.002).exp())
-                    .clamp(0.3, 4.0);
-                }
-                let hover = response
-                    .hover_pos()
-                    .map(|p| pick(&self.systems, &self.camera, rect, p))
-                    .unwrap_or_default();
-                if response.clicked() {
-                    self.candidates = response
-                        .interact_pointer_pos()
-                        .map(|p| pick(&self.systems, &self.camera, rect, p))
-                        .unwrap_or_default();
-                    if self.candidates.len() == 1 {
-                        self.selected = self.candidates.first().copied();
-                    }
-                }
-                if !hover.is_empty() {
-                    response.clone().on_hover_ui(|ui| {
-                        for system in self.systems.iter().filter(|s| hover.contains(&s.id)) {
-                            ui.label(format!("{} • {}", system.name, system.star_kind.label()));
-                        }
-                        if hover.len() > 1 {
-                            ui.label("Click to list all overlapping targets.");
-                        }
-                    });
-                }
-                if let (Some(origin), Some(target)) = (
-                    self.systems.first(),
-                    self.systems.iter().find(|s| Some(s.id) == self.selected),
-                ) {
-                    let route = [
-                        self.camera.project(position(origin), rect),
-                        self.camera.project(position(target), rect),
-                    ];
-                    painter.line_segment(
-                        route,
-                        Stroke::new(5.0_f32, Color32::from_rgba_unmultiplied(90, 220, 210, 24)),
-                    );
-                    painter
-                        .line_segment(route, Stroke::new(1.0_f32, Color32::from_rgb(92, 180, 183)));
-                }
-                // Paint the selected star last so it stays visible.
-                let mut order: Vec<_> = self.systems.iter().collect();
-                order.sort_by_key(|s| Some(s.id) == self.selected);
-                let mut labels: Vec<Rect> = Vec::new();
-                // Reserve selected label before admitting less important labels.
-                if let Some(system) = order.iter().find(|s| Some(s.id) == self.selected) {
-                    let point = self.camera.project(position(system), rect);
-                    let galley = painter.layout_no_wrap(
-                        system.name.clone(),
-                        egui::FontId::proportional(14.0),
-                        Color32::WHITE,
-                    );
-                    labels.push(Rect::from_min_size(
-                        point + Vec2::new(20.0, -20.0),
-                        galley.size(),
-                    ));
-                }
-                for system in order {
-                    let point = self.camera.project(position(system), rect);
-                    if !rect.expand(50.0).contains(point) {
-                        continue;
-                    }
-                    let selected = Some(system.id) == self.selected;
-                    visuals::star(
-                        &painter,
-                        point,
-                        system.star_kind,
-                        selected,
-                        hover.contains(&system.id),
-                    );
-                    let galley = painter.layout_no_wrap(
-                        system.name.clone(),
-                        egui::FontId::proportional(14.0),
-                        if selected {
-                            Color32::WHITE
-                        } else {
-                            Color32::from_rgb(174, 192, 215)
-                        },
-                    );
-                    let label_rect =
-                        Rect::from_min_size(point + Vec2::new(20.0, -20.0), galley.size());
-                    if selected
-                        || (!labels.iter().any(|r| r.expand(6.0).intersects(label_rect))
-                            && rect.contains_rect(label_rect))
-                    {
-                        labels.push(label_rect);
-                        painter.rect_filled(
-                            label_rect.expand(3.0),
-                            3.0,
-                            Color32::from_black_alpha(150),
-                        );
-                        painter.galley(label_rect.min, galley, Color32::WHITE);
-                    }
-                }
-                visuals::axes(&painter, rect, self.camera.rotation());
-                if self.candidates.len() > 1 {
-                    ui.group(|ui| {
-                        ui.label("Overlapping targets — choose one:");
-                        for system in self
-                            .systems
-                            .iter()
-                            .filter(|s| self.candidates.contains(&s.id))
-                        {
-                            let distance = self
-                                .systems
-                                .first()
-                                .map_or(0.0, |s| position(s).distance(position(system)));
-                            if ui
-                                .selectable_label(
-                                    Some(system.id) == self.selected,
-                                    format!(
-                                        "{} • {} • {:.2} ly",
-                                        system.name,
-                                        system.star_kind.label(),
-                                        distance
-                                    ),
-                                )
-                                .clicked()
-                            {
-                                self.selected = Some(system.id);
-                            }
-                        }
-                    });
-                }
-                if let Some(system) = self.systems.iter().find(|s| Some(s.id) == self.selected) {
-                    let origin = self.systems.first();
-                    let distance = origin.map_or(0.0, |s| position(s).distance(position(system)));
-                    ui.label(format!("{} • {}", system.name, system.star_kind.label()));
+                let visible = self
+                    .systems
+                    .iter()
+                    .filter(|s| self.slice.contains(s.position))
+                    .count();
+                if self.slice.enabled {
                     ui.label(format!(
-                        "{:.2} light-years from {} • true 3D distance",
-                        distance,
-                        origin.map_or("origin", |s| s.name.as_str())
+                        "{visible} of {} systems in slice",
+                        self.systems.len()
                     ));
-                    if !rect.contains(self.camera.project(position(system), rect)) {
-                        ui.label("Selection is outside the map. Use Focus selection to reveal it.");
-                    }
                 }
-                if ui
-                    .add_enabled(
-                        self.selected.is_some(),
-                        egui::Button::new("Open selected system"),
-                    )
-                    .clicked()
-                {
-                    self.open_selected_system();
-                }
-                egui::CollapsingHeader::new("Systems & star legend").show(ui, |ui| {
-                    ui.label("Symbolic sizes • background stars are decorative");
-                    egui::ScrollArea::vertical()
-                        .id_salt("systems")
-                        .max_height(160.0)
-                        .show(ui, |ui| {
-                            for system in &self.systems {
-                                ui.horizontal(|ui| {
-                                    ui.colored_label(visuals::appearance(system.star_kind).0, "●");
-                                    if ui
-                                        .selectable_label(
-                                            Some(system.id) == self.selected,
-                                            format!(
-                                                "{} — {}",
-                                                system.name,
-                                                system.star_kind.label()
-                                            ),
-                                        )
-                                        .clicked()
-                                    {
-                                        self.selected = Some(system.id);
-                                    }
-                                });
-                            }
-                        });
-                });
-                ui.separator();
-                ui.heading("Market layout fixture");
-                ui.label("Sample prices only; trading is not implemented.");
-                egui::ScrollArea::both()
-                    .id_salt("market")
-                    .max_height(150.0)
-                    .show(ui, |ui| {
-                        egui::Grid::new("market_table")
-                            .striped(true)
-                            .min_col_width(75.0)
-                            .show(ui, |ui| {
-                                for title in ["Commodity", "Buy (cr)", "Sell (cr)", "Stock"] {
-                                    ui.strong(title);
-                                }
-                                ui.end_row();
-                                for (name, buy, sell, stock) in [
-                                    ("Food", 12, 10, 80),
-                                    ("Ore", 30, 26, 40),
-                                    ("Medicine", 70, 62, 15),
-                                    ("Machinery", 90, 80, 20),
-                                    ("Textiles", 20, 17, 65),
-                                    ("Electronics", 110, 98, 10),
-                                ] {
-                                    ui.label(name);
-                                    ui.label(buy.to_string());
-                                    ui.label(sell.to_string());
-                                    ui.label(stock.to_string());
-                                    ui.end_row();
-                                }
-                            });
-                    });
+                let rect = self.draw_galaxy(ui);
+                self.details(ui, rect);
+                market::ui(ui);
             });
         });
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn overlapping_targets_are_all_pickable_and_distance_is_view_independent() {
-        let systems = fixtures::systems(Scene::Overlap);
-        let rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(320.0, 240.0));
-        let mut camera = Camera {
-            yaw: 0.0,
-            pitch: 0.0,
-            ..Camera::default()
-        };
-        assert_eq!(pick(&systems, &camera, rect, rect.center()).len(), 5);
-        let distance = position(&systems[0]).distance(position(&systems[4]));
-        assert_eq!(distance, 16.0);
-        camera.yaw = 1.0;
-        assert_ne!(
-            camera.project(position(&systems[0]), rect),
-            camera.project(position(&systems[4]), rect)
-        );
-        assert_eq!(
-            position(&systems[0]).distance(position(&systems[4])),
-            distance
-        );
-        assert!(pick(&systems, &camera, rect, Pos2::new(-100.0, -100.0)).is_empty());
-    }
-
-    #[test]
-    fn test_scenes_do_not_replace_session_selection() {
-        let mut map = Map::new(game_core::demo_galaxy());
-        map.selected = Some(SystemId(2));
-        map.change_scene(Scene::Dense);
-        map.selected = Some(SystemId(1010));
-        map.change_scene(Scene::Session);
-        assert_eq!(map.selected, Some(SystemId(2)));
-        assert_eq!(map.systems, game_core::demo_galaxy());
-    }
-
-    #[test]
-    fn returning_from_local_view_preserves_galaxy_context() {
-        let ctx = egui::Context::default();
-        let mut map = Map::new(game_core::demo_galaxy());
-        map.selected = Some(SystemId(2));
-        map.camera = Camera {
-            yaw: 1.2,
-            pitch: -0.7,
-            zoom: 2.5,
-            pan: Vec2::new(45.0, -30.0),
-            focus: DVec3::new(8.0, 4.0, 12.0),
-        };
-        map.candidates = vec![SystemId(1), SystemId(2)];
-        let expected_camera = Camera { ..map.camera };
-        map.open_selected_system();
-        assert!(map.local.is_some());
-        let _ = ctx.run(
-            egui::RawInput {
-                events: vec![egui::Event::Key {
-                    key: egui::Key::Escape,
-                    physical_key: None,
-                    pressed: true,
-                    repeat: false,
-                    modifiers: egui::Modifiers::NONE,
-                }],
-                ..Default::default()
-            },
-            |ctx| map.ui(ctx),
-        );
-        assert!(map.local.is_none());
-        assert_eq!(map.selected, Some(SystemId(2)));
-        assert_eq!(map.camera, expected_camera);
-        assert_eq!(map.candidates, vec![SystemId(1), SystemId(2)]);
-    }
-
-    #[test]
-    fn phone_and_desktop_layouts_tessellate_all_scenes() {
-        let ctx = egui::Context::default();
-        let mut map = Map::new(game_core::demo_galaxy());
-        for size in [Vec2::new(320.0, 480.0), Vec2::new(1000.0, 720.0)] {
-            for scene in [Scene::Session, Scene::Overlap, Scene::Dense] {
-                map.change_scene(scene);
-                let output = ctx.run(
-                    egui::RawInput {
-                        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
-                        ..Default::default()
-                    },
-                    |ctx| map.ui(ctx),
-                );
-                assert!(
-                    !ctx.tessellate(output.shapes, output.pixels_per_point)
-                        .is_empty()
-                );
-                map.open_selected_system();
-                let output = ctx.run(
-                    egui::RawInput {
-                        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
-                        ..Default::default()
-                    },
-                    |ctx| map.ui(ctx),
-                );
-                assert!(
-                    !ctx.tessellate(output.shapes, output.pixels_per_point)
-                        .is_empty()
-                );
-                map.local = None;
-            }
-        }
-    }
-}
+mod tests;

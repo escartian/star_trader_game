@@ -90,3 +90,26 @@ Checks added for local picking/focus, local overlaps, kilometer/view conversion,
 and returning via Escape without changing galaxy context. Both galaxy and local
 views tessellate at 320 × 480 and 1000 × 720 across all three scenes. Interactive
 GPU/device checks and the previously documented SDK gaps remain unresolved.
+
+## Trade-port art, modularity and depth slicing
+
+Blender 5.2.3 generated the original trade-port `.blend` and transparent 512 × 512
+PNG using the committed export script. The sandboxed Blender launch crashed before
+executing Python; the permitted host launch completed successfully. The sprite was
+visually inspected. The native map embeds it, retains a fallback marker on decode
+failure and offers a larger selected-station preview. The illustrated station is
+a billboard; it does not rotate as a 3D mesh with the camera. The client adds only
+PNG decoding, with image 0.25.10 pinned and default features disabled.
+
+Galaxy depth slicing is opt-in and operates on X/Y/Z world coordinates. The UI
+shows the inclusive bounds in light-years and a visible-system count. Stars outside
+the slice are hidden and excluded from picking. The system list marks hidden entries;
+Focus recenters the slice if necessary, retaining its thickness and the selection.
+The slice survives local-view navigation; Reset clears it.
+
+Additional checks cover all-axis slice bounds, hidden-target picking, focus reveal,
+slice preservation on return, PNG transparency/decoding and the selected station
+inspector at desktop/phone sizes. The dense phone/desktop tessellation test now
+exercises an enabled slice. `./tools/check.sh` additionally enforces source length,
+formatting and strict Clippy. Interactive GPU, touch and device lifecycle checks
+remain open, as do the previously documented mobile SDK gaps.

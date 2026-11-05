@@ -1,225 +1,153 @@
-# Implementation roadmap
+# Native Rust implementation roadmap
 
-Work in this order. Each phase has a visible completion criterion; complete it
-before expanding scope. These are dependency milestones, not calendar estimates.
-The desktop prototype now implements navigation, a local trading loop and JSON
-save slots. Mobile build/device work is deferred at the user's request; it does
-not block desktop gameplay implementation. Manual desktop acceptance and pacing
-remain open. See docs/PLATFORM_STATUS.md.
+This is escartian's rewrite of their own [Star Trader game](https://github.com/escartian/star_trader_game#star-trader-game).
+The original README was reviewed on 2026-11-05. Its fleet management, planetary
+commerce, combat, factions and mission ambitions define the destination. The
+current trading loop is an implementation foundation, not the entire game.
+See [rewrite parity](docs/REWRITE_PARITY.md) for original claims versus current evidence.
 
-## 0. Establish the boundaries
+## Decisions carried forward
 
-- [x] Create core, protocol, server, and client crates with a compiling fixture.
-- [x] Record the no-engine architecture and 3D map interaction plan.
-- [x] Record initial design decisions: premium/offline-first single-player with
-  optional multiplayer is the working assumption. Rules use discrete ticks;
-  single-player schedules them continuously, multiplayer will resolve explicit turns.
-- [x] Record working coordinate units, travel rules, and a concrete first-session goal
-  in [first-session rules](docs/FIRST_SESSION.md).
-  Proposed goal: earn enough to buy a larger cargo hold in roughly 20–30 minutes.
+- Pure Rust native client and authoritative Rust session/server; no web frontend.
+  Single-player runs both in one process: `cargo run -p game-client`.
+- Integer Cartesian coordinates and configurable cubic boundaries. Galaxy units
+  remain **light-years**, system units **kilometers**, per the owner's preference.
+  Separate coordinate types and explicit checked conversions must prevent mixing
+  spaces. The old generic ±100 local units are not interpreted as ±100 km.
+- Single-player advances discrete ticks **only on successful player movement**.
+  Waiting, reading, trading, fleet management and rendering consume no time. No
+  End Turn action or wall-clock catch-up. AI and markets act on movement ticks.
+  Multiplayer will collect explicit shared turns around the same rules.
+- JSON for definitions and player/world saves. One in-memory authority owns live
+  state; the original REST routes, per-model file reads and TTL caches are replaced.
+- Modular readable code, at most 500 lines per source file. Rustfmt, strict Clippy,
+  source-size checks and behavior tests run through `./tools/check.sh`.
+- Mobile builds/device work are deferred. Desktop implementation proceeds while
+  manual interaction, lifecycle and playtest gaps remain explicitly open.
 
-**Done when:** the first-session rules fit on one page and do not require factions,
-real-time piloting, or multiplayer to be entertaining.
+## 1. Foundation and native presentation
 
-## 1. Prove the native interface and platform path
+- [x] Separate core, protocol, server library and native client crates.
+- [x] In-process offline session with validated commands, revisions and events.
+- [x] Seeded 3D galaxy with reachable starting markets; distinct ly/km types.
+- [x] Orbit/pan/zoom, focus, presets, overlap chooser and double-click inspection.
+- [x] Starfield/nebula background, star-type colors/glows/sizes, local system view.
+- [x] Blender-authored celestial/station sprites and schematic moon separation.
+- [x] Stock-sensitive commerce, per-ship holds, refuel and cargo upgrade.
+- [x] Atomic JSON saves, backup recovery, slots, settings and trader onboarding.
+- [x] Action-driven single-player ticks, with no real-time scheduler.
+- [ ] Manual desktop navigation/DPI/lifecycle acceptance and pacing study.
 
-- [x] Add a compatible pinned library set: winit, wgpu, egui integrations, glam.
-- [ ] Open a window, draw text and a selectable star, and handle resize/DPI changes.
-- [ ] Prove a scrollable market table and readable layout on a phone-size viewport.
-- [ ] Build a minimal Android and iOS shell; check touch, safe areas, suspend/resume,
-  GPU surface recreation, and redraw behavior on real devices where available.
-- [x] Document any unavailable SDK/device checks and unresolved platform blockers.
-- [ ] Render on demand while idle; animate only while movement/effects require it.
+**Acceptance:** rejected actions preserve state; movement advances the world once;
+load restores existing state. Automated checks cover these rules. Window/device
+acceptance is separate; see [platform status](docs/PLATFORM_STATUS.md).
 
-**Done when:** desktop works and mobile feasibility is established with explicit
-evidence. Mobile feasibility remains unresolved and is deferred by user direction.
-Do not mark the platform phase complete on the basis of desktop/offscreen checks.
+## 2. Owned ships and fleets — current implementation batch
 
-## 2. Make the 3D universe understandable
+- [x] Stable ship/fleet IDs, per-ship cargo/fuel/capacity and data-driven ship classes.
+- [x] Purchase freighter/scout/patrol hulls; select the ship used for commerce.
+- [x] Split a fleet into nonempty groups; combine co-located owned fleets.
+- [x] Transfer cargo between co-located owned ships without creating goods.
+- [x] Travel the selected fleet atomically; check every member's fuel/range.
+- [x] Save fleet membership and migrate prior single-ship saves without reset.
+- [x] Original Blender ship sources/sprites and docked ship markers in system view.
+- [ ] Per-planet finite shipyard inventory, ship selling/trading and fleet renaming.
+- [ ] Ship locations tied to a planet/station/deep-space position, rather than a
+  system-level dock. Planet-orbit ship markers depend on that authoritative data.
 
-- [x] Use a fixed small galaxy plus fixtures with overlapping and dense stars.
-  Session / Overlap test / Dense test switcher; fixture state stays outside the session.
-- [x] Implement orthographic projection, orbit, pan, zoom, camera reset and focus.
-  Focus button/F and a visible pan tool are implemented; focus has automated coverage.
-- [x] Add top/front/side presets, axis indicator, labels, hover and selection.
-  Labels avoid other labels and reserve space for the selected system.
-- [ ] Resolve projected overlap with a candidate list; support touch selection.
-  Explicit candidate list and 24-point pick radius implemented and tested; real touch
-  and gesture-conflict verification remain open.
-- [x] Show actual 3D distance and a selected route, independent of camera angle.
-  Distance uses world positions; the overlap fixture covers distinct depths.
-- [x] Switch between galaxy and local system views while preserving selection.
-  Open selected system shows fixed planets/stations in local kilometers. The Galaxy
-  breadcrumb/Escape returns without changing galaxy camera, selection or candidates.
+**Acceptance:** split, move independently, rendezvous and merge; preserve each
+ship's cargo, fuel and identity through save/load. These flows have behavior tests.
+The current shipyard is a system-port catalog; patrol hulls have no combat yet.
 
-**Done when:** a new player can find a system, distinguish depth, select an
-overlapping target, and explain a route's distance without entering coordinates.
-See [map design](docs/MAP_DESIGN.md).
+## 3. Restore the original movement and planetary world model — next
 
-Map presentation now includes a static procedural nebula/starfield, soft star
-halos and symbolic sizes/colors driven by explicit star kinds. This introduces
-no simulation randomness or continuous animation. Local stars, planets, moons,
-asteroids and the trade port use original Blender-authored transparent sprites;
-editable sources/export scripts are kept in assets/ and tools/art/. Shared artwork
-preloads once per egui context; galaxy markers and halos remain procedural.
-Depth slicing has been removed by user direction; use camera controls and overlap
-selection for dense maps. Moons are spaced schematically without changing saved
-kilometer coordinates, using consistent drawing/picking/focus positions.
-Phase 2 remains incomplete: device interaction and manual acceptance scenarios
-still require work. Local-system navigation is implemented with fixed destinations;
-galaxy travel is authoritative; local docking is pending. Mobile platform work
-remains deferred; desktop gameplay implementation proceeds.
+- [ ] Add configurable galaxy/system cubic bounds in ly/km; choose kilometer
+  extents that contain generated bodies. Validate edge/corner/overflow cases.
+- [ ] Store fleet local or deep-space position explicitly, shared by its members.
+- [ ] Local movement to a position or body within system bounds; validate docking
+  and body proximity/collision rules without adding orbital physics.
+- [ ] Exit a system by crossing its cube boundary along the requested direction.
+  Compute a checked unit conversion; do not copy illustrative README formulas
+  that combine galaxy and system units.
+- [ ] Deep-space linear movement, bounded by galaxy dimensions.
+- [ ] Enter only when explicitly targeting system coordinates. Passing a system
+  along a route does not automatically intercept or enter it.
+- [ ] Shared movement preview/commit rules, fuel/tick costs, path and arrival events.
+- [ ] Planet economy type, production specialization, biome and danger rating
+  (VerySafe through Insidious); resource market, ship market and local credits.
+- [ ] Replace prototype system markets with planet markets, including buyer funds
+  and a migration that preserves balances rather than silently generating wealth.
 
-## 3. Build one authoritative local session
+**Acceptance:** a fleet can leave a planet, exit a system, move through deep space,
+explicitly enter another system and dock at a planet. All transitions survive
+save/load and use movement ticks. UI inspection alone never moves a fleet.
 
-- [ ] Define stable entity IDs, separate galaxy/local positions, fixed-unit money,
-  cargo quantities, ships, fleets, markets, and simulation time.
-  All are present for the one-player/one-ship fixture except fleet grouping, which
-  remains progression work. Money/cargo/market state is saved as validated JSON.
-- [x] Add reusable session handling to the server package; invoke it in-process
-  for offline play. Galaxy/session snapshots, travel previews and departures are handled.
-- [x] Implement initial travel commands, validation, typed errors, events and visible snapshots.
-  Commands carry ship/destination IDs and expected revisions, never a trusted owner ID.
-- [x] Add movement range, fuel costs, travel time and arrival handling.
-  Exact integer distance/ceil rounding, checked time arithmetic and host-tick arrivals;
-  the client displays fuel, location, quotes, errors and automatic travel progress.
-- [x] Validate fuel/capacity/ownership and apply each command atomically.
-  Candidate commerce transactions cover credits, cargo, stock, fuel and upgrades;
-  rejected commands preserve the complete authority snapshot.
-- [x] Add seeded generation with a guaranteed usable start and reachable markets.
-  Seeds preserve Sol and two reachable markets; 256 seeded starts are checked.
-- [ ] Keep hidden world state out of client snapshots when discovery is introduced.
+## 4. NPC traders and fleet combat
 
-**Done when:** the client can start a session and move a ship between markets;
-invalid actions leave state unchanged. Test travel boundaries, command atomicity,
-and reproducible generation rather than UI implementation details.
+Restore the original trader/personality direction before extending the economy.
+Combat is the original README's first prioritized expansion.
 
-## 4. Complete the first trading loop
+- [ ] NPC traders with personality, route choice, conserved funds/cargo and tick AI.
+- [ ] Ship type/size/engine, HP, shields, armor and weapon/loadout definitions.
+- [ ] Carry forward Photon Singularity Beam, Quantum Entanglement Torpedo, Neutron
+  Beam, Graviton Pulse and Magnetic Resonance Disruptor as balanceable JSON content.
+- [ ] Authoritative fleet encounters/combat, target selection, damage/destruction,
+  retreat, salvage/rewards and saved results; readable native combat report.
+- [ ] Deterministic seeded resolution and explicit hostility/engagement rules.
 
-- [x] Implement buy/sell commands, credits, cargo capacity and market stock.
-- [x] Add production, consumption, bounded stock-sensitive pricing and a spread.
-- [x] Advance markets on simulation time, never on opening or refreshing a panel.
-- [x] Prevent profitable immediate buy/sell loops at the same market.
-- [x] Show price per unit, total cost, capacity, stock and estimated journey costs.
-- [x] Show comparisons for known markets; give quotes a timestamp/revision so
-  stale purchases can be rejected clearly, without silently changing the price.
-- [x] Add one cargo upgrade and the first-session earnings goal.
+**Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
+cargo and rewards remain consistent. NPC actions occur on simulation ticks.
 
-**Done when:** travel → buy → travel → sell → upgrade works; multiple routes have
-credible tradeoffs, and credits/cargo/stock stay consistent on rejected trades.
-Test economic invariants and representative routes. The real-command integration
-check now completes the loop without granting test credits. Prices/production come
-from config/economy.json. The proposed 20–30 minute pacing is not validated.
+## 5. Factions and ship management
 
-## 5. Make it safe to return and easy to learn
+- [ ] Federation, Empire, Republic and Alliance with influence and relationships.
+- [ ] Influence affects NPC fleets, territory and trade access/opportunities.
+- [ ] Reputation, law/inspections, wanted status and police response.
+- [ ] Repairs, maintenance, detailed ship statistics, equipment and customization.
+- [ ] Fleet summaries and batch management that remain readable as ownership grows.
 
-- [x] Add a versioned save format, validated loading, atomic replacement and backup.
-- [x] Save/load world, markets, simulation time, player, ships and current journey.
-- [x] Add new/continue/save slots, settings, a short guided first delivery and logs.
-- [x] Add recovery messages for damaged or incompatible saves.
-- [x] Ensure loading does not regenerate prices or duplicate money/items.
-- [ ] Validate offline suspend/resume; persist at safe lifecycle points on mobile.
-  Desktop close/suspend hooks autosave and reset the clock; close-save failure
-  keeps the window open. Real lifecycle/device checks remain unverified/deferred.
+**Acceptance:** allegiance, equipment and damage affect actionable decisions;
+repairs, access and reputation changes persist and cannot duplicate credits/items.
 
-Save slots use schema-1 JSON with strict load validation, backup recovery and
-atomic replacement. Client settings separately remember save slot/path, tick speed,
-guide visibility and autosave. Pause and logs remain transient. Loading restores
-saved definitions and live balances.
-Actual window/device lifecycle and pacing still need acceptance testing.
+## 6. Missions and player specializations
 
-**Done when:** players can quit mid-session and resume the same state. Verify save
-round trips and failed-write recovery. This phase is required before external testing.
+The current first-delivery guide is trader onboarding, not a mission engine.
+Build common objective/deadline/reward rules after movement/combat foundations.
 
-## 6. Test whether the game deserves expansion
+- [ ] Authoritative saved contract lifecycle with tick deadlines and JSON content.
+- [ ] Transport/logistics, combat/escort, exploration/anomalies, bounty hunting and
+  piracy of goods/people, matching the original README's mission categories.
+- [ ] Trader, spy/espionage, soldier and pirate routes with appropriate onboarding.
+- [ ] Mixable specializations; shared control/save introduction, route-specific goals.
+- [ ] Candidate additions: explorer/scout, prospector/salvager, smuggler and
+  diplomat/fixer. Explorer and prospector are the preferred first additions.
 
-Feedback recorded so far from the project owner: depth slicing is unnecessary and
-moons were visually merged with planets. The filter has been removed; schematic
-moon spacing and marker-aware labels address the overlap. This is not a 5–10 player
-study; upgrade pacing and the interesting decisions still need observation.
+**Acceptance:** success/failure/rewards resolve once, survive saves, and use the
+same fleet/economy/combat/legal state. Trading is not mandatory for every route.
+See [specializations](docs/PLAYER_SPECIALIZATIONS.md).
 
-- [ ] Give the small build to 5–10 trading/management players.
-- [ ] Observe navigation, first profitable delivery, upgrade discovery and return play.
-- [ ] Ask which decisions were interesting and where the game became repetitive.
-- [ ] Fix confusing navigation, pacing and obvious dominant routes first.
-- [ ] Record a continue/change-direction decision from observed behavior.
+## 7. Shared multiplayer turns
 
-**Done when:** there is evidence people understand and enjoy the core loop.
-Do not expand the feature list to compensate for an uninteresting economy.
+- [ ] Versioned transport, serialization, authenticated per-player accounts.
+- [ ] Dedicated server loop with ordered actions and explicit turn collection.
+- [ ] Request IDs, duplicate response replay, stale revisions and snapshot resync.
+- [ ] Reconnect/restart/disconnection rules and hidden-state filtering.
+- [ ] Test competing purchases, ownership, fleet actions and turn determinism.
 
-## 7. Add risk, identity and progression
+**Acceptance:** two clients share one world without duplicate purchases/actions;
+clients cannot advance host time or impersonate another player. The current
+protocol boundary anticipates this; multiplayer itself is not implemented.
 
-The current first-delivery guide is trader onboarding, not a universal questline.
-Plan explicit trader, spy, soldier and pirate progression using shared mission,
-ship, faction, combat and legal-state foundations. See
-[player specializations](docs/PLAYER_SPECIALIZATIONS.md). These routes are not
-implemented yet; players should be able to mix specializations (working assumption).
+## 8. Desktop release, then mobile
 
+- [ ] Observe 5–10 players completing their preferred route; improve navigation,
+  tradeoffs and repetitive fleet management using evidence.
+- [ ] Package Windows/macOS/Linux; add accessibility, inputs, audio and feedback.
+- [ ] Complete phone/tablet gestures, safe areas, lifecycle and real-device profiling.
+- [ ] Mobile packaging/signing and full-session offline/connected acceptance.
 
-- [ ] Shared authoritative mission/contract lifecycle with objectives, tick deadlines,
-  deposits, outcomes, rewards and saved progress; route-specific JSON definitions.
-- [ ] Trader route: commerce, logistics and delivery/supply contracts.
-- [ ] Spy route: espionage, covert delivery, reconnaissance, cover and detection.
-- [ ] Soldier route: patrol, escort, military deployments and combat progression.
-- [ ] Pirate route: robbery, combat, stolen cargo/fencing, wanted status and police evasion.
-- [ ] Shared control/travel/save onboarding followed by route-specific introductions;
-  a trading delivery must not be mandatory for every specialization.
-- [ ] A small encounter set: trader, inspection, distress call, pirate demand.
-- [ ] Choices to negotiate, flee, surrender cargo or fight, with understandable odds.
-- [ ] Simple combat resolution driven by relevant equipment, damage and repairs.
-- [ ] Distinct ship roles, cargo/range/defense upgrades and maintenance costs.
-- [ ] Small faction reputation model, legal restrictions and meaningful access perks.
-- [ ] Support a few fleets with useful summaries and low repetitive interaction cost.
-
-**Done when:** safe and risky strategies are both viable, and upgrades alter choices.
-Avoid a separate tactical combat game unless playtesting establishes a need.
-
-## 8. Connect remote clients
-
-- [ ] Extract transport adapters around the existing session command interface.
-- [ ] Add serialization, protocol negotiation, request IDs and state revisions.
-- [ ] Implement an authoritative dedicated server with ordered command processing.
-- [ ] Establish authenticated player identity; do not trust an owner ID in a command.
-- [ ] Use TLS for public connections and bounds on message size/request frequency.
-- [ ] Reject stale trades, prevent duplicate actions after retry, and resync snapshots.
-- [ ] Handle reconnect, server restart, disconnect during travel and concurrent trades.
-- [ ] Implement shared-turn collection/resolution and session timing configuration.
-  Direction chosen: continuous single-player over discrete ticks; explicit turns for
-  multiplayer. Host-only clock advancement is separate from player commands.
-- [ ] Test two clients competing for the same stock and retrying the same purchase.
-
-**Done when:** two clients share one consistent world, reconnect safely, and cannot
-spend the same credits or purchase the same stock twice. No MMO infrastructure yet.
-
-## 9. Ship desktop, then finish mobile
-
-- [ ] Package and smoke-test Windows, macOS and Linux builds.
-- [ ] Add audio, visual feedback, accessibility settings and configurable inputs.
-- [ ] Finish phone/tablet layouts, gestures, safe areas and text sizing.
-- [ ] Profile map density, battery use, memory and network interruptions on devices.
-- [ ] Add mobile packaging, signing, store assets and platform-specific integration.
-- [ ] Run full-session checks on each supported platform, both offline and connected.
-
-**Done when:** a fresh install can complete, save and resume the core session on
-every claimed platform. Desktop may ship before the mobile rollout.
-
-## Deferred until there is a clear player need
-
-Planet colonization/development, elaborate diplomacy, research trees, orbital
-mechanics, fully rendered planets, real-time ship piloting, tactical 3D battles,
-multiple galaxies, MMO-scale hosting, modding infrastructure and a custom engine.
-
-## First implementation batch
-
-1. Complete the one-page rules and coordinate/time decisions from phase 0.
-2. Open the native window and render one egui panel with the proposed library stack.
-3. Draw the fixture's 3D stars through an orthographic camera; select by mouse/touch.
-4. Build the minimal Android/iOS shells before adding a large dependency graph.
-5. Add camera controls and route inspection; then implement the local session.
-
-## Engineering checks
-
-Follow [coding standard](docs/CODING_STANDARD.md) and run `./tools/check.sh` before
-commits. Maintained source files are checked against the 500-line limit; map
-state, rendering, panels, assets and tests have separate modules.
-Clippy denies warnings. The same command is configured for GitHub CI.
+Potential later scope from the original: enhanced faction AI/economy/generation,
+alien reputation, colonization, planetary development/events/diplomacy. Binary
+stars, multiple galaxies, galactic motion and orbital mechanics remain unlikely.
+Original web-save import is separate from migrations of this Rust rewrite's JSON;
+no compatibility claim is made without inspecting and testing actual old saves.

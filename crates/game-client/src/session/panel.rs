@@ -16,9 +16,21 @@ impl LocalSession {
                 .map_or("Unknown", |s| s.name.as_str())
         };
         ui.horizontal_wrapped(|ui| {
-            ui.strong("Your ship");
-            if self.saves.paused {
-                ui.strong("PAUSED");
+            let ships = self.state.ships.clone();
+            egui::ComboBox::from_id_salt("active_ship")
+                .selected_text(&self.selected_ship().name)
+                .show_ui(ui, |ui| {
+                    for ship in ships {
+                        if ui
+                            .selectable_label(ship.id == self.active_ship, &ship.name)
+                            .clicked()
+                        {
+                            self.select_ship(ship.id);
+                        }
+                    }
+                });
+            if ui.button("Fleets / shipyard").clicked() {
+                self.fleet_panel.open = true;
             }
             if ui.button("Session / saves").clicked() {
                 self.saves.open = true;
@@ -26,17 +38,19 @@ impl LocalSession {
             ui.label(format!(
                 "{} cr • cargo {}/{}",
                 self.economy.credits,
-                self.economy.cargo_used(),
-                self.economy.cargo_capacity
+                self.selected_ship().cargo_used(),
+                self.selected_ship().cargo_capacity
             ));
             if ui.button("Market / refuel").clicked() {
                 self.market.open = true;
             }
             ui.label(format!(
                 "Fuel: {}/{} • tick {}",
-                self.state.ship.fuel, self.state.ship.fuel_capacity, self.state.tick
+                self.selected_ship().fuel,
+                self.selected_ship().fuel_capacity,
+                self.state.tick
             ));
-            match &self.state.ship.location {
+            match &self.selected_ship().location {
                 Location::Docked(system) => {
                     ui.label(format!("At {}", name(*system)));
                 }
@@ -50,31 +64,38 @@ impl LocalSession {
                 }
             }
         });
+        if matches!(self.selected_ship().location, Location::Travelling(_))
+            && ui.button("Continue journey").clicked()
+        {
+            self.command(ClientCommand::ContinueTravel {
+                ship: self.selected_ship().id,
+                expected_revision: self.state.revision,
+            });
+            ui.ctx().request_repaint();
+        }
         let target = target.filter(|destination| {
-            matches!(self.state.ship.location,
+            matches!(self.selected_ship().location,
             Location::Docked(origin) if origin != *destination)
         });
         if let Some(destination) = target {
             match self.authority.handle(ClientCommand::PreviewTravel {
-                ship: self.state.ship.id,
+                ship: self.selected_ship().id,
                 destination,
             }) {
                 ServerMessage::TravelPreview(quote) => {
                     ui.horizontal_wrapped(|ui| {
                         ui.label(format!(
-                            "To {}: {} fuel (~{} cr) • {} ticks (~{:.1} seconds at {}x)",
+                            "To {}: {} fuel per ship (~{} cr each) • {} simulation ticks for the fleet",
                             name(destination),
                             quote.fuel,
                             game_core::economy::Credits(
                                 u64::from(quote.fuel) * self.economy.rules.fuel_unit_price.0
                             ),
-                            quote.duration_ticks,
-                            quote.duration_ticks as f64 / f64::from(self.saves.speed),
-                            self.saves.speed
+                            quote.duration_ticks
                         ));
                         if ui.button("Travel").clicked() {
-                            let message = self.authority.handle(ClientCommand::Travel {
-                                ship: self.state.ship.id,
+                            let message = self.authority.handle_offline(ClientCommand::Travel {
+                                ship: self.selected_ship().id,
                                 destination,
                                 expected_revision: quote.revision,
                             });

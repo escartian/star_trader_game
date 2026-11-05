@@ -39,3 +39,16 @@ Symbolic sizes retain stars > planets > stations. The local station is a small
 marker, with a larger detail illustration when selected. A moon next to its
 planet may overlap in projection; use the candidate chooser or destination list.
 Blender is needed only for authoring/export, never to run the game.
+
+## Ship hulls
+
+`source/freighter.blend`, `source/scout.blend` and `source/patrol.blend` are
+original editable models. `sprites/` contains their transparent 256px exports.
+Rebuild using Blender in background mode:
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender --background --python tools/art/build_ships.py
+```
+
+Freighters have cargo pods, scouts swept wings and patrol ships hardpoints.
+These are static ship illustrations; combat equipment is not implemented yet.

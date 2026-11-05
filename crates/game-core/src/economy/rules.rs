@@ -22,6 +22,8 @@ pub struct EconomyRules {
     pub hold_upgrade_capacity: u32,
     pub commodity_order: [Commodity; 6],
     pub markets: Vec<MarketTemplate>,
+    #[serde(default)]
+    pub ship_catalog: crate::fleet::ShipCatalog,
 }
 
 impl Default for EconomyRules {
@@ -39,6 +41,7 @@ impl EconomyRules {
     }
 
     pub fn validate(&self) -> Result<(), String> {
+        self.ship_catalog.validate()?;
         if self.schema_version != 1 {
             return Err("Unsupported economy schema version".into());
         }

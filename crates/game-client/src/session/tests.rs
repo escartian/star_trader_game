@@ -2,40 +2,40 @@ use super::*;
 use game_core::travel::ShipId;
 
 #[test]
-fn offline_clock_preserves_fractional_ticks_and_arrives_without_player_turns() {
+fn offline_time_advances_only_for_successful_movement() {
+    use game_core::economy::{Commodity, TradeSide};
     let mut host = LocalSession::new(game_server::Session::default());
-    let start = host.clock;
-    let message = host.authority.handle(ClientCommand::Travel {
+    let initial = host.state.clone();
+    for _ in 0..20 {
+        let _ = egui::Context::default().run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| host.guide(ui));
+        });
+        host.authority.handle(ClientCommand::GetSession);
+    }
+    assert_eq!(host.state, initial);
+    host.command(ClientCommand::Trade {
+        ship: ShipId(1),
+        commodity: Commodity::Food,
+        quantity: 1,
+        side: TradeSide::Buy,
+        expected_revision: host.state.revision,
+    });
+    assert_eq!(host.state.tick, 0);
+    host.command(ClientCommand::Travel {
         ship: ShipId(1),
         destination: SystemId(2),
-        expected_revision: 0,
+        expected_revision: host.state.revision,
     });
-    host.accept(message);
-    host.advance_to(start + Duration::from_millis(14_900));
-    assert_eq!(host.state.tick, 14);
-    assert!(matches!(host.state.ship.location, Location::Travelling(_)));
-    host.advance_to(start + Duration::from_secs(15));
-    assert_eq!(host.state.ship.location, Location::Docked(SystemId(2)));
     assert_eq!(host.state.tick, 15);
-    assert_eq!(host.state.ship.fuel, 25);
-    let original = host.state.clone();
-    host.advance_to(start + Duration::from_secs(15));
-    assert_eq!(host.state, original);
-}
-
-#[test]
-fn speed_changes_only_tick_scheduling_and_pause_prevents_catch_up() {
-    let mut host = LocalSession::new(game_server::Session::default());
-    let mut expected = host.economy.clone();
-    expected.advance(4);
-    host.saves.speed = 4;
-    host.advance_to(host.clock + Duration::from_secs(1));
-    assert_eq!(host.state.tick, 4);
-    assert_eq!(host.economy, expected);
-    host.saves.paused = true;
-    host.clock = Instant::now() - Duration::from_secs(100);
-    host.update_clock(&egui::Context::default());
-    assert_eq!(host.state.tick, 4);
+    assert_eq!(host.state.ships[0].location, Location::Docked(SystemId(2)));
+    assert_eq!(host.state.ships[0].fuel, 25);
+    let arrived = host.state.clone();
+    host.command(ClientCommand::Travel {
+        ship: ShipId(1),
+        destination: SystemId(2),
+        expected_revision: host.state.revision,
+    });
+    assert_eq!(host.state, arrived);
 }
 
 #[test]
@@ -86,7 +86,6 @@ fn remembered_slot_and_controls_restore_without_altering_world_state() {
     let settings = Preferences {
         save_path: game_path.clone(),
         slot: 3,
-        speed: 4,
         guide: false,
         ..Preferences::default()
     };
@@ -102,16 +101,50 @@ fn remembered_slot_and_controls_restore_without_altering_world_state() {
         .unwrap();
     assert_eq!(restored.saves.path, game_path);
     assert_eq!(restored.saves.slot, 3);
-    assert_eq!(restored.saves.speed, 4);
     assert!(!restored.saves.guide);
-    assert!(!restored.saves.paused);
     assert_eq!(restored.state, host.state);
     assert_eq!(restored.economy, host.economy);
     let invalid = Preferences {
-        speed: 0,
+        slot: 0,
         ..settings
     };
     let before = restored.preferences();
     assert!(restored.apply_preferences(invalid, None).is_err());
     assert_eq!(restored.preferences(), before);
+}
+
+#[test]
+fn selected_ship_trades_into_its_own_hold_and_restores_from_preferences() {
+    use game_core::{
+        economy::{Commodity, TradeSide},
+        fleet::ShipKind,
+    };
+    let mut host = LocalSession::new(game_server::Session::default());
+    host.command(ClientCommand::BuyShip {
+        ship: ShipId(1),
+        kind: ShipKind::Scout,
+        expected_revision: 0,
+    });
+    assert_eq!(host.selected_ship().id, ShipId(2));
+    host.command(ClientCommand::Trade {
+        ship: host.selected_ship().id,
+        commodity: Commodity::Food,
+        quantity: 2,
+        side: TradeSide::Buy,
+        expected_revision: host.state.revision,
+    });
+    assert_eq!(host.state.ships[0].cargo[0], 0);
+    assert_eq!(host.state.ships[1].cargo[0], 2);
+    assert_eq!(host.state.tick, 0);
+    let settings = host.preferences();
+    let mut restored = LocalSession::new(host.authority.clone());
+    restored.apply_preferences(settings, None).unwrap();
+    assert_eq!(restored.selected_ship().id, ShipId(2));
+    restored.select_ship(ShipId(999));
+    assert_eq!(restored.selected_ship().id, ShipId(2));
+    let _ = egui::Context::default().run(egui::RawInput::default(), |ctx| {
+        restored.open_fleets();
+        restored.show_fleets(ctx, &game_core::generation::generate_galaxy(0));
+    });
+    assert_eq!(restored.state.tick, 0);
 }

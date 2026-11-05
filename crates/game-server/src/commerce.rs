@@ -45,18 +45,18 @@ impl Session {
                 side,
                 ..
             } => SessionEvent::Traded(economy.trade(
-                &state.ship,
+                state.ship_mut(ship)?,
                 commodity,
                 quantity,
                 side,
-                state.revision,
+                expected_revision,
             )?),
             ClientCommand::Refuel { units, .. } => {
-                economy.refuel(&mut state.ship, units)?;
+                economy.refuel(state.ship_mut(ship)?, units)?;
                 SessionEvent::Refuelled { units }
             }
             ClientCommand::UpgradeHold { .. } => {
-                economy.upgrade_hold(&state.ship)?;
+                economy.upgrade_hold(state.ship_mut(ship)?)?;
                 SessionEvent::HoldUpgraded
             }
             _ => unreachable!("command was validated above"),

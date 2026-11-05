@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod economy;
+pub mod fleet;
 pub mod generation;
 pub mod travel;
 

@@ -9,22 +9,21 @@ impl LocalSession {
         path: Option<PathBuf>,
     ) -> Result<(), String> {
         settings.validate()?;
+        self.select_ship(settings.active_ship);
         self.saves.slot = settings.slot;
         self.set_save_path(settings.save_path);
-        self.saves.speed = settings.speed;
         self.saves.guide = settings.guide;
         self.saves.autosave = settings.autosave;
         self.preferences_path = path;
-        self.reset_clock();
         Ok(())
     }
 
     pub(super) fn preferences(&self) -> Preferences {
         Preferences {
-            schema_version: 1,
+            schema_version: 2,
             save_path: self.saves.path.clone(),
             slot: self.saves.slot,
-            speed: self.saves.speed,
+            active_ship: self.selected_ship().id,
             guide: self.saves.guide,
             autosave: self.saves.autosave,
         }

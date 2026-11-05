@@ -3,7 +3,7 @@ use super::Commodity;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
 
-pub(super) fn serialize<S: Serializer>(cargo: &[u32; 6], serializer: S) -> Result<S::Ok, S::Error> {
+pub(crate) fn serialize<S: Serializer>(cargo: &[u32; 6], serializer: S) -> Result<S::Ok, S::Error> {
     Commodity::ALL
         .into_iter()
         .map(|kind| (kind, cargo[kind.index()]))
@@ -11,7 +11,7 @@ pub(super) fn serialize<S: Serializer>(cargo: &[u32; 6], serializer: S) -> Resul
         .serialize(serializer)
 }
 
-pub(super) fn deserialize<'de, D: Deserializer<'de>>(
+pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<[u32; 6], D::Error> {
     let values = BTreeMap::<Commodity, u32>::deserialize(deserializer)?;

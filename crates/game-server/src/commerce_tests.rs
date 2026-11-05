@@ -45,7 +45,7 @@ fn refuel(session: &mut Session) {
         session,
         ClientCommand::Refuel {
             ship: ShipId(1),
-            units: 40 - session.state.ship.fuel,
+            units: 40 - session.state.ships[0].fuel,
             expected_revision: session.state.revision,
         },
     );
@@ -68,7 +68,7 @@ fn real_commands_complete_buy_travel_sell_refuel_and_upgrade_without_granted_cre
         }
     }
     assert!(session.economy.credits >= session.economy.rules.hold_upgrade_price);
-    assert_eq!(session.economy.cargo_used(), 0);
+    assert_eq!(session.state.ships[0].cargo_used(), 0);
     let revision = session.state.revision;
     succeed(
         &mut session,
@@ -77,8 +77,8 @@ fn real_commands_complete_buy_travel_sell_refuel_and_upgrade_without_granted_cre
             expected_revision: revision,
         },
     );
-    assert!(session.economy.upgraded);
-    assert_eq!(session.economy.cargo_capacity, 40);
+    assert!(session.state.ships[0].upgraded);
+    assert_eq!(session.state.ships[0].cargo_capacity, 40);
 }
 
 #[test]

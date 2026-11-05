@@ -7,25 +7,25 @@ fn economy() -> Economy {
 
 #[test]
 fn immediate_buy_sell_is_never_profitable_even_for_bulk_orders() {
-    let ship = TravelState::default().ship;
+    let mut ship = TravelState::default().ships[0].clone();
     for commodity in Commodity::ALL {
         for target in [1, 2, 10, 100] {
             for stock in [1, target, target * 2] {
                 for quantity in [1, stock.min(10), stock] {
                     let mut market = economy();
                     market.credits = Credits(10_000_000);
-                    market.cargo_capacity = 200;
+                    ship.cargo_capacity = 200;
                     market.markets[0].goods[commodity.index()].target = target;
                     market.markets[0].goods[commodity.index()].stock = stock;
                     let original = market.clone();
                     market
-                        .trade(&ship, commodity, quantity, TradeSide::Buy, 0)
+                        .trade(&mut ship, commodity, quantity, TradeSide::Buy, 0)
                         .unwrap();
                     market
-                        .trade(&ship, commodity, quantity, TradeSide::Sell, 1)
+                        .trade(&mut ship, commodity, quantity, TradeSide::Sell, 1)
                         .unwrap();
                     assert!(market.credits < original.credits);
-                    assert_eq!(market.cargo, original.cargo);
+                    assert_eq!(ship.cargo, [0; 6]);
                     assert_eq!(market.markets, original.markets);
                 }
             }
@@ -36,27 +36,27 @@ fn immediate_buy_sell_is_never_profitable_even_for_bulk_orders() {
 #[test]
 fn rejected_trade_and_service_operations_preserve_all_balances() {
     let mut economy = economy();
-    let mut ship = TravelState::default().ship;
+    let mut ship = TravelState::default().ships[0].clone();
     let original = economy.clone();
     assert_eq!(
-        economy.trade(&ship, Commodity::Food, 0, TradeSide::Buy, 0),
+        economy.trade(&mut ship, Commodity::Food, 0, TradeSide::Buy, 0),
         Err(EconomyError::InvalidQuantity)
     );
     assert_eq!(
-        economy.trade(&ship, Commodity::Food, 21, TradeSide::Buy, 0),
+        economy.trade(&mut ship, Commodity::Food, 21, TradeSide::Buy, 0),
         Err(EconomyError::CargoFull)
     );
     assert_eq!(
-        economy.trade(&ship, Commodity::Food, 1, TradeSide::Sell, 0),
+        economy.trade(&mut ship, Commodity::Food, 1, TradeSide::Sell, 0),
         Err(EconomyError::InsufficientCargo)
     );
     assert_eq!(economy.refuel(&mut ship, 1), Err(EconomyError::FuelFull));
     assert_eq!(
-        economy.upgrade_hold(&ship),
+        economy.upgrade_hold(&mut ship),
         Err(EconomyError::InsufficientCredits)
     );
     assert_eq!(economy, original);
-    assert_eq!(ship, TravelState::default().ship);
+    assert_eq!(ship, TravelState::default().ships[0]);
 }
 
 #[test]
@@ -82,25 +82,25 @@ fn market_time_is_batch_independent_and_price_curves_are_bounded() {
 #[test]
 fn representative_route_pays_for_fuel_and_makes_progress_to_upgrade() {
     let mut economy = economy();
-    let mut ship = TravelState::default().ship;
+    let mut ship = TravelState::default().ships[0].clone();
     economy
-        .trade(&ship, Commodity::Food, 20, TradeSide::Buy, 0)
+        .trade(&mut ship, Commodity::Food, 20, TradeSide::Buy, 0)
         .unwrap();
     ship.fuel -= 15;
     ship.location = Location::Docked(SystemId(2));
     economy.advance(15);
     economy
-        .trade(&ship, Commodity::Food, 20, TradeSide::Sell, 1)
+        .trade(&mut ship, Commodity::Food, 20, TradeSide::Sell, 1)
         .unwrap();
     economy.refuel(&mut ship, 15).unwrap();
     assert!(economy.credits > Credits(100_000));
-    assert_eq!(economy.cargo_used(), 0);
+    assert_eq!(ship.cargo_used(), 0);
     assert_eq!(ship.fuel, 40);
     economy.credits = economy.rules.hold_upgrade_price;
-    economy.upgrade_hold(&ship).unwrap();
-    assert_eq!(economy.cargo_capacity, 40);
+    economy.upgrade_hold(&mut ship).unwrap();
+    assert_eq!(ship.cargo_capacity, 40);
     assert_eq!(economy.credits, Credits(0));
-    assert!(economy.upgraded);
+    assert!(ship.upgraded);
 }
 
 #[test]
@@ -112,9 +112,12 @@ fn json_rules_and_cargo_are_validated_and_human_readable() {
     value["schema_version"] = 1.into();
     value["markets"][0]["target"] = 0.into();
     assert!(EconomyRules::from_json(&value.to_string()).is_err());
-    let mut economy = economy();
-    economy.cargo[Commodity::Medicine.index()] = 3;
-    let json = serde_json::to_value(&economy).unwrap();
+    let mut ship = TravelState::default().ships[0].clone();
+    ship.cargo[Commodity::Medicine.index()] = 3;
+    let json = serde_json::to_value(&ship).unwrap();
     assert_eq!(json["cargo"]["medicine"], 3);
-    assert_eq!(serde_json::from_value::<Economy>(json).unwrap(), economy);
+    assert_eq!(
+        serde_json::from_value::<crate::travel::Ship>(json).unwrap(),
+        ship
+    );
 }

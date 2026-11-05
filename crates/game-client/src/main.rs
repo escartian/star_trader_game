@@ -46,11 +46,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .is_file()
                 .then(|| "config/economy.json".into())
         });
-        let rules = if let Some(path) = economy_path {
+        let mut rules = if let Some(path) = economy_path {
             game_core::economy::EconomyRules::from_json(&std::fs::read_to_string(path)?)?
         } else {
             game_core::economy::EconomyRules::default()
         };
+        if std::path::Path::new("config/ships.json").is_file() {
+            rules.ship_catalog = game_core::fleet::ShipCatalog::from_json(
+                &std::fs::read_to_string("config/ships.json")?,
+            )?;
+        }
         game_server::Session::with_economy(options.seed, rules)?
     };
     if options.headless {

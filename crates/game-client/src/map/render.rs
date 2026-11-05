@@ -113,6 +113,29 @@ impl Map {
                 painter.galley(label_rect.min, galley, Color32::WHITE);
             }
         }
+        if self.scene == super::fixtures::Scene::Session {
+            let art = super::art::Artwork::preload(ui.ctx());
+            for system in &self.systems {
+                let docked: Vec<_> = self
+                    .session
+                    .ships()
+                    .iter()
+                    .filter(|ship| ship.location == game_core::travel::Location::Docked(system.id))
+                    .collect();
+                if let Some(ship) = docked.first() {
+                    let point =
+                        self.camera.project(position(system), rect) + Vec2::new(-24.0, 22.0);
+                    art.paint(super::art::ArtKind::from(ship.kind), &painter, point, 30.0);
+                    painter.text(
+                        point + Vec2::new(17.0, 0.0),
+                        egui::Align2::LEFT_CENTER,
+                        format!("{} ships", docked.len()),
+                        egui::FontId::proportional(11.0),
+                        Color32::LIGHT_GREEN,
+                    );
+                }
+            }
+        }
         visuals::axes(&painter, rect, self.camera.rotation());
 
         rect

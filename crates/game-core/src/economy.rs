@@ -1,6 +1,6 @@
 //! Fixed-unit commerce. Prices, stock and cargo are authoritative simulation data.
 use serde::{Deserialize, Serialize};
-mod cargo_json;
+pub(crate) mod cargo_json;
 mod market;
 mod rules;
 pub use rules::{EconomyRules, MarketTemplate};
@@ -84,10 +84,6 @@ pub struct Market {
 #[serde(deny_unknown_fields)]
 pub struct Economy {
     pub credits: Credits,
-    #[serde(with = "cargo_json")]
-    pub cargo: [u32; 6],
-    pub cargo_capacity: u32,
-    pub upgraded: bool,
     pub markets: Vec<Market>,
     pub rules: EconomyRules,
 }
@@ -140,10 +136,6 @@ impl std::fmt::Display for EconomyError {
 }
 
 impl Economy {
-    pub fn cargo_used(&self) -> u64 {
-        self.cargo.iter().map(|q| u64::from(*q)).sum()
-    }
-
     pub fn market(&self, system: SystemId) -> Result<&Market, EconomyError> {
         self.markets
             .iter()

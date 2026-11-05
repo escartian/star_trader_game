@@ -5,7 +5,11 @@ use game_core::BodyKind;
 use glam::DVec3;
 
 impl LocalView {
-    pub(super) fn draw_map(&mut self, ui: &mut egui::Ui) -> Rect {
+    pub(super) fn draw_map(
+        &mut self,
+        ui: &mut egui::Ui,
+        ships: &[game_core::travel::Ship],
+    ) -> Rect {
         let height = (ui.available_height() * 0.65).clamp(220.0, 540.0);
         let (response, painter) = ui.allocate_painter(
             Vec2::new(ui.available_width(), height),
@@ -140,6 +144,38 @@ impl LocalView {
                 label_bounds.push(label);
                 painter.rect_filled(label.expand(3.0), 3.0, Color32::from_black_alpha(150));
                 painter.galley(label.min, galley, Color32::WHITE);
+            }
+        }
+        if let Some(port) = self
+            .system
+            .bodies
+            .iter()
+            .find(|body| body.kind == BodyKind::Station)
+        {
+            let dock = self
+                .camera
+                .project(display_position(&self.system, port), rect);
+            for (index, ship) in ships
+                .iter()
+                .filter(|ship| ship.location == game_core::travel::Location::Docked(self.system.id))
+                .enumerate()
+            {
+                let point = dock
+                    + Vec2::new(
+                        42.0 + (index % 6) as f32 * 34.0,
+                        38.0 + (index / 6) as f32 * 34.0,
+                    );
+                painter.line_segment([dock, point], Stroke::new(0.5_f32, Color32::from_gray(70)));
+                if let Some(art) = &self.art {
+                    art.paint(ArtKind::from(ship.kind), &painter, point, 32.0);
+                }
+                painter.text(
+                    point + Vec2::new(0.0, 17.0),
+                    egui::Align2::CENTER_TOP,
+                    format!("#{}", ship.id.0),
+                    egui::FontId::proportional(11.0),
+                    Color32::LIGHT_GREEN,
+                );
             }
         }
         visuals::axes(&painter, rect, self.camera.rotation());

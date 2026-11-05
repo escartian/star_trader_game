@@ -1,4 +1,5 @@
 //! Client preferences are separate from authoritative world/player saves.
+mod legacy;
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -14,18 +15,23 @@ pub struct Preferences {
     pub schema_version: u32,
     pub save_path: PathBuf,
     pub slot: u8,
-    pub speed: u32,
+    #[serde(default = "default_active_ship")]
+    pub active_ship: game_core::travel::ShipId,
     pub guide: bool,
     pub autosave: bool,
+}
+
+fn default_active_ship() -> game_core::travel::ShipId {
+    game_core::travel::ShipId(1)
 }
 
 impl Default for Preferences {
     fn default() -> Self {
         Self {
-            schema_version: 1,
+            schema_version: 2,
             save_path: "data/slot-1.json".into(),
             slot: 1,
-            speed: 1,
+            active_ship: default_active_ship(),
             guide: true,
             autosave: true,
         }
@@ -34,11 +40,11 @@ impl Default for Preferences {
 
 impl Preferences {
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 1 {
+        if self.schema_version != 2 {
             return Err("Unsupported client settings version".into());
         }
-        if !(1..=3).contains(&self.slot) || ![1, 2, 4].contains(&self.speed) {
-            return Err("Invalid client save slot or tick speed".into());
+        if self.active_ship.0 == 0 || !(1..=3).contains(&self.slot) {
+            return Err("Invalid client save slot".into());
         }
         if self.save_path.file_name().is_none() || self.save_path.to_string_lossy().contains('\0') {
             return Err("Invalid save filename in client settings".into());
@@ -66,7 +72,18 @@ impl Preferences {
             return Err("Client settings file is too large".into());
         }
         let json = fs::read(path).map_err(|error| error.to_string())?;
-        let settings: Self = serde_json::from_slice(&json).map_err(|error| error.to_string())?;
+        let value: serde_json::Value =
+            serde_json::from_slice(&json).map_err(|error| error.to_string())?;
+        let settings: Self = match value
+            .get("schema_version")
+            .and_then(|version| version.as_u64())
+        {
+            Some(1) => serde_json::from_value::<legacy::LegacyPreferences>(value)
+                .map_err(|error| error.to_string())?
+                .migrate()?,
+            Some(2) => serde_json::from_value(value).map_err(|error| error.to_string())?,
+            _ => return Err("Unsupported client settings version".into()),
+        };
         settings.validate()?;
         Ok(settings)
     }

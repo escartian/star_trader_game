@@ -20,12 +20,12 @@ impl Economy {
                 if quantity > good.stock {
                     return Err(EconomyError::InsufficientStock);
                 }
-                if self.cargo_used() + u64::from(quantity) > u64::from(self.cargo_capacity) {
+                if ship.cargo_used() + u64::from(quantity) > u64::from(ship.cargo_capacity) {
                     return Err(EconomyError::CargoFull);
                 }
             }
             TradeSide::Sell => {
-                if quantity > self.cargo[commodity.index()] {
+                if quantity > ship.cargo[commodity.index()] {
                     return Err(EconomyError::InsufficientCargo);
                 }
                 if u64::from(good.stock) + u64::from(quantity) > u64::from(good.capacity()) {
@@ -69,14 +69,14 @@ impl Economy {
 
     pub fn trade(
         &mut self,
-        ship: &Ship,
+        ship: &mut Ship,
         commodity: Commodity,
         quantity: u32,
         side: TradeSide,
         revision: u64,
     ) -> Result<TradeQuote, EconomyError> {
         let quote = self.quote(ship, commodity, quantity, side, revision)?;
-        let cargo = self.cargo[commodity.index()];
+        let cargo = ship.cargo[commodity.index()];
         let (credits, cargo) = match side {
             TradeSide::Buy => (
                 self.credits.0 - quote.total.0,
@@ -97,7 +97,7 @@ impl Economy {
             TradeSide::Sell => *stock + quantity,
         };
         self.credits = Credits(credits);
-        self.cargo[commodity.index()] = cargo;
+        ship.cargo[commodity.index()] = cargo;
         Ok(quote)
     }
 
@@ -126,9 +126,9 @@ impl Economy {
         Ok(())
     }
 
-    pub fn upgrade_hold(&mut self, ship: &Ship) -> Result<(), EconomyError> {
+    pub fn upgrade_hold(&mut self, ship: &mut Ship) -> Result<(), EconomyError> {
         self.current_market(ship)?;
-        if self.upgraded {
+        if ship.upgraded {
             return Err(EconomyError::AlreadyUpgraded);
         }
         let credits = self
@@ -136,13 +136,13 @@ impl Economy {
             .0
             .checked_sub(self.rules.hold_upgrade_price.0)
             .ok_or(EconomyError::InsufficientCredits)?;
-        let capacity = self
+        let capacity = ship
             .cargo_capacity
             .checked_add(self.rules.hold_upgrade_capacity)
             .ok_or(EconomyError::ArithmeticOverflow)?;
         self.credits = Credits(credits);
-        self.cargo_capacity = capacity;
-        self.upgraded = true;
+        ship.cargo_capacity = capacity;
+        ship.upgraded = true;
         Ok(())
     }
 }

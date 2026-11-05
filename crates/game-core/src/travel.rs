@@ -1,11 +1,14 @@
 //! Discrete travel rules, independent of real-time clocks and player input devices.
-use crate::{GalaxyPosition, SystemId};
+use crate::{
+    GalaxyPosition, SystemId,
+    fleet::{Fleet, FleetId, ShipKind},
+};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub u64);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ShipId(pub u64);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -27,6 +30,13 @@ pub enum Location {
 pub struct Ship {
     pub id: ShipId,
     pub owner: PlayerId,
+    pub name: String,
+    pub kind: ShipKind,
+    #[serde(with = "crate::economy::cargo_json")]
+    pub cargo: [u32; 6],
+    pub cargo_capacity: u32,
+    pub base_cargo_capacity: u32,
+    pub upgraded: bool,
     pub fuel: u32,
     pub fuel_capacity: u32,
     pub range_ly: u32,
@@ -36,6 +46,7 @@ pub struct Ship {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TravelQuote {
+    pub ship: ShipId,
     pub origin: SystemId,
     pub destination: SystemId,
     pub fuel: u32,
@@ -49,6 +60,8 @@ pub enum TravelError {
     UnknownShip,
     NotOwner,
     AlreadyTravelling,
+    NotTravelling,
+    OfflineMovementOnly,
     AlreadyThere,
     OutOfRange,
     InsufficientFuel,
@@ -63,6 +76,10 @@ impl std::fmt::Display for TravelError {
             Self::UnknownSystem => "Unknown destination system.",
             Self::UnknownShip => "Unknown ship.",
             Self::NotOwner => "This player does not own the ship.",
+            Self::NotTravelling => "The ship has no journey to continue.",
+            Self::OfflineMovementOnly => {
+                "This movement shortcut is only available to the offline host."
+            }
             Self::AlreadyTravelling => "The ship is already travelling.",
             Self::AlreadyThere => "The ship is already at this system.",
             Self::OutOfRange => "Destination exceeds the ship's jump range.",
@@ -80,7 +97,10 @@ impl std::fmt::Display for TravelError {
 pub struct TravelState {
     pub tick: u64,
     pub revision: u64,
-    pub ship: Ship,
+    pub ships: Vec<Ship>,
+    pub fleets: Vec<Fleet>,
+    pub next_ship_id: u64,
+    pub next_fleet_id: u64,
 }
 
 impl Default for TravelState {
@@ -88,24 +108,49 @@ impl Default for TravelState {
         Self {
             tick: 0,
             revision: 0,
-            ship: Ship {
+            ships: vec![Ship {
                 id: ShipId(1),
                 owner: PlayerId(1),
+                name: "Freighter 1".into(),
+                kind: ShipKind::Freighter,
+                cargo: [0; 6],
+                cargo_capacity: 20,
+                base_cargo_capacity: 20,
+                upgraded: false,
                 fuel: 40,
                 fuel_capacity: 40,
                 range_ly: 20,
                 location: Location::Docked(SystemId(1)),
-            },
+            }],
+            fleets: vec![Fleet {
+                id: FleetId(1),
+                name: "Fleet 1".into(),
+                owner: PlayerId(1),
+                ships: vec![ShipId(1)],
+            }],
+            next_ship_id: 2,
+            next_fleet_id: 2,
         }
     }
 }
 
 impl TravelState {
-    pub fn authorize(&self, player: PlayerId, ship: ShipId) -> Result<(), TravelError> {
-        if ship != self.ship.id {
-            return Err(TravelError::UnknownShip);
-        }
-        if player != self.ship.owner {
+    pub fn ship(&self, id: ShipId) -> Result<&Ship, TravelError> {
+        self.ships
+            .iter()
+            .find(|ship| ship.id == id)
+            .ok_or(TravelError::UnknownShip)
+    }
+
+    pub fn ship_mut(&mut self, id: ShipId) -> Result<&mut Ship, TravelError> {
+        self.ships
+            .iter_mut()
+            .find(|ship| ship.id == id)
+            .ok_or(TravelError::UnknownShip)
+    }
+
+    pub fn authorize(&self, player: PlayerId, id: ShipId) -> Result<(), TravelError> {
+        if self.ship(id)?.owner != player {
             return Err(TravelError::NotOwner);
         }
         Ok(())
@@ -117,24 +162,36 @@ impl TravelState {
         origin: GalaxyPosition,
         target: GalaxyPosition,
     ) -> Result<TravelQuote, TravelError> {
-        let Location::Docked(origin_id) = self.ship.location else {
+        self.quote_for(self.ships[0].id, destination, origin, target)
+    }
+
+    pub fn quote_for(
+        &self,
+        id: ShipId,
+        destination: SystemId,
+        origin: GalaxyPosition,
+        target: GalaxyPosition,
+    ) -> Result<TravelQuote, TravelError> {
+        let ship = self.ship(id)?;
+        let Location::Docked(origin_id) = ship.location else {
             return Err(TravelError::AlreadyTravelling);
         };
         if origin_id == destination {
             return Err(TravelError::AlreadyThere);
         }
         let squared = distance_squared(origin, target)?;
-        let range = u128::from(self.ship.range_ly);
+        let range = u128::from(ship.range_ly);
         if squared > range * range {
             return Err(TravelError::OutOfRange);
         }
         let floor = squared.isqrt();
         let ceil = floor + u128::from(floor * floor != squared);
         let fuel = u32::try_from(ceil).map_err(|_| TravelError::InvalidCoordinates)?;
-        if fuel > self.ship.fuel {
+        if fuel > ship.fuel {
             return Err(TravelError::InsufficientFuel);
         }
         Ok(TravelQuote {
+            ship: id,
             origin: origin_id,
             destination,
             fuel,
@@ -145,37 +202,49 @@ impl TravelState {
 
     /// Receives an authority-generated quote, never an unchecked client quote.
     pub fn depart(&mut self, quote: TravelQuote) -> Result<(), TravelError> {
-        if quote.revision != self.revision {
-            return Err(TravelError::StaleQuote);
-        }
-        let arrival_tick = self
-            .tick
-            .checked_add(quote.duration_ticks)
-            .ok_or(TravelError::TimeOverflow)?;
+        self.depart_many(&[quote])
+    }
+
+    pub fn depart_many(&mut self, quotes: &[TravelQuote]) -> Result<(), TravelError> {
         let revision = self
             .revision
             .checked_add(1)
             .ok_or(TravelError::TimeOverflow)?;
-        let fuel = self
-            .ship
-            .fuel
-            .checked_sub(quote.fuel)
-            .ok_or(TravelError::InsufficientFuel)?;
-        // All fallible work finishes before any authoritative mutation.
-        self.ship.fuel = fuel;
-        self.ship.location = Location::Travelling(Journey {
-            origin: quote.origin,
-            destination: quote.destination,
-            arrival_tick,
-        });
+        for (index, quote) in quotes.iter().enumerate() {
+            if quote.revision != self.revision
+                || quotes[..index].iter().any(|other| other.ship == quote.ship)
+            {
+                return Err(TravelError::StaleQuote);
+            }
+            let ship = self.ship(quote.ship)?;
+            if ship.location != Location::Docked(quote.origin) {
+                return Err(TravelError::AlreadyTravelling);
+            }
+            ship.fuel
+                .checked_sub(quote.fuel)
+                .ok_or(TravelError::InsufficientFuel)?;
+            self.tick
+                .checked_add(quote.duration_ticks)
+                .ok_or(TravelError::TimeOverflow)?;
+        }
+        for quote in quotes {
+            let arrival_tick = self.tick + quote.duration_ticks;
+            let ship = self.ship_mut(quote.ship)?;
+            ship.fuel -= quote.fuel;
+            ship.location = Location::Travelling(Journey {
+                origin: quote.origin,
+                destination: quote.destination,
+                arrival_tick,
+            });
+        }
         self.revision = revision;
         Ok(())
     }
 
     /// Called by a host clock/turn resolver, never directly by an untrusted player.
-    pub fn advance(&mut self, ticks: u64) -> Result<Option<SystemId>, TravelError> {
+    pub fn advance(&mut self, ticks: u64) -> Result<Vec<(ShipId, SystemId)>, TravelError> {
         if ticks == 0 {
-            return Ok(None);
+            return Ok(Vec::new());
         }
         let tick = self
             .tick
@@ -185,18 +254,25 @@ impl TravelState {
             .revision
             .checked_add(1)
             .ok_or(TravelError::TimeOverflow)?;
-        let arrived = match &self.ship.location {
-            Location::Travelling(journey) if journey.arrival_tick <= tick => {
-                Some(journey.destination)
+        let mut arrived = Vec::new();
+        for ship in &mut self.ships {
+            if let Location::Travelling(journey) = &ship.location
+                && journey.arrival_tick <= tick
+            {
+                let destination = journey.destination;
+                ship.location = Location::Docked(destination);
+                arrived.push((ship.id, destination));
             }
-            _ => None,
-        };
+        }
         self.tick = tick;
         self.revision = revision;
-        if let Some(system) = arrived {
-            self.ship.location = Location::Docked(system);
-        }
         Ok(arrived)
+    }
+}
+
+impl Ship {
+    pub fn cargo_used(&self) -> u64 {
+        self.cargo.iter().map(|quantity| u64::from(*quantity)).sum()
     }
 }
 

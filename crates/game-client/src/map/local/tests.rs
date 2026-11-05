@@ -47,7 +47,7 @@ fn selected_station_inspector_tessellates_at_phone_and_desktop_sizes() {
                 ..Default::default()
             },
             |ctx| {
-                assert!(!local.ui(ctx));
+                assert!(!local.ui(ctx, &[]));
             },
         );
         assert!(

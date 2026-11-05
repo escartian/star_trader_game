@@ -8,8 +8,6 @@ pub(super) struct SavePanel {
     pub path: PathBuf,
     pub(super) slot: u8,
     seed: u64,
-    pub paused: bool,
-    pub speed: u32,
     pub guide: bool,
     pub autosave: bool,
 }
@@ -21,8 +19,6 @@ impl Default for SavePanel {
             path: "data/slot-1.json".into(),
             slot: 1,
             seed: 0,
-            paused: false,
-            speed: 1,
             guide: true,
             autosave: true,
         }
@@ -63,7 +59,6 @@ impl LocalSession {
         {
             self.loaded_galaxy = Some(systems);
         }
-        self.reset_clock();
     }
 
     pub fn autosave(&mut self) -> Result<(), String> {
@@ -72,9 +67,6 @@ impl LocalSession {
                 self.record(format!("Could not save client settings: {error}"));
             }
             return Ok(());
-        }
-        if !self.saves.paused {
-            self.advance_to(std::time::Instant::now());
         }
         let result = self.save_game();
         if let Err(error) = &result {
@@ -123,27 +115,10 @@ impl LocalSession {
             }
         });
         ui.separator();
-        if ui
-            .checkbox(&mut self.saves.paused, "Pause simulation")
-            .changed()
-        {
-            self.reset_clock();
-        }
-        ui.horizontal(|ui| {
-            ui.label("Tick speed");
-            for speed in [1, 2, 4] {
-                if ui
-                    .selectable_value(&mut self.saves.speed, speed, format!("{speed}×"))
-                    .changed()
-                {
-                    self.reset_clock();
-                }
-            }
-        });
-        ui.label("Ticks advance automatically in single-player. No End Turn action is required.");
+        ui.label("Only movement advances simulation ticks. Reading, trading and fleet management take no time.");
         ui.checkbox(&mut self.saves.guide, "Show first-delivery guide");
         ui.checkbox(&mut self.saves.autosave, "Autosave on close / suspend");
-        ui.label("Save slot, speed, guide and autosave choices are remembered. Pause applies to this run.");
+        ui.label("Save slot, guide and autosave choices are remembered.");
         if !self.notice.is_empty() {
             ui.label(&self.notice);
         }

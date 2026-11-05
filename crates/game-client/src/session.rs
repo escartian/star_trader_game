@@ -1,4 +1,5 @@
-//! Offline host adapter: schedules ticks and sends commands through the authority.
+//! Offline action adapter. Only successful movement advances simulation ticks.
+mod fleets;
 mod guide;
 mod market;
 mod panel;
@@ -10,20 +11,18 @@ use game_core::{
     travel::{Location, TravelState},
 };
 use game_protocol::{ClientCommand, ServerMessage, SessionEvent};
-use std::{
-    collections::VecDeque,
-    time::{Duration, Instant},
-};
+use std::collections::VecDeque;
 
 pub struct LocalSession {
     authority: game_server::Session,
     state: TravelState,
+    active_ship: game_core::travel::ShipId,
     economy: Economy,
     market: market::MarketPanel,
+    fleet_panel: fleets::FleetPanel,
     saves: saves::SavePanel,
     log: VecDeque<String>,
     loaded_galaxy: Option<Vec<game_core::StarSystem>>,
-    clock: Instant,
     notice: String,
     preferences_path: Option<std::path::PathBuf>,
 }
@@ -35,65 +34,50 @@ impl LocalSession {
         else {
             unreachable!("a fresh local session must return its own snapshot")
         };
+        let active_ship = state.ships[0].id;
         Self {
             authority,
+            active_ship,
             state,
             economy,
             market: market::MarketPanel::default(),
+            fleet_panel: fleets::FleetPanel::default(),
             saves: saves::SavePanel::default(),
             log: VecDeque::new(),
             loaded_galaxy: None,
-            clock: Instant::now(),
             notice: String::new(),
             preferences_path: None,
         }
     }
 
+    pub fn selected_ship(&self) -> &game_core::travel::Ship {
+        self.state
+            .ship(self.active_ship)
+            .unwrap_or(&self.state.ships[0])
+    }
+
+    pub fn ships(&self) -> &[game_core::travel::Ship] {
+        &self.state.ships
+    }
+
+    pub fn select_ship(&mut self, id: game_core::travel::ShipId) {
+        if self.state.ship(id).is_ok() {
+            self.active_ship = id;
+        }
+    }
+
     pub fn origin(&self) -> SystemId {
-        match &self.state.ship.location {
+        match &self.selected_ship().location {
             Location::Docked(system) => *system,
             Location::Travelling(journey) => journey.origin,
         }
     }
 
     pub fn display_system(&self) -> SystemId {
-        match &self.state.ship.location {
+        match &self.selected_ship().location {
             Location::Docked(system) => *system,
             Location::Travelling(journey) => journey.destination,
         }
-    }
-
-    /// Called on suspend/resume so background time never becomes simulation time.
-    pub fn reset_clock(&mut self) {
-        self.clock = Instant::now();
-    }
-
-    pub fn update_clock(&mut self, ctx: &egui::Context) {
-        if self.saves.paused {
-            self.reset_clock();
-        } else {
-            self.advance_to(Instant::now());
-        }
-        // Idle simulation catches up on the next input without a continuous redraw loop.
-        if !self.saves.paused && matches!(self.state.ship.location, Location::Travelling(_)) {
-            ctx.request_repaint_after(self.tick_interval().saturating_sub(self.clock.elapsed()));
-        }
-    }
-
-    fn advance_to(&mut self, now: Instant) {
-        let elapsed = now.saturating_duration_since(self.clock);
-        let interval = self.tick_interval();
-        let ticks = (elapsed.as_nanos() / interval.as_nanos()).min(u128::from(u64::MAX)) as u64;
-        if ticks > 0 {
-            let remainder = (elapsed.as_nanos() % interval.as_nanos()) as u64;
-            self.clock = now - Duration::from_nanos(remainder);
-            let message = self.authority.advance(ticks);
-            self.accept(message);
-        }
-    }
-
-    fn tick_interval(&self) -> Duration {
-        Duration::from_millis(1000 / u64::from(self.saves.speed))
     }
 
     pub fn take_loaded_galaxy(&mut self) -> Option<Vec<game_core::StarSystem>> {
@@ -121,7 +105,7 @@ impl LocalSession {
     }
 
     fn command(&mut self, command: ClientCommand) {
-        let message = self.authority.handle(command);
+        let message = self.authority.handle_offline(command);
         self.accept(message);
     }
 
@@ -133,12 +117,31 @@ impl LocalSession {
                 events,
             } => {
                 self.state = state;
+                if self.state.ship(self.active_ship).is_err() {
+                    self.active_ship = self.state.ships[0].id;
+                }
                 self.economy = economy;
                 for event in events {
                     let message = match event {
-                        SessionEvent::Departed { .. } => {
-                            "Departure confirmed. Travel advances automatically.".into()
+                        SessionEvent::Departed { .. } => "Departure confirmed.".into(),
+                        SessionEvent::ShipPurchased { ship } => {
+                            self.active_ship = ship;
+                            format!("Purchased {}.", self.selected_ship().name)
                         }
+                        SessionEvent::FleetSplit { new_fleet, .. } => {
+                            format!("Created Fleet {} from selected ships.", new_fleet.0)
+                        }
+                        SessionEvent::FleetsMerged { source, target } => {
+                            format!("Merged Fleet {} into Fleet {}.", source.0, target.0)
+                        }
+                        SessionEvent::CargoTransferred {
+                            source,
+                            target,
+                            quantity,
+                        } => format!(
+                            "Transferred {quantity} cargo from ship {} to ship {}.",
+                            source.0, target.0
+                        ),
                         SessionEvent::Arrived { .. } => "Arrival confirmed.".into(),
                         SessionEvent::Traded(quote) => format!(
                             "{:?}: {} {} for {} credits.",

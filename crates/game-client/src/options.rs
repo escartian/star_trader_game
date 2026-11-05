@@ -37,7 +37,7 @@ impl Options {
                 "--capture-view" => {
                     options.capture_view = args
                         .next()
-                        .ok_or("--capture-view needs galaxy, system, market or saves")?
+                        .ok_or("--capture-view needs galaxy, system, market, fleets or saves")?
                 }
                 "--seed" => {
                     options.new = true;

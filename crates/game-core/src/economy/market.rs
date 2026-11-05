@@ -31,9 +31,6 @@ impl Economy {
             .collect();
         Ok(Self {
             credits: rules.starting_credits,
-            cargo: [0; 6],
-            cargo_capacity: rules.cargo_capacity,
-            upgraded: false,
             markets,
             rules,
         })

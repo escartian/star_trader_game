@@ -30,8 +30,8 @@ Mobile builds and device checks are deferred by user direction.
 - [ ] Close normally and relaunch; autosave resumes without re-rolling prices or adding offline time.
 - [ ] Verify a failed save leaves the window open with actionable recovery text.
 - [ ] Recover a deliberately damaged copied primary from its backup; keep real progress untouched.
-- [ ] Confirm pause/speed behavior while trading, travelling and loading.
-- [ ] Select slot 2, save, quit and relaunch; verify remembered slot, speed, guide and autosave choices.
+- [ ] Confirm ticks advance only on movement; waiting, trading and fleet management leave time unchanged.
+- [ ] Select slot 2, save, quit and relaunch; verify remembered slot, active ship, guide and autosave choices.
 
 ## Before expanding scope
 

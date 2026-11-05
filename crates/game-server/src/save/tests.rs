@@ -20,7 +20,7 @@ fn json_round_trip_preserves_journey_markets_money_and_ticks() {
     assert_eq!(restored.economy, session.economy);
     assert!(recovered.is_none());
     let json: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
-    assert!(json["economy"]["cargo"].is_object());
+    assert!(json["player"]["ships"][0]["cargo"].is_object());
 }
 
 #[test]
@@ -59,13 +59,13 @@ fn invalid_balances_and_failed_writes_cannot_replace_good_saves() {
     session.save(&path).unwrap();
     let original = fs::read(&path).unwrap();
     let mut invalid = Session::default();
-    invalid.state.ship.fuel = 41;
+    invalid.state.ships[0].fuel = 41;
     assert!(invalid.save(&path).is_err());
     assert_eq!(fs::read(&path).unwrap(), original);
     assert!(session.save(directory.path()).is_err());
     assert_eq!(fs::read(&path).unwrap(), original);
     let mut value: serde_json::Value = serde_json::from_slice(&original).unwrap();
-    value["economy"]["cargo"]["food"] = 999.into();
+    value["player"]["ships"][0]["cargo"]["food"] = 999.into();
     fs::write(&path, value.to_string()).unwrap();
     assert!(Session::load(&path).is_err());
 }

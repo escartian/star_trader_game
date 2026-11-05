@@ -15,6 +15,9 @@ pub enum ArtKind {
     Moon,
     Asteroid,
     Station,
+    Freighter,
+    Scout,
+    Patrol,
 }
 
 impl From<StarKind> for ArtKind {
@@ -41,7 +44,32 @@ impl From<BodyKind> for ArtKind {
     }
 }
 
+impl From<game_core::fleet::ShipKind> for ArtKind {
+    fn from(kind: game_core::fleet::ShipKind) -> Self {
+        match kind {
+            game_core::fleet::ShipKind::Freighter => Self::Freighter,
+            game_core::fleet::ShipKind::Scout => Self::Scout,
+            game_core::fleet::ShipKind::Patrol => Self::Patrol,
+        }
+    }
+}
+
 const SOURCES: &[(ArtKind, &str, &[u8])] = &[
+    (
+        ArtKind::Freighter,
+        "freighter",
+        include_bytes!("../../../../assets/sprites/freighter.png"),
+    ),
+    (
+        ArtKind::Scout,
+        "scout",
+        include_bytes!("../../../../assets/sprites/scout.png"),
+    ),
+    (
+        ArtKind::Patrol,
+        "patrol",
+        include_bytes!("../../../../assets/sprites/patrol.png"),
+    ),
     (
         ArtKind::YellowDwarf,
         "yellow-dwarf",

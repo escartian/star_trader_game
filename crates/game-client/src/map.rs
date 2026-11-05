@@ -130,10 +130,6 @@ impl Map {
         self.session.autosave()
     }
 
-    pub fn reset_clock(&mut self) {
-        self.session.reset_clock();
-    }
-
     fn route_origin(&self) -> Option<&StarSystem> {
         if self.scene == Scene::Session {
             self.systems.iter().find(|s| s.id == self.session.origin())
@@ -154,7 +150,6 @@ impl Map {
             self.candidates.clear();
         }
         let _ = art::Artwork::preload(ctx);
-        self.session.update_clock(ctx);
         egui::TopBottomPanel::bottom("ship_status").show(ctx, |ui| {
             let target = if self.scene == Scene::Session {
                 self.selected
@@ -164,9 +159,10 @@ impl Map {
             self.session.ui(ui, target, &self.session_systems);
         });
         self.session.show_market(ctx, &self.session_systems);
+        self.session.show_fleets(ctx, &self.session_systems);
         self.session.show_session_controls(ctx);
         if let Some(local) = &mut self.local {
-            if local.ui(ctx) {
+            if local.ui(ctx, self.session.ships()) {
                 self.local = None;
             }
             return;

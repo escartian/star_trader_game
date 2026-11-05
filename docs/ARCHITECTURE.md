@@ -27,8 +27,8 @@ currently a print-and-exit fixture; a remote adapter is still planned. Revisit c
 - Use stable IDs; names and list positions are presentation, not identity.
 - Keep galaxy and local coordinates as different types. Record units explicitly.
 - Rules use discrete ticks, with no real-time physics. The authority owns state
-  changes. Offline play schedules ticks from a monotonic host clock and feels
-  continuous; future AI can act on ticks. Shared multiplayer will collect player
+  changes. Offline play advances ticks only on successful player movement;
+  future AI acts on these ticks. Shared multiplayer will collect player
   actions and resolve explicit turns. Its order collection/resolution is pending.
   Clock advancement is a host method, deliberately absent from player commands.
 - Seed random generation and persist its necessary state. Rendering never consumes
@@ -63,11 +63,12 @@ quotes. Persistence and transport errors must not leave partial transactions.
 
 ## Migration from the original
 
-Use the original as a reference for resources, ships and world generation. Port
-one feature at a time after defining its rules; do not transplant route handlers,
-global state, file-backed model methods or UI geometry calculations into the core.
-Keep one source of truth for travel distance/cost in simulation; clients can ask
-for previews. Existing save import and source/assets reuse need a separate decision.
+The project owner is escartian, author of the original repository. Preserve its
+fleet, planetary economy, combat, faction and mission direction; reuse source or
+assets where appropriate. The README parity review is in REWRITE_PARITY.md.
+Port rules into the core rather than transplanting web handlers or TTL caches.
+Keep galaxy light-years and local kilometers distinct, with cubic boundaries.
+Original web-save import is separate, still unimplemented work.
 
 ## Verification
 
@@ -87,12 +88,12 @@ without charging fuel twice; this is not full network retry deduplication.
 `handle_as` requires an authenticated identity from a future adapter; its numeric
 argument is not authentication. The one-player fixture rejects other identities.
 
-The offline host adapter is `game-client/src/session.rs`. It schedules ticks at one
-second per in-world hour and pauses its monotonic clock at suspend/resume. While
-idle it catches up on the next input without continuous redraws; travel schedules
-redraws to report progress. A multiplayer adapter must never expose the host's
-`advance` method as an untrusted command. Actual networking, multiple-player state,
-authentication, turn ordering, reconnect/resync and idempotent responses remain open.
+`game-server/src/offline.rs` resolves a successful movement as an atomic departure
+and tick advance. Nonmovement commands never advance time. `ContinueTravel` is an
+offline-only action for resuming journeys saved by older builds. The client has
+no wall-clock simulation scheduler. A multiplayer adapter must keep host `advance`
+private and resolve authenticated players' collected orders at turn boundaries.
+Networking, per-player accounts, ordering, reconnect and retry replay remain open.
 
 ## Economy, JSON and shared art
 
@@ -107,14 +108,13 @@ single-player fixture; multiple authenticated accounts are later multiplayer wor
 Production/consumption have closed-form, bounded net changes per tick. Current
 bulk advancement matches individual ticks. Future AI/encounters must preserve
 intermediate event ordering rather than assume all tick systems can be batched.
-The player does not press End Turn in single-player. Pause and speed only alter
-the offline adapter's scheduling of discrete ticks.
+The player does not press End Turn in single-player; movement consumes ticks.
 
-`game-server/src/save.rs` owns schema-1 authoritative JSON, validation, atomic
+`game-server/src/save.rs` owns schema-2 authoritative JSON, validation, atomic
 replacement and a previous-good backup. Saves contain the world/player/economy
 and their active definitions; continuing does not regenerate markets or apply
 changed startup definitions. The client replaces its session only after load
-succeeds, resets clocks, and refreshes map data. Close/suspend hooks save at safe
+succeeds and refreshes map data. Close/suspend hooks save at safe
 lifecycle points. A failed close-save keeps the window open. See DATA_FORMATS.md.
 
 Blender is a build-time authoring tool. Static transparent sprites are embedded
@@ -126,3 +126,14 @@ exercise the same UI code for visual review, separately from window/device check
 
 Mobile build work is deferred by explicit user direction. Desktop implementation
 continues while those platform/lifecycle gaps remain recorded in PLATFORM_STATUS.md.
+
+## Fleet authority
+
+TravelState owns ships, disjoint fleet membership and monotonic IDs. Each ship
+owns cargo, hold upgrades, fuel and range. The current single player shares one
+credit account. Split/merge/transfer/purchase operations validate on a candidate
+session before publication; every member must pass travel checks before fuel is
+charged. Fleet members share a location. Local-body and deep-space positions
+remain next work; current dock markers represent a system-level trade port.
+Ship catalog definitions come from config/ships.json, embedded as a fallback.
+Schema-1 migration moves the old global cargo/upgrade into its existing ship.

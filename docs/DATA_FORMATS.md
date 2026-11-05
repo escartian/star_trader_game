@@ -25,21 +25,23 @@ unbounded prices/rates, and invalid stocks/capacities. New games load the projec
 file when available or an explicitly supplied `--economy PATH`; packaged builds
 can use the embedded validated defaults. No per-trade filesystem reads occur.
 
-## Session save (schema 1)
+## Session save (schema 2)
 
 Each `data/slot-N.json` stores:
 
 - `systems`: stable IDs, star/body kinds and galaxy/local positions.
-- `player`: tick/revision, ship ID/owner, fuel/range, location or active journey.
-- `economy`: credits, cargo keyed by commodity name, hold capacity/upgrade state,
-  current markets and the exact rules used by that session.
+- `player`: tick/revision, ships (IDs, owner, class, individual cargo/hold/fuel/range
+  and location/journey), fleets (IDs, owner and ship membership), monotonic ID counters.
+- `economy`: shared player credits, current markets and exact session rules,
+  including the ship catalog. Cargo is keyed by commodity name inside each ship.
 
 The root schema is independent of the command protocol version. Money uses
 unsigned integer hundredths of a credit; credits and cargo cannot be negative.
 Loading checks size, schema, IDs, references, coordinates, ownership, balances,
 capacity, stock/rates, route validity and journey timing before returning a session.
-A failed load leaves the live session unchanged. Unknown versions currently produce
-a clear error; no migrations are implemented. Do not hand-edit a live session's file
+A failed load leaves the live session unchanged. Schema 1 migrates its existing
+single ship and global cargo/hold into Fleet 1 without resetting time, money or
+journeys; other unsupported versions produce a clear error. Do not hand-edit a live session's file
 and expect its in-memory state to change.
 
 Saving validates the state, writes a sibling temporary file, flushes/syncs it, and
@@ -55,15 +57,25 @@ and suspend; a failed close-save keeps the window open for recovery. Slots and a
 custom `--save PATH` are supported. `--headless` exports the same validated JSON
 without writing a save or advancing time.
 
-## Client settings (schema 1)
+## Client settings (schema 2)
 
-`data/settings.json` separately remembers `save_path`, `slot`, `speed` (1/2/4),
+`data/settings.json` separately remembers `save_path`, `slot`, `active_ship`,
 `guide` and `autosave`. Loading validates these values and their schema; invalid
 preferences fall back to defaults with a message. Changes and save/close hooks use
 atomic replacement. Settings are not world data and do not regenerate prices,
 advance ticks or change player balances. `--save PATH` overrides remembered selection.
-Pause and session logs remain transient. Headless/capture modes never write settings.
+Legacy schema-1 preferences migrate while discarding the obsolete tick speed.
+Session logs remain transient. Headless/capture modes never write settings.
 
-Fleets, multiple-player accounts, discovery restrictions and remote identity are
-not implemented. Multiplayer will need authenticated per-player state and explicit
+Fleets are implemented; multiple-player accounts, discovery restrictions and
+remote identity remain planned. Multiplayer will need authenticated per-player state and explicit
 turn resolution around the same rules; a numeric owner ID is not authentication.
+
+## Ship catalog (schema 1)
+
+`config/ships.json` defines unique freighter/scout/patrol entries with `kind`,
+`price` (credit hundredths), `cargo_capacity`, `fuel_capacity` and `range_ly`.
+New games load this project file if available, with embedded defaults as fallback.
+Saves preserve the active catalog. Purchased ships start empty and fully fuelled;
+shipyard stock is currently unlimited and ships cannot yet be sold. Starter hold
+capacity still comes from the economy definition. HP/equipment are future data.

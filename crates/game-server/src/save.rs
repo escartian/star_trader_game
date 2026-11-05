@@ -1,4 +1,6 @@
 //! Versioned authoritative JSON. Loading never regenerates worlds or prices.
+mod fleets;
+mod migration;
 mod validation;
 use crate::Session;
 use game_core::{StarSystem, economy::Economy, travel::TravelState};
@@ -19,15 +21,18 @@ struct SaveData {
     systems: Vec<StarSystem>,
     player: TravelState,
     economy: Economy,
+    #[serde(skip)]
+    migrated: bool,
 }
 
 impl Session {
     fn save_data(&self) -> SaveData {
         SaveData {
-            schema_version: 1,
+            schema_version: 2,
             systems: self.systems.clone(),
             player: self.state.clone(),
             economy: self.economy.clone(),
+            migrated: false,
         }
     }
 
@@ -97,6 +102,14 @@ impl Session {
                 }
             },
         };
+        let recovery = if data.migrated {
+            Some(format!(
+                "{}Upgraded single-ship save to fleet format; balances and positions preserved.",
+                recovery.map_or(String::new(), |message| format!("{message} "))
+            ))
+        } else {
+            recovery
+        };
         Ok((
             Self {
                 systems: data.systems,
@@ -114,7 +127,11 @@ fn read(path: &Path) -> Result<SaveData, String> {
         return Err("Save exceeds the supported size limit".into());
     }
     let json = fs::read(path).map_err(|error| error.to_string())?;
-    let data: SaveData = serde_json::from_slice(&json).map_err(|error| error.to_string())?;
+    let value: serde_json::Value =
+        serde_json::from_slice(&json).map_err(|error| error.to_string())?;
+    let (value, migrated) = migration::upgrade(value)?;
+    let mut data: SaveData = serde_json::from_value(value).map_err(|error| error.to_string())?;
+    data.migrated = migrated;
     data.validate()?;
     Ok(data)
 }
@@ -127,3 +144,6 @@ fn backup_path(path: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod migration_tests;

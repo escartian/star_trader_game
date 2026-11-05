@@ -9,10 +9,9 @@ replacement uses tempfile 3.27.0. No game engine or network runtime is present.
 
 The window handles resize/DPI events, nonzero surface reconfiguration and
 surface-loss recovery. Graphics are released on suspend and recreated on resume.
-World state is owned separately. The offline clock resets at suspend/resume;
+World state is owned separately. Movement actions alone advance ticks;
 autosave runs at safe close/suspend points. Failed close-saves keep the window open.
-While travelling, tick progress schedules redraws. Idle stock/ticks catch up on
-input without a continuous render loop. Pause and speed affect scheduling only.
+Waiting and UI refreshes do not advance ticks. Travel resolves as an action.
 
 ## Rendering evidence
 
@@ -29,7 +28,7 @@ wgpu texture upload/render/readback, text, transparent sprites and those layouts
 The sandbox exposes no GPU adapter; the permitted host captures succeeded. The
 local camera was adjusted after review to separate the port from the enlarged star.
 
-Reproduce with `--new --capture PATH --capture-view system|market|saves|galaxy`.
+Reproduce with `--new --capture PATH --capture-view system|market|saves|fleets|galaxy`.
 This does not verify a desktop window, mouse/touch interaction, DPI transitions,
 OS suspend/resume, surface loss or idle power behavior. An earlier sandboxed window
 launch reported macOS desktop-service errors. Manual interactive checks remain open.
@@ -49,7 +48,7 @@ Seeded-start tests check 256 reachable starts. Refreshes never create stock/mone
 
 Save checks cover world/player/journey/economy round trips, schema/invariant
 rejection, failed writes, previous-save backup recovery, and preserving a good backup
-over a damaged primary. Client checks cover fractional ticks, speed/pause, save
+over a damaged primary. Client checks cover movement-triggered ticks, save
 restore and a failed load retaining the live session. See docs/DATA_FORMATS.md.
 
 The 20–30 minute first-upgrade target and whether routes are enjoyable require
@@ -71,7 +70,7 @@ without changing save/world coordinates. Markers, picking, Focus and inspection
 share one layout; labels avoid marker bounds. A test checks that an existing
 fixture moon remains separately pickable/focusable without mutating its state.
 
-Separate schema-1 `data/settings.json` now remembers save path/slot, tick speed,
+Separate schema-2 `data/settings.json` now remembers save path/slot, active ship,
 guide visibility and autosave. Preferences use validated atomic JSON replacement;
 invalid preferences report a fallback to defaults without modifying game saves.
 CLI `--save` overrides remembered selection. Pause remains transient, and capture/
@@ -82,3 +81,13 @@ without altering simulation state.
 The trader guide is explicitly labelled as such. Spy, soldier and pirate mission
 routes are planned in PLAYER_SPECIALIZATIONS.md; no quest/role system is claimed.
 Planet rotation remains deferred pending lighting-consistent surface animation.
+
+Fleet/action-time checks now cover purchases, splits/merges, per-ship cargo
+transfers, group travel rollback, unauthorized/stale operations, fleet save round
+trips and schema-1 migration of active journeys. Ship Blender sources and sprites
+cover freighter, scout and patrol. System docking markers represent system ports,
+not authoritative local-body positions yet.
+
+The updated system and fleet-management captures were rendered on Apple M5 Pro
+and visually inspected. The system capture shows the freighter beside its trade
+port. Fleet UI capture validates layout, not clicking/OS lifecycle behavior.

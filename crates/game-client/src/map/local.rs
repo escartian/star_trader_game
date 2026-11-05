@@ -88,7 +88,7 @@ impl LocalView {
     }
 
     /// Returns true when the player chooses the galaxy breadcrumb or Escape.
-    pub fn ui(&mut self, ctx: &egui::Context) -> bool {
+    pub fn ui(&mut self, ctx: &egui::Context, ships: &[game_core::travel::Ship]) -> bool {
         // A resumed GPU window has a new egui context; refresh shared handles too.
         self.art = Some(Artwork::preload(ctx));
         let mut back =
@@ -98,7 +98,7 @@ impl LocalView {
                 .id_salt("local_page")
                 .show(ui, |ui| {
                     self.header(ui, ctx, &mut back);
-                    let rect = self.draw_map(ui);
+                    let rect = self.draw_map(ui, ships);
                     self.details(ui, rect);
                 });
         });
@@ -113,7 +113,9 @@ impl LocalView {
             ui.heading(&self.system.name);
         });
         ui.label(format!("{} • local system", self.system.star_kind.label()));
-        ui.label("Inspecting this system • your ship location is shown below; docking is not implemented");
+        ui.label(
+            "Ships docked in this system appear beside the trade port. Local movement is planned.",
+        );
         ui.horizontal_wrapped(|ui| {
             if ui.button("Reset").clicked() {
                 self.camera = Self::initial_camera();

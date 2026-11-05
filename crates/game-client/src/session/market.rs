@@ -33,7 +33,8 @@ impl LocalSession {
     }
 
     fn market_ui(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
-        let Location::Docked(system) = self.state.ship.location else {
+        let ship = self.selected_ship().clone();
+        let Location::Docked(system) = ship.location else {
             ui.label("Your ship must arrive before trading, refuelling or upgrading.");
             return;
         };
@@ -45,8 +46,8 @@ impl LocalSession {
         ui.label(format!(
             "Credits: {} • cargo: {}/{}",
             self.economy.credits,
-            self.economy.cargo_used(),
-            self.economy.cargo_capacity
+            ship.cargo_used(),
+            ship.cargo_capacity
         ));
         ui.horizontal(|ui| {
             ui.label("Order quantity");
@@ -84,7 +85,7 @@ impl LocalSession {
                         let good = &market.goods[commodity.index()];
                         let quote = |side| {
                             self.economy.quote(
-                                &self.state.ship,
+                                &ship,
                                 commodity,
                                 self.market.quantity,
                                 side,
@@ -95,7 +96,7 @@ impl LocalSession {
                         let sell = quote(TradeSide::Sell);
                         ui.label(commodity.label());
                         ui.label(good.stock.to_string());
-                        ui.label(self.economy.cargo[commodity.index()].to_string());
+                        ui.label(ship.cargo[commodity.index()].to_string());
                         ui.label(good.price(TradeSide::Buy, good.stock).to_string());
                         ui.label(good.price(TradeSide::Sell, good.stock).to_string());
                         ui.label(buy.as_ref().map_or("—".into(), |q| q.total.to_string()));
@@ -109,7 +110,7 @@ impl LocalSession {
                                     ui.add_enabled(quote.is_ok(), egui::Button::new(label));
                                 if button.clicked() {
                                     action = Some(ClientCommand::Trade {
-                                        ship: self.state.ship.id,
+                                        ship: ship.id,
                                         commodity,
                                         quantity: self.market.quantity,
                                         side,
@@ -128,10 +129,7 @@ impl LocalSession {
         ui.separator();
         ui.horizontal_wrapped(|ui| {
             ui.label("Fuel units");
-            ui.add(
-                egui::DragValue::new(&mut self.market.fuel_units)
-                    .range(1..=self.state.ship.fuel_capacity),
-            );
+            ui.add(egui::DragValue::new(&mut self.market.fuel_units).range(1..=ship.fuel_capacity));
             let cost = u64::from(self.market.fuel_units) * self.economy.rules.fuel_unit_price.0;
             ui.label(format!(
                 "{} cr/unit • total {} cr",
@@ -140,7 +138,7 @@ impl LocalSession {
             ));
             if ui.button("Refuel").clicked() {
                 action = Some(ClientCommand::Refuel {
-                    ship: self.state.ship.id,
+                    ship: ship.id,
                     units: self.market.fuel_units,
                     expected_revision: self.state.revision,
                 });
@@ -152,16 +150,16 @@ impl LocalSession {
                 self.economy.rules.hold_upgrade_capacity, self.economy.rules.hold_upgrade_price
             ));
             if ui
-                .add_enabled(!self.economy.upgraded, egui::Button::new("Upgrade hold"))
+                .add_enabled(!ship.upgraded, egui::Button::new("Upgrade hold"))
                 .clicked()
             {
                 action = Some(ClientCommand::UpgradeHold {
-                    ship: self.state.ship.id,
+                    ship: ship.id,
                     expected_revision: self.state.revision,
                 });
             }
         });
-        if self.economy.upgraded {
+        if ship.upgraded {
             ui.strong("First earnings goal completed: larger cargo hold purchased.");
         }
         self.known_prices(ui, systems);

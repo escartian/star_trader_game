@@ -18,8 +18,8 @@ fn snapshots_do_not_mutate_authority_or_advance_time() {
     };
     systems.clear();
     let mut copy = state(&mut session);
-    copy.ship.fuel = 0;
-    assert_eq!(copy.ship.fuel, 0);
+    copy.ships[0].fuel = 0;
+    assert_eq!(copy.ships[0].fuel, 0);
     assert_eq!(state(&mut session), TravelState::default());
 }
 
@@ -95,7 +95,7 @@ fn travel_arrives_only_after_the_host_advances_time_and_retries_do_not_charge_tw
         ServerMessage::SessionSnapshot { .. }
     ));
     let underway = state(&mut session);
-    assert_eq!(underway.ship.fuel, 25);
+    assert_eq!(underway.ships[0].fuel, 25);
     assert_eq!(underway.tick, 0);
     assert_eq!(
         session.handle(command),
@@ -104,15 +104,15 @@ fn travel_arrives_only_after_the_host_advances_time_and_retries_do_not_charge_tw
     assert_eq!(state(&mut session), underway);
     session.advance(14);
     assert!(matches!(
-        state(&mut session).ship.location,
+        state(&mut session).ships[0].location,
         Location::Travelling(_)
     ));
     assert!(
         matches!(session.advance(1), ServerMessage::SessionSnapshot { events, .. }
-        if events == vec![SessionEvent::Arrived { system: SystemId(2) }])
+        if events == vec![SessionEvent::Arrived { system: SystemId(2), ship: ShipId(1) }])
     );
     assert_eq!(
-        state(&mut session).ship.location,
+        state(&mut session).ships[0].location,
         Location::Docked(SystemId(2))
     );
     let before = state(&mut session);

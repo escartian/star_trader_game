@@ -1,9 +1,16 @@
-use game_core::{economy::EconomyError, travel::TravelError};
+use game_core::{economy::EconomyError, fleet::FleetError, travel::TravelError};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CommandError {
     Travel(TravelError),
     Economy(EconomyError),
+    Fleet(FleetError),
+}
+
+impl From<FleetError> for CommandError {
+    fn from(error: FleetError) -> Self {
+        Self::Fleet(error)
+    }
 }
 
 impl From<TravelError> for CommandError {
@@ -21,6 +28,7 @@ impl std::fmt::Display for CommandError {
         match self {
             Self::Travel(error) => error.fmt(f),
             Self::Economy(error) => error.fmt(f),
+            Self::Fleet(error) => error.fmt(f),
         }
     }
 }

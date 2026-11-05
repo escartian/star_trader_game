@@ -27,12 +27,12 @@ fn range_and_fuel_boundaries_use_exact_integer_distance() {
             .fuel,
         15
     );
-    state.ship.fuel = 14;
+    state.ships[0].fuel = 14;
     assert_eq!(
         state.quote(destination, origin, position(8, 4, 12)),
         Err(TravelError::InsufficientFuel)
     );
-    state.ship.fuel = 15;
+    state.ships[0].fuel = 15;
     assert!(state.quote(destination, origin, position(8, 4, 12)).is_ok());
 }
 
@@ -44,13 +44,13 @@ fn departure_and_arrival_preserve_fuel_and_time_invariants() {
         .unwrap();
     state.depart(quote).unwrap();
     assert_eq!(state.tick, 0);
-    assert_eq!(state.ship.fuel, 25);
-    assert_eq!(state.advance(14), Ok(None));
-    assert!(matches!(state.ship.location, Location::Travelling(_)));
-    assert_eq!(state.advance(1), Ok(Some(SystemId(2))));
-    assert_eq!(state.ship.location, Location::Docked(SystemId(2)));
-    assert_eq!(state.ship.fuel, 25);
-    assert_eq!(state.advance(100), Ok(None));
+    assert_eq!(state.ships[0].fuel, 25);
+    assert_eq!(state.advance(14), Ok(Vec::new()));
+    assert!(matches!(state.ships[0].location, Location::Travelling(_)));
+    assert_eq!(state.advance(1), Ok(vec![(ShipId(1), SystemId(2))]));
+    assert_eq!(state.ships[0].location, Location::Docked(SystemId(2)));
+    assert_eq!(state.ships[0].fuel, 25);
+    assert_eq!(state.advance(100), Ok(Vec::new()));
 }
 
 #[test]

@@ -10,8 +10,9 @@ impl Map {
                 self.local = Some(LocalView::new(system));
             }
             "market" => self.session.open_market(),
+            "fleets" => self.session.open_fleets(),
             "saves" => self.session.open_saves(),
-            _ => return Err("Capture view must be galaxy, system, market or saves".into()),
+            _ => return Err("Capture view must be galaxy, system, market, fleets or saves".into()),
         }
         Ok(())
     }

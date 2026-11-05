@@ -1,4 +1,4 @@
-use super::{LOCAL_PLAYER, Session};
+use super::Session;
 use game_core::{
     SystemId,
     economy::{Commodity, Credits, EconomyError, TradeSide},
@@ -28,16 +28,7 @@ fn trade(session: &mut Session, commodity: Commodity, side: TradeSide) {
 }
 
 fn travel(session: &mut Session, destination: SystemId) {
-    let quote = session.quote(LOCAL_PLAYER, ShipId(1), destination).unwrap();
-    succeed(
-        session,
-        ClientCommand::Travel {
-            ship: ShipId(1),
-            destination,
-            expected_revision: quote.revision,
-        },
-    );
-    session.advance(quote.duration_ticks);
+    super::test_support::travel_to_port(session, destination);
 }
 
 fn refuel(session: &mut Session) {

@@ -11,6 +11,8 @@ impl LocalSession {
             "Goal completed: you purchased the larger cargo hold. Continue exploring trade routes."
         } else if matches!(ship.location, Location::Travelling(_)) {
             "A saved journey is in progress. Choose Continue journey to consume the remaining movement ticks."
+        } else if !matches!(ship.location, Location::Docked(_)) {
+            "Use Navigation to enter your destination system from deep space, then inspect its trade port and preview docking. Movement consumes ticks; inspection does not."
         } else if self.economy.credits >= self.economy.rules.hold_upgrade_price {
             "You can afford the hold upgrade. Open Market / refuel and buy it to complete the first earnings goal."
         } else if ship.fuel < 20 {
@@ -19,7 +21,7 @@ impl LocalSession {
             if ship.location == Location::Docked(SystemId(2)) {
                 "At Meridian, open Market / refuel and sell your food. Compare known prices for your return cargo."
             } else {
-                "Select Meridian in the galaxy and press Travel to deliver your food. Double-click only inspects a system."
+                "Open Navigation and exit the system, select Meridian and enter it, then inspect its trade port and dock to sell. Double-click only inspects a system."
             }
         } else if ship.location == Location::Docked(SystemId(1)) {
             "First delivery: open Market / refuel, buy food that fits the selected ship, travel to Meridian, and sell it. Work toward the hold upgrade."

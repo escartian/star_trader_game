@@ -1,12 +1,13 @@
 //! Authoritative rules shared by offline hosting and future remote transports.
 mod commerce;
 mod fleets;
+mod movement;
 mod offline;
 mod save;
 use game_core::economy::Economy;
 use game_core::{
-    StarSystem, SystemId,
-    travel::{Location, PlayerId, ShipId, TravelError, TravelQuote, TravelState},
+    StarSystem,
+    travel::{PlayerId, TravelError, TravelState},
 };
 use game_protocol::{ClientCommand, CommandError, PROTOCOL_VERSION, ServerMessage, SessionEvent};
 
@@ -87,9 +88,10 @@ impl Session {
             | ClientCommand::MergeFleets { .. }
             | ClientCommand::TransferCargo { .. }) => self.fleet_command(player, command),
             ClientCommand::GetSession => Ok(self.snapshot(Vec::new())),
-            ClientCommand::PreviewTravel { ship, destination } => Ok(ServerMessage::TravelPreview(
-                self.quote(player, ship, destination)?,
+            ClientCommand::PreviewMove { ship, target } => Ok(ServerMessage::MovementPreview(
+                self.preview_movement(player, ship, &target)?,
             )),
+            ClientCommand::Move { .. } => Err(TravelError::OfflineMovementOnly.into()),
             ClientCommand::PreviewTrade {
                 ship,
                 commodity,
@@ -108,62 +110,7 @@ impl Session {
             command @ (ClientCommand::Trade { .. }
             | ClientCommand::Refuel { .. }
             | ClientCommand::UpgradeHold { .. }) => self.commerce(player, command),
-            ClientCommand::Travel {
-                ship,
-                destination,
-                expected_revision,
-            } => {
-                if expected_revision != self.state.revision {
-                    return Err(TravelError::StaleQuote.into());
-                }
-                let quotes = self.fleet_quotes(player, ship, destination)?;
-                self.state.depart_many(&quotes)?;
-                Ok(self.snapshot(vec![SessionEvent::Departed { destination }]))
-            }
         }
-    }
-
-    fn quote(
-        &self,
-        player: PlayerId,
-        ship: ShipId,
-        destination: SystemId,
-    ) -> Result<TravelQuote, CommandError> {
-        self.fleet_quotes(player, ship, destination)?
-            .into_iter()
-            .find(|quote| quote.ship == ship)
-            .ok_or_else(|| TravelError::UnknownShip.into())
-    }
-
-    fn fleet_quotes(
-        &self,
-        player: PlayerId,
-        ship: ShipId,
-        destination: SystemId,
-    ) -> Result<Vec<TravelQuote>, CommandError> {
-        self.state.authorize(player, ship)?;
-        if matches!(self.state.ship(ship)?.location, Location::Travelling(_)) {
-            return Err(TravelError::AlreadyTravelling.into());
-        }
-        let fleet = self.state.fleet_for_ship(ship)?;
-        let origin = self.state.fleet_location(fleet.id, player)?;
-        let position = |id| {
-            self.systems
-                .iter()
-                .find(|system| system.id == id)
-                .map(|system| system.position)
-                .ok_or(TravelError::UnknownSystem)
-        };
-        let (origin, target) = (position(origin)?, position(destination)?);
-        fleet
-            .ships
-            .iter()
-            .map(|member| {
-                self.state
-                    .quote_for(*member, destination, origin, target)
-                    .map_err(Into::into)
-            })
-            .collect()
     }
 
     /// Host-only simulation advancement. The offline adapter consumes movement ticks; a future
@@ -200,3 +147,9 @@ mod tests;
 
 #[cfg(test)]
 mod fleet_tests;
+
+#[cfg(test)]
+mod test_support;
+
+#[cfg(test)]
+mod movement_tests;

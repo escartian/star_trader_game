@@ -1,8 +1,10 @@
+mod bounds;
 mod labels;
 mod layout;
 mod render;
 use layout::{display_position, moon_parent};
 mod scale;
+mod ships;
 
 use super::{
     art::{ArtKind, Artwork},
@@ -48,6 +50,10 @@ pub struct LocalView {
     candidates: Vec<BodyId>,
     pan_tool: bool,
     art: Option<Artwork>,
+    show_boundary: bool,
+    half_extent_km: i64,
+    active_ship: game_core::travel::ShipId,
+    move_request: Option<game_core::movement::MoveTarget>,
 }
 
 impl LocalView {
@@ -60,7 +66,24 @@ impl LocalView {
             candidates: Vec::new(),
             pan_tool: false,
             art: None,
+            move_request: None,
+            show_boundary: false,
+            half_extent_km: game_core::movement::MovementRules::default().system_half_extent_km,
+            active_ship: game_core::travel::ShipId(1),
         }
+    }
+
+    pub fn set_fleet_context(
+        &mut self,
+        active_ship: game_core::travel::ShipId,
+        half_extent_km: i64,
+    ) {
+        self.active_ship = active_ship;
+        self.half_extent_km = half_extent_km;
+    }
+
+    pub fn take_movement_request(&mut self) -> Option<game_core::movement::MoveTarget> {
+        self.move_request.take()
     }
 
     fn initial_camera() -> Camera {
@@ -98,6 +121,16 @@ impl LocalView {
                 .id_salt("local_page")
                 .show(ui, |ui| {
                     self.header(ui, ctx, &mut back);
+                    ui.horizontal_wrapped(|ui| {
+                        ui.checkbox(&mut self.show_boundary, "Show system boundary");
+                        if ui.button("Focus selected ship").clicked()
+                            && let Some(ship) =
+                                ships.iter().find(|ship| ship.id == self.active_ship)
+                            && let Some(anchor) = self.ship_anchor(&ship.location)
+                        {
+                            self.camera.focus_on(anchor);
+                        }
+                    });
                     let rect = self.draw_map(ui, ships);
                     self.details(ui, rect);
                 });
@@ -114,7 +147,7 @@ impl LocalView {
         });
         ui.label(format!("{} • local system", self.system.star_kind.label()));
         ui.label(
-            "Ships docked in this system appear beside the trade port. Local movement is planned.",
+            "Select a body to preview fleet movement. Ship offsets are symbolic; distances use true kilometers.",
         );
         ui.horizontal_wrapped(|ui| {
             if ui.button("Reset").clicked() {
@@ -186,6 +219,19 @@ impl LocalView {
             .find(|b| Some(b.id) == self.selected)
         {
             ui.label(format!("{} • {}", body.name, body.kind.label()));
+            if ui
+                .button(if body.kind == BodyKind::Station {
+                    "Preview docking at trade port"
+                } else {
+                    "Preview movement to body"
+                })
+                .clicked()
+            {
+                self.move_request = Some(game_core::movement::MoveTarget::Body {
+                    system: self.system.id,
+                    body: body.id,
+                });
+            }
             ui.label(format!(
                 "{:.0} km from {} • true 3D distance",
                 kilometers(body.position).length(),

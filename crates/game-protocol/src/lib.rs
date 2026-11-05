@@ -5,10 +5,10 @@ use game_core::economy::{Commodity, Economy, TradeQuote, TradeSide};
 use game_core::fleet::{FleetId, ShipKind};
 use game_core::{
     StarSystem, SystemId,
-    travel::{ShipId, TravelQuote, TravelState},
+    travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 5;
+pub const PROTOCOL_VERSION: u32 = 6;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -36,9 +36,14 @@ pub enum ClientCommand {
         quantity: u32,
         expected_revision: u64,
     },
-    PreviewTravel {
+    PreviewMove {
         ship: ShipId,
-        destination: SystemId,
+        target: game_core::movement::MoveTarget,
+    },
+    Move {
+        ship: ShipId,
+        target: game_core::movement::MoveTarget,
+        expected_revision: u64,
     },
     PreviewTrade {
         ship: ShipId,
@@ -66,18 +71,11 @@ pub enum ClientCommand {
         ship: ShipId,
         expected_revision: u64,
     },
-    Travel {
-        ship: ShipId,
-        destination: SystemId,
-        expected_revision: u64,
-    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SessionEvent {
-    Departed {
-        destination: SystemId,
-    },
+    Moved(game_core::movement::MovementPlan),
     Arrived {
         system: SystemId,
         ship: ShipId,
@@ -116,7 +114,7 @@ pub enum ServerMessage {
         economy: Economy,
         events: Vec<SessionEvent>,
     },
-    TravelPreview(TravelQuote),
+    MovementPreview(game_core::movement::MovementPlan),
     TradePreview(TradeQuote),
     CommandRejected(CommandError),
 }

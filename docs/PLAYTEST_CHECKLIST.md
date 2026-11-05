@@ -39,3 +39,10 @@ Observe 5–10 trading/management players once the desktop acceptance checks pas
 Record navigation, profitable delivery, upgrade discovery and willingness to return.
 Capture dominant routes/confusion before adding factions, encounters or fleets.
 No participants have been contacted and no playtest results are claimed here.
+
+- [ ] Exit a system in Navigation, enter a deep-space waypoint, explicitly enter
+  the destination system, and dock at its trade port before trading.
+- [ ] Inspect another system without moving; verify the ship remains where it was.
+- [ ] Try a local route through the star, then route around it with a waypoint.
+- [ ] Visit a planet/moon, focus the selected ship and inspect its tethered marker.
+- [ ] Show the system boundary and save/continue from an entry face/deep space.

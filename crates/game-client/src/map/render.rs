@@ -51,11 +51,11 @@ impl Map {
             });
         }
         if let (Some(origin), Some(target)) = (
-            self.route_origin(),
+            self.route_position(),
             self.systems.iter().find(|s| Some(s.id) == self.selected),
         ) {
             let route = [
-                self.camera.project(position(origin), rect),
+                self.camera.project(origin, rect),
                 self.camera.project(position(target), rect),
             ];
             painter.line_segment(
@@ -120,7 +120,7 @@ impl Map {
                     .session
                     .ships()
                     .iter()
-                    .filter(|ship| ship.location == game_core::travel::Location::Docked(system.id))
+                    .filter(|ship| ship.location.system() == Some(system.id))
                     .collect();
                 if let Some(ship) = docked.first() {
                     let point =
@@ -130,6 +130,38 @@ impl Map {
                         point + Vec2::new(17.0, 0.0),
                         egui::Align2::LEFT_CENTER,
                         format!("{} ships", docked.len()),
+                        egui::FontId::proportional(11.0),
+                        Color32::LIGHT_GREEN,
+                    );
+                }
+            }
+        }
+        if self.scene == super::fixtures::Scene::Session {
+            let art = super::art::Artwork::preload(ui.ctx());
+            for ship in self.session.ships() {
+                if let game_core::travel::Location::DeepSpace(position) = ship.location {
+                    let world = glam::DVec3::new(
+                        position.x_km as f64,
+                        position.y_km as f64,
+                        position.z_km as f64,
+                    ) / game_core::movement::KM_PER_LIGHT_YEAR as f64;
+                    let point = self.camera.project(world, rect);
+                    let offset = Vec2::new(-28.0, 22.0 + (ship.id.0 % 4) as f32 * 22.0);
+                    painter.line_segment(
+                        [point, point + offset],
+                        Stroke::new(1.0_f32, Color32::LIGHT_GREEN),
+                    );
+                    painter.circle_stroke(point, 4.0, Stroke::new(1.0_f32, Color32::LIGHT_GREEN));
+                    art.paint(
+                        super::art::ArtKind::from(ship.kind),
+                        &painter,
+                        point + offset,
+                        28.0,
+                    );
+                    painter.text(
+                        point + offset + Vec2::new(16.0, 0.0),
+                        egui::Align2::LEFT_CENTER,
+                        format!("#{}", ship.id.0),
                         egui::FontId::proportional(11.0),
                         Color32::LIGHT_GREEN,
                     );

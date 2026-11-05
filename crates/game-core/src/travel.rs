@@ -21,7 +21,17 @@ pub struct Journey {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Location {
+    /// Docked at the system's primary trade station (legacy saves retain this ID).
     Docked(SystemId),
+    Orbiting {
+        system: SystemId,
+        body: crate::BodyId,
+    },
+    InSystem {
+        system: SystemId,
+        position: crate::LocalPosition,
+    },
+    DeepSpace(crate::movement::SpacePosition),
     Travelling(Journey),
 }
 
@@ -95,6 +105,7 @@ impl std::fmt::Display for TravelError {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TravelState {
+    pub movement_rules: crate::movement::MovementRules,
     pub tick: u64,
     pub revision: u64,
     pub ships: Vec<Ship>,
@@ -106,6 +117,7 @@ pub struct TravelState {
 impl Default for TravelState {
     fn default() -> Self {
         Self {
+            movement_rules: crate::movement::MovementRules::default(),
             tick: 0,
             revision: 0,
             ships: vec![Ship {
@@ -267,6 +279,21 @@ impl TravelState {
         self.tick = tick;
         self.revision = revision;
         Ok(arrived)
+    }
+}
+
+impl Location {
+    pub fn system(&self) -> Option<SystemId> {
+        match self {
+            Self::Docked(system)
+            | Self::Orbiting { system, .. }
+            | Self::InSystem { system, .. } => Some(*system),
+            Self::Travelling(journey) => Some(journey.origin),
+            Self::DeepSpace(_) => None,
+        }
+    }
+    pub fn stationary(&self) -> bool {
+        !matches!(self, Self::Travelling(_))
     }
 }
 

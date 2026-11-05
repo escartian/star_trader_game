@@ -52,35 +52,41 @@ acceptance is separate; see [platform status](docs/PLATFORM_STATUS.md).
 - [x] Save fleet membership and migrate prior single-ship saves without reset.
 - [x] Original Blender ship sources/sprites and docked ship markers in system view.
 - [ ] Per-planet finite shipyard inventory, ship selling/trading and fleet renaming.
-- [ ] Ship locations tied to a planet/station/deep-space position, rather than a
-  system-level dock. Planet-orbit ship markers depend on that authoritative data.
+- [x] Body, local waypoint and deep-space locations, with ship markers tethered
+  beside visited bodies/stations or placed at their deep-space coordinates.
 
 **Acceptance:** split, move independently, rendezvous and merge; preserve each
 ship's cargo, fuel and identity through save/load. These flows have behavior tests.
 The current shipyard is a system-port catalog; patrol hulls have no combat yet.
 
-## 3. Restore the original movement and planetary world model — next
+## 3. Restore the original movement and planetary world model — in progress
 
-- [ ] Add configurable galaxy/system cubic bounds in ly/km; choose kilometer
-  extents that contain generated bodies. Validate edge/corner/overflow cases.
-- [ ] Store fleet local or deep-space position explicitly, shared by its members.
-- [ ] Local movement to a position or body within system bounds; validate docking
-  and body proximity/collision rules without adding orbital physics.
-- [ ] Exit a system by crossing its cube boundary along the requested direction.
-  Compute a checked unit conversion; do not copy illustrative README formulas
-  that combine galaxy and system units.
-- [ ] Deep-space linear movement, bounded by galaxy dimensions.
-- [ ] Enter only when explicitly targeting system coordinates. Passing a system
-  along a route does not automatically intercept or enter it.
-- [ ] Shared movement preview/commit rules, fuel/tick costs, path and arrival events.
+- [x] Configurable galaxy/system cubic bounds in ly/km; extents contain generated
+  bodies. Checked coordinates, edge/corner exits and exact range boundary tests.
+- [x] Explicit fleet local/body/deep-space position, shared by its members.
+- [x] Local movement to a waypoint/body, station docking and stellar exclusion.
+- [ ] Planet/moon collision volumes and more detailed proximity/landing rules.
+- [x] Exit at the first crossed cube face and place the fleet just outside it.
+  Checked coordinate conversion preserves kilometer offsets in deep space.
+- [x] Deep-space linear movement within galaxy bounds.
+- [x] Explicit system entry by ID or exact coordinates, at the near cube face.
+  Passing a system along a path never enters it.
+- [x] Shared authoritative previews/commits, whole-fleet fuel/range checks,
+  movement ticks/events, UI confirmation and location-aware ship markers.
+- [x] Save schema 3 and migration from schemas 1/2; resume older active journeys.
 - [ ] Planet economy type, production specialization, biome and danger rating
   (VerySafe through Insidious); resource market, ship market and local credits.
 - [ ] Replace prototype system markets with planet markets, including buyer funds
   and a migration that preserves balances rather than silently generating wealth.
 
-**Acceptance:** a fleet can leave a planet, exit a system, move through deep space,
-explicitly enter another system and dock at a planet. All transitions survive
-save/load and use movement ticks. UI inspection alone never moves a fleet.
+**Movement acceptance:** leave a body, exit its system, move through deep space,
+enter another system and dock at its station. Behavior tests cover these stages
+and save/load at each point; UI confirmation has an egui input regression test.
+Inspection never moves the fleet. GPU previews are visually checked separately
+from OS window/manual interaction. See [movement rules](docs/MOVEMENT.md).
+
+**Next:** per-planet resource/ship markets, their finite credit balances and
+planet metadata. These remain unimplemented; current commerce uses system ports.
 
 ## 4. NPC traders and fleet combat
 

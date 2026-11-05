@@ -14,7 +14,8 @@ impl TravelState {
             .ok_or(FleetError::UnknownFleet)
     }
 
-    pub fn fleet_location(&self, id: FleetId, player: PlayerId) -> Result<SystemId, FleetError> {
+    /// All members must share one stationary location in any coordinate space.
+    pub fn fleet_position(&self, id: FleetId, player: PlayerId) -> Result<&Location, FleetError> {
         let fleet = self
             .fleets
             .iter()
@@ -29,15 +30,21 @@ impl TravelState {
             if ship.owner != player {
                 return Err(FleetError::NotOwner);
             }
-            let Location::Docked(system) = ship.location else {
-                return Err(FleetError::DifferentLocations);
-            };
-            if location.is_some_and(|previous| previous != system) {
+            if !ship.location.stationary()
+                || location.is_some_and(|previous| previous != &ship.location)
+            {
                 return Err(FleetError::DifferentLocations);
             }
-            location = Some(system);
+            location = Some(&ship.location);
         }
         location.ok_or(FleetError::UnknownFleet)
+    }
+
+    pub fn fleet_location(&self, id: FleetId, player: PlayerId) -> Result<SystemId, FleetError> {
+        match self.fleet_position(id, player)? {
+            Location::Docked(system) => Ok(*system),
+            _ => Err(FleetError::NotDocked),
+        }
     }
 
     pub fn split_fleet(
@@ -46,7 +53,7 @@ impl TravelState {
         id: FleetId,
         ships: &[ShipId],
     ) -> Result<FleetId, FleetError> {
-        self.fleet_location(id, player)?;
+        self.fleet_position(id, player)?;
         let index = self
             .fleets
             .iter()
@@ -89,7 +96,7 @@ impl TravelState {
         if source == target {
             return Err(FleetError::SameFleet);
         }
-        if self.fleet_location(source, player)? != self.fleet_location(target, player)? {
+        if self.fleet_position(source, player)? != self.fleet_position(target, player)? {
             return Err(FleetError::DifferentLocations);
         }
         let source_index = self
@@ -163,9 +170,7 @@ impl TravelState {
         if origin.owner != player || destination.owner != player {
             return Err(FleetError::NotOwner);
         }
-        if !matches!(origin.location, Location::Docked(_))
-            || origin.location != destination.location
-        {
+        if !origin.location.stationary() || origin.location != destination.location {
             return Err(FleetError::DifferentLocations);
         }
         let remaining = origin.cargo[commodity.index()]

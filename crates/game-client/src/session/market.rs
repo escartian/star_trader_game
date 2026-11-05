@@ -35,7 +35,7 @@ impl LocalSession {
     fn market_ui(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
         let ship = self.selected_ship().clone();
         let Location::Docked(system) = ship.location else {
-            ui.label("Your ship must arrive before trading, refuelling or upgrading.");
+            ui.label("Dock at the system trade port to trade, refuel or upgrade.");
             return;
         };
         let name = systems

@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 impl SaveData {
     pub(super) fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 2 {
+        if self.schema_version != 3 {
             return Err("Unsupported save schema version".into());
         }
         if self.systems.is_empty() || self.systems.len() > 1024 {
@@ -42,11 +42,20 @@ impl SaveData {
                 }
             }
         }
+        self.player
+            .movement_rules
+            .validate_world(&self.systems)
+            .map_err(|error| error.to_string())?;
         self.economy.rules.validate()?;
         self.validate_fleets()?;
         for ship in &self.player.ships {
+            self.player
+                .movement_rules
+                .validate_location(&ship.location, &self.systems)
+                .map_err(|error| error.to_string())?;
             match &ship.location {
                 Location::Docked(system) if systems.contains(system) => {}
+                Location::Orbiting { .. } | Location::InSystem { .. } | Location::DeepSpace(_) => {}
                 Location::Travelling(journey)
                     if systems.contains(&journey.origin)
                         && systems.contains(&journey.destination)

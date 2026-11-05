@@ -1,17 +1,11 @@
 use super::*;
-use game_core::{SystemId, travel::ShipId};
-use game_protocol::ClientCommand;
 
 #[test]
 fn json_round_trip_preserves_journey_markets_money_and_ticks() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("slot.json");
     let mut session = Session::with_seed(42);
-    session.handle(ClientCommand::Travel {
-        ship: ShipId(1),
-        destination: SystemId(2),
-        expected_revision: 0,
-    });
+    crate::test_support::legacy_depart(&mut session);
     session.advance(4);
     session.save(&path).unwrap();
     let (restored, recovered) = Session::load(&path).unwrap();

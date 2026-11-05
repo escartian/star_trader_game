@@ -3,7 +3,20 @@ use serde_json::{Value, json};
 
 pub(super) fn upgrade(mut data: Value) -> Result<(Value, bool), String> {
     match data.get("schema_version").and_then(Value::as_u64) {
-        Some(2) => Ok((data, false)),
+        Some(3) => Ok((data, false)),
+        Some(2) => {
+            let player = data
+                .get_mut("player")
+                .and_then(Value::as_object_mut)
+                .ok_or("Missing or malformed saved player")?;
+            player.insert(
+                "movement_rules".into(),
+                serde_json::to_value(game_core::movement::MovementRules::default())
+                    .map_err(|error| error.to_string())?,
+            );
+            data["schema_version"] = 3.into();
+            Ok((data, true))
+        }
         Some(1) => {
             let economy = data
                 .get_mut("economy")
@@ -51,6 +64,7 @@ pub(super) fn upgrade(mut data: Value) -> Result<(Value, bool), String> {
             player.insert("next_ship_id".into(), next.into());
             player.insert("next_fleet_id".into(), 2.into());
             data["schema_version"] = 2.into();
+            let (data, _) = upgrade(data)?;
             Ok((data, true))
         }
         _ => Err("Unsupported save schema version".into()),

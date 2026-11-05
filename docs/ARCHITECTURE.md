@@ -88,8 +88,8 @@ without charging fuel twice; this is not full network retry deduplication.
 `handle_as` requires an authenticated identity from a future adapter; its numeric
 argument is not authentication. The one-player fixture rejects other identities.
 
-`game-server/src/offline.rs` resolves a successful movement as an atomic departure
-and tick advance. Nonmovement commands never advance time. `ContinueTravel` is an
+`game-server/src/offline.rs` dispatches movement to host resolution in movement.rs.
+It publishes a complete fleet location/fuel/tick/market change atomically. Nonmovement commands never advance time. `ContinueTravel` is an
 offline-only action for resuming journeys saved by older builds. The client has
 no wall-clock simulation scheduler. A multiplayer adapter must keep host `advance`
 private and resolve authenticated players' collected orders at turn boundaries.
@@ -110,7 +110,7 @@ bulk advancement matches individual ticks. Future AI/encounters must preserve
 intermediate event ordering rather than assume all tick systems can be batched.
 The player does not press End Turn in single-player; movement consumes ticks.
 
-`game-server/src/save.rs` owns schema-2 authoritative JSON, validation, atomic
+`game-server/src/save.rs` owns schema-3 authoritative JSON, validation, atomic
 replacement and a previous-good backup. Saves contain the world/player/economy
 and their active definitions; continuing does not regenerate markets or apply
 changed startup definitions. The client replaces its session only after load
@@ -134,6 +134,24 @@ owns cargo, hold upgrades, fuel and range. The current single player shares one
 credit account. Split/merge/transfer/purchase operations validate on a candidate
 session before publication; every member must pass travel checks before fuel is
 charged. Fleet members share a location. Local-body and deep-space positions
-remain next work; current dock markers represent a system-level trade port.
+are authoritative. Ships share fleet locations and are illustrated beside their
+body anchors or at deep-space positions. The current primary trade station retains
+its system ID in Docked; planetary markets are next work.
 Ship catalog definitions come from config/ships.json, embedded as a fallback.
 Schema-1 migration moves the old global cargo/upgrade into its existing ship.
+
+## Movement spaces and host resolution
+
+`game-core::movement` separates configuration, integer geometry and planning.
+Galaxy anchors are integer ly; local offsets and absolute SpacePosition use km.
+The local cube exit clips a ray to its first face; entry projects the approach to
+its near face. Crossing an intermediate system never intercepts a deep-space move.
+Body arrivals attach to an orbit/berth; local stellar exclusion blocks invalid
+segments. Body collision volumes and planetary landing physics remain unmodeled.
+
+Movement previews validate all fleet members. Inputs contain a target and revision,
+never an executable plan. Offline host resolution rebuilds the plan on current
+state, resolves movement ticks, updates markets and publishes one candidate session.
+Ordinary handle_as rejects immediate Move; a future multiplayer turn resolver
+must collect orders before invoking host resolution. It cannot expose that host
+entry point directly as a remote command handler. See MOVEMENT.md for current costs.

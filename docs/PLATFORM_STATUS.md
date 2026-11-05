@@ -73,8 +73,8 @@ fixture moon remains separately pickable/focusable without mutating its state.
 Separate schema-2 `data/settings.json` now remembers save path/slot, active ship,
 guide visibility and autosave. Preferences use validated atomic JSON replacement;
 invalid preferences report a fallback to defaults without modifying game saves.
-CLI `--save` overrides remembered selection. Pause remains transient, and capture/
-headless commands do not write settings. Checks cover preference round trips,
+CLI `--save` overrides remembered selection. Capture/headless commands do not
+write settings. Checks cover preference round trips,
 invalid data, preserving a last-good settings file and restoring slot/control state
 without altering simulation state.
 
@@ -85,9 +85,16 @@ Planet rotation remains deferred pending lighting-consistent surface animation.
 Fleet/action-time checks now cover purchases, splits/merges, per-ship cargo
 transfers, group travel rollback, unauthorized/stale operations, fleet save round
 trips and schema-1 migration of active journeys. Ship Blender sources and sprites
-cover freighter, scout and patrol. System docking markers represent system ports,
-not authoritative local-body positions yet.
+cover freighter, scout and patrol. Markers now follow authoritative local-body/waypoint/deep-space locations.
 
 The updated system and fleet-management captures were rendered on Apple M5 Pro
 and visually inspected. The system capture shows the freighter beside its trade
 port. Fleet UI capture validates layout, not clicking/OS lifecycle behavior.
+
+Movement now has local/body, cube exit, deep-space and explicit entry flows.
+Checks cover exact fuel/range bounds, star intersection, extreme coordinates,
+whole-fleet rejection, timing/market advancement, saved positions at each stage,
+and schema 1/2→3 migration. An egui pointer-input test clicks Confirm movement;
+a preview-only or invalid preview leaves time unchanged. This is not OS window
+or physical-device interaction evidence. Offscreen navigation, entry and planet
+ship-marker captures were rendered on Apple M5 Pro and visually inspected.

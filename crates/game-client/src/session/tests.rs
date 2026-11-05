@@ -1,5 +1,9 @@
 use super::*;
-use game_core::travel::ShipId;
+use game_core::{
+    BodyId,
+    movement::MoveTarget,
+    travel::{Location, ShipId},
+};
 
 #[test]
 fn offline_time_advances_only_for_successful_movement() {
@@ -21,18 +25,30 @@ fn offline_time_advances_only_for_successful_movement() {
         expected_revision: host.state.revision,
     });
     assert_eq!(host.state.tick, 0);
-    host.command(ClientCommand::Travel {
+    host.command(ClientCommand::Move {
         ship: ShipId(1),
-        destination: SystemId(2),
+        target: MoveTarget::Body {
+            system: SystemId(1),
+            body: BodyId(1),
+        },
         expected_revision: host.state.revision,
     });
-    assert_eq!(host.state.tick, 15);
-    assert_eq!(host.state.ships[0].location, Location::Docked(SystemId(2)));
-    assert_eq!(host.state.ships[0].fuel, 25);
+    assert_eq!(host.state.tick, 2);
+    assert_eq!(
+        host.state.ships[0].location,
+        Location::Orbiting {
+            system: SystemId(1),
+            body: BodyId(1)
+        }
+    );
+    assert_eq!(host.state.ships[0].fuel, 39);
     let arrived = host.state.clone();
-    host.command(ClientCommand::Travel {
+    host.command(ClientCommand::Move {
         ship: ShipId(1),
-        destination: SystemId(2),
+        target: MoveTarget::Body {
+            system: SystemId(1),
+            body: BodyId(1),
+        },
         expected_revision: host.state.revision,
     });
     assert_eq!(host.state, arrived);

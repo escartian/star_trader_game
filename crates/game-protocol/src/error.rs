@@ -5,6 +5,7 @@ pub enum CommandError {
     Travel(TravelError),
     Economy(EconomyError),
     Fleet(FleetError),
+    Movement(game_core::movement::MovementError),
 }
 
 impl From<FleetError> for CommandError {
@@ -29,6 +30,17 @@ impl std::fmt::Display for CommandError {
             Self::Travel(error) => error.fmt(f),
             Self::Economy(error) => error.fmt(f),
             Self::Fleet(error) => error.fmt(f),
+            Self::Movement(error) => error.fmt(f),
+        }
+    }
+}
+
+impl From<game_core::fleet::FleetMovementError> for CommandError {
+    fn from(error: game_core::fleet::FleetMovementError) -> Self {
+        match error {
+            game_core::fleet::FleetMovementError::Movement(error) => Self::Movement(error),
+            game_core::fleet::FleetMovementError::Travel(error) => Self::Travel(error),
+            game_core::fleet::FleetMovementError::Fleet(error) => Self::Fleet(error),
         }
     }
 }

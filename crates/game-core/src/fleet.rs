@@ -92,6 +92,7 @@ impl ShipCatalog {
 pub enum FleetError {
     UnknownFleet,
     DifferentLocations,
+    NotDocked,
     InvalidSelection,
     SameFleet,
     ShipLimit,
@@ -108,7 +109,8 @@ impl std::fmt::Display for FleetError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::UnknownFleet => "Unknown fleet.",
-            Self::DifferentLocations => "Ships must be docked at the same system.",
+            Self::DifferentLocations => "Ships must be together at the same stationary location.",
+            Self::NotDocked => "Dock at a trade port before purchasing ships.",
             Self::InvalidSelection => "Select some, but not all, ships to split a fleet.",
             Self::SameFleet => "Choose two different fleets.",
             Self::ShipLimit => "The prototype supports up to 64 owned ships.",
@@ -120,5 +122,37 @@ impl std::fmt::Display for FleetError {
             Self::CargoFull => "The target ship has insufficient cargo space.",
             Self::ArithmeticOverflow => "Fleet identity or quantity limit reached.",
         })
+    }
+}
+
+/// Errors shared by the pure movement planner and the session boundary.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FleetMovementError {
+    Movement(crate::movement::MovementError),
+    Travel(crate::travel::TravelError),
+    Fleet(FleetError),
+}
+impl From<crate::movement::MovementError> for FleetMovementError {
+    fn from(error: crate::movement::MovementError) -> Self {
+        Self::Movement(error)
+    }
+}
+impl From<crate::travel::TravelError> for FleetMovementError {
+    fn from(error: crate::travel::TravelError) -> Self {
+        Self::Travel(error)
+    }
+}
+impl From<FleetError> for FleetMovementError {
+    fn from(error: FleetError) -> Self {
+        Self::Fleet(error)
+    }
+}
+impl std::fmt::Display for FleetMovementError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Movement(error) => error.fmt(f),
+            Self::Travel(error) => error.fmt(f),
+            Self::Fleet(error) => error.fmt(f),
+        }
     }
 }

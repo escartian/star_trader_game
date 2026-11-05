@@ -56,7 +56,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &std::fs::read_to_string("config/ships.json")?,
             )?;
         }
-        game_server::Session::with_economy(options.seed, rules)?
+        let mut authority = game_server::Session::with_economy(options.seed, rules)?;
+        if std::path::Path::new("config/movement.json").is_file() {
+            authority.set_movement_rules(game_core::movement::MovementRules::from_json(
+                &std::fs::read_to_string("config/movement.json")?,
+            )?)?;
+        }
+        authority
     };
     if options.headless {
         println!("{}", session.export_json()?);

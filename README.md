@@ -9,7 +9,8 @@ through a readable native map. No game engine, browser, webview or JavaScript.
   double-click system inspection, and separate local views with planets/stations.
 - Blender-authored star, planet, moon, asteroid station and ship models, baked to
   transparent sprites. Shared textures preload once; halos/selection stay procedural.
-- An authoritative offline session with range/fuel validation and movement-triggered ticks.
+- Authoritative local/body movement, cubic system exits, deep-space travel and
+  explicit system entry, with whole-fleet fuel/range checks and movement ticks.
 - Credits, cargo, finite commodity stock, stock-sensitive prices, refuelling,
   known-market comparisons and a purchasable cargo-hold upgrade.
 - Seeded starts, a first-delivery guide, session logs and
@@ -51,16 +52,22 @@ that slot, with its previous valid snapshot retained as backup.
 
 Open **Fleets / shipyard** to buy ships, split checked members, merge co-located
 fleets or transfer cargo. Travel moves every ship in the selected fleet and checks
-each member’s fuel/range. Docked ships appear beside the system’s trade port;
-planet-specific docking and deep-space positions are the next movement milestone.
+each member’s fuel/range. Ships appear beside visited bodies/trade ports and at their deep-space positions.
+Planetary markets and detailed landing/collision volumes remain planned.
 
 ## First delivery
 
-At Sol, open **Market / refuel**, set quantity to 20, and buy food. Select Meridian
-and press **Travel**. After arrival, sell the food, refuel, and compare ore or
-machinery for the return trip. Earn enough for the hold upgrade. Double-clicking
-a star only inspects it; travelling is an explicit ship command. Local docking,
-mining and orbital simulation are not implemented.
+At Sol, open **Market / refuel**, set quantity to 20, and buy food. Open
+**Navigation**, choose **+X** under Exit toward, and confirm. In deep space, choose
+**Enter Meridian** and confirm. Double-click Meridian to inspect it, select its
+trade port, choose **Preview docking at trade port**, and confirm. Sell your food,
+refuel, and compare ore or machinery for the return trip. Work toward the hold
+upgrade. Double-clicking a star only inspects it.
+
+Local/body destinations and coordinate waypoints use the same preview/confirm
+flow. Routes through the star reject; use a waypoint around it. See the complete
+[movement controls and costs](docs/MOVEMENT.md). Mining and orbital physics remain
+unimplemented. Current markets are attached to system trade ports.
 
 All simulation uses discrete ticks. Single-player advances ticks only when a
 successful movement action resolves a journey, with no End Turn action. Waiting,
@@ -137,7 +144,8 @@ cargo run -p game-client -- --new --capture /tmp/market.png --capture-view marke
 ```
 
 Example captures: [system](docs/previews/system.png), [market](docs/previews/market.png),
-[fleets](docs/previews/fleets.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`. Captures do not test window
+[fleets](docs/previews/fleets.png), [movement](docs/previews/navigation.png),
+[system entry](docs/previews/entry.png), [ship near planet](docs/previews/orbit.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `deep-space`, `orbit`. Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

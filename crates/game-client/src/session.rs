@@ -2,14 +2,12 @@
 mod fleets;
 mod guide;
 mod market;
+mod navigation;
 mod panel;
 mod saves;
 mod settings;
 use game_core::economy::Economy;
-use game_core::{
-    SystemId,
-    travel::{Location, TravelState},
-};
+use game_core::{SystemId, travel::TravelState};
 use game_protocol::{ClientCommand, ServerMessage, SessionEvent};
 use std::collections::VecDeque;
 
@@ -19,6 +17,7 @@ pub struct LocalSession {
     active_ship: game_core::travel::ShipId,
     economy: Economy,
     market: market::MarketPanel,
+    navigation: navigation::NavigationPanel,
     fleet_panel: fleets::FleetPanel,
     saves: saves::SavePanel,
     log: VecDeque<String>,
@@ -41,6 +40,7 @@ impl LocalSession {
             state,
             economy,
             market: market::MarketPanel::default(),
+            navigation: navigation::NavigationPanel::default(),
             fleet_panel: fleets::FleetPanel::default(),
             saves: saves::SavePanel::default(),
             log: VecDeque::new(),
@@ -48,6 +48,10 @@ impl LocalSession {
             notice: String::new(),
             preferences_path: None,
         }
+    }
+
+    pub fn system_half_extent_km(&self) -> i64 {
+        self.state.movement_rules.system_half_extent_km
     }
 
     pub fn selected_ship(&self) -> &game_core::travel::Ship {
@@ -66,18 +70,30 @@ impl LocalSession {
         }
     }
 
-    pub fn origin(&self) -> SystemId {
-        match &self.selected_ship().location {
-            Location::Docked(system) => *system,
-            Location::Travelling(journey) => journey.origin,
+    pub fn galaxy_position(&self, systems: &[game_core::StarSystem]) -> Option<glam::DVec3> {
+        match self.selected_ship().location {
+            game_core::travel::Location::DeepSpace(position) => Some(
+                glam::DVec3::new(
+                    position.x_km as f64,
+                    position.y_km as f64,
+                    position.z_km as f64,
+                ) / game_core::movement::KM_PER_LIGHT_YEAR as f64,
+            ),
+            _ => systems
+                .iter()
+                .find(|system| Some(system.id) == self.current_system())
+                .map(|system| {
+                    glam::DVec3::new(
+                        system.position.x as f64,
+                        system.position.y as f64,
+                        system.position.z as f64,
+                    )
+                }),
         }
     }
 
-    pub fn display_system(&self) -> SystemId {
-        match &self.selected_ship().location {
-            Location::Docked(system) => *system,
-            Location::Travelling(journey) => journey.destination,
-        }
+    pub fn display_system(&self) -> Option<SystemId> {
+        self.current_system()
     }
 
     pub fn take_loaded_galaxy(&mut self) -> Option<Vec<game_core::StarSystem>> {
@@ -123,7 +139,12 @@ impl LocalSession {
                 self.economy = economy;
                 for event in events {
                     let message = match event {
-                        SessionEvent::Departed { .. } => "Departure confirmed.".into(),
+                        SessionEvent::Moved(plan) => format!(
+                            "{} complete: {} fuel per ship, {} ticks.",
+                            plan.mode.label(),
+                            plan.fuel_per_ship,
+                            plan.duration_ticks
+                        ),
                         SessionEvent::ShipPurchased { ship } => {
                             self.active_ship = ship;
                             format!("Purchased {}.", self.selected_ship().name)

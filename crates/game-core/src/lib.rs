@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub mod economy;
 pub mod fleet;
 pub mod generation;
+pub mod movement;
 pub mod travel;
 
 /// Stable identity; never use a display name or array index as an entity ID.

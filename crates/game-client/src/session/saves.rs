@@ -51,6 +51,7 @@ impl LocalSession {
     }
 
     fn replace_authority(&mut self, authority: game_server::Session) {
+        self.navigation = super::navigation::NavigationPanel::default();
         self.authority = authority;
         let message = self.authority.handle(ClientCommand::GetSession);
         self.accept(message);
@@ -102,7 +103,10 @@ impl LocalSession {
                 match game_server::Session::with_economy(
                     self.saves.seed,
                     self.economy.rules.clone(),
-                ) {
+                ).and_then(|mut authority| {
+                    authority.set_movement_rules(self.state.movement_rules.clone())?;
+                    Ok(authority)
+                }) {
                     Ok(authority) => {
                         self.replace_authority(authority);
                         self.record(

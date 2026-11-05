@@ -50,7 +50,7 @@ impl Map {
         let session = crate::session::LocalSession::new(authority);
         let selected = systems
             .iter()
-            .find(|s| s.id == session.display_system())
+            .find(|s| Some(s.id) == session.display_system())
             .or_else(|| systems.first())
             .map(|s| s.id);
         Self {
@@ -130,11 +130,11 @@ impl Map {
         self.session.autosave()
     }
 
-    fn route_origin(&self) -> Option<&StarSystem> {
+    fn route_position(&self) -> Option<DVec3> {
         if self.scene == Scene::Session {
-            self.systems.iter().find(|s| s.id == self.session.origin())
+            self.session.galaxy_position(&self.systems)
         } else {
-            self.systems.first()
+            self.systems.first().map(position)
         }
     }
 
@@ -143,7 +143,10 @@ impl Map {
             self.session_systems = systems.clone();
             self.systems = systems;
             self.scene = Scene::Session;
-            self.selected = Some(self.session.display_system());
+            self.selected = self
+                .session
+                .display_system()
+                .or_else(|| self.systems.first().map(|system| system.id));
             self.session_selection = self.selected;
             self.local = None;
             self.camera = Camera::default();
@@ -161,8 +164,17 @@ impl Map {
         self.session.show_market(ctx, &self.session_systems);
         self.session.show_fleets(ctx, &self.session_systems);
         self.session.show_session_controls(ctx);
+        self.session.show_navigation(ctx, &self.session_systems);
         if let Some(local) = &mut self.local {
-            if local.ui(ctx, self.session.ships()) {
+            local.set_fleet_context(
+                self.session.selected_ship().id,
+                self.session.system_half_extent_km(),
+            );
+            let back = local.ui(ctx, self.session.ships());
+            if let Some(target) = local.take_movement_request() {
+                self.session.request_movement(target);
+            }
+            if back {
                 self.local = None;
             }
             return;
@@ -193,6 +205,8 @@ impl Map {
                     if ui.button("Focus selection (F)").clicked() {
                         self.focus_selection();
                     }
+                    if self.scene == Scene::Session && ui.button("Focus fleet").clicked()
+                        && let Some(position) = self.route_position() { self.camera.focus_on(position); }
                     ui.toggle_value(&mut self.pan_tool, "Pan tool");
                     if ui.button("Top (XZ)").clicked() {
                         self.camera.yaw = 0.0;

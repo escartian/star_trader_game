@@ -1,8 +1,9 @@
 use super::{LOCAL_PLAYER, Session};
 use game_core::{
-    SystemId,
+    BodyId, SystemId,
     economy::Commodity,
     fleet::{FleetId, ShipKind},
+    movement::MoveTarget,
     travel::{Location, PlayerId, ShipId},
 };
 use game_protocol::{ClientCommand, ServerMessage};
@@ -57,20 +58,26 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
     assert_eq!(session.state.fleets.len(), 2);
     apply(
         &mut session,
-        ClientCommand::Travel {
+        ClientCommand::Move {
             ship: ShipId(2),
-            destination: SystemId(2),
+            target: MoveTarget::Body {
+                system: SystemId(1),
+                body: BodyId(1),
+            },
             expected_revision: 3,
         },
     );
-    assert_eq!(session.state.tick, 15);
+    assert_eq!(session.state.tick, 2);
     assert_eq!(
         session.state.ships[0].location,
         Location::Docked(SystemId(1))
     );
     assert_eq!(
         session.state.ships[1].location,
-        Location::Docked(SystemId(2))
+        Location::Orbiting {
+            system: SystemId(1),
+            body: BodyId(1)
+        }
     );
     let before = session.export_json().unwrap();
     assert!(matches!(
@@ -84,10 +91,13 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
     assert_eq!(session.export_json().unwrap(), before);
     apply(
         &mut session,
-        ClientCommand::Travel {
+        ClientCommand::Move {
             ship: ShipId(1),
-            destination: SystemId(2),
-            expected_revision: 5,
+            target: MoveTarget::Body {
+                system: SystemId(1),
+                body: BodyId(1),
+            },
+            expected_revision: 4,
         },
     );
     apply(
@@ -95,11 +105,11 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
         ClientCommand::MergeFleets {
             source: FleetId(2),
             target: FleetId(1),
-            expected_revision: 7,
+            expected_revision: 5,
         },
     );
     assert_eq!(session.state.fleets[0].ships, [ShipId(1), ShipId(2)]);
-    assert_eq!(session.state.tick, 30);
+    assert_eq!(session.state.tick, 4);
     assert_eq!(session.state.ships[1].cargo[0], 3);
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("fleet.json");
@@ -115,9 +125,12 @@ fn fleet_failures_and_stale_retries_never_charge_or_advance_ticks() {
     buy(&mut session);
     session.state.ships[1].fuel = 0;
     let commands = [
-        ClientCommand::Travel {
+        ClientCommand::Move {
             ship: ShipId(1),
-            destination: SystemId(2),
+            target: MoveTarget::Body {
+                system: SystemId(1),
+                body: BodyId(1),
+            },
             expected_revision: 1,
         },
         ClientCommand::BuyShip {
@@ -171,25 +184,29 @@ fn fleet_failures_and_stale_retries_never_charge_or_advance_ticks() {
     session.state.ships[1].fuel = 50;
     apply(
         &mut session,
-        ClientCommand::Travel {
+        ClientCommand::Move {
             ship: ShipId(1),
-            destination: SystemId(2),
+            target: MoveTarget::Body {
+                system: SystemId(1),
+                body: BodyId(1),
+            },
             expected_revision: 1,
         },
     );
-    assert_eq!(session.state.tick, 15);
-    assert!(
-        session
-            .state
-            .ships
-            .iter()
-            .all(|ship| ship.location == Location::Docked(SystemId(2)))
-    );
+    assert_eq!(session.state.tick, 2);
+    assert!(session.state.ships.iter().all(|ship| ship.location
+        == Location::Orbiting {
+            system: SystemId(1),
+            body: BodyId(1)
+        }));
     assert_eq!(
         session
             .state
-            .fleet_location(FleetId(1), LOCAL_PLAYER)
+            .fleet_position(FleetId(1), LOCAL_PLAYER)
             .unwrap(),
-        SystemId(2)
+        &Location::Orbiting {
+            system: SystemId(1),
+            body: BodyId(1)
+        }
     );
 }

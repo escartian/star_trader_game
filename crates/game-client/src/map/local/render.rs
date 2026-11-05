@@ -54,6 +54,7 @@ impl LocalView {
                 }
             });
         }
+        self.draw_boundary(&painter, rect);
         let star = self.camera.project(DVec3::ZERO, rect);
         if let Some(body) = self
             .system
@@ -61,9 +62,14 @@ impl LocalView {
             .iter()
             .find(|b| Some(b.id) == self.selected)
         {
+            let origin = ships
+                .iter()
+                .find(|ship| ship.id == self.active_ship)
+                .and_then(|ship| self.ship_anchor(&ship.location))
+                .map_or(star, |point| self.camera.project(point, rect));
             painter.line_segment(
                 [
-                    star,
+                    origin,
                     self.camera
                         .project(display_position(&self.system, body), rect),
                 ],
@@ -146,38 +152,7 @@ impl LocalView {
                 painter.galley(label.min, galley, Color32::WHITE);
             }
         }
-        if let Some(port) = self
-            .system
-            .bodies
-            .iter()
-            .find(|body| body.kind == BodyKind::Station)
-        {
-            let dock = self
-                .camera
-                .project(display_position(&self.system, port), rect);
-            for (index, ship) in ships
-                .iter()
-                .filter(|ship| ship.location == game_core::travel::Location::Docked(self.system.id))
-                .enumerate()
-            {
-                let point = dock
-                    + Vec2::new(
-                        42.0 + (index % 6) as f32 * 34.0,
-                        38.0 + (index / 6) as f32 * 34.0,
-                    );
-                painter.line_segment([dock, point], Stroke::new(0.5_f32, Color32::from_gray(70)));
-                if let Some(art) = &self.art {
-                    art.paint(ArtKind::from(ship.kind), &painter, point, 32.0);
-                }
-                painter.text(
-                    point + Vec2::new(0.0, 17.0),
-                    egui::Align2::CENTER_TOP,
-                    format!("#{}", ship.id.0),
-                    egui::FontId::proportional(11.0),
-                    Color32::LIGHT_GREEN,
-                );
-            }
-        }
+        self.draw_ships(&painter, rect, ships, &label_bounds, &marker_bounds);
         visuals::axes(&painter, rect, self.camera.rotation());
         rect
     }

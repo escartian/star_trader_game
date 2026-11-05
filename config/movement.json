@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "galaxy_half_extent_ly": 100,
+  "system_half_extent_km": 200000000,
+  "star_exclusion_radius_km": 1000000,
+  "local_km_per_tick": 50000000,
+  "local_km_per_fuel": 100000000
+}

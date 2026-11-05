@@ -28,7 +28,7 @@ struct SaveData {
 impl Session {
     fn save_data(&self) -> SaveData {
         SaveData {
-            schema_version: 2,
+            schema_version: 3,
             systems: self.systems.clone(),
             player: self.state.clone(),
             economy: self.economy.clone(),
@@ -104,7 +104,7 @@ impl Session {
         };
         let recovery = if data.migrated {
             Some(format!(
-                "{}Upgraded single-ship save to fleet format; balances and positions preserved.",
+                "{}Upgraded older save to movement format; balances and positions preserved.",
                 recovery.map_or(String::new(), |message| format!("{message} "))
             ))
         } else {

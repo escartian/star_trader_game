@@ -12,8 +12,8 @@ impl Map {
                     .filter(|s| self.candidates.contains(&s.id))
                 {
                     let distance = self
-                        .route_origin()
-                        .map_or(0.0, |s| position(s).distance(position(system)));
+                        .route_position()
+                        .map_or(0.0, |s| s.distance(position(system)));
                     if ui
                         .selectable_label(
                             Some(system.id) == self.selected,
@@ -32,13 +32,11 @@ impl Map {
             });
         }
         if let Some(system) = self.systems.iter().find(|s| Some(s.id) == self.selected) {
-            let origin = self.route_origin();
-            let distance = origin.map_or(0.0, |s| position(s).distance(position(system)));
+            let origin = self.route_position();
+            let distance = origin.map_or(0.0, |s| s.distance(position(system)));
             ui.label(format!("{} • {}", system.name, system.star_kind.label()));
             ui.label(format!(
-                "{:.2} light-years from {} • true 3D distance",
-                distance,
-                origin.map_or("origin", |s| s.name.as_str())
+                "{distance:.2} light-years from fleet • true 3D distance"
             ));
             if !rect.contains(self.camera.project(position(system), rect)) {
                 ui.label("Selection is outside the map. Use Focus selection to reveal it.");

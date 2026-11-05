@@ -25,13 +25,13 @@ unbounded prices/rates, and invalid stocks/capacities. New games load the projec
 file when available or an explicitly supplied `--economy PATH`; packaged builds
 can use the embedded validated defaults. No per-trade filesystem reads occur.
 
-## Session save (schema 2)
+## Session save (schema 3)
 
 Each `data/slot-N.json` stores:
 
 - `systems`: stable IDs, star/body kinds and galaxy/local positions.
-- `player`: tick/revision, ships (IDs, owner, class, individual cargo/hold/fuel/range
-  and location/journey), fleets (IDs, owner and ship membership), monotonic ID counters.
+- `player`: tick/revision, movement rules, ships (IDs, owner, class, individual cargo/hold/fuel/range
+  and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters.
 - `economy`: shared player credits, current markets and exact session rules,
   including the ship catalog. Cargo is keyed by commodity name inside each ship.
 
@@ -41,7 +41,9 @@ Loading checks size, schema, IDs, references, coordinates, ownership, balances,
 capacity, stock/rates, route validity and journey timing before returning a session.
 A failed load leaves the live session unchanged. Schema 1 migrates its existing
 single ship and global cargo/hold into Fleet 1 without resetting time, money or
-journeys; other unsupported versions produce a clear error. Do not hand-edit a live session's file
+journeys. Schema 2 migrates to schema 3 by adding validated default movement
+rules; existing fleets/balances/positions remain intact. Unsupported versions
+produce a clear error. Do not hand-edit a live session's file
 and expect its in-memory state to change.
 
 Saving validates the state, writes a sibling temporary file, flushes/syncs it, and
@@ -79,3 +81,12 @@ New games load this project file if available, with embedded defaults as fallbac
 Saves preserve the active catalog. Purchased ships start empty and fully fuelled;
 shipyard stock is currently unlimited and ships cannot yet be sold. Starter hold
 capacity still comes from the economy definition. HP/equipment are future data.
+
+## Movement definition (schema 1)
+
+`config/movement.json` controls cubic extents, local fuel/tick distance units and
+stellar exclusion. Configuration must contain every system/body within its bounds
+and keep arithmetic in supported ranges. New sessions use these definitions;
+continuing restores saved rules. See [movement rules](MOVEMENT.md) for units,
+rounding, location variants and supported transitions. The primary station is
+resolved from the saved system's first Station body; Docked retains its system ID.

@@ -55,20 +55,7 @@ impl LocalSession {
                         .ship(*id)
                         .expect("validated fleet membership")
                         .clone();
-                    let system_name = |id| {
-                        systems
-                            .iter()
-                            .find(|system| system.id == id)
-                            .map_or("Unknown", |system| system.name.as_str())
-                    };
-                    let location = match &ship.location {
-                        game_core::travel::Location::Docked(id) => {
-                            format!("At {}", system_name(*id))
-                        }
-                        game_core::travel::Location::Travelling(journey) => {
-                            format!("Travelling to {}", system_name(journey.destination))
-                        }
-                    };
+                    let location = super::navigation::location_label(&ship.location, systems);
                     ui.horizontal_wrapped(|ui| {
                         let mut checked = self.fleet_panel.selection.contains(id);
                         if ui.checkbox(&mut checked, "").changed() {
@@ -117,9 +104,9 @@ impl LocalSession {
                     if target.id != fleet.id
                         && self
                             .state
-                            .fleet_location(fleet.id, fleet.owner)
+                            .fleet_position(fleet.id, fleet.owner)
                             .ok()
-                            .zip(self.state.fleet_location(target.id, target.owner).ok())
+                            .zip(self.state.fleet_position(target.id, target.owner).ok())
                             .is_some_and(|(a, b)| a == b)
                         && ui.button(format!("Merge into {}", target.name)).clicked()
                     {

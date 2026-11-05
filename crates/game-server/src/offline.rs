@@ -10,12 +10,12 @@ impl Session {
 
     pub fn handle_offline_as(&mut self, player: PlayerId, command: ClientCommand) -> ServerMessage {
         let (ship, revision) = match command {
-            ClientCommand::Travel {
+            ClientCommand::Move {
                 ship,
+                target,
                 expected_revision,
-                ..
-            }
-            | ClientCommand::ContinueTravel {
+            } => return self.resolve_movement_as(player, ship, &target, expected_revision),
+            ClientCommand::ContinueTravel {
                 ship,
                 expected_revision,
             } => (ship, expected_revision),
@@ -28,13 +28,6 @@ impl Session {
             return ServerMessage::CommandRejected(TravelError::StaleQuote.into());
         }
         let mut candidate = self.clone();
-        let mut movement_events = Vec::new();
-        if matches!(command, ClientCommand::Travel { .. }) {
-            match candidate.handle_as(player, command) {
-                ServerMessage::SessionSnapshot { events, .. } => movement_events = events,
-                error => return error,
-            }
-        }
         let Ok(moving_ship) = candidate.state.ship(ship) else {
             return ServerMessage::CommandRejected(TravelError::UnknownShip.into());
         };
@@ -43,9 +36,7 @@ impl Session {
         };
         let remaining = journey.arrival_tick.saturating_sub(candidate.state.tick);
         let mut response = candidate.advance(remaining);
-        if let ServerMessage::SessionSnapshot { events, .. } = &mut response {
-            movement_events.append(events);
-            *events = movement_events;
+        if let ServerMessage::SessionSnapshot { .. } = &mut response {
             *self = candidate;
         }
         response

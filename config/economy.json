@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "starting_credits": 100000,
+  "cargo_capacity": 20,
+  "fuel_unit_price": 200,
+  "hold_upgrade_price": 150000,
+  "hold_upgrade_capacity": 20,
+  "commodity_order": [
+    "food",
+    "ore",
+    "medicine",
+    "machinery",
+    "textiles",
+    "electronics"
+  ],
+  "markets": [
+    {
+      "base_prices": [
+        1000,
+        3200,
+        7000,
+        10000,
+        2000,
+        12000
+      ],
+      "stock": 100,
+      "target": 100,
+      "production": [
+        2,
+        0,
+        0,
+        2,
+        0,
+        0
+      ],
+      "consumption": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "base_prices": [
+        2000,
+        1800,
+        9000,
+        6000,
+        3000,
+        9000
+      ],
+      "stock": 100,
+      "target": 100,
+      "production": [
+        0,
+        2,
+        0,
+        0,
+        2,
+        0
+      ],
+      "consumption": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "base_prices": [
+        1600,
+        4000,
+        4500,
+        8000,
+        1200,
+        15000
+      ],
+      "stock": 100,
+      "target": 100,
+      "production": [
+        0,
+        0,
+        2,
+        0,
+        0,
+        2
+      ],
+      "consumption": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}

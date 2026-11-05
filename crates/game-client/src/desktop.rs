@@ -43,6 +43,7 @@ impl ApplicationHandler for App {
         self.map.reset_clock();
         match pollster::block_on(Graphics::new(event_loop)) {
             Ok(graphics) => {
+                self.map.reset_clock();
                 graphics.window.request_redraw();
                 self.graphics = Some(graphics);
             }
@@ -54,6 +55,7 @@ impl ApplicationHandler for App {
     }
 
     fn suspended(&mut self, _: &ActiveEventLoop) {
+        let _ = self.map.autosave();
         self.map.reset_clock();
         self.graphics = None;
         self.next_redraw = None;
@@ -71,7 +73,13 @@ impl ApplicationHandler for App {
             g.window.request_redraw();
         }
         match event {
-            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::CloseRequested => {
+                if self.map.autosave().is_ok() {
+                    event_loop.exit();
+                } else {
+                    g.window.request_redraw();
+                }
+            }
             WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
                 g.resize();
                 g.window.request_redraw();

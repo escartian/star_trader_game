@@ -1,0 +1,167 @@
+//! Explicit save/load controls. Failed loads never replace the live authority.
+use super::LocalSession;
+use game_protocol::{ClientCommand, ServerMessage};
+use std::path::PathBuf;
+
+pub(super) struct SavePanel {
+    pub open: bool,
+    pub path: PathBuf,
+    slot: u8,
+    seed: u64,
+    pub paused: bool,
+    pub speed: u32,
+    pub guide: bool,
+    pub autosave: bool,
+}
+
+impl Default for SavePanel {
+    fn default() -> Self {
+        Self {
+            open: false,
+            path: "data/slot-1.json".into(),
+            slot: 1,
+            seed: 0,
+            paused: false,
+            speed: 1,
+            guide: true,
+            autosave: true,
+        }
+    }
+}
+
+impl LocalSession {
+    pub fn set_save_path(&mut self, path: PathBuf) {
+        self.saves.path = path;
+    }
+
+    pub(super) fn load_slot(&mut self) {
+        match game_server::Session::load(&self.saves.path) {
+            Ok((authority, recovery)) => {
+                self.replace_authority(authority);
+                self.record(recovery.unwrap_or_else(|| "Saved session restored.".into()));
+            }
+            Err(error) => self.record(error),
+        }
+    }
+
+    fn replace_authority(&mut self, authority: game_server::Session) {
+        self.authority = authority;
+        let message = self.authority.handle(ClientCommand::GetSession);
+        self.accept(message);
+        if let ServerMessage::GalaxySnapshot { systems, .. } =
+            self.authority.handle(ClientCommand::GetGalaxy)
+        {
+            self.loaded_galaxy = Some(systems);
+        }
+        self.reset_clock();
+    }
+
+    pub fn autosave(&mut self) -> Result<(), String> {
+        if !self.saves.autosave {
+            return Ok(());
+        }
+        if !self.saves.paused {
+            self.advance_to(std::time::Instant::now());
+        }
+        let result = self.authority.save(&self.saves.path);
+        if let Err(error) = &result {
+            self.record(format!(
+                "Autosave failed: {error}. Retry Save or disable autosave before closing."
+            ));
+        }
+        result
+    }
+
+    pub fn show_session_controls(&mut self, ctx: &egui::Context) {
+        let mut open = self.saves.open;
+        egui::Window::new("Session and saves")
+            .open(&mut open)
+            .vscroll(true)
+            .show(ctx, |ui| self.controls_ui(ui));
+        self.saves.open = open;
+    }
+
+    fn controls_ui(&mut self, ui: &mut egui::Ui) {
+        self.slot_controls(ui);
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.label("New galaxy seed");
+            ui.add(egui::DragValue::new(&mut self.saves.seed));
+            if ui.button("New session").clicked() {
+                match game_server::Session::with_economy(
+                    self.saves.seed,
+                    self.economy.rules.clone(),
+                ) {
+                    Ok(authority) => {
+                        self.replace_authority(authority);
+                        self.record(
+                            "New session started. Autosave uses the selected slot; choose another slot to preserve an older run.".into(),
+                        );
+                        ui.ctx().request_repaint();
+                    }
+                    Err(error) => self.record(error),
+                }
+            }
+        });
+        ui.separator();
+        if ui
+            .checkbox(&mut self.saves.paused, "Pause simulation")
+            .changed()
+        {
+            self.reset_clock();
+        }
+        ui.horizontal(|ui| {
+            ui.label("Tick speed");
+            for speed in [1, 2, 4] {
+                if ui
+                    .selectable_value(&mut self.saves.speed, speed, format!("{speed}×"))
+                    .changed()
+                {
+                    self.reset_clock();
+                }
+            }
+        });
+        ui.label("Ticks advance automatically in single-player. No End Turn action is required.");
+        ui.checkbox(&mut self.saves.guide, "Show first-delivery guide");
+        ui.checkbox(&mut self.saves.autosave, "Autosave on close / suspend");
+        ui.label("Pause, speed and guide controls apply to this run; world/player data is stored in JSON save slots.");
+        if !self.notice.is_empty() {
+            ui.label(&self.notice);
+        }
+        ui.separator();
+        ui.heading("Session log");
+        for message in self.log.iter().rev() {
+            ui.label(message);
+        }
+    }
+
+    fn slot_controls(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.label("Save slot");
+            if ui
+                .add(egui::DragValue::new(&mut self.saves.slot).range(1..=3))
+                .changed()
+            {
+                self.saves
+                    .path
+                    .set_file_name(format!("slot-{}.json", self.saves.slot));
+            }
+        });
+        ui.label(self.saves.path.display().to_string());
+        ui.label("Selecting a slot does not load it. Autosave writes the current session to the selected slot; the previous valid save becomes its backup.");
+        ui.horizontal(|ui| {
+            if ui.button("Save current session").clicked() {
+                let result = self.authority.save(&self.saves.path);
+                self.record(result.map_or_else(
+                    |error| format!("Save failed: {error}"),
+                    |_| "Session saved.".into(),
+                ));
+            }
+            if ui.button("Continue from slot").clicked() {
+                self.load_slot();
+                ui.ctx().request_repaint();
+            }
+        });
+        ui.label("Continue replaces the current session with the selected save. Save first to keep current progress.");
+    }
+}

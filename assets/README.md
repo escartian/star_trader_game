@@ -1,32 +1,41 @@
-# Trade-port artwork
+# Original Blender artwork
 
-Original model created for this project in Blender. No downloaded assets.
+Editable `.blend` scenes are in `source/`, with transparent baked PNGs in
+`sprites/`. No downloaded textures or external asset packs are used.
 
-- `source/trade-port.blend`: editable model, materials, lighting and camera.
-- `sprites/trade-port.png`: 512 × 512 transparent orthographic render.
-- `../tools/art/build_trade_port.py`: recreates the scene and sprite from scratch.
+| Assets | Purpose | Runtime sprite size |
+| --- | --- | --- |
+| yellow/red dwarfs, blue/red giants, white dwarf | Local star surfaces; procedural halos layered behind | 256 × 256 |
+| rocky planet, gas giant | Planet silhouettes/surfaces | 256 × 256 |
+| moon, asteroid | Cratered satellite and irregular prospecting destination | 256 × 256 |
+| trade port | Habitat ring, cargo bays, solar arrays and docking guidance | 512 × 512 |
 
 Regenerate from the repository root:
 
 ```sh
 /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
   --python tools/art/build_trade_port.py
+/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
+  --python tools/art/build_celestials.py
 ```
 
-On other platforms, replace the executable path with `blender`.
-The script replaces the generated model and image; manual edits to the `.blend`
-should be preserved separately or incorporated into the script first.
-Blender is only required when changing/rebuilding the artwork. The native client
-embeds the PNG and decodes it once per local view, with a fallback marker if loading
-fails. The map uses a fixed screen-facing illustration with a symbolic size, not
-a physical-scale 3D model. Selecting the station also displays a larger preview.
+On other platforms, replace the executable path with `blender`. The shared
+`celestial_materials.py` module creates original noise/band materials in Blender.
+The scripts overwrite generated sources/images; preserve hand edits separately
+or incorporate them into the authoring scripts before regenerating.
 
-The design has a titanium habitat ring, central docking spine, orange freight
-bays, blue solar arrays, cyan guidance lights and amber approach beacons.
+The runtime embeds all ten sprites, decodes them once per egui context and shares
+texture handles across system views. Recreated graphics contexts receive new
+handles. Their raw RGBA pixels total about 3.25 MiB, excluding fonts and driver
+allocation overhead. PNG checks validate transparency/decoding and cache reuse.
 
-Local-view size hierarchy is symbolic: enlarged procedural star, then gas giant,
-rocky planet, and a small station sprite (22 logical points at default zoom).
-The 160-point station inspector is a detail illustration, not its map scale.
-Stars use egui glow geometry and planets use shaded circles; neither is a Blender
-model. Both orbital distances and physical sizes would need separate treatment
-for a true astronomical scale, which this navigation map does not claim.
+This is a hybrid renderer: detailed local surfaces use the baked artwork; tiny
+galaxy markers, star halos, route lines and selection effects remain procedural.
+The images are static billboards; orbiting the camera changes projected positions,
+not the object's lighting or visible face. No animation frame sets are currently
+justified. No claim of measured performance improvement is made.
+
+Symbolic sizes retain stars > planets > stations. The local station is a small
+marker, with a larger detail illustration when selected. A moon next to its
+planet may overlap in projection; use the candidate chooser or destination list.
+Blender is needed only for authoring/export, never to run the game.

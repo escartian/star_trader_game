@@ -27,6 +27,8 @@ impl SymbolScale {
         match kind {
             BodyKind::RockyPlanet => 11.0 * self.factor,
             BodyKind::GasGiant => 18.0 * self.factor,
+            BodyKind::Moon => 5.0 * self.factor,
+            BodyKind::Asteroid => 4.0 * self.factor,
             BodyKind::Station => self.station_size() / 2.0,
         }
     }

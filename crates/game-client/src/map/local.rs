@@ -1,10 +1,12 @@
 mod render;
 mod scale;
-mod station;
 
-use super::camera::Camera;
+use super::{
+    art::{ArtKind, Artwork},
+    camera::Camera,
+};
 use egui::{Pos2, Rect};
-use game_core::{BodyId, BodyKind, LocalBody, LocalPosition, StarSystem};
+use game_core::{BodyId, LocalBody, LocalPosition, StarSystem};
 use glam::DVec3;
 
 /// Explicit view conversion only. Simulation coordinates always remain kilometers.
@@ -42,7 +44,7 @@ pub struct LocalView {
     selected: Option<BodyId>,
     candidates: Vec<BodyId>,
     pan_tool: bool,
-    station: station::StationArt,
+    art: Option<Artwork>,
 }
 
 impl LocalView {
@@ -50,11 +52,21 @@ impl LocalView {
         let selected = system.bodies.first().map(|body| body.id);
         Self {
             system,
-            camera: Camera::default(),
+            camera: Self::initial_camera(),
             selected,
             candidates: Vec::new(),
             pan_tool: false,
-            station: station::StationArt::default(),
+            art: None,
+        }
+    }
+
+    fn initial_camera() -> Camera {
+        // A steeper starting view separates the port from the enlarged star silhouette.
+        Camera {
+            yaw: 0.0,
+            pitch: 1.05,
+            zoom: 1.3,
+            ..Camera::default()
         }
     }
 
@@ -74,7 +86,8 @@ impl LocalView {
 
     /// Returns true when the player chooses the galaxy breadcrumb or Escape.
     pub fn ui(&mut self, ctx: &egui::Context) -> bool {
-        self.station.prepare(ctx);
+        // A resumed GPU window has a new egui context; refresh shared handles too.
+        self.art = Some(Artwork::preload(ctx));
         let mut back =
             !ctx.wants_keyboard_input() && ctx.input(|i| i.key_pressed(egui::Key::Escape));
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -90,7 +103,7 @@ impl LocalView {
     }
     fn header(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, back: &mut bool) {
         ui.horizontal_wrapped(|ui| {
-            if ui.button("← Galaxy").clicked() {
+            if ui.button("Back to galaxy").clicked() {
                 *back = true;
             }
             ui.label("/");
@@ -100,7 +113,7 @@ impl LocalView {
         ui.label("Inspecting this system • your ship location is shown below; docking is not implemented");
         ui.horizontal_wrapped(|ui| {
             if ui.button("Reset").clicked() {
-                self.camera = Camera::default();
+                self.camera = Self::initial_camera();
             }
             if ui.button("Focus selection (F)").clicked() {
                 self.focus();
@@ -178,13 +191,16 @@ impl LocalView {
                 ui.label("Destination is outside the map. Use Focus selection to reveal it.");
             }
         }
-        if self
-            .system
-            .bodies
-            .iter()
-            .any(|body| Some(body.id) == self.selected && body.kind == BodyKind::Station)
-        {
-            self.station.inspector(ui);
+        if let Some(art) = &self.art {
+            if let Some(body) = self
+                .system
+                .bodies
+                .iter()
+                .find(|body| Some(body.id) == self.selected)
+            {
+                art.preview(ArtKind::from(body.kind), ui);
+            }
+            art.warnings(ui);
         }
     }
 }

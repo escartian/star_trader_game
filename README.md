@@ -1,117 +1,124 @@
-# Star Trader — native Rust rewrite
+# Star Trader — native Rust
 
-A space trading and fleet management game in a genuinely three-dimensional universe,
-presented through a readable map and native management screens.
+A trading and fleet-management game in a three-dimensional universe, presented
+through a readable native map. No game engine, browser, webview or JavaScript.
 
-**No game engine, browser, webview, or JavaScript frontend.** Use focused libraries;
-do not build a general-purpose engine as part of the game.
+## Current prototype
 
-## Current status
+- Galaxy navigation: orbit/pan/zoom, presets, focus, depth slicing, overlap chooser,
+  double-click system inspection, and separate local views with planets/stations.
+- Blender-authored star, planet, moon, asteroid and station models, baked to
+  transparent sprites. Shared textures preload once; halos/selection stay procedural.
+- An authoritative offline session with range/fuel validation and automatic travel.
+- Credits, cargo, finite commodity stock, stock-sensitive prices, refuelling,
+  known-market comparisons and a purchasable cargo-hold upgrade.
+- Seeded starts, a first-delivery guide, session logs, pause/speed controls and
+  three JSON save slots with validation, atomic replacement and backup recovery.
 
-The first native desktop prototype implements an interactive orthographic star map
-and a scrollable market-layout fixture. The client starts an authoritative local
-session in the same process. You can travel between the fixture systems with
-validated fuel/range limits and automatic arrival. Trading, refuelling, saves,
-and networking are not yet implemented; market prices are sample data.
+Multiplayer, fleet management, discovery, combat and contracts are not implemented.
+Mobile build work is deferred at the user's request. Desktop interaction, pacing
+and device lifecycle still need manual/playtest evidence; see [platform status](docs/PLATFORM_STATUS.md).
 
 ## Run
 
-Install a current stable Rust toolchain with edition 2024 support.
+Use a current stable Rust toolchain with edition 2024 support.
 
 ```sh
-# One command starts the native client AND its in-process offline session:
 cargo run -p game-client
-# Check offline session startup without a window:
-cargo run -p game-client -- --headless
-# Dedicated-session fixture (prints and exits; no network listener yet):
-cargo run -p game-server
-cargo test --workspace --offline
-cargo fmt --all --check
-cargo check --workspace --all-targets --offline
-cargo clippy --workspace --all-targets --offline -- -D warnings
+# Start fresh in another slot with a reproducible seed:
+cargo run -p game-client -- --new --seed 42 --save data/slot-2.json
+# Explicitly resume slot 1:
+cargo run -p game-client -- --continue
+# Export a complete initial world/player save as JSON without a window:
+cargo run -p game-client -- --new --headless > /tmp/star-trader-save.json
+# Run all engineering checks:
+./tools/check.sh
 ```
 
-## Workspace
+The default path is `data/slot-1.json`; `--save PATH` selects another file. Launch
+resumes that file if it exists, including backup recovery; otherwise it starts a
+new session. To resume another UI slot, select it and choose Continue. **Session / saves** provides New,
+Save, Continue, slot selection, Pause and 1×/2×/4× tick speeds. Autosave runs on
+close/suspend and writes to the selected slot. The previous valid file becomes
+its `.bak`; a failed close-save keeps the window open with an error message.
+Save slots live under ignored `data/`, keeping personal progress out of Git.
+
+Changing the slot changes the autosave destination; it does not load that slot.
+Use Continue to load it. Closing or starting fresh in a selected slot can replace
+that slot, with its previous valid snapshot retained as backup.
+
+## First delivery
+
+At Sol, open **Market / refuel**, set quantity to 20, and buy food. Select Meridian
+and press **Travel**. After arrival, sell the food, refuel, and compare ore or
+machinery for the return trip. Earn enough for the hold upgrade. Double-clicking
+a star only inspects it; travelling is an explicit ship command. Local docking,
+mining and orbital simulation are not implemented.
+
+All simulation is calculated in discrete ticks. Single-player schedules those
+ticks automatically with no End Turn action; by default one real second is one
+in-world hour. Pause/speed are host controls. Multiplayer is planned around
+explicit turns over these same rules, with authentication and turn resolution
+still pending. Suspension pauses the clock; loading does not add offline time.
+The initial 20–30 minute upgrade goal remains a pacing hypothesis to playtest.
+
+## JSON economy and player data
+
+[config/economy.json](config/economy.json) defines starting credits/cargo capacity,
+service/upgrade costs, commodity prices and market production/consumption. Money
+uses integer hundredths of a credit: `100000` means `1000.00` credits.
+The explicit commodity order identifies array entries. Custom definitions are
+validated before a new session starts:
+
+```sh
+cargo run -p game-client -- --new --economy config/economy.json
+```
+
+New games load the project JSON when present; packaged builds have an embedded
+fallback. Saved sessions include their definitions and all current player, ship,
+journey, tick, cargo and market state. Continuing a save does not regenerate it
+from the seed or apply newly edited economy definitions. The live authority stays
+in memory; trades do not read or rewrite JSON files.
+
+See [JSON data and saves](docs/DATA_FORMATS.md) and [working rules](docs/FIRST_SESSION.md).
+
+## Workspace and checks
 
 | Crate | Responsibility |
 | --- | --- |
-| `game-core` | World data, economy, travel, combat, validated simulation rules |
-| `game-protocol` | Commands, responses, versioning, client-visible snapshots |
-| `game-server` | Authoritative sessions, transport, saves, dedicated server executable |
-| `game-client` | Window, map projection, UI, input, audio, connection state |
+| `game-core` | Data, deterministic travel/economic rules, seeded starts |
+| `game-protocol` | Commands, typed errors, revisioned quotes, visible snapshots/events |
+| `game-server` | Session authority, JSON save adapter, future dedicated transport |
+| `game-client` | Native window, map/UI, shared art, offline clock and session controls |
 
-Single-player runs the reusable `game-server::Session` library inside the client.
-No second terminal or background server is required. A remote transport is planned
-for multiplayer; the dedicated executable currently only prints a snapshot.
+Single-player hosts `game-server::Session` inside the client process. No separate
+server is required. `cargo run -p game-server` is still a print-and-exit fixture;
+it does not accept network connections.
 
-Start with [ROADMAP.md](ROADMAP.md), then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-and [docs/MAP_DESIGN.md](docs/MAP_DESIGN.md).
+The client uses pinned winit, wgpu, egui integrations and glam. Serde/serde_json
+handle data; PNG decoding handles baked art. Source files are limited to 500
+lines by `./tools/check.sh`, alongside rustfmt, strict Clippy and workspace tests.
+See [coding standard](docs/CODING_STANDARD.md), [architecture](docs/ARCHITECTURE.md),
+[map design](docs/MAP_DESIGN.md) and [roadmap](ROADMAP.md).
 
-## Library stack
+## Art and GPU captures
 
-The prototype uses `winit` for window/input/lifecycle, `wgpu` for GPU rendering, `egui` with
-`egui-winit` / `egui-wgpu` for panels and text, and `glam` for camera math. This is a
-collection of libraries, not an engine; we own the small event loop and map renderer.
-The initial renderer draws projected star markers and route lines, not 3D ships or planets.
+Editable sources and export commands are documented in [assets/README.md](assets/README.md).
+Runtime sprites are static, screen-facing illustrations with symbolic sizes;
+world positions/distances retain their own units. Baking improves the available
+detail, but no rendering-performance advantage has been benchmarked. No animation
+frame sets are preloaded; effects remain lightweight procedural overlays.
 
-The initial compatible set is pinned in the client manifest and Cargo.lock.
-See [platform status](docs/PLATFORM_STATUS.md) for validation limits. This choice minimizes engine
-machinery, not necessarily compiled binary size or build time.
+Render the real UI to a GPU texture for visual review without a desktop window:
 
-Add `serde` / `serde_json` for versioned data, a seeded RNG for generation, and
-`tracing` when those milestones require them. Use a single async runtime and a
-WebSocket transport only when remote sessions are implemented. Do not pull in an
-ECS, physics, scripting, or asset pipeline framework by default.
+```sh
+cargo run -p game-client -- --new --capture /tmp/system.png --capture-view system
+cargo run -p game-client -- --new --capture /tmp/market.png --capture-view market
+```
 
-Desktop comes first, with an early Android/iOS build and lifecycle check. Mobile
-support is a milestone to verify on devices, not an assumed automatic port.
+Example captures: [system](docs/previews/system.png), [market](docs/previews/market.png),
+[save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `saves`. Captures do not test window
+resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
-Official references reviewed when preparing this plan:
-
-- [winit](https://github.com/rust-windowing/winit)
-- [wgpu](https://github.com/gfx-rs/wgpu)
-- [egui](https://github.com/emilk/egui)
-- [glam](https://github.com/bitshifter/glam-rs)
-
-## Relationship to the original
-
-Design reference: <https://github.com/escartian/star_trader_game>.
-This scaffold does not copy original source or assets. Reuse domain ideas after
-review, while keeping I/O and framework dependencies out of simulation rules.
-Save compatibility with the original is not an initial requirement.
-
-Working rules: [first session](docs/FIRST_SESSION.md). Map controls are shown in
-the client; click/tap selects, drag orbits, middle drag pans, and the slider or
-wheel zooms. Reset recovers the initial view. Mobile feasibility remains open.
-
-The map now has a nebula/starfield background and glowing, type-colored stars
-with different symbolic sizes. Use **Focus selection** (or F) to center a target,
-**Pan tool** to pan by dragging, and **Systems & star legend** to browse types.
-**Overlap test** and **Dense test** exercise navigation without changing the local
-session. Overlapping targets appear in a dedicated chooser; ordinary labels are
-reduced where they collide. Select a star and choose **Open selected system** to inspect its planets and
-trade station. The local map uses kilometers and has its own camera. **← Galaxy**
-or Escape returns to the same galaxy view and selection. Local destinations are
-fixed fixtures; galaxy travel is implemented, while docking and refuelling remain planned.
-
-Use **Depth slice** to filter dense maps by X/Y/Z coordinate and thickness in
-light-years. Hidden systems remain in the system list; **Focus selection** reveals
-them. A system's trade port now has an original Blender model and transparent
-map illustration, plus a larger preview when selected. See [art sources](assets/README.md).
-
-Development checks: `./tools/check.sh` runs source-length checks (500-line limit),
-rustfmt, strict Clippy and tests. See [coding standard](docs/CODING_STANDARD.md).
-
-In the galaxy view, **double-click a star** to inspect its system. Single click
-selects it; ambiguous overlaps keep the candidate chooser open. **Open selected
-system** remains available for touch users. Local stars and planets are drawn
-procedurally, with larger symbolic sizes than the small Blender station sprite.
-Only the station is Blender-authored; stars/planets are not Blender models.
-
-Select a destination and use **Travel** in the ship panel. The authority validates
-the quote, owner, jump range and fuel. Single-player runs continuously at one
-simulation tick per second; one tick represents an in-world hour. Travel to Meridian
-from Sol costs 15 fuel and takes about 15 seconds. The ship panel reports arrival.
-Suspending/resuming the app pauses its clock. Multiplayer will use explicit turns;
-there is no network/turn resolver yet. Refuelling is not implemented, so fuel is
-limited in this prototype and restarting the app begins a fresh session.
+Design reference: <https://github.com/escartian/star_trader_game>. Implementation and artwork are authored for this workspace; compatibility with
+the original save format is not a goal.

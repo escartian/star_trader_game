@@ -12,5 +12,8 @@ game-core = { path = "crates/game-core" }
 game-protocol = { path = "crates/game-protocol" }
 game-server = { path = "crates/game-server" }
 
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -2,8 +2,10 @@
 
 Work in this order. Each phase has a visible completion criterion; complete it
 before expanding scope. These are dependency milestones, not calendar estimates.
-The initial desktop interface and local snapshot session are implemented; mobile
-feasibility and the playable simulation remain open. See docs/PLATFORM_STATUS.md.
+The desktop prototype now implements navigation, a local trading loop and JSON
+save slots. Mobile build/device work is deferred at the user's request; it does
+not block desktop gameplay implementation. Manual desktop acceptance and pacing
+remain open. See docs/PLATFORM_STATUS.md.
 
 ## 0. Establish the boundaries
 
@@ -30,8 +32,8 @@ real-time piloting, or multiplayer to be entertaining.
 - [ ] Render on demand while idle; animate only while movement/effects require it.
 
 **Done when:** desktop works and mobile feasibility is established with explicit
-evidence. Resolve platform blockers before investing in the full UI. If no device
-is available, treat feasibility as unresolved rather than marking this phase complete.
+evidence. Mobile feasibility remains unresolved and is deferred by user direction.
+Do not mark the platform phase complete on the basis of desktop/offscreen checks.
 
 ## 2. Make the 3D universe understandable
 
@@ -60,18 +62,21 @@ See [map design](docs/MAP_DESIGN.md).
 
 Map presentation now includes a static procedural nebula/starfield, soft star
 halos and symbolic sizes/colors driven by explicit star kinds. This introduces
-no simulation randomness or continuous animation. The trade port now uses an
-original Blender-authored transparent sprite; editable source/export script are kept
-in assets/ and tools/art/. PNG decoding is isolated in the local artwork module.
+no simulation randomness or continuous animation. Local stars, planets, moons,
+asteroids and the trade port use original Blender-authored transparent sprites;
+editable sources/export scripts are kept in assets/ and tools/art/. Shared artwork
+preloads once per egui context; galaxy markers and halos remain procedural.
 Phase 2 remains incomplete: device interaction and manual acceptance scenarios
 still require work. Local-system navigation is implemented with fixed destinations;
-galaxy travel has its first authoritative implementation; local docking is pending. Phase 1 platform blockers remain
-open; these map changes extend the existing prototype without adding a full UI.
+galaxy travel is authoritative; local docking is pending. Mobile platform work
+remains deferred; desktop gameplay implementation proceeds.
 
 ## 3. Build one authoritative local session
 
 - [ ] Define stable entity IDs, separate galaxy/local positions, fixed-unit money,
   cargo quantities, ships, fleets, markets, and simulation time.
+  All are present for the one-player/one-ship fixture except fleet grouping, which
+  remains progression work. Money/cargo/market state is saved as validated JSON.
 - [x] Add reusable session handling to the server package; invoke it in-process
   for offline play. Galaxy/session snapshots, travel previews and departures are handled.
 - [x] Implement initial travel commands, validation, typed errors, events and visible snapshots.
@@ -79,8 +84,11 @@ open; these map changes extend the existing prototype without adding a full UI.
 - [x] Add movement range, fuel costs, travel time and arrival handling.
   Exact integer distance/ceil rounding, checked time arithmetic and host-tick arrivals;
   the client displays fuel, location, quotes, errors and automatic travel progress.
-- [ ] Validate fuel/capacity/ownership and apply each command atomically.
-- [ ] Add seeded generation with a guaranteed usable start and reachable markets.
+- [x] Validate fuel/capacity/ownership and apply each command atomically.
+  Candidate commerce transactions cover credits, cargo, stock, fuel and upgrades;
+  rejected commands preserve the complete authority snapshot.
+- [x] Add seeded generation with a guaranteed usable start and reachable markets.
+  Seeds preserve Sol and two reachable markets; 256 seeded starts are checked.
 - [ ] Keep hidden world state out of client snapshots when discovery is introduced.
 
 **Done when:** the client can start a session and move a ship between markets;
@@ -89,27 +97,36 @@ and reproducible generation rather than UI implementation details.
 
 ## 4. Complete the first trading loop
 
-- [ ] Implement buy/sell commands, credits, cargo capacity and market stock.
-- [ ] Add production, consumption, bounded stock-sensitive pricing and a spread.
-- [ ] Advance markets on simulation time, never on opening or refreshing a panel.
-- [ ] Prevent profitable immediate buy/sell loops at the same market.
-- [ ] Show price per unit, total cost, capacity, stock and estimated journey costs.
-- [ ] Show comparisons for known markets; give quotes a timestamp/revision so
+- [x] Implement buy/sell commands, credits, cargo capacity and market stock.
+- [x] Add production, consumption, bounded stock-sensitive pricing and a spread.
+- [x] Advance markets on simulation time, never on opening or refreshing a panel.
+- [x] Prevent profitable immediate buy/sell loops at the same market.
+- [x] Show price per unit, total cost, capacity, stock and estimated journey costs.
+- [x] Show comparisons for known markets; give quotes a timestamp/revision so
   stale purchases can be rejected clearly, without silently changing the price.
-- [ ] Add one cargo upgrade and the first-session earnings goal.
+- [x] Add one cargo upgrade and the first-session earnings goal.
 
 **Done when:** travel → buy → travel → sell → upgrade works; multiple routes have
 credible tradeoffs, and credits/cargo/stock stay consistent on rejected trades.
-Test economic invariants and representative routes.
+Test economic invariants and representative routes. The real-command integration
+check now completes the loop without granting test credits. Prices/production come
+from config/economy.json. The proposed 20–30 minute pacing is not validated.
 
 ## 5. Make it safe to return and easy to learn
 
-- [ ] Add a versioned save format, validated loading, atomic replacement and backup.
-- [ ] Save/load world, markets, simulation time, player, ships and current journey.
-- [ ] Add new/continue/save slots, settings, a short guided first delivery and logs.
-- [ ] Add recovery messages for damaged or incompatible saves.
-- [ ] Ensure loading does not regenerate prices or duplicate money/items.
+- [x] Add a versioned save format, validated loading, atomic replacement and backup.
+- [x] Save/load world, markets, simulation time, player, ships and current journey.
+- [x] Add new/continue/save slots, settings, a short guided first delivery and logs.
+- [x] Add recovery messages for damaged or incompatible saves.
+- [x] Ensure loading does not regenerate prices or duplicate money/items.
 - [ ] Validate offline suspend/resume; persist at safe lifecycle points on mobile.
+  Desktop close/suspend hooks autosave and reset the clock; close-save failure
+  keeps the window open. Real lifecycle/device checks remain unverified/deferred.
+
+Save slots use schema-1 JSON with strict load validation, backup recovery and
+atomic replacement. Pause/speed/guide controls and logs are runtime settings,
+not persisted preferences. Loading restores saved definitions and live balances.
+Actual window/device lifecycle and pacing still need acceptance testing.
 
 **Done when:** players can quit mid-session and resume the same state. Verify save
 round trips and failed-write recovery. This phase is required before external testing.

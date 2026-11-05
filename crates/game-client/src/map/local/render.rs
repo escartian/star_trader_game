@@ -1,5 +1,5 @@
 use super::{LocalView, pick, scale::SymbolScale, view_position};
-use crate::map::visuals;
+use crate::map::{art::ArtKind, visuals};
 use egui::{Color32, Pos2, Rect, Sense, Stroke, Vec2};
 use game_core::BodyKind;
 use glam::DVec3;
@@ -69,30 +69,32 @@ impl LocalView {
             self.system.star_kind,
             scale.star_radius(self.system.star_kind),
         );
+        if let Some(art) = &self.art {
+            art.paint(
+                ArtKind::from(self.system.star_kind),
+                &painter,
+                star,
+                scale.star_radius(self.system.star_kind) * 2.25,
+            );
+        }
         let mut bodies: Vec<_> = self.system.bodies.iter().collect();
         bodies.sort_by_key(|b| Some(b.id) != self.selected);
         let mut labels: Vec<Rect> = Vec::new();
         for body in bodies {
             let point = self.camera.project(view_position(body), rect);
             let selected = Some(body.id) == self.selected;
-            let color = match body.kind {
-                BodyKind::RockyPlanet => Color32::from_rgb(98, 178, 191),
-                BodyKind::GasGiant => Color32::from_rgb(212, 168, 130),
-                BodyKind::Station => Color32::from_rgb(144, 228, 199),
+            let radius = scale.body_radius(body.kind);
+            let size = if body.kind == BodyKind::Station {
+                scale.station_size()
+            } else {
+                radius * 2.25
             };
-            match body.kind {
-                BodyKind::Station => {
-                    self.station.paint(&painter, point, scale.station_size());
-                }
-                kind => {
-                    let radius = scale.body_radius(kind);
-                    painter.circle_filled(point, radius, color);
-                    painter.circle_filled(
-                        point - Vec2::splat(radius * 0.25),
-                        radius * 0.45,
-                        color.gamma_multiply(1.25),
-                    );
-                }
+            let painted = self
+                .art
+                .as_ref()
+                .is_some_and(|art| art.paint(ArtKind::from(body.kind), &painter, point, size));
+            if !painted {
+                painter.circle_filled(point, radius, Color32::LIGHT_BLUE);
             }
             if selected || hover.contains(&body.id) {
                 painter.circle_stroke(

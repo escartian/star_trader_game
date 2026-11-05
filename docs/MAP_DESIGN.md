@@ -66,3 +66,18 @@ explicitly. **← Galaxy** / Escape returns to the previous galaxy camera, selec
 and overlap candidates. Each view exposes pan, focus, zoom and orientation tools.
 Local distances use kilometer positions; interstellar distances use galaxy
 light-years. Physical travel and docking rules are not yet implemented.
+
+## Celestial artwork and gameplay panels
+
+Local stars and destinations now use shared preloaded Blender-baked surfaces:
+five star classes, rocky/gas planets, a moon, asteroid and trade port. Procedural
+halos and selection remain overlaid; galaxy markers retain their small geometric
+symbols. These are static billboards with symbolic sizes, not live 3D models or
+physical-scale radii. A steeper default system camera separates the small port
+from the star. Moon/planet overlaps can be resolved with the candidate list.
+
+The ship panel always reports actual ship location, cargo, credits and fuel.
+Inspecting or double-clicking a system does not move the ship. Market controls
+operate at the ship's current system, independently of the inspected target.
+Travel uses an explicit authority-validated command and reports tick progress.
+Continuing a saved journey selects its destination for route inspection.

@@ -121,7 +121,7 @@ def build():
     camera.data.type = "ORTHO"
     camera.data.ortho_scale = 11
     scene.camera = camera
-    scene.render.filepath = str(ROOT / "assets/sprites/trade-port.png")
+    scene.render.filepath = "//../sprites/trade-port.png"
     bpy.ops.wm.save_as_mainfile(filepath=str(ROOT / "assets/source/trade-port.blend"))
     bpy.ops.render.render(write_still=True)
 

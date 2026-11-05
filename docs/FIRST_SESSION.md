@@ -1,38 +1,33 @@
-# First-session rules — prototype baseline
+# First-session rules — current prototype
 
-These are working design decisions, to be adjusted through playtesting.
+- Premium, offline-first single-player; optional multiplayer comes later. The
+  client hosts the authoritative session in-process, without a background server.
+- Start at Sol with one ship, 1000.00 credits, 20 cargo spaces and 40 fuel. Its
+  jump range is 20 light-years. All seeded starts retain two reachable markets.
+  The initial hold upgrade adds 20 cargo spaces for 1500.00 credits.
+- Galaxy coordinates are whole light-years; local coordinates are a distinct
+  kilometer-based type. Travel uses true Euclidean 3D distance. The fuel cost is
+  ceil(distance), calculated exactly with checked integer arithmetic. Duration is
+  the same number of ticks, with a minimum of one tick for distinct co-located systems.
+- Everything is calculated in discrete simulation ticks. Single-player schedules
+  ticks automatically with no End Turn action: at 1×, one real second is one
+  in-world hour. Pause and 2×/4× change scheduling, not rules. Idle ticks catch up
+  on the next input; active journeys schedule redraws. Suspend/load adds no offline
+  time. Future multiplayer will resolve explicit turns; future AI can act on ticks.
+- Money is integer hundredths of a credit. Fuel, stock and cargo use whole units.
+  The authority validates ownership, location, quantities, capacity, stock, funds
+  and revisions before publishing each command. Rejections leave state unchanged.
+- Trade food, ore, medicine, machinery, textiles and electronics. Production and
+  consumption run on ticks. Prices respond to stock within bounds, with a spread.
+  Bulk orders price each unit; immediate buy/sell reversal cannot make a profit.
+- First delivery: buy food at Sol, travel to Meridian, sell and refuel. Compare
+  known markets for return cargo. Fixed-price fuel service costs 2.00 credits/unit
+  by default. Earn enough for the cargo upgrade while budgeting for future journeys.
+- Continue restores the exact saved journey, cargo, prices, markets and clock.
+  Save slots use validated JSON, atomic replacement and a previous-good backup.
+  Autosave runs on close/suspend; failed close-saves keep the window open.
 
-- Premium, offline-first single-player; multiplayer is optional and later.
-  The client owns an in-process authoritative session. No socket or server
-  process is needed for offline play.
-- The first goal is to earn a cargo-hold upgrade within roughly 20–30 minutes.
-  Start at Sol with one ship, 1,000 credits, 20 cargo units, and a full fuel tank.
-  The proposed upgrade adds 20 cargo units for 1,500 credits.
-- Galaxy positions are signed integer light-years on independent X/Y/Z axes.
-  Distances use Euclidean 3D distance, independent of the map projection.
-  Both other systems are within 20 light-years of Sol; the direct Meridian–Far
-  Reach route exceeds the initial range.
-  Local positions use a distinct type measured in kilometers.
-- Travel costs ceil(distance in light-years) fuel units, takes the same number
-  of simulation ticks, and requires enough fuel before departure. Start with
-  a 40-unit tank; visited markets sell fuel at a proposed 2 credits per unit.
-  Travel now uses checked integer distance/rounding in the simulation. Distinct
-  systems at coincident coordinates still take at least one tick to travel between.
-- Simulation rules use discrete ticks. Single-player advances continuously via a
-  local host clock at one tick per real second in the prototype; one tick represents
-  one in-world hour. Idle ticks catch up on the next UI input, while active travel
-  requests scheduled redraws. Rendering, refreshes and inspection do not themselves
-  advance time. Suspension pauses the clock; no catch-up is applied on resume.
-  Multiplayer is planned around explicit turns, with tick-based AI. The shared-turn
-  collection/resolution policy is not implemented yet.
-- Money uses integer hundredths of a credit; cargo, fuel, stock, and ticks use
-  whole nonnegative units. Reject invalid actions without partial mutation.
-- Trade food, ore, medicine, machinery, textiles, and electronics between three
-  reachable markets. Finite stock and a buy/sell spread prevent instant profit
-  at a single port. Price quotes will carry revisions and expire clearly.
-- The loop is inspect a route, buy cargo, travel, sell, refuel, then upgrade.
-  No factions, combat, real-time piloting, or multiplayer are needed for this loop.
-
-Implemented: fixture navigation and authoritative travel/arrival with fuel,
-range, ownership, stale-quote and overflow checks. Proposed credits, cargo,
-refuelling, prices and upgrade still require economic rules and pacing tests.
+The economy values come from config/economy.json. The initial 20–30 minute upgrade
+pacing remains a playtest hypothesis; regression checks deliberately complete the
+mechanical loop quickly. Factions, combat, mining, fleets, local docking and shared
+multiplayer turns are not needed or implemented for this first trading loop.

@@ -1,26 +1,29 @@
 //! Discrete travel rules, independent of real-time clocks and player input devices.
 use crate::{GalaxyPosition, SystemId};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlayerId(pub u64);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShipId(pub u64);
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Journey {
     pub origin: SystemId,
     pub destination: SystemId,
     pub arrival_tick: u64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Location {
     Docked(SystemId),
     Travelling(Journey),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Ship {
     pub id: ShipId,
     pub owner: PlayerId,
@@ -30,7 +33,8 @@ pub struct Ship {
     pub location: Location,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TravelQuote {
     pub origin: SystemId,
     pub destination: SystemId,
@@ -39,7 +43,7 @@ pub struct TravelQuote {
     pub revision: u64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TravelError {
     UnknownSystem,
     UnknownShip,
@@ -71,7 +75,8 @@ impl std::fmt::Display for TravelError {
 }
 
 /// The authority resolves identity before calling rules; commands never supply an owner.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TravelState {
     pub tick: u64,
     pub revision: u64,

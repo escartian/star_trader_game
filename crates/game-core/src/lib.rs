@@ -1,13 +1,17 @@
 //! Simulation types and rules. No graphics, networking, or filesystem access.
+use serde::{Deserialize, Serialize};
 
+pub mod economy;
+pub mod generation;
 pub mod travel;
 
 /// Stable identity; never use a display name or array index as an entity ID.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SystemId(pub u64);
 
 /// Absolute galaxy coordinates in whole light-years.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct GalaxyPosition {
     pub x: i64,
     pub y: i64,
@@ -15,21 +19,24 @@ pub struct GalaxyPosition {
 }
 
 /// A destination ID scoped to its parent SystemId.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BodyId(pub u64);
 
 /// Position relative to the system's star, in kilometers; never galaxy units.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LocalPosition {
     pub x_km: i64,
     pub y_km: i64,
     pub z_km: i64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BodyKind {
     RockyPlanet,
     GasGiant,
+    Moon,
+    Asteroid,
     Station,
 }
 
@@ -38,12 +45,15 @@ impl BodyKind {
         match self {
             Self::RockyPlanet => "Rocky planet",
             Self::GasGiant => "Gas giant",
+            Self::Moon => "Moon",
+            Self::Asteroid => "Asteroid",
             Self::Station => "Trade station",
         }
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LocalBody {
     pub id: BodyId,
     pub name: String,
@@ -52,7 +62,7 @@ pub struct LocalBody {
 }
 
 /// Display classification; rendering sizes are symbolic, not physical scale.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StarKind {
     YellowDwarf,
     RedDwarf,
@@ -73,7 +83,8 @@ impl StarKind {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct StarSystem {
     pub id: SystemId,
     pub name: String,
@@ -115,8 +126,10 @@ pub fn demo_galaxy() -> Vec<StarSystem> {
 
 /// Fixed navigation destinations, not an orbital simulation or astronomical model.
 fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
+    // IDs remain fixed even if display ordering changes or destinations are added.
     [
         (
+            BodyId(1),
             "Inner world",
             BodyKind::RockyPlanet,
             45_000_000,
@@ -124,6 +137,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
             -20_000_000,
         ),
         (
+            BodyId(2),
             "Outer giant",
             BodyKind::GasGiant,
             -100_000_000,
@@ -131,17 +145,33 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
             80_000_000,
         ),
         (
+            BodyId(3),
             "Trade port",
             BodyKind::Station,
             30_000_000,
             10_000_000,
             35_000_000,
         ),
+        (
+            BodyId(4),
+            "Moon",
+            BodyKind::Moon,
+            46_000_000,
+            8_500_000,
+            -20_000_000,
+        ),
+        (
+            BodyId(5),
+            "Prospector asteroid",
+            BodyKind::Asteroid,
+            -60_000_000,
+            12_000_000,
+            -25_000_000,
+        ),
     ]
     .into_iter()
-    .enumerate()
-    .map(|(index, (name, kind, x_km, y_km, z_km))| LocalBody {
-        id: BodyId(index as u64 + 1),
+    .map(|(id, name, kind, x_km, y_km, z_km)| LocalBody {
+        id,
         name: format!("{system_name} {name}"),
         kind,
         position: LocalPosition { x_km, y_km, z_km },

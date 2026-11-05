@@ -17,6 +17,21 @@ impl LocalSession {
         };
         ui.horizontal_wrapped(|ui| {
             ui.strong("Your ship");
+            if self.saves.paused {
+                ui.strong("PAUSED");
+            }
+            if ui.button("Session / saves").clicked() {
+                self.saves.open = true;
+            }
+            ui.label(format!(
+                "{} cr • cargo {}/{}",
+                self.economy.credits,
+                self.economy.cargo_used(),
+                self.economy.cargo_capacity
+            ));
+            if ui.button("Market / refuel").clicked() {
+                self.market.open = true;
+            }
             ui.label(format!(
                 "Fuel: {}/{} • tick {}",
                 self.state.ship.fuel, self.state.ship.fuel_capacity, self.state.tick
@@ -27,13 +42,17 @@ impl LocalSession {
                 }
                 Location::Travelling(journey) => {
                     ui.label(format!(
-                        "{} → {} • {} ticks remaining",
+                        "{} -> {} • {} ticks remaining",
                         name(journey.origin),
                         name(journey.destination),
                         journey.arrival_tick.saturating_sub(self.state.tick)
                     ));
                 }
             }
+        });
+        let target = target.filter(|destination| {
+            matches!(self.state.ship.location,
+            Location::Docked(origin) if origin != *destination)
         });
         if let Some(destination) = target {
             match self.authority.handle(ClientCommand::PreviewTravel {
@@ -43,11 +62,15 @@ impl LocalSession {
                 ServerMessage::TravelPreview(quote) => {
                     ui.horizontal_wrapped(|ui| {
                         ui.label(format!(
-                            "To {}: {} fuel • {} ticks (~{} seconds)",
+                            "To {}: {} fuel (~{} cr) • {} ticks (~{:.1} seconds at {}x)",
                             name(destination),
                             quote.fuel,
+                            game_core::economy::Credits(
+                                u64::from(quote.fuel) * self.economy.rules.fuel_unit_price.0
+                            ),
                             quote.duration_ticks,
-                            quote.duration_ticks
+                            quote.duration_ticks as f64 / f64::from(self.saves.speed),
+                            self.saves.speed
                         ));
                         if ui.button("Travel").clicked() {
                             let message = self.authority.handle(ClientCommand::Travel {

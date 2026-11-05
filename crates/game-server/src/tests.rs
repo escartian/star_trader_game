@@ -76,7 +76,7 @@ fn rejected_commands_leave_the_authoritative_state_unchanged() {
     ] {
         assert_eq!(
             session.handle_as(player, command),
-            ServerMessage::CommandRejected(error)
+            ServerMessage::CommandRejected(error.into())
         );
         assert_eq!(state(&mut session), initial);
     }
@@ -99,7 +99,7 @@ fn travel_arrives_only_after_the_host_advances_time_and_retries_do_not_charge_tw
     assert_eq!(underway.tick, 0);
     assert_eq!(
         session.handle(command),
-        ServerMessage::CommandRejected(TravelError::StaleQuote)
+        ServerMessage::CommandRejected(TravelError::StaleQuote.into())
     );
     assert_eq!(state(&mut session), underway);
     session.advance(14);
@@ -122,7 +122,7 @@ fn travel_arrives_only_after_the_host_advances_time_and_retries_do_not_charge_tw
             destination: SystemId(3),
             expected_revision: before.revision
         }),
-        ServerMessage::CommandRejected(TravelError::OutOfRange)
+        ServerMessage::CommandRejected(TravelError::OutOfRange.into())
     );
     assert_eq!(state(&mut session), before);
 }

@@ -15,9 +15,9 @@ explicit visible snapshots; never serialize the complete authoritative world by 
 The fixture currently shares `StarSystem` directly because it has no hidden state.
 
 The server package exposes a session library that the client hosts in-process.
-The session handles galaxy/session snapshots, travel previews and departures.
-The host advances discrete ticks and emits arrival events. The dedicated server binary is
-a thin remote adapter. Revisit crate extraction only when this creates a real need.
+The session handles snapshots, travel, trading, refuelling and upgrades.
+The host advances discrete ticks and emits events. The dedicated executable is
+currently a print-and-exit fixture; a remote adapter is still planned. Revisit crate extraction only when this creates a real need.
 
 ## Simulation
 
@@ -93,3 +93,36 @@ idle it catches up on the next input without continuous redraws; travel schedule
 redraws to report progress. A multiplayer adapter must never expose the host's
 `advance` method as an untrusted command. Actual networking, multiple-player state,
 authentication, turn ordering, reconnect/resync and idempotent responses remain open.
+
+## Economy, JSON and shared art
+
+`game-core::economy` owns fixed-unit credits/cargo, finite market stock, bounded
+per-unit stock pricing and service/upgrade rules. JSON definitions live in
+config/economy.json and are validated before startup. Core has data serialization
+but no runtime filesystem access. Commerce commands include a state revision;
+the authority recomputes prices and publishes a candidate state only after all
+ownership/location/funds/capacity/stock checks pass. The current account is the
+single-player fixture; multiple authenticated accounts are later multiplayer work.
+
+Production/consumption have closed-form, bounded net changes per tick. Current
+bulk advancement matches individual ticks. Future AI/encounters must preserve
+intermediate event ordering rather than assume all tick systems can be batched.
+The player does not press End Turn in single-player. Pause and speed only alter
+the offline adapter's scheduling of discrete ticks.
+
+`game-server/src/save.rs` owns schema-1 authoritative JSON, validation, atomic
+replacement and a previous-good backup. Saves contain the world/player/economy
+and their active definitions; continuing does not regenerate markets or apply
+changed startup definitions. The client replaces its session only after load
+succeeds, resets clocks, and refreshes map data. Close/suspend hooks save at safe
+lifecycle points. A failed close-save keeps the window open. See DATA_FORMATS.md.
+
+Blender is a build-time authoring tool. Static transparent sprites are embedded
+and preloaded once per egui context, with shared texture handles reused across
+system views. A new graphics context receives new handles. Stars retain procedural
+halos; tiny galaxy markers remain geometry. No runtime model importer, animation
+asset pipeline or additional engine framework is introduced. Offscreen wgpu captures
+exercise the same UI code for visual review, separately from window/device checks.
+
+Mobile build work is deferred by explicit user direction. Desktop implementation
+continues while those platform/lifecycle gaps remain recorded in PLATFORM_STATUS.md.

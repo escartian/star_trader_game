@@ -38,9 +38,7 @@ impl Map {
                 .map(|p| pick(&self.systems, &self.camera, rect, p, &self.slice))
                 .unwrap_or_default();
             self.select_targets(candidates, response.double_clicked());
-            if self.local.is_some() {
-                ui.ctx().request_repaint();
-            }
+            ui.ctx().request_repaint();
         }
         if !hover.is_empty() {
             response.clone().on_hover_ui(|ui| {

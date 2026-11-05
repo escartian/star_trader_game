@@ -1,7 +1,8 @@
+mod art;
 mod camera;
+mod capture_state;
 mod fixtures;
 mod local;
-mod market;
 mod panels;
 mod render;
 mod slice;
@@ -55,7 +56,12 @@ fn pick(
 
 impl Map {
     pub fn new(systems: Vec<StarSystem>, authority: game_server::Session) -> Self {
-        let selected = systems.first().map(|s| s.id);
+        let session = crate::session::LocalSession::new(authority);
+        let selected = systems
+            .iter()
+            .find(|s| s.id == session.display_system())
+            .or_else(|| systems.first())
+            .map(|s| s.id);
         Self {
             session_systems: systems.clone(),
             systems,
@@ -67,7 +73,7 @@ impl Map {
             pan_tool: false,
             local: None,
             slice: DepthSlice::default(),
-            session: crate::session::LocalSession::new(authority),
+            session,
         }
     }
 
@@ -120,6 +126,18 @@ impl Map {
         }
     }
 
+    pub fn set_save_path(&mut self, path: std::path::PathBuf) {
+        self.session.set_save_path(path);
+    }
+
+    pub fn notify(&mut self, message: String) {
+        self.session.notify(message);
+    }
+
+    pub fn autosave(&mut self) -> Result<(), String> {
+        self.session.autosave()
+    }
+
     pub fn reset_clock(&mut self) {
         self.session.reset_clock();
     }
@@ -133,6 +151,18 @@ impl Map {
     }
 
     pub fn ui(&mut self, ctx: &egui::Context) {
+        if let Some(systems) = self.session.take_loaded_galaxy() {
+            self.session_systems = systems.clone();
+            self.systems = systems;
+            self.scene = Scene::Session;
+            self.selected = Some(self.session.display_system());
+            self.session_selection = self.selected;
+            self.local = None;
+            self.camera = Camera::default();
+            self.slice = DepthSlice::default();
+            self.candidates.clear();
+        }
+        let _ = art::Artwork::preload(ctx);
         self.session.update_clock(ctx);
         egui::TopBottomPanel::bottom("ship_status").show(ctx, |ui| {
             let target = if self.scene == Scene::Session {
@@ -142,6 +172,8 @@ impl Map {
             };
             self.session.ui(ui, target, &self.session_systems);
         });
+        self.session.show_market(ctx, &self.session_systems);
+        self.session.show_session_controls(ctx);
         if let Some(local) = &mut self.local {
             if local.ui(ctx) {
                 self.local = None;
@@ -152,6 +184,7 @@ impl Map {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.heading("Star Trader");
                 ui.label("Offline session • galaxy navigation");
+                self.session.guide(ui);
                 ui.horizontal_wrapped(|ui| {
                     for scene in [Scene::Session, Scene::Overlap, Scene::Dense] {
                         if ui
@@ -209,7 +242,7 @@ impl Map {
                 }
                 let rect = self.draw_galaxy(ui);
                 self.details(ui, rect);
-                market::ui(ui);
+
             });
         });
     }

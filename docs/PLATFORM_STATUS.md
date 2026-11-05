@@ -1,141 +1,65 @@
-# Native interface spike status
+# Native prototype verification
 
-## Implemented
+## Implemented desktop path
 
-Pinned direct dependencies: winit 0.30.13, wgpu 24.0.1, egui/egui-winit/
-egui-wgpu 0.31.1, glam 0.30.10, pollster 0.4.0. Cargo.lock pins the complete graph.
-This compatible cached set is a baseline, not a claim to use the latest releases.
-The integration follows the upstream egui renderer and winit APIs:
-https://docs.rs/egui-wgpu/0.31.1/egui_wgpu/
+The native client uses pinned winit 0.30.13, wgpu 24.0.1, egui integrations 0.31.1,
+glam 0.30.10 and image 0.25.10 with PNG-only decoding. Cargo.lock pins the graph.
+Core/session JSON uses serde 1.0.229 and serde_json 1.0.154; temporary-file save
+replacement uses tempfile 3.27.0. No game engine or network runtime is present.
 
-Desktop creates a native window and GPU surface, routes DPI-aware input through
-egui-winit, reconfigures on resize and surface loss, ignores zero-size redraws,
-and releases graphics resources on suspend. The event loop waits for input or
-egui repaint deadlines while idle. No continuous animation loop is requested.
-An orthographic map projects the three-system fixture using glam; the market
-layout fixture scrolls horizontally and vertically in a narrow viewport.
+The window handles resize/DPI events, nonzero surface reconfiguration and
+surface-loss recovery. Graphics are released on suspend and recreated on resume.
+World state is owned separately. The offline clock resets at suspend/resume;
+autosave runs at safe close/suspend points. Failed close-saves keep the window open.
+While travelling, tick progress schedules redraws. Idle stock/ticks catch up on
+input without a continuous render loop. Pause and speed affect scheduling only.
 
-## Evidence and remaining checks
+## Rendering evidence
 
-Validated in this environment: workspace check, strict Clippy, formatting,
-workspace tests (session snapshot isolation plus seven map tests), headless client startup,
-and dedicated fixture startup all passed. The graphical launch reported macOS
-LaunchServices / com.apple.hiservices-xpcservice connection failures and was
-stopped; rendered output and interaction remain unverified in this environment.
+Original Blender 5.2.3 models and baked transparent sprites cover five star classes,
+a rocky planet, gas giant, moon, asteroid and trade port. Their images were visually
+inspected. One shared cache preloads sprites per egui context; system views reuse
+handles and refresh them when a graphics context is recreated. No animation frame
+sets or runtime Blender dependency were introduced. Surface images are billboards;
+star halos, galaxy markers, routes and selection remain procedural.
 
-See the README for reproducible build and smoke commands. Compilation does not
-prove visual readability or mobile behavior. Manual checks still required:
+The actual system, market and save-slot views (see docs/previews/) were rendered to offscreen GPU
+textures on the host Apple M5 Pro and visually inspected. This verified native
+wgpu texture upload/render/readback, text, transparent sprites and those layouts.
+The sandbox exposes no GPU adapter; the permitted host captures succeeded. The
+local camera was adjusted after review to separate the port from the enlarged star.
 
-- Select each star and rotate the map; route distance must stay constant.
-- Resize to 320 × 480 logical pixels, scroll the market, and change display DPI.
-- Exercise minimize/restore, GPU surface loss and desktop suspend/resume.
-- Confirm idle redraw/battery behavior with platform profiling tools.
-- Test overlap candidate selection and gestures with dense/overlap fixtures.
+Reproduce with `--new --capture PATH --capture-view system|market|saves|galaxy`.
+This does not verify a desktop window, mouse/touch interaction, DPI transitions,
+OS suspend/resume, surface loss or idle power behavior. An earlier sandboxed window
+launch reported macOS desktop-service errors. Manual interactive checks remain open.
 
-## Mobile feasibility: unresolved
+## Behavioral and engineering checks
 
-Only desktop Rust targets are installed in this environment.
-`xcrun --sdk iphoneos --show-sdk-path` failed because the iOS SDK cannot be
-located. ANDROID_HOME and ANDROID_NDK_HOME are unset. No Android/iOS
-shells, device runs, signing configuration, safe-area integration or touch
-lifecycle evidence are included. Desktop suspend handling is groundwork, not
-mobile validation. Add Android NativeActivity packaging and an iOS app shell,
-then verify touch, suspend/resume and surface recreation on devices before
-marking phase 1 complete or expanding the full interface.
+`./tools/check.sh` enforces the 500-line source-file limit, formatting, strict
+Clippy and workspace tests. Tests cover map projection/picking/focus, overlapping
+candidates, slice reveal, view-state preservation, double-click target decisions,
+texture decoding/cache reuse, and UI tessellation at 320 × 480 and 1000 × 720.
 
-## Map presentation and navigation follow-up
+Travel checks cover exact range/fuel boundaries, ownership, stale commands,
+rejection atomicity and host-driven arrival. Economics checks cover per-unit bulk
+pricing, anti-arbitrage across small/large market targets, bounded prices/stock,
+batched-versus-stepped tick equivalence and real-command trading through upgrade.
+Seeded-start tests check 256 reachable starts. Refreshes never create stock/money.
 
-The map draws a static procedural nebula with a dim decorative starfield using
-clipped egui geometry. Selectable stars have explicit domain classifications:
-yellow/red dwarfs, blue/red giants and white dwarfs, with warm/cool colors,
-different symbolic radii, radial soft halos, bright cores and selection rings.
-There are no new dependencies or continuous animation requests.
+Save checks cover world/player/journey/economy round trips, schema/invariant
+rejection, failed writes, previous-save backup recovery, and preserving a good backup
+over a damaged primary. Client checks cover fractional ticks, speed/pause, save
+restore and a failed load retaining the live session. See docs/DATA_FORMATS.md.
 
-Focus selection (button/F) centers the camera's orbit target. The Pan tool offers
-primary-drag panning. Hover shows type details. A dedicated overlap chooser lists
-only nearby candidates with types/distances. Selected labels have priority;
-colliding ordinary labels are omitted, with all systems accessible in the list.
+The 20–30 minute first-upgrade target and whether routes are enjoyable require
+observed playtesting. Automated route completion establishes mechanics only.
+CI is configured but a hosted workflow run is not claimed here.
 
-Use **Overlap test** in the client for five stars with the same XY position and
-different Z coordinates. Front view aligns them; rotation separates them. Use
-**Dense test** for a deterministic 64-star cluster containing all five types.
-These are explicitly separate UI fixtures, and returning to Session restores its
-selection. Reset restores the normal camera; Front reproduces the overlap.
+## Mobile: deliberately deferred
 
-Automated checks cover centering after focus across angles/zooms, all overlapping
-candidates being pickable, route distance staying independent of projection,
-session-selection preservation, and egui tessellation for all three scenes at
-320 × 480 and 1000 × 720. These tests do not establish visual quality, actual
-GPU rendering, mobile readability, touch handling or device lifecycle behavior.
-
-## Galaxy / system navigation follow-up
-
-Session snapshots now include fixed local destinations (rocky planet, gas giant,
-and trade station). `LocalPosition` is a distinct kilometer-based type, and
-`BodyId` is scoped to its parent `SystemId`. Destination snapshots are public
-fixture data; there is still no discovery/hidden-state implementation.
-
-Choose **Open selected system**, select a local destination by map or list, and
-use **← Galaxy** or Escape to return. The system view has its own camera, focus,
-pan tool, presets, orientation indicator and overlap chooser. Galaxy selection,
-camera (including focus/pan/zoom) and candidate list remain intact. Navigation
-fixtures with no local data show an empty catalogue rather than fabricated bodies.
-
-Local map projection converts kilometers to display units explicitly; displayed
-3D distance always uses the kilometer coordinates. Planet/station markers have
-symbolic sizes, and fixed positions are neither real ephemerides nor an orbital
-simulation. No travel, docking, fleet, fuel or economic rules are implied.
-
-Checks added for local picking/focus, local overlaps, kilometer/view conversion,
-and returning via Escape without changing galaxy context. Both galaxy and local
-views tessellate at 320 × 480 and 1000 × 720 across all three scenes. Interactive
-GPU/device checks and the previously documented SDK gaps remain unresolved.
-
-## Trade-port art, modularity and depth slicing
-
-Blender 5.2.3 generated the original trade-port `.blend` and transparent 512 × 512
-PNG using the committed export script. The sandboxed Blender launch crashed before
-executing Python; the permitted host launch completed successfully. The sprite was
-visually inspected. The native map embeds it, retains a fallback marker on decode
-failure and offers a larger selected-station preview. The illustrated station is
-a billboard; it does not rotate as a 3D mesh with the camera. The client adds only
-PNG decoding, with image 0.25.10 pinned and default features disabled.
-
-Galaxy depth slicing is opt-in and operates on X/Y/Z world coordinates. The UI
-shows the inclusive bounds in light-years and a visible-system count. Stars outside
-the slice are hidden and excluded from picking. The system list marks hidden entries;
-Focus recenters the slice if necessary, retaining its thickness and the selection.
-The slice survives local-view navigation; Reset clears it.
-
-Additional checks cover all-axis slice bounds, hidden-target picking, focus reveal,
-slice preservation on return, PNG transparency/decoding and the selected station
-inspector at desktop/phone sizes. The dense phone/desktop tessellation test now
-exercises an enabled slice. `./tools/check.sh` additionally enforces source length,
-formatting and strict Clippy. Interactive GPU, touch and device lifecycle checks
-remain open, as do the previously documented mobile SDK gaps.
-
-## Relative scale, double-click navigation and initial travel
-
-Local symbols now share a size hierarchy that scales gently with zoom: star radii
-26–44 points by class, gas-giant radius 18, rocky-planet radius 11, station sprite
-22 points across at default zoom. Selection rings, label offsets and pick targets
-use the corresponding radii, retaining minimum touch targets. The station inspector
-remains a larger illustration. Only the station is Blender-authored; stars and
-planets are procedural egui shapes. These are symbolic sizes, not physical ratios.
-
-Double-clicking an unambiguous galaxy target enters its local view; ambiguous or
-empty picks do not enter a system. The visible Open button remains available.
-An automated check covers the transition decision alongside existing navigation tests.
-
-Initial travel is authoritative: typed player/ship IDs, exact integer range and
-fuel rounding, revisioned quotes, departures, journeys and arrivals. Checked
-arithmetic and validation complete before mutation. Host-only tick advancement is
-not a player command. The offline clock advances one tick per second, catches idle
-time up on input, schedules updates during journeys and pauses on suspend/resume.
-Shared multiplayer turns, network identity, retries/resync, cargo/economy,
-refuelling, saves and seeded generation remain open.
-
-Behavior checks cover exact range/fuel boundaries, overflow, unauthorized/stale/
-unknown commands, rejection atomicity, duplicate departure rejection, host-driven
-arrival, fractional-clock accumulation and double-click disambiguation. Device,
-interactive GPU and mobile lifecycle checks remain pending.
+The user has asked to continue implementation while ignoring mobile build work.
+Only desktop Rust targets were installed when inspected. The iOS SDK lookup failed;
+ANDROID_HOME/ANDROID_NDK_HOME were unset. No mobile shells, signing, touch-device,
+safe-area or device lifecycle evidence is provided. These remain open milestones.
+Desktop lifecycle checks and Windows/Linux packaging also remain unverified.

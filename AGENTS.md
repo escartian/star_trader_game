@@ -15,3 +15,6 @@
   docs/ARCHITECTURE.md. Update documentation when implemented behavior changes.
 - Keep original art sources and reproducible export scripts alongside runtime
   assets. Blender is an authoring tool, not a runtime dependency.
+
+Mobile build/device work is deferred at the user’s request. Continue the desktop
+implementation roadmap while keeping those validation gaps documented.

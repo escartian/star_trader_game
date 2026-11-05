@@ -1,16 +1,56 @@
+mod capture;
 mod desktop;
 mod map;
+mod options;
 mod session;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut session = game_server::Session::default();
-    let snapshot = session.handle(game_protocol::ClientCommand::GetGalaxy);
-    if std::env::args().any(|arg| arg == "--headless") {
-        println!("Offline session (in-process authority): {snapshot:#?}");
+    let options = options::Options::parse()?;
+    let mut backup = options.save.as_os_str().to_os_string();
+    backup.push(".bak");
+    let should_resume = options.resume
+        || (!options.new
+            && options.seed == 0
+            && options.economy.is_none()
+            && (options.save.is_file() || std::path::Path::new(&backup).is_file()));
+    let mut startup_notice = None;
+    let mut session = if should_resume {
+        let (session, recovery) = game_server::Session::load(&options.save)?;
+        if let Some(message) = recovery {
+            eprintln!("{message}");
+            startup_notice = Some(message);
+        }
+        session
+    } else {
+        let economy_path = options.economy.or_else(|| {
+            std::path::Path::new("config/economy.json")
+                .is_file()
+                .then(|| "config/economy.json".into())
+        });
+        let rules = if let Some(path) = economy_path {
+            game_core::economy::EconomyRules::from_json(&std::fs::read_to_string(path)?)?
+        } else {
+            game_core::economy::EconomyRules::default()
+        };
+        game_server::Session::with_economy(options.seed, rules)?
+    };
+    if options.headless {
+        println!("{}", session.export_json()?);
         return Ok(());
     }
-    let game_protocol::ServerMessage::GalaxySnapshot { systems, .. } = snapshot else {
+    let game_protocol::ServerMessage::GalaxySnapshot { systems, .. } =
+        session.handle(game_protocol::ClientCommand::GetGalaxy)
+    else {
         return Err("Unable to start local galaxy session".into());
     };
-    desktop::run(map::Map::new(systems, session))
+    let mut map = map::Map::new(systems, session);
+    map.set_save_path(options.save);
+    if let Some(message) = startup_notice {
+        map.notify(message);
+    }
+    if let Some(path) = options.capture {
+        map.prepare_capture(&options.capture_view)?;
+        return pollster::block_on(capture::save(&mut map, &path));
+    }
+    desktop::run(map)
 }

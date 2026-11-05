@@ -18,7 +18,7 @@ layout fixture scrolls horizontally and vertically in a narrow viewport.
 ## Evidence and remaining checks
 
 Validated in this environment: workspace check, strict Clippy, formatting,
-workspace tests (session snapshot isolation plus four map tests), headless client startup,
+workspace tests (session snapshot isolation plus seven map tests), headless client startup,
 and dedicated fixture startup all passed. The graphical launch reported macOS
 LaunchServices / com.apple.hiservices-xpcservice connection failures and was
 stopped; rendered output and interaction remain unverified in this environment.
@@ -67,3 +67,26 @@ candidates being pickable, route distance staying independent of projection,
 session-selection preservation, and egui tessellation for all three scenes at
 320 × 480 and 1000 × 720. These tests do not establish visual quality, actual
 GPU rendering, mobile readability, touch handling or device lifecycle behavior.
+
+## Galaxy / system navigation follow-up
+
+Session snapshots now include fixed local destinations (rocky planet, gas giant,
+and trade station). `LocalPosition` is a distinct kilometer-based type, and
+`BodyId` is scoped to its parent `SystemId`. Destination snapshots are public
+fixture data; there is still no discovery/hidden-state implementation.
+
+Choose **Open selected system**, select a local destination by map or list, and
+use **← Galaxy** or Escape to return. The system view has its own camera, focus,
+pan tool, presets, orientation indicator and overlap chooser. Galaxy selection,
+camera (including focus/pan/zoom) and candidate list remain intact. Navigation
+fixtures with no local data show an empty catalogue rather than fabricated bodies.
+
+Local map projection converts kilometers to display units explicitly; displayed
+3D distance always uses the kilometer coordinates. Planet/station markers have
+symbolic sizes, and fixed positions are neither real ephemerides nor an orbital
+simulation. No travel, docking, fleet, fuel or economic rules are implied.
+
+Checks added for local picking/focus, local overlaps, kilometer/view conversion,
+and returning via Escape without changing galaxy context. Both galaxy and local
+views tessellate at 320 × 480 and 1000 × 720 across all three scenes. Interactive
+GPU/device checks and the previously documented SDK gaps remain unresolved.

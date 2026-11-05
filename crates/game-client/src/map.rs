@@ -1,5 +1,6 @@
 mod camera;
 mod fixtures;
+mod local;
 mod visuals;
 
 use camera::Camera;
@@ -17,6 +18,7 @@ pub struct Map {
     scene: Scene,
     session_selection: Option<SystemId>,
     pan_tool: bool,
+    local: Option<local::LocalView>,
 }
 
 fn position(system: &StarSystem) -> DVec3 {
@@ -50,6 +52,7 @@ impl Map {
             scene: Scene::Session,
             session_selection: selected,
             pan_tool: false,
+            local: None,
         }
     }
 
@@ -83,7 +86,19 @@ impl Map {
         }
     }
 
+    fn open_selected_system(&mut self) {
+        if let Some(system) = self.systems.iter().find(|s| Some(s.id) == self.selected) {
+            self.local = Some(local::LocalView::new(system.clone()));
+        }
+    }
+
     pub fn ui(&mut self, ctx: &egui::Context) {
+        if let Some(local) = &mut self.local {
+            if local.ui(ctx) {
+                self.local = None;
+            }
+            return;
+        }
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.heading("Star Trader");
@@ -135,7 +150,7 @@ impl Map {
                 let rect = response.rect;
                 // Every background, glow and label shares the map's clip rectangle.
                 let painter = painter.with_clip_rect(rect.intersect(ui.clip_rect()));
-                visuals::background(&painter, rect);
+                visuals::background(&painter, rect, "GALAXY / light-years");
                 if response.dragged_by(egui::PointerButton::Middle)
                     || (self.pan_tool && response.dragged_by(egui::PointerButton::Primary))
                 {
@@ -245,23 +260,7 @@ impl Map {
                         painter.galley(label_rect.min, galley, Color32::WHITE);
                     }
                 }
-                let axis_origin = rect.left_bottom() + Vec2::new(35.0, -35.0);
-                for (axis, label, color) in [
-                    (DVec3::X, "X", Color32::LIGHT_RED),
-                    (DVec3::Y, "Y", Color32::LIGHT_GREEN),
-                    (DVec3::Z, "Z", Color32::LIGHT_BLUE),
-                ] {
-                    let axis = self.camera.rotation() * axis * 23.0;
-                    let end = axis_origin + Vec2::new(axis.x as f32, -axis.y as f32);
-                    painter.line_segment([axis_origin, end], Stroke::new(1.0_f32, color));
-                    painter.text(
-                        end,
-                        egui::Align2::CENTER_CENTER,
-                        label,
-                        egui::FontId::proportional(12.0),
-                        color,
-                    );
-                }
+                visuals::axes(&painter, rect, self.camera.rotation());
                 if self.candidates.len() > 1 {
                     ui.group(|ui| {
                         ui.label("Overlapping targets — choose one:");
@@ -303,6 +302,15 @@ impl Map {
                     if !rect.contains(self.camera.project(position(system), rect)) {
                         ui.label("Selection is outside the map. Use Focus selection to reveal it.");
                     }
+                }
+                if ui
+                    .add_enabled(
+                        self.selected.is_some(),
+                        egui::Button::new("Open selected system"),
+                    )
+                    .clicked()
+                {
+                    self.open_selected_system();
                 }
                 egui::CollapsingHeader::new("Systems & star legend").show(ui, |ui| {
                     ui.label("Symbolic sizes • background stars are decorative");
@@ -406,6 +414,41 @@ mod tests {
     }
 
     #[test]
+    fn returning_from_local_view_preserves_galaxy_context() {
+        let ctx = egui::Context::default();
+        let mut map = Map::new(game_core::demo_galaxy());
+        map.selected = Some(SystemId(2));
+        map.camera = Camera {
+            yaw: 1.2,
+            pitch: -0.7,
+            zoom: 2.5,
+            pan: Vec2::new(45.0, -30.0),
+            focus: DVec3::new(8.0, 4.0, 12.0),
+        };
+        map.candidates = vec![SystemId(1), SystemId(2)];
+        let expected_camera = Camera { ..map.camera };
+        map.open_selected_system();
+        assert!(map.local.is_some());
+        let _ = ctx.run(
+            egui::RawInput {
+                events: vec![egui::Event::Key {
+                    key: egui::Key::Escape,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: egui::Modifiers::NONE,
+                }],
+                ..Default::default()
+            },
+            |ctx| map.ui(ctx),
+        );
+        assert!(map.local.is_none());
+        assert_eq!(map.selected, Some(SystemId(2)));
+        assert_eq!(map.camera, expected_camera);
+        assert_eq!(map.candidates, vec![SystemId(1), SystemId(2)]);
+    }
+
+    #[test]
     fn phone_and_desktop_layouts_tessellate_all_scenes() {
         let ctx = egui::Context::default();
         let mut map = Map::new(game_core::demo_galaxy());
@@ -423,6 +466,19 @@ mod tests {
                     !ctx.tessellate(output.shapes, output.pixels_per_point)
                         .is_empty()
                 );
+                map.open_selected_system();
+                let output = ctx.run(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
+                        ..Default::default()
+                    },
+                    |ctx| map.ui(ctx),
+                );
+                assert!(
+                    !ctx.tessellate(output.shapes, output.pixels_per_point)
+                        .is_empty()
+                );
+                map.local = None;
             }
         }
     }

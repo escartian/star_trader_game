@@ -47,7 +47,9 @@ is available, treat feasibility as unresolved rather than marking this phase com
 - [x] Show actual 3D distance and a selected route, independent of camera angle.
   Distance uses world positions; the overlap fixture covers distinct depths.
 - [ ] Add an adjustable depth slice if dense-fixture testing demonstrates the need.
-- [ ] Switch between galaxy and local system views while preserving selection.
+- [x] Switch between galaxy and local system views while preserving selection.
+  Open selected system shows fixed planets/stations in local kilometers. The Galaxy
+  breadcrumb/Escape returns without changing galaxy camera, selection or candidates.
 
 **Done when:** a new player can find a system, distinguish depth, select an
 overlapping target, and explain a route's distance without entering coordinates.
@@ -56,8 +58,9 @@ See [map design](docs/MAP_DESIGN.md).
 Map presentation now includes a static procedural nebula/starfield, soft star
 halos and symbolic sizes/colors driven by explicit star kinds. This introduces
 no assets, dependencies, simulation randomness or continuous animation.
-Phase 2 remains incomplete: local-system navigation, device interaction and
-manual acceptance scenarios still require work. Phase 1 platform blockers remain
+Phase 2 remains incomplete: device interaction and manual acceptance scenarios
+still require work. Local-system navigation is implemented with fixed destinations;
+travel/docking remain simulation work in phase 3. Phase 1 platform blockers remain
 open; these map changes extend the existing prototype without adding a full UI.
 
 ## 3. Build one authoritative local session

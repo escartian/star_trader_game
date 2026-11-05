@@ -88,4 +88,7 @@ with different symbolic sizes. Use **Focus selection** (or F) to center a target
 **Pan tool** to pan by dragging, and **Systems & star legend** to browse types.
 **Overlap test** and **Dense test** exercise navigation without changing the local
 session. Overlapping targets appear in a dedicated chooser; ordinary labels are
-reduced where they collide. Local-system view and playable travel are still planned.
+reduced where they collide. Select a star and choose **Open selected system** to inspect its planets and
+trade station. The local map uses kilometers and has its own camera. **← Galaxy**
+or Escape returns to the same galaxy view and selection. Local destinations are
+fixed fixtures; playable travel and docking are still planned.

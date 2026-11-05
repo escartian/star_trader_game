@@ -29,6 +29,7 @@ pub fn systems(scene: Scene) -> Vec<StarSystem> {
     (0..if scene == Scene::Overlap { 5 } else { 64 })
         .map(|i| StarSystem {
             id: SystemId(1000 + i),
+            bodies: Vec::new(),
             name: format!(
                 "{} {:02}",
                 if scene == Scene::Overlap {

@@ -56,3 +56,13 @@ visual spacing used to make a local system readable.
 4. Dense labels do not obscure the selected destination or route.
 5. Reset recovers the map; entering and leaving a system preserves context.
 6. A minimum-size phone viewport keeps labels and selection controls usable.
+
+## Implemented navigation baseline
+
+The galaxy's **Open selected system** button enters a separately scaled local
+map using fixed snapshot destinations. Local rocky planets, gas giants and trade
+stations are selectable by marker or list; overlapping candidates are listed
+explicitly. **← Galaxy** / Escape returns to the previous galaxy camera, selection
+and overlap candidates. Each view exposes pan, focus, zoom and orientation tools.
+Local distances use kilometer positions; interstellar distances use galaxy
+light-years. Physical travel and docking rules are not yet implemented.

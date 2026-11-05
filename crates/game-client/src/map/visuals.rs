@@ -28,7 +28,7 @@ fn glow(painter: &Painter, center: Pos2, radius: Vec2, color: Color32) {
     painter.add(Shape::mesh(mesh));
 }
 
-pub fn background(painter: &Painter, rect: Rect) {
+pub fn background(painter: &Painter, rect: Rect, caption: &str) {
     painter.rect_filled(rect, 0.0, Color32::from_rgb(4, 8, 19));
     for (x, y, r, color) in [
         (
@@ -72,7 +72,7 @@ pub fn background(painter: &Painter, rect: Rect) {
     painter.text(
         rect.right_bottom() - Vec2::splat(10.0),
         egui::Align2::RIGHT_BOTTOM,
-        "GALAXY / light-years",
+        caption,
         egui::FontId::monospace(10.0),
         Color32::from_rgb(100, 125, 150),
     );
@@ -120,6 +120,27 @@ pub fn star(painter: &Painter, center: Pos2, kind: StarKind, selected: bool, hov
                     Color32::from_white_alpha(130)
                 },
             ),
+        );
+    }
+}
+
+/// Orientation stays visible even when the focused object has been panned away.
+pub fn axes(painter: &Painter, rect: Rect, rotation: glam::DQuat) {
+    let origin = rect.left_bottom() + Vec2::new(35.0, -35.0);
+    for (axis, label, color) in [
+        (glam::DVec3::X, "X", Color32::LIGHT_RED),
+        (glam::DVec3::Y, "Y", Color32::LIGHT_GREEN),
+        (glam::DVec3::Z, "Z", Color32::LIGHT_BLUE),
+    ] {
+        let axis = rotation * axis * 23.0;
+        let end = origin + Vec2::new(axis.x as f32, -axis.y as f32);
+        painter.line_segment([origin, end], Stroke::new(1.0_f32, color));
+        painter.text(
+            end,
+            egui::Align2::CENTER_CENTER,
+            label,
+            egui::FontId::proportional(12.0),
+            color,
         );
     }
 }

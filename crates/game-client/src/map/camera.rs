@@ -1,6 +1,7 @@
 use egui::{Pos2, Rect, Vec2};
 use glam::{DQuat, DVec3};
 
+#[derive(Debug, PartialEq)]
 pub struct Camera {
     pub yaw: f64,
     pub pitch: f64,

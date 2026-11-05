@@ -1,4 +1,4 @@
-use super::{LocalView, pick, view_position};
+use super::{LocalView, pick, scale::SymbolScale, view_position};
 use crate::map::visuals;
 use egui::{Color32, Pos2, Rect, Sense, Stroke, Vec2};
 use game_core::BodyKind;
@@ -62,7 +62,13 @@ impl LocalView {
                 Stroke::new(1.0_f32, Color32::from_rgb(92, 180, 183)),
             );
         }
-        visuals::star(&painter, star, self.system.star_kind, false, false);
+        let scale = SymbolScale::new(self.camera.zoom);
+        visuals::star_with_radius(
+            &painter,
+            star,
+            self.system.star_kind,
+            scale.star_radius(self.system.star_kind),
+        );
         let mut bodies: Vec<_> = self.system.bodies.iter().collect();
         bodies.sort_by_key(|b| Some(b.id) != self.selected);
         let mut labels: Vec<Rect> = Vec::new();
@@ -76,10 +82,10 @@ impl LocalView {
             };
             match body.kind {
                 BodyKind::Station => {
-                    self.station.paint(&painter, point);
+                    self.station.paint(&painter, point, scale.station_size());
                 }
                 kind => {
-                    let radius = if kind == BodyKind::GasGiant { 9.0 } else { 6.0 };
+                    let radius = scale.body_radius(kind);
                     painter.circle_filled(point, radius, color);
                     painter.circle_filled(
                         point - Vec2::splat(radius * 0.25),
@@ -91,11 +97,7 @@ impl LocalView {
             if selected || hover.contains(&body.id) {
                 painter.circle_stroke(
                     point,
-                    if body.kind == BodyKind::Station {
-                        38.0
-                    } else {
-                        15.0
-                    },
+                    scale.body_radius(body.kind) + 5.0,
                     Stroke::new(1.5_f32, Color32::from_rgb(130, 230, 226)),
                 );
             }
@@ -106,11 +108,7 @@ impl LocalView {
             );
             // Keep names readable near the right/bottom edges of a narrow map.
             let size = galley.size();
-            let offset = if body.kind == BodyKind::Station {
-                44.0
-            } else {
-                20.0
-            };
+            let offset = scale.body_radius(body.kind) + 10.0;
             let min = Pos2::new(
                 (point.x + offset)
                     .min(rect.right() - size.x - 4.0)

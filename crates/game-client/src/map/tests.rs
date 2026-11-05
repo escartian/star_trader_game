@@ -46,7 +46,7 @@ fn overlapping_targets_are_all_pickable_and_distance_is_view_independent() {
 
 #[test]
 fn test_scenes_do_not_replace_session_selection() {
-    let mut map = Map::new(game_core::demo_galaxy());
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
     map.selected = Some(SystemId(2));
     map.change_scene(Scene::Dense);
     map.selected = Some(SystemId(1010));
@@ -58,7 +58,7 @@ fn test_scenes_do_not_replace_session_selection() {
 #[test]
 fn returning_from_local_view_preserves_galaxy_context() {
     let ctx = egui::Context::default();
-    let mut map = Map::new(game_core::demo_galaxy());
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
     map.selected = Some(SystemId(2));
     map.camera = Camera {
         yaw: 1.2,
@@ -101,7 +101,7 @@ fn returning_from_local_view_preserves_galaxy_context() {
 #[test]
 fn phone_and_desktop_layouts_tessellate_all_scenes() {
     let ctx = egui::Context::default();
-    let mut map = Map::new(game_core::demo_galaxy());
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
     for size in [Vec2::new(320.0, 480.0), Vec2::new(1000.0, 720.0)] {
         for scene in [Scene::Session, Scene::Overlap, Scene::Dense] {
             map.change_scene(scene);
@@ -136,7 +136,7 @@ fn phone_and_desktop_layouts_tessellate_all_scenes() {
 
 #[test]
 fn hidden_stars_cannot_be_picked_and_focus_reveals_selection() {
-    let mut map = Map::new(game_core::demo_galaxy());
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
     map.change_scene(Scene::Overlap);
     map.slice = DepthSlice {
         enabled: true,
@@ -160,4 +160,19 @@ fn hidden_stars_cannot_be_picked_and_focus_reveals_selection() {
         pick(&map.systems, &map.camera, rect, rect.center(), &map.slice),
         vec![SystemId(1004)]
     );
+}
+
+#[test]
+fn double_click_enters_only_an_unambiguous_system() {
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
+    map.select_targets(vec![SystemId(2)], false);
+    assert_eq!(map.selected, Some(SystemId(2)));
+    assert!(map.local.is_none());
+    map.select_targets(vec![SystemId(1), SystemId(2)], true);
+    assert!(map.local.is_none());
+    assert_eq!(map.selected, Some(SystemId(2)));
+    map.select_targets(vec![], true);
+    assert!(map.local.is_none());
+    map.select_targets(vec![SystemId(2)], true);
+    assert!(map.local.is_some());
 }

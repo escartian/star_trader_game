@@ -40,6 +40,7 @@ impl ApplicationHandler for App {
         if self.graphics.is_some() {
             return;
         }
+        self.map.reset_clock();
         match pollster::block_on(Graphics::new(event_loop)) {
             Ok(graphics) => {
                 graphics.window.request_redraw();
@@ -53,6 +54,7 @@ impl ApplicationHandler for App {
     }
 
     fn suspended(&mut self, _: &ActiveEventLoop) {
+        self.map.reset_clock();
         self.graphics = None;
         self.next_redraw = None;
     }

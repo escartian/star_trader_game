@@ -12,8 +12,7 @@ impl Map {
                     .filter(|s| self.candidates.contains(&s.id))
                 {
                     let distance = self
-                        .systems
-                        .first()
+                        .route_origin()
                         .map_or(0.0, |s| position(s).distance(position(system)));
                     if ui
                         .selectable_label(
@@ -33,7 +32,7 @@ impl Map {
             });
         }
         if let Some(system) = self.systems.iter().find(|s| Some(s.id) == self.selected) {
-            let origin = self.systems.first();
+            let origin = self.route_origin();
             let distance = origin.map_or(0.0, |s| position(s).distance(position(system)));
             ui.label(format!("{} • {}", system.name, system.star_kind.label()));
             ui.label(format!(

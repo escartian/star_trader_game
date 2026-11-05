@@ -10,8 +10,9 @@ do not build a general-purpose engine as part of the game.
 
 The first native desktop prototype implements an interactive orthographic star map
 and a scrollable market-layout fixture. The client starts an authoritative local
-session in the same process. Trading, travel, saves, and networking are not yet
-implemented; displayed market prices are sample data.
+session in the same process. You can travel between the fixture systems with
+validated fuel/range limits and automatic arrival. Trading, refuelling, saves,
+and networking are not yet implemented; market prices are sample data.
 
 ## Run
 
@@ -91,7 +92,7 @@ session. Overlapping targets appear in a dedicated chooser; ordinary labels are
 reduced where they collide. Select a star and choose **Open selected system** to inspect its planets and
 trade station. The local map uses kilometers and has its own camera. **← Galaxy**
 or Escape returns to the same galaxy view and selection. Local destinations are
-fixed fixtures; playable travel and docking are still planned.
+fixed fixtures; galaxy travel is implemented, while docking and refuelling remain planned.
 
 Use **Depth slice** to filter dense maps by X/Y/Z coordinate and thickness in
 light-years. Hidden systems remain in the system list; **Focus selection** reveals
@@ -100,3 +101,17 @@ map illustration, plus a larger preview when selected. See [art sources](assets/
 
 Development checks: `./tools/check.sh` runs source-length checks (500-line limit),
 rustfmt, strict Clippy and tests. See [coding standard](docs/CODING_STANDARD.md).
+
+In the galaxy view, **double-click a star** to inspect its system. Single click
+selects it; ambiguous overlaps keep the candidate chooser open. **Open selected
+system** remains available for touch users. Local stars and planets are drawn
+procedurally, with larger symbolic sizes than the small Blender station sprite.
+Only the station is Blender-authored; stars/planets are not Blender models.
+
+Select a destination and use **Travel** in the ship panel. The authority validates
+the quote, owner, jump range and fuel. Single-player runs continuously at one
+simulation tick per second; one tick represents an in-world hour. Travel to Meridian
+from Sol costs 15 fuel and takes about 15 seconds. The ship panel reports arrival.
+Suspending/resuming the app pauses its clock. Multiplayer will use explicit turns;
+there is no network/turn resolver yet. Refuelling is not implemented, so fuel is
+limited in this prototype and restarting the app begins a fresh session.

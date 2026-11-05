@@ -1,5 +1,6 @@
 mod desktop;
 mod map;
+mod session;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut session = game_server::Session::default();
@@ -8,6 +9,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Offline session (in-process authority): {snapshot:#?}");
         return Ok(());
     }
-    let game_protocol::ServerMessage::GalaxySnapshot { systems, .. } = snapshot;
-    desktop::run(map::Map::new(systems))
+    let game_protocol::ServerMessage::GalaxySnapshot { systems, .. } = snapshot else {
+        return Err("Unable to start local galaxy session".into());
+    };
+    desktop::run(map::Map::new(systems, session))
 }

@@ -1,5 +1,7 @@
 //! Simulation types and rules. No graphics, networking, or filesystem access.
 
+pub mod travel;
+
 /// Stable identity; never use a display name or array index as an entity ID.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct SystemId(pub u64);

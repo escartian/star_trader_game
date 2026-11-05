@@ -32,13 +32,14 @@ impl Map {
             .hover_pos()
             .map(|p| pick(&self.systems, &self.camera, rect, p, &self.slice))
             .unwrap_or_default();
-        if response.clicked() {
-            self.candidates = response
+        if response.clicked() || response.double_clicked() {
+            let candidates = response
                 .interact_pointer_pos()
                 .map(|p| pick(&self.systems, &self.camera, rect, p, &self.slice))
                 .unwrap_or_default();
-            if self.candidates.len() == 1 {
-                self.selected = self.candidates.first().copied();
+            self.select_targets(candidates, response.double_clicked());
+            if self.local.is_some() {
+                ui.ctx().request_repaint();
             }
         }
         if !hover.is_empty() {
@@ -52,7 +53,7 @@ impl Map {
             });
         }
         if let (Some(origin), Some(target)) = (
-            self.systems.first(),
+            self.route_origin(),
             self.systems
                 .iter()
                 .find(|s| Some(s.id) == self.selected && self.slice.contains(s.position)),

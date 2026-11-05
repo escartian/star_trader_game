@@ -1,4 +1,5 @@
 mod render;
+mod scale;
 mod station;
 
 use super::camera::Camera;
@@ -29,11 +30,7 @@ fn pick(system: &StarSystem, camera: &Camera, rect: Rect, pointer: Pos2) -> Vec<
             let point = camera.project(view_position(body), rect);
             rect.contains(point)
                 && pointer.distance(point)
-                    <= if body.kind == BodyKind::Station {
-                        40.0
-                    } else {
-                        24.0
-                    }
+                    <= (scale::SymbolScale::new(camera.zoom).body_radius(body.kind) + 6.0).max(24.0)
         })
         .map(|body| body.id)
         .collect()
@@ -100,7 +97,7 @@ impl LocalView {
             ui.heading(&self.system.name);
         });
         ui.label(format!("{} • local system", self.system.star_kind.label()));
-        ui.label("Fixed navigation destinations • travel and docking are not yet implemented");
+        ui.label("Inspecting this system • your ship location is shown below; docking is not implemented");
         ui.horizontal_wrapped(|ui| {
             if ui.button("Reset").clicked() {
                 self.camera = Camera::default();

@@ -26,11 +26,11 @@ impl StationArt {
         }
     }
 
-    pub(super) fn paint(&self, painter: &Painter, center: Pos2) {
+    pub(super) fn paint(&self, painter: &Painter, center: Pos2, size: f32) {
         if let Some(texture) = &self.texture {
             painter.image(
                 texture.id(),
-                Rect::from_center_size(center, Vec2::splat(88.0)),
+                Rect::from_center_size(center, Vec2::splat(size)),
                 Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
                 Color32::WHITE,
             );
@@ -38,7 +38,7 @@ impl StationArt {
             // Preserve a recognizable destination if artwork fails to decode.
             painter.circle_stroke(
                 center,
-                10.0,
+                size * 0.3,
                 egui::Stroke::new(2.0_f32, Color32::LIGHT_GREEN),
             );
         }

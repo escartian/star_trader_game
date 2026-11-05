@@ -10,8 +10,8 @@ feasibility and the playable simulation remain open. See docs/PLATFORM_STATUS.md
 - [x] Create core, protocol, server, and client crates with a compiling fixture.
 - [x] Record the no-engine architecture and 3D map interaction plan.
 - [x] Record initial design decisions: premium/offline-first single-player with
-  optional multiplayer is the working assumption; world time advances through
-  explicit simulation ticks/actions in the first prototype.
+  optional multiplayer is the working assumption. Rules use discrete ticks;
+  single-player schedules them continuously, multiplayer will resolve explicit turns.
 - [x] Record working coordinate units, travel rules, and a concrete first-session goal
   in [first-session rules](docs/FIRST_SESSION.md).
   Proposed goal: earn enough to buy a larger cargo hold in roughly 20–30 minutes.
@@ -65,7 +65,7 @@ original Blender-authored transparent sprite; editable source/export script are 
 in assets/ and tools/art/. PNG decoding is isolated in the local artwork module.
 Phase 2 remains incomplete: device interaction and manual acceptance scenarios
 still require work. Local-system navigation is implemented with fixed destinations;
-travel/docking remain simulation work in phase 3. Phase 1 platform blockers remain
+galaxy travel has its first authoritative implementation; local docking is pending. Phase 1 platform blockers remain
 open; these map changes extend the existing prototype without adding a full UI.
 
 ## 3. Build one authoritative local session
@@ -73,9 +73,12 @@ open; these map changes extend the existing prototype without adding a full UI.
 - [ ] Define stable entity IDs, separate galaxy/local positions, fixed-unit money,
   cargo quantities, ships, fleets, markets, and simulation time.
 - [x] Add reusable session handling to the server package; invoke it in-process
-  for offline play. Snapshot command only so far; simulation commands remain below.
-- [ ] Implement commands, validation, typed errors, events and visible snapshots.
-- [ ] Add movement range, fuel costs, travel time and arrival handling.
+  for offline play. Galaxy/session snapshots, travel previews and departures are handled.
+- [x] Implement initial travel commands, validation, typed errors, events and visible snapshots.
+  Commands carry ship/destination IDs and expected revisions, never a trusted owner ID.
+- [x] Add movement range, fuel costs, travel time and arrival handling.
+  Exact integer distance/ceil rounding, checked time arithmetic and host-tick arrivals;
+  the client displays fuel, location, quotes, errors and automatic travel progress.
 - [ ] Validate fuel/capacity/ownership and apply each command atomically.
 - [ ] Add seeded generation with a guaranteed usable start and reachable markets.
 - [ ] Keep hidden world state out of client snapshots when discovery is introduced.
@@ -144,8 +147,9 @@ Avoid a separate tactical combat game unless playtesting establishes a need.
 - [ ] Use TLS for public connections and bounds on message size/request frequency.
 - [ ] Reject stale trades, prevent duplicate actions after retry, and resync snapshots.
 - [ ] Handle reconnect, server restart, disconnect during travel and concurrent trades.
-- [ ] Choose and document multiplayer time progression; isolate incompatible offline
-  and shared-world timing policies behind session configuration.
+- [ ] Implement shared-turn collection/resolution and session timing configuration.
+  Direction chosen: continuous single-player over discrete ticks; explicit turns for
+  multiplayer. Host-only clock advancement is separate from player commands.
 - [ ] Test two clients competing for the same stock and retrying the same purchase.
 
 **Done when:** two clients share one consistent world, reconnect safely, and cannot

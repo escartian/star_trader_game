@@ -113,3 +113,29 @@ inspector at desktop/phone sizes. The dense phone/desktop tessellation test now
 exercises an enabled slice. `./tools/check.sh` additionally enforces source length,
 formatting and strict Clippy. Interactive GPU, touch and device lifecycle checks
 remain open, as do the previously documented mobile SDK gaps.
+
+## Relative scale, double-click navigation and initial travel
+
+Local symbols now share a size hierarchy that scales gently with zoom: star radii
+26–44 points by class, gas-giant radius 18, rocky-planet radius 11, station sprite
+22 points across at default zoom. Selection rings, label offsets and pick targets
+use the corresponding radii, retaining minimum touch targets. The station inspector
+remains a larger illustration. Only the station is Blender-authored; stars and
+planets are procedural egui shapes. These are symbolic sizes, not physical ratios.
+
+Double-clicking an unambiguous galaxy target enters its local view; ambiguous or
+empty picks do not enter a system. The visible Open button remains available.
+An automated check covers the transition decision alongside existing navigation tests.
+
+Initial travel is authoritative: typed player/ship IDs, exact integer range and
+fuel rounding, revisioned quotes, departures, journeys and arrivals. Checked
+arithmetic and validation complete before mutation. Host-only tick advancement is
+not a player command. The offline clock advances one tick per second, catches idle
+time up on input, schedules updates during journeys and pauses on suspend/resume.
+Shared multiplayer turns, network identity, retries/resync, cargo/economy,
+refuelling, saves and seeded generation remain open.
+
+Behavior checks cover exact range/fuel boundaries, overflow, unauthorized/stale/
+unknown commands, rejection atomicity, duplicate departure rejection, host-driven
+arrival, fractional-clock accumulation and double-click disambiguation. Device,
+interactive GPU and mobile lifecycle checks remain pending.

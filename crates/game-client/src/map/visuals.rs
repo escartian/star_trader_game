@@ -79,7 +79,22 @@ pub fn background(painter: &Painter, rect: Rect, caption: &str) {
 }
 
 pub fn star(painter: &Painter, center: Pos2, kind: StarKind, selected: bool, hovered: bool) {
-    let (color, radius) = appearance(kind);
+    draw_star(painter, center, kind, appearance(kind).1, selected, hovered);
+}
+
+pub fn star_with_radius(painter: &Painter, center: Pos2, kind: StarKind, radius: f32) {
+    draw_star(painter, center, kind, radius, false, false);
+}
+
+fn draw_star(
+    painter: &Painter,
+    center: Pos2,
+    kind: StarKind,
+    radius: f32,
+    selected: bool,
+    hovered: bool,
+) {
+    let color = appearance(kind).0;
     glow(
         painter,
         center,

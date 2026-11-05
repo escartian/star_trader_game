@@ -25,6 +25,7 @@ pub struct Map {
     pan_tool: bool,
     local: Option<local::LocalView>,
     slice: DepthSlice,
+    session: crate::session::LocalSession,
 }
 
 fn position(system: &StarSystem) -> DVec3 {
@@ -53,7 +54,7 @@ fn pick(
 }
 
 impl Map {
-    pub fn new(systems: Vec<StarSystem>) -> Self {
+    pub fn new(systems: Vec<StarSystem>, authority: game_server::Session) -> Self {
         let selected = systems.first().map(|s| s.id);
         Self {
             session_systems: systems.clone(),
@@ -66,6 +67,7 @@ impl Map {
             pan_tool: false,
             local: None,
             slice: DepthSlice::default(),
+            session: crate::session::LocalSession::new(authority),
         }
     }
 
@@ -102,13 +104,44 @@ impl Map {
         }
     }
 
+    fn select_targets(&mut self, candidates: Vec<SystemId>, enter_system: bool) {
+        self.candidates = candidates;
+        if self.candidates.len() == 1 {
+            self.selected = self.candidates.first().copied();
+            if enter_system {
+                self.open_selected_system();
+            }
+        }
+    }
+
     fn open_selected_system(&mut self) {
         if let Some(system) = self.systems.iter().find(|s| Some(s.id) == self.selected) {
             self.local = Some(local::LocalView::new(system.clone()));
         }
     }
 
+    pub fn reset_clock(&mut self) {
+        self.session.reset_clock();
+    }
+
+    fn route_origin(&self) -> Option<&StarSystem> {
+        if self.scene == Scene::Session {
+            self.systems.iter().find(|s| s.id == self.session.origin())
+        } else {
+            self.systems.first()
+        }
+    }
+
     pub fn ui(&mut self, ctx: &egui::Context) {
+        self.session.update_clock(ctx);
+        egui::TopBottomPanel::bottom("ship_status").show(ctx, |ui| {
+            let target = if self.scene == Scene::Session {
+                self.selected
+            } else {
+                None
+            };
+            self.session.ui(ui, target, &self.session_systems);
+        });
         if let Some(local) = &mut self.local {
             if local.ui(ctx) {
                 self.local = None;
@@ -159,7 +192,7 @@ impl Map {
                 if !ctx.wants_keyboard_input() && ui.input(|i| i.key_pressed(egui::Key::F)) {
                     self.focus_selection();
                 }
-                ui.label("Tap to select • drag to orbit • Pan tool to move • wheel/slider to zoom");
+                ui.label("Tap to select • double-click to inspect • drag to orbit • Pan tool to move • wheel/slider to zoom");
                 if self.slice.ui(ui) {
                     self.candidates.clear();
                 }

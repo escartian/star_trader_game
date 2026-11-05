@@ -1,4 +1,7 @@
+mod labels;
+mod layout;
 mod render;
+use layout::{display_position, moon_parent};
 mod scale;
 
 use super::{
@@ -6,7 +9,7 @@ use super::{
     camera::Camera,
 };
 use egui::{Pos2, Rect};
-use game_core::{BodyId, LocalBody, LocalPosition, StarSystem};
+use game_core::{BodyId, BodyKind, LocalBody, LocalPosition, StarSystem};
 use glam::DVec3;
 
 /// Explicit view conversion only. Simulation coordinates always remain kilometers.
@@ -29,7 +32,7 @@ fn pick(system: &StarSystem, camera: &Camera, rect: Rect, pointer: Pos2) -> Vec<
         .bodies
         .iter()
         .filter(|body| {
-            let point = camera.project(view_position(body), rect);
+            let point = camera.project(display_position(system, body), rect);
             rect.contains(point)
                 && pointer.distance(point)
                     <= (scale::SymbolScale::new(camera.zoom).body_radius(body.kind) + 6.0).max(24.0)
@@ -78,7 +81,7 @@ impl LocalView {
             .iter()
             .find(|b| Some(b.id) == self.selected)
         {
-            self.camera.focus_on(view_position(body));
+            self.camera.focus_on(display_position(&self.system, body));
         } else {
             self.camera.focus_on(DVec3::ZERO);
         }
@@ -187,7 +190,21 @@ impl LocalView {
                 self.system.name
             ));
             ui.label("Marker sizes are symbolic; local coordinates are independent of galaxy light-years.");
-            if !rect.contains(self.camera.project(view_position(body), rect)) {
+            if body.kind == BodyKind::Moon
+                && let Some(parent) = moon_parent(&self.system, body)
+            {
+                let distance = kilometers(body.position).distance(kilometers(parent.position));
+                let note = if display_position(&self.system, body) != view_position(body) {
+                    " • spacing exaggerated in the diagram"
+                } else {
+                    ""
+                };
+                ui.label(format!("{distance:.0} km from {}{note}", parent.name));
+            }
+            if !rect.contains(
+                self.camera
+                    .project(display_position(&self.system, body), rect),
+            ) {
                 ui.label("Destination is outside the map. Use Focus selection to reveal it.");
             }
         }

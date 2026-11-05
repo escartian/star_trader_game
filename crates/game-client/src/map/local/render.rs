@@ -1,6 +1,6 @@
-use super::{LocalView, pick, scale::SymbolScale, view_position};
+use super::{LocalView, labels, layout::display_position, pick, scale::SymbolScale};
 use crate::map::{art::ArtKind, visuals};
-use egui::{Color32, Pos2, Rect, Sense, Stroke, Vec2};
+use egui::{Color32, Rect, Sense, Stroke, Vec2};
 use game_core::BodyKind;
 use glam::DVec3;
 
@@ -58,7 +58,11 @@ impl LocalView {
             .find(|b| Some(b.id) == self.selected)
         {
             painter.line_segment(
-                [star, self.camera.project(view_position(body), rect)],
+                [
+                    star,
+                    self.camera
+                        .project(display_position(&self.system, body), rect),
+                ],
                 Stroke::new(1.0_f32, Color32::from_rgb(92, 180, 183)),
             );
         }
@@ -79,9 +83,23 @@ impl LocalView {
         }
         let mut bodies: Vec<_> = self.system.bodies.iter().collect();
         bodies.sort_by_key(|b| Some(b.id) != self.selected);
-        let mut labels: Vec<Rect> = Vec::new();
+        let marker_bounds: Vec<_> = bodies
+            .iter()
+            .map(|body| {
+                let point = self
+                    .camera
+                    .project(display_position(&self.system, body), rect);
+                Rect::from_center_size(
+                    point,
+                    Vec2::splat((scale.body_radius(body.kind) + 4.0) * 2.0),
+                )
+            })
+            .collect();
+        let mut label_bounds: Vec<Rect> = Vec::new();
         for body in bodies {
-            let point = self.camera.project(view_position(body), rect);
+            let point = self
+                .camera
+                .project(display_position(&self.system, body), rect);
             let selected = Some(body.id) == self.selected;
             let radius = scale.body_radius(body.kind);
             let size = if body.kind == BodyKind::Station {
@@ -108,20 +126,18 @@ impl LocalView {
                 egui::FontId::proportional(13.0),
                 Color32::WHITE,
             );
-            // Keep names readable near the right/bottom edges of a narrow map.
-            let size = galley.size();
-            let offset = scale.body_radius(body.kind) + 10.0;
-            let min = Pos2::new(
-                (point.x + offset)
-                    .min(rect.right() - size.x - 4.0)
-                    .max(rect.left() + 4.0),
-                (point.y - 20.0).clamp(rect.top() + 4.0, rect.bottom() - size.y - 4.0),
-            );
-            let label = Rect::from_min_size(min, size);
             if rect.contains(point)
-                && (selected || !labels.iter().any(|r| r.expand(6.0).intersects(label)))
+                && let Some(label) = labels::place(
+                    point,
+                    radius,
+                    galley.size(),
+                    rect,
+                    &label_bounds,
+                    &marker_bounds,
+                    selected,
+                )
             {
-                labels.push(label);
+                label_bounds.push(label);
                 painter.rect_filled(label.expand(3.0), 3.0, Color32::from_black_alpha(150));
                 painter.galley(label.min, galley, Color32::WHITE);
             }

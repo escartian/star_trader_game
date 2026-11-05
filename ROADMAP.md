@@ -48,10 +48,6 @@ Do not mark the platform phase complete on the basis of desktop/offscreen checks
   and gesture-conflict verification remain open.
 - [x] Show actual 3D distance and a selected route, independent of camera angle.
   Distance uses world positions; the overlap fixture covers distinct depths.
-- [x] Add an adjustable depth slice for dense/overlapping fixtures.
-  Choose X/Y/Z, center and thickness in light-years. Bounds/count are visible;
-  outside stars are hidden and excluded from picking. Focus reveals a hidden
-  selection without changing thickness; returning from local view preserves the slice.
 - [x] Switch between galaxy and local system views while preserving selection.
   Open selected system shows fixed planets/stations in local kilometers. The Galaxy
   breadcrumb/Escape returns without changing galaxy camera, selection or candidates.
@@ -66,6 +62,9 @@ no simulation randomness or continuous animation. Local stars, planets, moons,
 asteroids and the trade port use original Blender-authored transparent sprites;
 editable sources/export scripts are kept in assets/ and tools/art/. Shared artwork
 preloads once per egui context; galaxy markers and halos remain procedural.
+Depth slicing has been removed by user direction; use camera controls and overlap
+selection for dense maps. Moons are spaced schematically without changing saved
+kilometer coordinates, using consistent drawing/picking/focus positions.
 Phase 2 remains incomplete: device interaction and manual acceptance scenarios
 still require work. Local-system navigation is implemented with fixed destinations;
 galaxy travel is authoritative; local docking is pending. Mobile platform work
@@ -124,14 +123,20 @@ from config/economy.json. The proposed 20–30 minute pacing is not validated.
   keeps the window open. Real lifecycle/device checks remain unverified/deferred.
 
 Save slots use schema-1 JSON with strict load validation, backup recovery and
-atomic replacement. Pause/speed/guide controls and logs are runtime settings,
-not persisted preferences. Loading restores saved definitions and live balances.
+atomic replacement. Client settings separately remember save slot/path, tick speed,
+guide visibility and autosave. Pause and logs remain transient. Loading restores
+saved definitions and live balances.
 Actual window/device lifecycle and pacing still need acceptance testing.
 
 **Done when:** players can quit mid-session and resume the same state. Verify save
 round trips and failed-write recovery. This phase is required before external testing.
 
 ## 6. Test whether the game deserves expansion
+
+Feedback recorded so far from the project owner: depth slicing is unnecessary and
+moons were visually merged with planets. The filter has been removed; schematic
+moon spacing and marker-aware labels address the overlap. This is not a 5–10 player
+study; upgrade pacing and the interesting decisions still need observation.
 
 - [ ] Give the small build to 5–10 trading/management players.
 - [ ] Observe navigation, first profitable delivery, upgrade discovery and return play.
@@ -144,7 +149,21 @@ Do not expand the feature list to compensate for an uninteresting economy.
 
 ## 7. Add risk, identity and progression
 
-- [ ] Delivery contracts with deadlines, deposits and clear failure consequences.
+The current first-delivery guide is trader onboarding, not a universal questline.
+Plan explicit trader, spy, soldier and pirate progression using shared mission,
+ship, faction, combat and legal-state foundations. See
+[player specializations](docs/PLAYER_SPECIALIZATIONS.md). These routes are not
+implemented yet; players should be able to mix specializations (working assumption).
+
+
+- [ ] Shared authoritative mission/contract lifecycle with objectives, tick deadlines,
+  deposits, outcomes, rewards and saved progress; route-specific JSON definitions.
+- [ ] Trader route: commerce, logistics and delivery/supply contracts.
+- [ ] Spy route: espionage, covert delivery, reconnaissance, cover and detection.
+- [ ] Soldier route: patrol, escort, military deployments and combat progression.
+- [ ] Pirate route: robbery, combat, stolen cargo/fencing, wanted status and police evasion.
+- [ ] Shared control/travel/save onboarding followed by route-specific introductions;
+  a trading delivery must not be mandatory for every specialization.
 - [ ] A small encounter set: trader, inspection, distress call, pirate demand.
 - [ ] Choices to negotiate, flee, surrender cargo or fight, with understandable odds.
 - [ ] Simple combat resolution driven by relevant equipment, damage and repairs.
@@ -202,5 +221,5 @@ multiple galaxies, MMO-scale hosting, modding infrastructure and a custom engine
 
 Follow [coding standard](docs/CODING_STANDARD.md) and run `./tools/check.sh` before
 commits. Maintained source files are checked against the 500-line limit; map
-state, rendering, panels, assets, slice filtering and tests have separate modules.
+state, rendering, panels, assets and tests have separate modules.
 Clippy denies warnings. The same command is configured for GitHub CI.

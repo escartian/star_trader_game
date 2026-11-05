@@ -36,9 +36,8 @@ mouse button to complete an essential action. UI panels consume input before the
   overlap, list candidates with name and distance instead of choosing arbitrarily.
 - Highlight reachable neighbors and draw the selected journey; use text/symbols as
   well as color to distinguish states.
-- For dense regions, add a slice with an explicit axis (X/Y/Z), center and thickness
-  in galaxy units. Show the slice boundaries and whether stars are faded or hidden.
-- Persistent selection survives slice changes; offer focus/reveal when it is hidden.
+- Use orbit/presets, focus and the overlap candidate list for dense regions.
+  Depth slicing is deliberately omitted by user direction.
 - Keep rotation around the selected/focused point and pan separate from world state.
 
 ## Levels of detail
@@ -81,3 +80,17 @@ Inspecting or double-clicking a system does not move the ship. Market controls
 operate at the ship's current system, independently of the inspected target.
 Travel uses an explicit authority-validated command and reports tick progress.
 Continuing a saved journey selects its destination for route inspection.
+
+## Moon spacing and rotation
+
+Moons too close to a planet to read as separate markers receive an exaggerated
+separation in the system diagram. The nearest planet is used as the presentation
+anchor; saved positions and kilometer distances are not changed or migrated.
+Drawing, picking, routes and Focus share the displayed positions. Label placement
+reserves all body markers, preventing a moon from being hidden by a planet's name.
+Projection overlap is still possible from some camera angles; the chooser remains.
+
+Slow planet rotation could add life, but it is deferred: the current sprites have
+lighting baked into a single view. A future surface shader or properly baked
+rotation frames should keep illumination consistent; spinning the sprite in 2D
+would not. Do not introduce an idle animation loop for this decorative effect now.

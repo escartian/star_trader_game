@@ -8,9 +8,9 @@ Mobile builds and device checks are deferred by user direction.
 - [ ] Launch, resize and change display DPI; confirm text/sprites and input align.
 - [ ] Single-click/tap selects; double-click enters an unambiguous system only.
 - [ ] Open the overlap fixture, inspect all candidates, orbit, focus and reset.
-- [ ] Slice the dense fixture; hidden selections remain selectable/revealable.
-- [ ] Enter a local system and return; galaxy camera/selection/slice are preserved.
-- [ ] Verify transparent celestial artwork, scale hierarchy and readable labels.
+- [ ] Use camera presets/orbit and candidate selection to inspect the dense fixture.
+- [ ] Enter a local system and return; galaxy camera/selection are preserved.
+- [ ] Verify transparent celestial artwork, scale hierarchy, moon separation and readable labels.
 - [ ] Minimize/restore and suspend/resume without losing state or advancing background time.
 - [ ] Observe idle redraw/power behavior rather than infer it from the event loop.
 
@@ -31,6 +31,7 @@ Mobile builds and device checks are deferred by user direction.
 - [ ] Verify a failed save leaves the window open with actionable recovery text.
 - [ ] Recover a deliberately damaged copied primary from its backup; keep real progress untouched.
 - [ ] Confirm pause/speed behavior while trading, travelling and loading.
+- [ ] Select slot 2, save, quit and relaunch; verify remembered slot, speed, guide and autosave choices.
 
 ## Before expanding scope
 

@@ -38,7 +38,7 @@ launch reported macOS desktop-service errors. Manual interactive checks remain o
 
 `./tools/check.sh` enforces the 500-line source-file limit, formatting, strict
 Clippy and workspace tests. Tests cover map projection/picking/focus, overlapping
-candidates, slice reveal, view-state preservation, double-click target decisions,
+candidates, view-state preservation, double-click target decisions,
 texture decoding/cache reuse, and UI tessellation at 320 × 480 and 1000 × 720.
 
 Travel checks cover exact range/fuel boundaries, ownership, stale commands,
@@ -63,3 +63,22 @@ Only desktop Rust targets were installed when inspected. The iOS SDK lookup fail
 ANDROID_HOME/ANDROID_NDK_HOME were unset. No mobile shells, signing, touch-device,
 safe-area or device lifecycle evidence is provided. These remain open milestones.
 Desktop lifecycle checks and Windows/Linux packaging also remain unverified.
+
+## Navigation simplification and return-to-game follow-up
+
+Depth slicing has been removed at user request. Moon diagram spacing is exaggerated
+without changing save/world coordinates. Markers, picking, Focus and inspection
+share one layout; labels avoid marker bounds. A test checks that an existing
+fixture moon remains separately pickable/focusable without mutating its state.
+
+Separate schema-1 `data/settings.json` now remembers save path/slot, tick speed,
+guide visibility and autosave. Preferences use validated atomic JSON replacement;
+invalid preferences report a fallback to defaults without modifying game saves.
+CLI `--save` overrides remembered selection. Pause remains transient, and capture/
+headless commands do not write settings. Checks cover preference round trips,
+invalid data, preserving a last-good settings file and restoring slot/control state
+without altering simulation state.
+
+The trader guide is explicitly labelled as such. Spy, soldier and pirate mission
+routes are planned in PLAYER_SPECIALIZATIONS.md; no quest/role system is claimed.
+Planet rotation remains deferred pending lighting-consistent surface animation.

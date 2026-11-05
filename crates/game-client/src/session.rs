@@ -3,6 +3,7 @@ mod guide;
 mod market;
 mod panel;
 mod saves;
+mod settings;
 use game_core::economy::Economy;
 use game_core::{
     SystemId,
@@ -24,6 +25,7 @@ pub struct LocalSession {
     loaded_galaxy: Option<Vec<game_core::StarSystem>>,
     clock: Instant,
     notice: String,
+    preferences_path: Option<std::path::PathBuf>,
 }
 
 impl LocalSession {
@@ -43,6 +45,7 @@ impl LocalSession {
             loaded_galaxy: None,
             clock: Instant::now(),
             notice: String::new(),
+            preferences_path: None,
         }
     }
 

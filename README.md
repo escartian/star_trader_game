@@ -5,7 +5,7 @@ through a readable native map. No game engine, browser, webview or JavaScript.
 
 ## Current prototype
 
-- Galaxy navigation: orbit/pan/zoom, presets, focus, depth slicing, overlap chooser,
+- Galaxy navigation: orbit/pan/zoom, presets, focus, overlap chooser,
   double-click system inspection, and separate local views with planets/stations.
 - Blender-authored star, planet, moon, asteroid and station models, baked to
   transparent sprites. Shared textures preload once; halos/selection stay procedural.
@@ -35,7 +35,8 @@ cargo run -p game-client -- --new --headless > /tmp/star-trader-save.json
 ./tools/check.sh
 ```
 
-The default path is `data/slot-1.json`; `--save PATH` selects another file. Launch
+The initial path is `data/slot-1.json`. Later launches remember the selected save
+via `data/settings.json`; `--save PATH` explicitly selects another file. Launch
 resumes that file if it exists, including backup recovery; otherwise it starts a
 new session. To resume another UI slot, select it and choose Continue. **Session / saves** provides New,
 Save, Continue, slot selection, Pause and 1×/2×/4× tick speeds. Autosave runs on
@@ -80,6 +81,14 @@ journey, tick, cargo and market state. Continuing a save does not regenerate it
 from the seed or apply newly edited economy definitions. The live authority stays
 in memory; trades do not read or rewrite JSON files.
 
+Save slot/path, tick speed, guide visibility and autosave choices are remembered
+in separate client-settings JSON. Pause and session logs apply to the current run.
+
+The current delivery guide is the **trader introduction**, not a generic questline.
+Trader, spy (espionage), soldier (warfare) and pirate (robbery/police evasion)
+progression are now explicit planned routes; see
+[player specializations](docs/PLAYER_SPECIALIZATIONS.md). They are not playable yet.
+
 See [JSON data and saves](docs/DATA_FORMATS.md) and [working rules](docs/FIRST_SESSION.md).
 
 ## Workspace and checks
@@ -107,7 +116,11 @@ Editable sources and export commands are documented in [assets/README.md](assets
 Runtime sprites are static, screen-facing illustrations with symbolic sizes;
 world positions/distances retain their own units. Baking improves the available
 detail, but no rendering-performance advantage has been benchmarked. No animation
-frame sets are preloaded; effects remain lightweight procedural overlays.
+frame sets are preloaded; effects remain lightweight procedural overlays. Planet
+rotation is deferred until surface rotation can keep lighting/shape consistent;
+rotating a flat baked image would rotate its lighting too. Moon spacing is
+exaggerated in the diagram for readability, while kilometer readings and saves
+retain actual positions. Drawing, picking and Focus share that schematic layout.
 
 Render the real UI to a GPU texture for visual review without a desktop window:
 

@@ -40,9 +40,7 @@ impl Map {
                 distance,
                 origin.map_or("origin", |s| s.name.as_str())
             ));
-            if !self.slice.contains(system.position) {
-                ui.label("Selection is outside the depth slice. Focus selection reveals it.");
-            } else if !rect.contains(self.camera.project(position(system), rect)) {
+            if !rect.contains(self.camera.project(position(system), rect)) {
                 ui.label("Selection is outside the map. Use Focus selection to reveal it.");
             }
         }
@@ -67,16 +65,7 @@ impl Map {
                             if ui
                                 .selectable_label(
                                     Some(system.id) == self.selected,
-                                    format!(
-                                        "{} — {}{}",
-                                        system.name,
-                                        system.star_kind.label(),
-                                        if self.slice.contains(system.position) {
-                                            ""
-                                        } else {
-                                            " (outside slice)"
-                                        }
-                                    ),
+                                    format!("{} — {}", system.name, system.star_kind.label()),
                                 )
                                 .clicked()
                             {

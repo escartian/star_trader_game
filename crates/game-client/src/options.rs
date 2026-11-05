@@ -8,6 +8,7 @@ pub struct Options {
     pub capture_view: String,
     pub seed: u64,
     pub save: PathBuf,
+    pub save_explicit: bool,
     pub economy: Option<PathBuf>,
 }
 
@@ -21,6 +22,7 @@ impl Options {
             capture_view: "galaxy".into(),
             seed: 0,
             save: PathBuf::from("data/slot-1.json"),
+            save_explicit: false,
             economy: None,
         };
         let mut args = std::env::args().skip(1);
@@ -45,7 +47,10 @@ impl Options {
                         .parse()
                         .map_err(|_| "Invalid seed")?
                 }
-                "--save" => options.save = args.next().ok_or("--save needs a file path")?.into(),
+                "--save" => {
+                    options.save_explicit = true;
+                    options.save = args.next().ok_or("--save needs a file path")?.into();
+                }
                 "--economy" => {
                     options.new = true;
                     options.economy = Some(args.next().ok_or("--economy needs a JSON file")?.into())

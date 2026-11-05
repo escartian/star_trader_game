@@ -10,17 +10,7 @@ fn overlapping_targets_are_all_pickable_and_distance_is_view_independent() {
         pitch: 0.0,
         ..Camera::default()
     };
-    assert_eq!(
-        pick(
-            &systems,
-            &camera,
-            rect,
-            rect.center(),
-            &DepthSlice::default()
-        )
-        .len(),
-        5
-    );
+    assert_eq!(pick(&systems, &camera, rect, rect.center()).len(), 5);
     let distance = position(&systems[0]).distance(position(&systems[4]));
     assert_eq!(distance, 16.0);
     camera.yaw = 1.0;
@@ -32,16 +22,7 @@ fn overlapping_targets_are_all_pickable_and_distance_is_view_independent() {
         position(&systems[0]).distance(position(&systems[4])),
         distance
     );
-    assert!(
-        pick(
-            &systems,
-            &camera,
-            rect,
-            Pos2::new(-100.0, -100.0),
-            &DepthSlice::default()
-        )
-        .is_empty()
-    );
+    assert!(pick(&systems, &camera, rect, Pos2::new(-100.0, -100.0)).is_empty());
 }
 
 #[test]
@@ -68,13 +49,6 @@ fn returning_from_local_view_preserves_galaxy_context() {
         focus: DVec3::new(8.0, 4.0, 12.0),
     };
     map.candidates = vec![SystemId(1), SystemId(2)];
-    map.slice = DepthSlice {
-        enabled: true,
-        center: 4.0,
-        thickness: 24.0,
-        ..DepthSlice::default()
-    };
-    let expected_slice = DepthSlice { ..map.slice };
     let expected_camera = Camera { ..map.camera };
     map.open_selected_system();
     assert!(map.local.is_some());
@@ -94,7 +68,6 @@ fn returning_from_local_view_preserves_galaxy_context() {
     assert!(map.local.is_none());
     assert_eq!(map.selected, Some(SystemId(2)));
     assert_eq!(map.camera, expected_camera);
-    assert_eq!(map.slice, expected_slice);
     assert_eq!(map.candidates, vec![SystemId(1), SystemId(2)]);
 }
 
@@ -105,7 +78,6 @@ fn phone_and_desktop_layouts_tessellate_all_scenes() {
     for size in [Vec2::new(320.0, 480.0), Vec2::new(1000.0, 720.0)] {
         for scene in [Scene::Session, Scene::Overlap, Scene::Dense] {
             map.change_scene(scene);
-            map.slice.enabled = scene == Scene::Dense;
             let output = ctx.run(
                 egui::RawInput {
                     screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
@@ -132,34 +104,6 @@ fn phone_and_desktop_layouts_tessellate_all_scenes() {
             map.local = None;
         }
     }
-}
-
-#[test]
-fn hidden_stars_cannot_be_picked_and_focus_reveals_selection() {
-    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
-    map.change_scene(Scene::Overlap);
-    map.slice = DepthSlice {
-        enabled: true,
-        thickness: 1.0,
-        ..DepthSlice::default()
-    };
-    let rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(320.0, 240.0));
-    assert_eq!(
-        pick(&map.systems, &map.camera, rect, rect.center(), &map.slice),
-        vec![SystemId(1002)]
-    );
-    map.selected = Some(SystemId(1004));
-    map.candidates = vec![SystemId(1002)];
-    assert!(!map.slice.contains(map.systems[4].position));
-    map.focus_selection();
-    assert_eq!(map.selected, Some(SystemId(1004)));
-    assert!(map.candidates.is_empty());
-    assert!(map.slice.contains(map.systems[4].position));
-    assert_eq!(map.slice.thickness, 1.0);
-    assert_eq!(
-        pick(&map.systems, &map.camera, rect, rect.center(), &map.slice),
-        vec![SystemId(1004)]
-    );
 }
 
 #[test]

@@ -56,3 +56,34 @@ fn selected_station_inspector_tessellates_at_phone_and_desktop_sizes() {
         );
     }
 }
+
+#[test]
+fn schematic_moon_is_separate_pickable_and_keeps_saved_coordinates() {
+    let system = game_core::demo_galaxy().remove(0);
+    let moon = system
+        .bodies
+        .iter()
+        .find(|body| body.kind == BodyKind::Moon)
+        .unwrap();
+    let parent = moon_parent(&system, moon).unwrap();
+    let original = system.clone();
+    let mut local = LocalView::new(system.clone());
+    let rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(1000.0, 400.0));
+    let moon_point = local.camera.project(display_position(&system, moon), rect);
+    let planet_point = local
+        .camera
+        .project(display_position(&system, parent), rect);
+    assert!(moon_point.distance(planet_point) > 35.0);
+    assert_eq!(
+        pick(&system, &local.camera, rect, moon_point),
+        vec![moon.id]
+    );
+    local.selected = Some(moon.id);
+    local.focus();
+    assert_eq!(
+        local.camera.project(display_position(&system, moon), rect),
+        rect.center()
+    );
+    assert_eq!(system, original);
+    assert_eq!(local.system, original);
+}

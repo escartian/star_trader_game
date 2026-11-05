@@ -55,8 +55,15 @@ and suspend; a failed close-save keeps the window open for recovery. Slots and a
 custom `--save PATH` are supported. `--headless` exports the same validated JSON
 without writing a save or advancing time.
 
-Client slot selection, pause, speed, guide visibility and event logs are runtime controls/history,
-not part of this authoritative save schema. Fleets, multiple-player accounts,
-discovery restrictions and remote identity are not implemented. Multiplayer will
-need authenticated per-player state and explicit turn resolution around the same
-rules; passing a numeric owner ID is not authentication.
+## Client settings (schema 1)
+
+`data/settings.json` separately remembers `save_path`, `slot`, `speed` (1/2/4),
+`guide` and `autosave`. Loading validates these values and their schema; invalid
+preferences fall back to defaults with a message. Changes and save/close hooks use
+atomic replacement. Settings are not world data and do not regenerate prices,
+advance ticks or change player balances. `--save PATH` overrides remembered selection.
+Pause and session logs remain transient. Headless/capture modes never write settings.
+
+Fleets, multiple-player accounts, discovery restrictions and remote identity are
+not implemented. Multiplayer will need authenticated per-player state and explicit
+turn resolution around the same rules; a numeric owner ID is not authentication.

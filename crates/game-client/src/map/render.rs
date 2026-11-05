@@ -30,12 +30,12 @@ impl Map {
         }
         let hover = response
             .hover_pos()
-            .map(|p| pick(&self.systems, &self.camera, rect, p, &self.slice))
+            .map(|p| pick(&self.systems, &self.camera, rect, p))
             .unwrap_or_default();
         if response.clicked() || response.double_clicked() {
             let candidates = response
                 .interact_pointer_pos()
-                .map(|p| pick(&self.systems, &self.camera, rect, p, &self.slice))
+                .map(|p| pick(&self.systems, &self.camera, rect, p))
                 .unwrap_or_default();
             self.select_targets(candidates, response.double_clicked());
             ui.ctx().request_repaint();
@@ -52,9 +52,7 @@ impl Map {
         }
         if let (Some(origin), Some(target)) = (
             self.route_origin(),
-            self.systems
-                .iter()
-                .find(|s| Some(s.id) == self.selected && self.slice.contains(s.position)),
+            self.systems.iter().find(|s| Some(s.id) == self.selected),
         ) {
             let route = [
                 self.camera.project(position(origin), rect),
@@ -67,11 +65,7 @@ impl Map {
             painter.line_segment(route, Stroke::new(1.0_f32, Color32::from_rgb(92, 180, 183)));
         }
         // Paint the selected star last so it stays visible.
-        let mut order: Vec<_> = self
-            .systems
-            .iter()
-            .filter(|s| self.slice.contains(s.position))
-            .collect();
+        let mut order: Vec<_> = self.systems.iter().collect();
         order.sort_by_key(|s| Some(s.id) == self.selected);
         let mut labels: Vec<Rect> = Vec::new();
         // Reserve selected label before admitting less important labels.

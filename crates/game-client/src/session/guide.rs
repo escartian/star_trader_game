@@ -26,7 +26,7 @@ impl LocalSession {
             "Compare known markets before buying return cargo. Sell where demand is higher, budget for fuel, and work toward the hold upgrade."
         };
         ui.group(|ui| {
-            ui.strong("First delivery / earnings goal");
+            ui.strong("Trader introduction / earnings goal");
             ui.label(hint);
         });
     }

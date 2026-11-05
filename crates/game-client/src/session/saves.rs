@@ -6,7 +6,7 @@ use std::path::PathBuf;
 pub(super) struct SavePanel {
     pub open: bool,
     pub path: PathBuf,
-    slot: u8,
+    pub(super) slot: u8,
     seed: u64,
     pub paused: bool,
     pub speed: u32,
@@ -31,6 +31,16 @@ impl Default for SavePanel {
 
 impl LocalSession {
     pub fn set_save_path(&mut self, path: PathBuf) {
+        if let Some(slot) = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .and_then(|name| name.strip_prefix("slot-"))
+            .and_then(|name| name.strip_suffix(".json"))
+            .and_then(|value| value.parse::<u8>().ok())
+            .filter(|slot| (1..=3).contains(slot))
+        {
+            self.saves.slot = slot;
+        }
         self.saves.path = path;
     }
 
@@ -58,12 +68,15 @@ impl LocalSession {
 
     pub fn autosave(&mut self) -> Result<(), String> {
         if !self.saves.autosave {
+            if let Err(error) = self.persist_preferences() {
+                self.record(format!("Could not save client settings: {error}"));
+            }
             return Ok(());
         }
         if !self.saves.paused {
             self.advance_to(std::time::Instant::now());
         }
-        let result = self.authority.save(&self.saves.path);
+        let result = self.save_game();
         if let Err(error) = &result {
             self.record(format!(
                 "Autosave failed: {error}. Retry Save or disable autosave before closing."
@@ -73,12 +86,18 @@ impl LocalSession {
     }
 
     pub fn show_session_controls(&mut self, ctx: &egui::Context) {
+        let previous = self.preferences();
         let mut open = self.saves.open;
         egui::Window::new("Session and saves")
             .open(&mut open)
             .vscroll(true)
             .show(ctx, |ui| self.controls_ui(ui));
         self.saves.open = open;
+        if self.preferences() != previous
+            && let Err(error) = self.persist_preferences()
+        {
+            self.record(format!("Could not save client settings: {error}"));
+        }
     }
 
     fn controls_ui(&mut self, ui: &mut egui::Ui) {
@@ -124,7 +143,7 @@ impl LocalSession {
         ui.label("Ticks advance automatically in single-player. No End Turn action is required.");
         ui.checkbox(&mut self.saves.guide, "Show first-delivery guide");
         ui.checkbox(&mut self.saves.autosave, "Autosave on close / suspend");
-        ui.label("Pause, speed and guide controls apply to this run; world/player data is stored in JSON save slots.");
+        ui.label("Save slot, speed, guide and autosave choices are remembered. Pause applies to this run.");
         if !self.notice.is_empty() {
             ui.label(&self.notice);
         }
@@ -151,7 +170,7 @@ impl LocalSession {
         ui.label("Selecting a slot does not load it. Autosave writes the current session to the selected slot; the previous valid save becomes its backup.");
         ui.horizontal(|ui| {
             if ui.button("Save current session").clicked() {
-                let result = self.authority.save(&self.saves.path);
+                let result = self.save_game();
                 self.record(result.map_or_else(
                     |error| format!("Save failed: {error}"),
                     |_| "Session saved.".into(),

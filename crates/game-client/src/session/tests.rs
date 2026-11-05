@@ -75,3 +75,43 @@ fn save_controls_restore_player_data_and_failed_loads_preserve_live_state() {
     assert_eq!(host.state, before);
     assert!(host.notice.contains("Could not load"));
 }
+
+#[test]
+fn remembered_slot_and_controls_restore_without_altering_world_state() {
+    use crate::preferences::Preferences;
+    let directory = tempfile::tempdir().unwrap();
+    let settings_path = directory.path().join("settings.json");
+    let game_path = directory.path().join("slot-3.json");
+    let mut host = LocalSession::new(game_server::Session::default());
+    let settings = Preferences {
+        save_path: game_path.clone(),
+        slot: 3,
+        speed: 4,
+        guide: false,
+        ..Preferences::default()
+    };
+    host.apply_preferences(settings.clone(), Some(settings_path.clone()))
+        .unwrap();
+    host.save_game().unwrap();
+    let restored_settings = Preferences::load(&settings_path).unwrap();
+    assert_eq!(restored_settings, settings);
+    let (session, _) = game_server::Session::load(&restored_settings.save_path).unwrap();
+    let mut restored = LocalSession::new(session);
+    restored
+        .apply_preferences(restored_settings, Some(settings_path))
+        .unwrap();
+    assert_eq!(restored.saves.path, game_path);
+    assert_eq!(restored.saves.slot, 3);
+    assert_eq!(restored.saves.speed, 4);
+    assert!(!restored.saves.guide);
+    assert!(!restored.saves.paused);
+    assert_eq!(restored.state, host.state);
+    assert_eq!(restored.economy, host.economy);
+    let invalid = Preferences {
+        speed: 0,
+        ..settings
+    };
+    let before = restored.preferences();
+    assert!(restored.apply_preferences(invalid, None).is_err());
+    assert_eq!(restored.preferences(), before);
+}

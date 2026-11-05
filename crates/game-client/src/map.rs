@@ -5,7 +5,6 @@ mod fixtures;
 mod local;
 mod panels;
 mod render;
-mod slice;
 mod visuals;
 
 use camera::Camera;
@@ -13,7 +12,6 @@ use egui::{Pos2, Rect};
 use fixtures::Scene;
 use game_core::{StarSystem, SystemId};
 use glam::DVec3;
-use slice::DepthSlice;
 
 pub struct Map {
     session_systems: Vec<StarSystem>,
@@ -25,7 +23,6 @@ pub struct Map {
     session_selection: Option<SystemId>,
     pan_tool: bool,
     local: Option<local::LocalView>,
-    slice: DepthSlice,
     session: crate::session::LocalSession,
 }
 
@@ -37,18 +34,12 @@ fn position(system: &StarSystem) -> DVec3 {
     )
 }
 
-fn pick(
-    systems: &[StarSystem],
-    camera: &Camera,
-    rect: Rect,
-    pointer: Pos2,
-    slice: &DepthSlice,
-) -> Vec<SystemId> {
+fn pick(systems: &[StarSystem], camera: &Camera, rect: Rect, pointer: Pos2) -> Vec<SystemId> {
     systems
         .iter()
         .filter(|s| {
             let point = camera.project(position(s), rect);
-            slice.contains(s.position) && rect.contains(point) && pointer.distance(point) <= 24.0
+            rect.contains(point) && pointer.distance(point) <= 24.0
         })
         .map(|s| s.id)
         .collect()
@@ -72,7 +63,6 @@ impl Map {
             session_selection: selected,
             pan_tool: false,
             local: None,
-            slice: DepthSlice::default(),
             session,
         }
     }
@@ -99,13 +89,11 @@ impl Map {
             self.camera.pitch = 0.0;
         }
         self.candidates.clear();
-        self.slice = DepthSlice::default();
     }
 
     fn focus_selection(&mut self) {
         if let Some(system) = self.systems.iter().find(|s| Some(s.id) == self.selected) {
             self.camera.focus_on(position(system));
-            self.slice.reveal(system.position);
             self.candidates.clear();
         }
     }
@@ -126,8 +114,12 @@ impl Map {
         }
     }
 
-    pub fn set_save_path(&mut self, path: std::path::PathBuf) {
-        self.session.set_save_path(path);
+    pub fn apply_preferences(
+        &mut self,
+        settings: crate::preferences::Preferences,
+        path: Option<std::path::PathBuf>,
+    ) -> Result<(), String> {
+        self.session.apply_preferences(settings, path)
     }
 
     pub fn notify(&mut self, message: String) {
@@ -159,7 +151,6 @@ impl Map {
             self.session_selection = self.selected;
             self.local = None;
             self.camera = Camera::default();
-            self.slice = DepthSlice::default();
             self.candidates.clear();
         }
         let _ = art::Artwork::preload(ctx);
@@ -201,8 +192,7 @@ impl Map {
                 ui.horizontal_wrapped(|ui| {
                     if ui.button("Reset").clicked() {
                         self.camera = Camera::default();
-                        self.slice = DepthSlice::default();
-                        self.candidates.clear();
+                                        self.candidates.clear();
                     }
                     if ui.button("Focus selection (F)").clicked() {
                         self.focus_selection();
@@ -226,20 +216,6 @@ impl Map {
                     self.focus_selection();
                 }
                 ui.label("Tap to select • double-click to inspect • drag to orbit • Pan tool to move • wheel/slider to zoom");
-                if self.slice.ui(ui) {
-                    self.candidates.clear();
-                }
-                let visible = self
-                    .systems
-                    .iter()
-                    .filter(|s| self.slice.contains(s.position))
-                    .count();
-                if self.slice.enabled {
-                    ui.label(format!(
-                        "{visible} of {} systems in slice",
-                        self.systems.len()
-                    ));
-                }
                 let rect = self.draw_galaxy(ui);
                 self.details(ui, rect);
 

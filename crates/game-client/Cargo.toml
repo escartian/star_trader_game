@@ -1,0 +1,20 @@
+[package]
+name = "game-client"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+game-core.workspace = true
+game-protocol.workspace = true
+game-server.workspace = true
+egui = "=0.31.1"
+egui-winit = { version = "=0.31.1", default-features = false, features = ["x11", "wayland"] }
+egui-wgpu = { version = "=0.31.1", default-features = false }
+winit = "=0.30.13"
+wgpu = "=24.0.1"
+glam = "=0.30.10"
+pollster = "=0.4.0"
+
+[lints]
+workspace = true

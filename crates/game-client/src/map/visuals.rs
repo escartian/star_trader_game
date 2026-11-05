@@ -1,0 +1,125 @@
+use egui::{Color32, Mesh, Painter, Pos2, Rect, Shape, Stroke, Vec2};
+use game_core::StarKind;
+
+pub fn appearance(kind: StarKind) -> (Color32, f32) {
+    match kind {
+        StarKind::YellowDwarf => (Color32::from_rgb(255, 208, 112), 5.5),
+        StarKind::RedDwarf => (Color32::from_rgb(255, 108, 78), 3.8),
+        StarKind::BlueGiant => (Color32::from_rgb(113, 180, 255), 8.0),
+        StarKind::RedGiant => (Color32::from_rgb(255, 143, 72), 10.0),
+        StarKind::WhiteDwarf => (Color32::from_rgb(217, 235, 255), 3.0),
+    }
+}
+
+/// A transparent radial fan gives soft light without textures or a bloom pass.
+fn glow(painter: &Painter, center: Pos2, radius: Vec2, color: Color32) {
+    let mut mesh = Mesh::default();
+    mesh.colored_vertex(center, color);
+    for i in 0..=48 {
+        let angle = i as f32 * std::f32::consts::TAU / 48.0;
+        mesh.colored_vertex(
+            center + Vec2::new(angle.cos(), angle.sin()) * radius,
+            Color32::TRANSPARENT,
+        );
+        if i > 0 {
+            mesh.add_triangle(0, i, i + 1);
+        }
+    }
+    painter.add(Shape::mesh(mesh));
+}
+
+pub fn background(painter: &Painter, rect: Rect) {
+    painter.rect_filled(rect, 0.0, Color32::from_rgb(4, 8, 19));
+    for (x, y, r, color) in [
+        (
+            0.18,
+            0.70,
+            0.9,
+            Color32::from_rgba_unmultiplied(37, 64, 125, 100),
+        ),
+        (
+            0.65,
+            0.30,
+            0.8,
+            Color32::from_rgba_unmultiplied(76, 42, 110, 85),
+        ),
+        (
+            0.88,
+            0.65,
+            0.6,
+            Color32::from_rgba_unmultiplied(20, 93, 116, 70),
+        ),
+    ] {
+        glow(
+            painter,
+            rect.min + rect.size() * Vec2::new(x, y),
+            rect.size() * r,
+            color,
+        );
+    }
+    // Fixed decorative points: no simulation RNG, flicker, picking, or redraw timer.
+    for i in 0..220_u32 {
+        let hash = i.wrapping_mul(747_796_405).wrapping_add(2_891_336_453);
+        let x = (hash & 0xffff) as f32 / 65535.0;
+        let y = (hash.rotate_left(13) & 0xffff) as f32 / 65535.0;
+        let brightness = 45 + (hash % 65) as u8;
+        painter.circle_filled(
+            rect.min + rect.size() * Vec2::new(x, y),
+            if i % 11 == 0 { 1.0 } else { 0.55 },
+            Color32::from_rgb(brightness, brightness, brightness.saturating_add(25)),
+        );
+    }
+    painter.text(
+        rect.right_bottom() - Vec2::splat(10.0),
+        egui::Align2::RIGHT_BOTTOM,
+        "GALAXY / light-years",
+        egui::FontId::monospace(10.0),
+        Color32::from_rgb(100, 125, 150),
+    );
+}
+
+pub fn star(painter: &Painter, center: Pos2, kind: StarKind, selected: bool, hovered: bool) {
+    let (color, radius) = appearance(kind);
+    glow(
+        painter,
+        center,
+        Vec2::splat(radius * 5.0),
+        color.gamma_multiply(0.2),
+    );
+    glow(
+        painter,
+        center,
+        Vec2::splat(radius * 2.4),
+        color.gamma_multiply(0.65),
+    );
+    painter.circle_filled(center, radius, color);
+    glow(
+        painter,
+        center,
+        Vec2::splat(radius),
+        Color32::from_white_alpha(210),
+    );
+    painter.circle_filled(center, radius * 0.28, Color32::from_rgb(255, 249, 232));
+    if matches!(kind, StarKind::BlueGiant | StarKind::RedGiant) {
+        for axis in [Vec2::X, Vec2::Y] {
+            painter.line_segment(
+                [center - axis * radius * 1.9, center + axis * radius * 1.9],
+                Stroke::new(0.7_f32, color.gamma_multiply(0.5)),
+            );
+        }
+    }
+    if selected || hovered {
+        painter.circle_stroke(
+            center,
+            radius + 7.0,
+            Stroke::new(
+                if selected { 1.5_f32 } else { 1.0_f32 },
+                if selected {
+                    Color32::from_rgb(130, 230, 226)
+                } else {
+                    Color32::from_white_alpha(130)
+                },
+            ),
+        );
+    }
+}

@@ -1,0 +1,16 @@
+[workspace]
+members = ["crates/game-core", "crates/game-protocol", "crates/game-server", "crates/game-client"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+game-core = { path = "crates/game-core" }
+game-protocol = { path = "crates/game-protocol" }
+game-server = { path = "crates/game-server" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

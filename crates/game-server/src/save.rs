@@ -1,6 +1,8 @@
 //! Versioned authoritative JSON. Loading never regenerates worlds or prices.
 mod fleets;
+mod markets;
 mod migration;
+mod planet_migration;
 mod validation;
 use crate::Session;
 use game_core::{StarSystem, economy::Economy, travel::TravelState};
@@ -28,7 +30,7 @@ struct SaveData {
 impl Session {
     fn save_data(&self) -> SaveData {
         SaveData {
-            schema_version: 3,
+            schema_version: 4,
             systems: self.systems.clone(),
             player: self.state.clone(),
             economy: self.economy.clone(),
@@ -104,7 +106,7 @@ impl Session {
         };
         let recovery = if data.migrated {
             Some(format!(
-                "{}Upgraded older save to movement format; balances and positions preserved.",
+                "{}Upgraded older save to planetary markets; player assets and station stock preserved. New market treasuries and shipyards start empty.",
                 recovery.map_or(String::new(), |message| format!("{message} "))
             ))
         } else {
@@ -147,3 +149,6 @@ mod tests;
 
 #[cfg(test)]
 mod migration_tests;
+
+#[cfg(test)]
+mod market_tests;

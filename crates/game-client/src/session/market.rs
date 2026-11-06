@@ -2,7 +2,6 @@ use super::LocalSession;
 use game_core::{
     StarSystem,
     economy::{Commodity, TradeSide},
-    travel::Location,
 };
 use game_protocol::ClientCommand;
 
@@ -24,7 +23,7 @@ impl Default for MarketPanel {
 impl LocalSession {
     pub fn show_market(&mut self, ctx: &egui::Context, systems: &[StarSystem]) {
         let mut open = self.market.open;
-        egui::Window::new("Trade port market")
+        egui::Window::new("Local resource market")
             .open(&mut open)
             .vscroll(true)
             .default_width(700.0)
@@ -34,15 +33,28 @@ impl LocalSession {
 
     fn market_ui(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
         let ship = self.selected_ship().clone();
-        let Location::Docked(system) = ship.location else {
-            ui.label("Dock at the system trade port to trade, refuel or upgrade.");
-            return;
+        let market = match self.economy.current_market(&ship) {
+            Ok(market) => market.clone(),
+            Err(error) => {
+                ui.label(error.to_string());
+                return;
+            }
         };
-        let name = systems
+        let body = systems
             .iter()
-            .find(|s| s.id == system)
-            .map_or("Unknown", |s| s.name.as_str());
-        ui.heading(format!("{name} trade port"));
+            .find(|system| system.id == market.id.system)
+            .and_then(|system| system.bodies.iter().find(|body| body.id == market.id.body));
+        ui.heading(body.map_or("Unknown market", |body| body.name.as_str()));
+        ui.label(format!("Local market funds: {} cr", market.credits));
+        if let Some(profile) = body.and_then(|body| body.planet.as_ref()) {
+            ui.label(format!(
+                "{} • {} • danger: {} • specializes in {}",
+                profile.economy.label(),
+                profile.biome.label(),
+                profile.danger.label(),
+                profile.specialization.label()
+            ));
+        }
         ui.label(format!(
             "Credits: {} • cargo: {}/{}",
             self.economy.credits,
@@ -58,11 +70,6 @@ impl LocalSession {
             "Quote revision {} • simulation tick {}",
             self.state.revision, self.state.tick
         ));
-        let Ok(market) = self.economy.market(system) else {
-            ui.label("No market available.");
-            return;
-        };
-        let market = market.clone();
         let mut action = None;
         egui::ScrollArea::horizontal()
             .id_salt("trade_table")
@@ -184,8 +191,11 @@ impl LocalSession {
                             ui.strong(
                                 systems
                                     .iter()
-                                    .find(|s| s.id == market.system)
-                                    .map_or("Unknown", |s| s.name.as_str()),
+                                    .find(|s| s.id == market.id.system)
+                                    .and_then(|system| {
+                                        system.bodies.iter().find(|body| body.id == market.id.body)
+                                    })
+                                    .map_or("Unknown", |body| body.name.as_str()),
                             );
                         }
                         ui.end_row();

@@ -121,7 +121,7 @@ impl TravelState {
         fleet: FleetId,
         spec: &ShipSpec,
     ) -> Result<ShipId, FleetError> {
-        let location = self.fleet_location(fleet, player)?;
+        let location = self.fleet_position(fleet, player)?.clone();
         if self.ships.len() >= 64 {
             return Err(FleetError::ShipLimit);
         }
@@ -147,7 +147,7 @@ impl TravelState {
             fuel: spec.fuel_capacity,
             fuel_capacity: spec.fuel_capacity,
             range_ly: spec.range_ly,
-            location: Location::Docked(location),
+            location,
         });
         self.fleets[index].ships.push(id);
         self.next_ship_id = next;

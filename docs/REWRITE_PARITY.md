@@ -12,13 +12,13 @@ Its “implemented” and “future” sections are tracked separately below.
 | Galaxy | Procedural integer 3D world, cubic boundaries | Seeded world, ly coordinates, native camera and configurable cubic bounds |
 | System movement | Local, exit, deep space and explicit entry | All four movement types, km local/absolute positions, explicit entry and station docking |
 | Fleets | Owned ships, fleet details and movement under development | Purchases, per-ship cargo/fuel, split/merge, transfers, fleet travel and saves |
-| Planet economy | Per-planet resources/ships, production, biome, danger, credits | System-port stock-sensitive markets; planetary model and market funds pending |
+| Planet economy | Per-planet resources/ships, production, biome, danger, credits | Independent planet/station markets, profiles, production specializations, finite funds and hull stocks |
 | NPCs | Traders and personality under development | No NPC trader simulation yet |
 | Combat | Backend concepts; first future priority | Pending ship HP/shield/armor/loadout and fleet resolution |
 | Factions | Federation, Empire, Republic, Alliance; second priority | Pending influence, relationships, territories and access |
-| Ship management | Type/size/engine/stats; third priority | Three cargo/fuel/range classes; repair, selling and equipment pending |
+| Ship management | Type/size/engine/stats; third priority | Three classes, hull buying/selling and fleet renaming; repair/equipment pending |
 | Missions | Fourth priority: transport, combat, anomalies, bounty, piracy | Trader guide only; shared mission lifecycle pending |
-| Persistence | JSON per-game files and aggregate saves | Validated atomic JSON snapshots, backup recovery; rewrite schema 1/2→3 migration |
+| Persistence | JSON per-game files and aggregate saves | Validated atomic JSON snapshots, backup recovery; rewrite schemas 1–3→4 migration |
 | Multiplayer | Potential future feature | Authoritative command boundary present; transport/accounts/turn resolver pending |
 
 The owner further specified movement-triggered ticks for single-player, explicit
@@ -32,6 +32,6 @@ snapshots, with filesystem access isolated in persistence/startup adapters.
 Movement now uses explicit checked unit conversions and tested cube intersections
 instead of copying the original illustrative formulas. No automatic entry merely because a path crosses a system.
 
-Next work restores planetary economies, followed by
-combat, factions/ship management and missions in the original priority order.
+Next work restores NPC traders/personality, then combat, factions/ship management
+and missions in the original priority order.
 No mobile milestone blocks this desktop implementation work.

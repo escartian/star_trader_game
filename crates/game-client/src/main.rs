@@ -56,6 +56,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &std::fs::read_to_string("config/ships.json")?,
             )?;
         }
+        if std::path::Path::new("config/planets.json").is_file() {
+            rules.planet_catalog = game_core::planet::PlanetCatalog::from_json(
+                &std::fs::read_to_string("config/planets.json")?,
+            )?;
+        }
         let mut authority = game_server::Session::with_economy(options.seed, rules)?;
         if std::path::Path::new("config/movement.json").is_file() {
             authority.set_movement_rules(game_core::movement::MovementRules::from_json(

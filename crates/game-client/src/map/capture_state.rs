@@ -32,13 +32,19 @@ impl Map {
                         .request_movement(MoveTarget::EnterSystem(SystemId(2)));
                 }
             }
-            "orbit" => {
+            "orbit" | "planet-market" | "planet-shipyard" => {
                 let system = self.systems.first().ok_or("No system to capture")?.clone();
                 self.session.capture_movement(MoveTarget::Body {
                     system: system.id,
                     body: BodyId(1),
                 })?;
                 self.local = Some(LocalView::new(system));
+                if view == "planet-market" {
+                    self.session.open_market();
+                }
+                if view == "planet-shipyard" {
+                    self.session.open_fleets();
+                }
             }
             "market" => self.session.open_market(),
             "fleets" => self.session.open_fleets(),

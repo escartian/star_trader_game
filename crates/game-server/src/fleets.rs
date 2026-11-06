@@ -15,6 +15,12 @@ impl Session {
             ClientCommand::BuyShip {
                 expected_revision, ..
             }
+            | ClientCommand::SellShip {
+                expected_revision, ..
+            }
+            | ClientCommand::RenameFleet {
+                expected_revision, ..
+            }
             | ClientCommand::SplitFleet {
                 expected_revision, ..
             }
@@ -36,27 +42,28 @@ impl Session {
             .ok_or(TravelError::TimeOverflow)?;
         let mut candidate = self.clone();
         let event = match command {
-            ClientCommand::BuyShip { ship, kind, .. } => {
-                candidate.state.authorize(player, ship)?;
-                let spec = candidate
-                    .economy
-                    .rules
-                    .ship_catalog
-                    .ships
-                    .iter()
-                    .find(|spec| spec.kind == kind)
-                    .ok_or(FleetError::UnknownClass)?
-                    .clone();
-                let credits = candidate
-                    .economy
-                    .credits
-                    .0
-                    .checked_sub(spec.price.0)
-                    .ok_or(FleetError::InsufficientCredits)?;
-                let fleet = candidate.state.fleet_for_ship(ship)?.id;
-                let id = candidate.state.add_ship(player, fleet, &spec)?;
-                candidate.economy.credits.0 = credits;
-                SessionEvent::ShipPurchased { ship: id }
+            ClientCommand::BuyShip { ship, kind, .. } => candidate.buy_ship(player, ship, kind)?,
+            ClientCommand::SellShip { ship, .. } => candidate.sell_ship(player, ship)?,
+            ClientCommand::RenameFleet { fleet, name, .. } => {
+                let name = name.trim();
+                if name.is_empty()
+                    || name.chars().count() > 64
+                    || name.len() > 128
+                    || name.chars().any(char::is_control)
+                {
+                    return Err(FleetError::InvalidName.into());
+                }
+                let fleet_record = candidate
+                    .state
+                    .fleets
+                    .iter_mut()
+                    .find(|record| record.id == fleet)
+                    .ok_or(FleetError::UnknownFleet)?;
+                if fleet_record.owner != player {
+                    return Err(FleetError::NotOwner.into());
+                }
+                fleet_record.name = name.into();
+                SessionEvent::FleetRenamed { fleet }
             }
             ClientCommand::SplitFleet { fleet, ships, .. } => {
                 let new_fleet = candidate.state.split_fleet(player, fleet, &ships)?;

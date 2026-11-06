@@ -219,6 +219,15 @@ impl LocalView {
             .find(|b| Some(b.id) == self.selected)
         {
             ui.label(format!("{} • {}", body.name, body.kind.label()));
+            if let Some(profile) = &body.planet {
+                ui.label(format!(
+                    "{} economy • {} • danger: {}",
+                    profile.economy.label(),
+                    profile.biome.label(),
+                    profile.danger.label()
+                ));
+                ui.label(format!("Production specialization: {} • resource market and shipyard available at this body's orbital berth", profile.specialization.label()));
+            }
             if ui
                 .button(if body.kind == BodyKind::Station {
                     "Preview docking at trade port"

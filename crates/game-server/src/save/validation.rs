@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 impl SaveData {
     pub(super) fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 3 {
+        if self.schema_version != 4 {
             return Err("Unsupported save schema version".into());
         }
         if self.systems.is_empty() || self.systems.len() > 1024 {
@@ -98,26 +98,7 @@ impl SaveData {
         if self.economy.credits.0 > 1_000_000_000_000_000 {
             return Err("Invalid player credits".into());
         }
-        if self.economy.markets.len() != systems.len() {
-            return Err("Missing markets".into());
-        }
-        let mut markets = HashSet::new();
-        for market in &self.economy.markets {
-            if !systems.contains(&market.system) || !markets.insert(market.system) {
-                return Err("Invalid market identity".into());
-            }
-            for good in &market.goods {
-                if !(1..=1000).contains(&good.target)
-                    || good.stock > good.capacity()
-                    || good.base_price.0 == 0
-                    || good.base_price.0 > 1_000_000_000
-                    || good.production > 1000
-                    || good.consumption > 1000
-                {
-                    return Err("Invalid market balances or rates".into());
-                }
-            }
-        }
+        self.validate_markets()?;
         Ok(())
     }
 }

@@ -11,12 +11,14 @@ through a readable native map. No game engine, browser, webview or JavaScript.
   transparent sprites. Shared textures preload once; halos/selection stay procedural.
 - Authoritative local/body movement, cubic system exits, deep-space travel and
   explicit system entry, with whole-fleet fuel/range checks and movement ticks.
-- Credits, cargo, finite commodity stock, stock-sensitive prices, refuelling,
+- Per-planet and station markets with finite funds/hull stock, planet economy/biome/
+  danger/specialization, stock-sensitive prices and refuelling,
   known-market comparisons and a purchasable cargo-hold upgrade.
 - Seeded starts, a first-delivery guide, session logs and
   three JSON save slots with validation, atomic replacement and backup recovery.
 
-Owned ships support purchases, individual holds, fleet split/merge and cargo transfers.
+Owned ships support buying/selling, individual holds, fleet split/merge, renaming
+and cargo transfers.
 Multiplayer, discovery, combat and contracts are not implemented.
 Mobile build work is deferred at the user's request. Desktop interaction, pacing
 and device lifecycle still need manual/playtest evidence; see [platform status](docs/PLATFORM_STATUS.md).
@@ -53,7 +55,8 @@ that slot, with its previous valid snapshot retained as backup.
 Open **Fleets / shipyard** to buy ships, split checked members, merge co-located
 fleets or transfer cargo. Travel moves every ship in the selected fleet and checks
 each member’s fuel/range. Ships appear beside visited bodies/trade ports and at their deep-space positions.
-Planetary markets and detailed landing/collision volumes remain planned.
+Rocky/gas planets have markets at orbital berths; detailed landing/collision
+volumes remain planned.
 
 ## First delivery
 
@@ -67,7 +70,7 @@ upgrade. Double-clicking a star only inspects it.
 Local/body destinations and coordinate waypoints use the same preview/confirm
 flow. Routes through the star reject; use a waypoint around it. See the complete
 [movement controls and costs](docs/MOVEMENT.md). Mining and orbital physics remain
-unimplemented. Current markets are attached to system trade ports.
+unimplemented. Markets belong to individual planets and primary trade stations.
 
 All simulation uses discrete ticks. Single-player advances ticks only when a
 successful movement action resolves a journey, with no End Turn action. Waiting,
@@ -76,9 +79,19 @@ explicit shared turns; authentication and turn resolution remain pending. Loadin
 does not add offline time.
 The initial 20–30 minute upgrade goal remains a pacing hypothesis to playtest.
 
+Visit a planet, then open **Market / refuel** to trade there. **Fleets / shipyard**
+shows local hull stock, treasury-funded sale offers and fleet naming controls.
+Markets can run out of money; shipyards can run out of hulls. See
+[planet economies](docs/PLANET_ECONOMY.md).
+
+Older saves preserve player assets and station goods; new treasuries and shipyards
+start empty, and new planetary stock grows through movement ticks. A new game in
+another save slot uses the configured starting funds and hull inventory.
+
 ## JSON economy and player data
 
-[config/ships.json](config/ships.json) defines purchasable hull prices, holds, fuel
+[config/planets.json](config/planets.json) defines planet profiles, market templates,
+starting budgets and hull stock. [config/ships.json](config/ships.json) defines purchasable hull prices, holds, fuel
 and range. [config/economy.json](config/economy.json) defines starting credits/cargo capacity,
 service/upgrade costs, commodity prices and market production/consumption. Money
 uses integer hundredths of a credit: `100000` means `1000.00` credits.
@@ -145,7 +158,8 @@ cargo run -p game-client -- --new --capture /tmp/market.png --capture-view marke
 
 Example captures: [system](docs/previews/system.png), [market](docs/previews/market.png),
 [fleets](docs/previews/fleets.png), [movement](docs/previews/navigation.png),
-[system entry](docs/previews/entry.png), [ship near planet](docs/previews/orbit.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `deep-space`, `orbit`. Captures do not test window
+[system entry](docs/previews/entry.png), [ship near planet](docs/previews/orbit.png),
+[planet market](docs/previews/planet-market.png), [planet shipyard](docs/previews/planet-shipyard.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`. Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

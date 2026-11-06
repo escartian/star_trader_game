@@ -4,8 +4,10 @@ pub(crate) mod cargo_json;
 mod market;
 mod rules;
 pub use rules::{EconomyRules, MarketTemplate};
+mod services;
+mod shipyard;
 mod transactions;
-use crate::{SystemId, travel::Ship};
+use crate::{BodyId, SystemId, travel::Ship};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Credits(pub u64);
@@ -73,10 +75,20 @@ impl MarketGood {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MarketId {
+    pub system: SystemId,
+    pub body: BodyId,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Market {
-    pub system: SystemId,
+    pub id: MarketId,
+    pub is_station: bool,
+    pub credits: Credits,
+    pub ship_stock: [u32; 3],
     pub goods: [MarketGood; 6],
 }
 
@@ -91,7 +103,7 @@ pub struct Economy {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TradeQuote {
-    pub system: SystemId,
+    pub market: MarketId,
     pub commodity: Commodity,
     pub side: TradeSide,
     pub quantity: u32,
@@ -106,6 +118,9 @@ pub enum EconomyError {
     UnknownMarket,
     InvalidQuantity,
     InsufficientCredits,
+    MarketInsufficientCredits,
+    ShipOutOfStock,
+    NonEmptyHold,
     CargoFull,
     InsufficientStock,
     InsufficientCargo,
@@ -119,7 +134,10 @@ impl std::fmt::Display for EconomyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::MustBeDocked => "Arrive at a market before trading or refuelling.",
-            Self::UnknownMarket => "There is no known market at this system.",
+            Self::UnknownMarket => "There is no market at this body.",
+            Self::MarketInsufficientCredits => "The local market cannot afford this purchase.",
+            Self::NonEmptyHold => "Empty this ship’s cargo before selling it.",
+            Self::ShipOutOfStock => "This ship class is out of stock here.",
             Self::InvalidQuantity => "Choose a positive quantity.",
             Self::InsufficientCredits => "Not enough credits.",
             Self::CargoFull => "Not enough cargo space.",
@@ -136,18 +154,33 @@ impl std::fmt::Display for EconomyError {
 }
 
 impl Economy {
-    pub fn market(&self, system: SystemId) -> Result<&Market, EconomyError> {
+    pub fn market(&self, id: MarketId) -> Result<&Market, EconomyError> {
         self.markets
             .iter()
-            .find(|market| market.system == system)
+            .find(|market| market.id == id)
+            .ok_or(EconomyError::UnknownMarket)
+    }
+
+    pub fn market_mut(&mut self, id: MarketId) -> Result<&mut Market, EconomyError> {
+        self.markets
+            .iter_mut()
+            .find(|market| market.id == id)
             .ok_or(EconomyError::UnknownMarket)
     }
 
     pub fn current_market(&self, ship: &Ship) -> Result<&Market, EconomyError> {
-        let crate::travel::Location::Docked(system) = ship.location else {
-            return Err(EconomyError::MustBeDocked);
+        let id = match ship.location {
+            // Primary station IDs are stable in generated worlds and legacy saves.
+            crate::travel::Location::Docked(system) => self
+                .markets
+                .iter()
+                .find(|market| market.id.system == system && market.is_station)
+                .map(|market| market.id)
+                .ok_or(EconomyError::UnknownMarket)?,
+            crate::travel::Location::Orbiting { system, body } => MarketId { system, body },
+            _ => return Err(EconomyError::MustBeDocked),
         };
-        self.market(system)
+        self.market(id)
     }
 }
 

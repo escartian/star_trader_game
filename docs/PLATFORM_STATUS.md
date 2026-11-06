@@ -98,3 +98,11 @@ and schema 1/2→3 migration. An egui pointer-input test clicks Confirm movement
 a preview-only or invalid preview leaves time unchanged. This is not OS window
 or physical-device interaction evidence. Offscreen navigation, entry and planet
 ship-marker captures were rendered on Apple M5 Pro and visually inspected.
+
+Planetary economy checks cover market isolation, specialization production, finite
+funds, cash conservation, hull depletion/restocking, last-ship/cargo sale rejection,
+unique IDs, fleet naming and market/metadata save validation. A save exported by
+the prior schema-3 executable was migrated through the new CLI: player state and
+station goods matched, with no new cash/hulls or duplicated planetary goods.
+New planetary market/shipyard GPU captures on Apple M5 Pro were visually inspected;
+OS window/lifecycle and player pacing remain unverified.

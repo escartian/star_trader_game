@@ -22,8 +22,26 @@ pub struct EconomyRules {
     pub hold_upgrade_capacity: u32,
     pub commodity_order: [Commodity; 6],
     pub markets: Vec<MarketTemplate>,
+    #[serde(default = "default_market_credits")]
+    pub market_starting_credits: Credits,
+    #[serde(default = "default_ship_stock")]
+    pub shipyard_starting_stock: [u32; 3],
+    #[serde(default = "default_resale_percent")]
+    pub ship_resale_percent: u32,
+    #[serde(default)]
+    pub planet_catalog: crate::planet::PlanetCatalog,
     #[serde(default)]
     pub ship_catalog: crate::fleet::ShipCatalog,
+}
+
+fn default_resale_percent() -> u32 {
+    60
+}
+fn default_market_credits() -> Credits {
+    Credits(1_000_000)
+}
+fn default_ship_stock() -> [u32; 3] {
+    [2, 2, 1]
 }
 
 impl Default for EconomyRules {
@@ -42,6 +60,16 @@ impl EconomyRules {
 
     pub fn validate(&self) -> Result<(), String> {
         self.ship_catalog.validate()?;
+        self.planet_catalog.validate()?;
+        if !(1..=90).contains(&self.ship_resale_percent)
+            || self.market_starting_credits.0 > 1_000_000_000_000
+            || self
+                .shipyard_starting_stock
+                .iter()
+                .any(|stock| *stock > 1000)
+        {
+            return Err("Invalid market allocation or planet market template".into());
+        }
         if self.schema_version != 1 {
             return Err("Unsupported economy schema version".into());
         }

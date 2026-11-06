@@ -46,3 +46,9 @@ No participants have been contacted and no playtest results are claimed here.
 - [ ] Try a local route through the star, then route around it with a waypoint.
 - [ ] Visit a planet/moon, focus the selected ship and inspect its tethered marker.
 - [ ] Show the system boundary and save/continue from an entry face/deep space.
+
+- [ ] Trade at two planets in the same system and verify separate stock/funds.
+- [ ] Buy a hull, split its fleet, sell it empty and verify local stock replenishes.
+- [ ] Rename a fleet, save and continue with the same name and ship membership.
+- [ ] Compare a migrated save's empty new treasuries/yards against the explicit
+  configured budgets in a fresh slot. Verify no player assets or station goods reset.

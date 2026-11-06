@@ -1,34 +1,54 @@
 use super::{Credits, Economy, Market, MarketGood, TradeSide};
-use crate::SystemId;
+use crate::{BodyKind, StarSystem};
 
 impl Economy {
-    pub fn new(systems: impl IntoIterator<Item = SystemId>) -> Self {
+    pub fn new(systems: &[StarSystem]) -> Self {
         Self::with_rules(systems, super::EconomyRules::default())
             .expect("embedded rules are validated")
     }
 
-    pub fn with_rules(
-        systems: impl IntoIterator<Item = SystemId>,
-        rules: super::EconomyRules,
-    ) -> Result<Self, String> {
+    pub fn with_rules(systems: &[StarSystem], rules: super::EconomyRules) -> Result<Self, String> {
         rules.validate()?;
-        let markets = systems
-            .into_iter()
-            .enumerate()
-            .map(|(index, system)| {
-                let template = &rules.markets[index % rules.markets.len()];
-                Market {
-                    system,
-                    goods: std::array::from_fn(|commodity| MarketGood {
-                        stock: template.stock,
-                        target: template.target,
-                        base_price: template.base_prices[commodity],
-                        production: template.production[commodity],
-                        consumption: template.consumption[commodity],
-                    }),
+        let mut markets = Vec::new();
+        for (index, system) in systems.iter().enumerate() {
+            let station = system
+                .bodies
+                .iter()
+                .find(|body| body.kind == BodyKind::Station)
+                .ok_or("System is missing its primary trade station")?;
+            markets.push(Market::from_template(
+                super::MarketId {
+                    system: system.id,
+                    body: station.id,
+                },
+                true,
+                &rules.markets[index % rules.markets.len()],
+                rules.market_starting_credits,
+                rules.shipyard_starting_stock,
+            ));
+            for body in &system.bodies {
+                if let Some(planet) = rules.planet_catalog.template(index, body.kind) {
+                    let mut market = Market::from_template(
+                        super::MarketId {
+                            system: system.id,
+                            body: body.id,
+                        },
+                        false,
+                        &rules.markets[planet.market_template % rules.markets.len()],
+                        planet.starting_credits,
+                        planet.ship_stock,
+                    );
+                    // Specialization creates an actual production advantage, independent
+                    // of rendering and without increasing initial commodity stock.
+                    market.goods[planet.profile.specialization.index()].production = market.goods
+                        [planet.profile.specialization.index()]
+                    .production
+                    .saturating_add(2)
+                    .min(1000);
+                    markets.push(market);
                 }
-            })
-            .collect();
+            }
+        }
         Ok(Self {
             credits: rules.starting_credits,
             markets,
@@ -45,6 +65,30 @@ impl Economy {
                 let next = i128::from(good.stock) + net * i128::from(ticks);
                 good.stock = next.clamp(0, i128::from(good.capacity())) as u32;
             }
+        }
+    }
+}
+
+impl Market {
+    pub fn from_template(
+        id: super::MarketId,
+        is_station: bool,
+        template: &super::MarketTemplate,
+        credits: Credits,
+        ship_stock: [u32; 3],
+    ) -> Self {
+        Self {
+            id,
+            is_station,
+            credits,
+            ship_stock,
+            goods: std::array::from_fn(|commodity| MarketGood {
+                stock: template.stock,
+                target: template.target,
+                base_price: template.base_prices[commodity],
+                production: template.production[commodity],
+                consumption: template.consumption[commodity],
+            }),
         }
     }
 }

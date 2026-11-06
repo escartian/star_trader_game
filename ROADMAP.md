@@ -42,7 +42,7 @@ See [rewrite parity](docs/REWRITE_PARITY.md) for original claims versus current 
 load restores existing state. Automated checks cover these rules. Window/device
 acceptance is separate; see [platform status](docs/PLATFORM_STATUS.md).
 
-## 2. Owned ships and fleets — current implementation batch
+## 2. Owned ships and fleets — implemented foundation
 
 - [x] Stable ship/fleet IDs, per-ship cargo/fuel/capacity and data-driven ship classes.
 - [x] Purchase freighter/scout/patrol hulls; select the ship used for commerce.
@@ -51,13 +51,14 @@ acceptance is separate; see [platform status](docs/PLATFORM_STATUS.md).
 - [x] Travel the selected fleet atomically; check every member's fuel/range.
 - [x] Save fleet membership and migrate prior single-ship saves without reset.
 - [x] Original Blender ship sources/sprites and docked ship markers in system view.
-- [ ] Per-planet finite shipyard inventory, ship selling/trading and fleet renaming.
+- [x] Per-planet finite shipyard inventory, hull buying/selling and fleet renaming.
 - [x] Body, local waypoint and deep-space locations, with ship markers tethered
   beside visited bodies/stations or placed at their deep-space coordinates.
 
 **Acceptance:** split, move independently, rendezvous and merge; preserve each
 ship's cargo, fuel and identity through save/load. These flows have behavior tests.
-The current shipyard is a system-port catalog; patrol hulls have no combat yet.
+Planet/station shipyards have finite inventory and treasury-funded sales. Patrol
+hulls have no combat yet; customization and used-hull loadouts remain later work.
 
 ## 3. Restore the original movement and planetary world model — in progress
 
@@ -74,9 +75,9 @@ The current shipyard is a system-port catalog; patrol hulls have no combat yet.
 - [x] Shared authoritative previews/commits, whole-fleet fuel/range checks,
   movement ticks/events, UI confirmation and location-aware ship markers.
 - [x] Save schema 3 and migration from schemas 1/2; resume older active journeys.
-- [ ] Planet economy type, production specialization, biome and danger rating
+- [x] Planet economy type, production specialization, biome and danger rating
   (VerySafe through Insidious); resource market, ship market and local credits.
-- [ ] Replace prototype system markets with planet markets, including buyer funds
+- [x] Add independent planet markets alongside stations, including buyer funds
   and a migration that preserves balances rather than silently generating wealth.
 
 **Movement acceptance:** leave a body, exit its system, move through deep space,
@@ -85,8 +86,15 @@ and save/load at each point; UI confirmation has an egui input regression test.
 Inspection never moves the fleet. GPU previews are visually checked separately
 from OS window/manual interaction. See [movement rules](docs/MOVEMENT.md).
 
-**Next:** per-planet resource/ship markets, their finite credit balances and
-planet metadata. These remain unimplemented; current commerce uses system ports.
+Planet resource/ship markets, finite credit balances and metadata are implemented.
+Schema 4 preserves old player assets/station stock, with explicit zero funding and
+inventory for newly tracked accounts. Planetary commerce and hull transactions
+have conservation/rejection/save tests. See [planet economies](docs/PLANET_ECONOMY.md).
+Biome/danger are descriptive until encounters use them. Detailed collision and
+landing volumes remain open, independently of the following gameplay work.
+
+**Next:** NPC traders with personality and movement-tick decisions, then ship
+combat statistics/loadouts and fleet combat. No NPC/combat implementation is claimed.
 
 ## 4. NPC traders and fleet combat
 

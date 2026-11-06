@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "templates": [
+    {"kind":"RockyPlanet","profile":{"economy":"agricultural","specialization":"food","biome":"temperate","danger":"very_safe"},"market_template":0,"starting_credits":500000,"ship_stock":[2,2,0]},
+    {"kind":"RockyPlanet","profile":{"economy":"extraction","specialization":"ore","biome":"arid","danger":"dangerous"},"market_template":1,"starting_credits":400000,"ship_stock":[2,1,1]},
+    {"kind":"RockyPlanet","profile":{"economy":"industrial","specialization":"machinery","biome":"frozen","danger":"safe"},"market_template":2,"starting_credits":600000,"ship_stock":[1,2,2]},
+    {"kind":"GasGiant","profile":{"economy":"extraction","specialization":"ore","biome":"gas","danger":"moderate"},"market_template":1,"starting_credits":400000,"ship_stock":[2,1,0]},
+    {"kind":"GasGiant","profile":{"economy":"industrial","specialization":"electronics","biome":"gas","danger":"insidious"},"market_template":2,"starting_credits":600000,"ship_stock":[1,1,2]}
+  ]
+}

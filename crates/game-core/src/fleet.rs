@@ -18,6 +18,14 @@ pub enum ShipKind {
 }
 
 impl ShipKind {
+    pub fn index(self) -> usize {
+        match self {
+            Self::Freighter => 0,
+            Self::Scout => 1,
+            Self::Patrol => 2,
+        }
+    }
+
     pub fn label(self) -> &'static str {
         match self {
             Self::Freighter => "Freighter",
@@ -102,6 +110,8 @@ pub enum FleetError {
     InvalidQuantity,
     MissingCargo,
     CargoFull,
+    LastShip,
+    InvalidName,
     ArithmeticOverflow,
 }
 
@@ -119,6 +129,8 @@ impl std::fmt::Display for FleetError {
             Self::InsufficientCredits => "Not enough credits to buy this ship.",
             Self::InvalidQuantity => "Choose a positive amount and a different target ship.",
             Self::MissingCargo => "The source ship does not carry that much cargo.",
+            Self::LastShip => "Keep at least one owned ship.",
+            Self::InvalidName => "Fleet names must contain 1–64 readable characters.",
             Self::CargoFull => "The target ship has insufficient cargo space.",
             Self::ArithmeticOverflow => "Fleet identity or quantity limit reached.",
         })

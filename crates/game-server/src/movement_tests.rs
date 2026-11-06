@@ -105,7 +105,7 @@ fn a_complete_trip_preserves_cargo_and_saves_at_every_movement_stage() {
 }
 
 #[test]
-fn new_locations_do_not_allow_remote_trade_or_fleet_merge() {
+fn non_market_locations_do_not_allow_remote_trade_or_fleet_merge() {
     let mut session = Session::default();
     session.handle_offline(ClientCommand::BuyShip {
         ship: ShipId(1),
@@ -122,7 +122,7 @@ fn new_locations_do_not_allow_remote_trade_or_fleet_merge() {
         ShipId(2),
         MoveTarget::Body {
             system: SystemId(1),
-            body: BodyId(1),
+            body: BodyId(4),
         },
     );
     let before = session.snapshot(Vec::new());

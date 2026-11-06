@@ -4,6 +4,7 @@ mod fleets;
 mod movement;
 mod offline;
 mod save;
+mod shipyard;
 use game_core::economy::Economy;
 use game_core::{
     StarSystem,
@@ -28,16 +29,8 @@ impl Default for Session {
 
 impl Session {
     pub fn with_seed(seed: u64) -> Self {
-        let systems = game_core::generation::generate_galaxy(seed);
-        let economy = Economy::new(systems.iter().map(|system| system.id));
-        let mut state = TravelState::default();
-        state.ships[0].cargo_capacity = economy.rules.cargo_capacity;
-        state.ships[0].base_cargo_capacity = economy.rules.cargo_capacity;
-        Self {
-            systems,
-            economy,
-            state,
-        }
+        Self::with_economy(seed, game_core::economy::EconomyRules::default())
+            .expect("embedded world/economy definitions must validate")
     }
 
     pub fn with_economy(
@@ -45,8 +38,9 @@ impl Session {
         rules: game_core::economy::EconomyRules,
     ) -> Result<Self, String> {
         rules.validate()?;
-        let systems = game_core::generation::generate_galaxy(seed);
-        let economy = Economy::with_rules(systems.iter().map(|system| system.id), rules)?;
+        let mut systems = game_core::generation::generate_galaxy(seed);
+        rules.planet_catalog.populate(&mut systems);
+        let economy = Economy::with_rules(&systems, rules)?;
         let mut state = TravelState::default();
         state.ships[0].cargo_capacity = economy.rules.cargo_capacity;
         state.ships[0].base_cargo_capacity = economy.rules.cargo_capacity;
@@ -84,6 +78,8 @@ impl Session {
             }),
             ClientCommand::ContinueTravel { .. } => Err(TravelError::OfflineMovementOnly.into()),
             command @ (ClientCommand::BuyShip { .. }
+            | ClientCommand::SellShip { .. }
+            | ClientCommand::RenameFleet { .. }
             | ClientCommand::SplitFleet { .. }
             | ClientCommand::MergeFleets { .. }
             | ClientCommand::TransferCargo { .. }) => self.fleet_command(player, command),
@@ -134,7 +130,7 @@ impl Session {
     fn snapshot(&self, events: Vec<SessionEvent>) -> ServerMessage {
         ServerMessage::SessionSnapshot {
             state: self.state.clone(),
-            economy: self.economy.clone(),
+            economy: Box::new(self.economy.clone()),
             events,
         }
     }
@@ -153,3 +149,6 @@ mod test_support;
 
 #[cfg(test)]
 mod movement_tests;
+
+#[cfg(test)]
+mod planet_tests;

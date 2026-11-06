@@ -8,6 +8,7 @@ pub(super) struct FleetPanel {
     selection: Vec<ShipId>,
     commodity: Commodity,
     quantity: u32,
+    rename: String,
 }
 
 impl Default for FleetPanel {
@@ -17,6 +18,7 @@ impl Default for FleetPanel {
             selection: Vec::new(),
             commodity: Commodity::Food,
             quantity: 1,
+            rename: String::new(),
         }
     }
 }
@@ -121,25 +123,22 @@ impl LocalSession {
         }
         ui.separator();
         let ship = self.selected_ship().clone();
-        ui.heading(format!("Shipyard • join {}'s fleet", ship.name));
-        for spec in self.economy.rules.ship_catalog.ships.clone() {
+        if let Ok(fleet) = self.state.fleet_for_ship(ship.id) {
+            let id = fleet.id;
             ui.horizontal_wrapped(|ui| {
-                ui.label(format!(
-                    "{}: {} cr • hold {} • fuel {} • range {} ly",
-                    spec.kind.label(),
-                    spec.price,
-                    spec.cargo_capacity,
-                    spec.fuel_capacity,
-                    spec.range_ly
-                ));
-                if ui.button("Buy").clicked() {
-                    action = Some(ClientCommand::BuyShip {
-                        ship: ship.id,
-                        kind: spec.kind,
+                ui.label(format!("Rename {}", fleet.name));
+                ui.text_edit_singleline(&mut self.fleet_panel.rename);
+                if ui.button("Rename fleet").clicked() {
+                    action = Some(ClientCommand::RenameFleet {
+                        fleet: id,
+                        name: self.fleet_panel.rename.clone(),
                         expected_revision: revision,
                     });
                 }
             });
+        }
+        if let Some(command) = self.shipyard_ui(ui) {
+            action = Some(command);
         }
         ui.separator();
         ui.heading(format!("Transfer cargo from {}", ship.name));

@@ -17,7 +17,9 @@
 - Money is integer hundredths of a credit. Fuel, stock and cargo use whole units.
   The authority validates ownership, location, quantities, capacity, stock, funds
   and revisions before publishing each command. Rejections leave state unchanged.
-- Trade food, ore, medicine, machinery, textiles and electronics. Production and
+- Trade food, ore, medicine, machinery, textiles and electronics at independent
+  planet/station markets. Planet specializations boost production. Market funds
+  and hull stock are finite; sales need a buyer that can afford them. Production and
   consumption run on ticks. Prices respond to stock within bounds, with a spread.
   Bulk orders price each unit; immediate buy/sell reversal cannot make a profit.
 - First delivery: buy food at Sol, exit the system in Navigation, explicitly enter
@@ -34,6 +36,6 @@ mechanical loop quickly. Owned ships/fleets are implemented; factions, combat,
 mining and shared multiplayer turns remain planned. Local/body movement and
 station docking are implemented. See [movement rules](MOVEMENT.md).
 
-- Ships have separate cargo/fuel. Fleet purchases, splitting/merging and cargo
+- Ships have separate cargo/fuel. Fleet buying/selling, renaming, splitting/merging and cargo
   transfers consume no ticks. Travel moves the whole fleet; split first for an
   independent journey. Galaxy distances remain light-years; local distances kilometers.

@@ -98,5 +98,12 @@
         1
       ]
     }
-  ]
+  ],
+  "market_starting_credits": 1000000,
+  "shipyard_starting_stock": [
+    2,
+    2,
+    1
+  ],
+  "ship_resale_percent": 60
 }

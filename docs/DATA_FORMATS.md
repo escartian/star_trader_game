@@ -25,15 +25,16 @@ unbounded prices/rates, and invalid stocks/capacities. New games load the projec
 file when available or an explicitly supplied `--economy PATH`; packaged builds
 can use the embedded validated defaults. No per-trade filesystem reads occur.
 
-## Session save (schema 3)
+## Session save (schema 4)
 
 Each `data/slot-N.json` stores:
 
-- `systems`: stable IDs, star/body kinds and galaxy/local positions.
+- `systems`: stable IDs, star/body kinds, planet profiles and galaxy/local positions.
 - `player`: tick/revision, movement rules, ships (IDs, owner, class, individual cargo/hold/fuel/range
   and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters.
 - `economy`: shared player credits, current markets and exact session rules,
-  including the ship catalog. Cargo is keyed by commodity name inside each ship.
+  including ship/planet catalogs. Each market records a composite system/body ID,
+  station flag, treasury, hull inventory and commodity balances. Cargo is keyed by commodity name inside each ship.
 
 The root schema is independent of the command protocol version. Money uses
 unsigned integer hundredths of a credit; credits and cargo cannot be negative.
@@ -43,7 +44,10 @@ A failed load leaves the live session unchanged. Schema 1 migrates its existing
 single ship and global cargo/hold into Fleet 1 without resetting time, money or
 journeys. Schema 2 migrates to schema 3 by adding validated default movement
 rules; existing fleets/balances/positions remain intact. Unsupported versions
-produce a clear error. Do not hand-edit a live session's file
+produce a clear error. Schemas 1–3 migrate to schema 4 planetary markets: old
+station goods/prices remain, new commodity stocks start empty, and newly tracked
+market treasuries/hull stock start at zero. The migration never grants player
+assets or copies goods. See [migration policy](PLANET_ECONOMY.md). Do not hand-edit a live session's file
 and expect its in-memory state to change.
 
 Saving validates the state, writes a sibling temporary file, flushes/syncs it, and
@@ -79,7 +83,8 @@ turn resolution around the same rules; a numeric owner ID is not authentication.
 `price` (credit hundredths), `cargo_capacity`, `fuel_capacity` and `range_ly`.
 New games load this project file if available, with embedded defaults as fallback.
 Saves preserve the active catalog. Purchased ships start empty and fully fuelled;
-shipyard stock is currently unlimited and ships cannot yet be sold. Starter hold
+shipyard inventory is finite and saved by class. Empty-hold hulls can be sold
+while retaining another owned ship, subject to market funds. Starter hold
 capacity still comes from the economy definition. HP/equipment are future data.
 
 ## Movement definition (schema 1)
@@ -90,3 +95,17 @@ and keep arithmetic in supported ranges. New sessions use these definitions;
 continuing restores saved rules. See [movement rules](MOVEMENT.md) for units,
 rounding, location variants and supported transitions. The primary station is
 resolved from the saved system's first Station body; Docked retains its system ID.
+
+## Planet catalog and finite-market allocations
+
+`config/planets.json` schema 1 defines rocky/gas profiles: `economy`, `biome`,
+`danger`, `specialization`, market-template index, `starting_credits` (hundredths)
+and `ship_stock` in freighter/scout/patrol order. Economy template indices cycle
+modulo available market templates. A specialization adds two production units per
+tick, capped at 1000. Danger/biome remain descriptive pending encounter simulation.
+
+Economy schema 1 has additive defaults for `market_starting_credits`,
+`shipyard_starting_stock` and `ship_resale_percent` (1–90), plus embedded catalogs.
+The defaults support existing definition files; migration explicitly starts newly
+tracked live balances at zero. Runtime profile definitions, treasuries and hull
+stocks are preserved in saves, rather than rebuilt when opening a panel.

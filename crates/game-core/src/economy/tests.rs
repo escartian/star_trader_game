@@ -2,7 +2,7 @@ use super::*;
 use crate::travel::{Location, TravelState};
 
 fn economy() -> Economy {
-    Economy::new([SystemId(1), SystemId(2), SystemId(3)])
+    Economy::new(&crate::demo_galaxy())
 }
 
 #[test]
@@ -26,7 +26,11 @@ fn immediate_buy_sell_is_never_profitable_even_for_bulk_orders() {
                         .unwrap();
                     assert!(market.credits < original.credits);
                     assert_eq!(ship.cargo, [0; 6]);
-                    assert_eq!(market.markets, original.markets);
+                    assert_eq!(market.markets[0].goods, original.markets[0].goods);
+                    assert_eq!(
+                        market.credits.0 + market.markets[0].credits.0,
+                        original.credits.0 + original.markets[0].credits.0
+                    );
                 }
             }
         }

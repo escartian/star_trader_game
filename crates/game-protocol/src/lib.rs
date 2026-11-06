@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 6;
+pub const PROTOCOL_VERSION: u32 = 7;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -17,6 +17,15 @@ pub enum ClientCommand {
     BuyShip {
         ship: ShipId,
         kind: ShipKind,
+        expected_revision: u64,
+    },
+    SellShip {
+        ship: ShipId,
+        expected_revision: u64,
+    },
+    RenameFleet {
+        fleet: FleetId,
+        name: String,
         expected_revision: u64,
     },
     SplitFleet {
@@ -80,6 +89,13 @@ pub enum SessionEvent {
         system: SystemId,
         ship: ShipId,
     },
+    ShipSold {
+        ship: ShipId,
+        price: game_core::economy::Credits,
+    },
+    FleetRenamed {
+        fleet: FleetId,
+    },
     ShipPurchased {
         ship: ShipId,
     },
@@ -111,7 +127,7 @@ pub enum ServerMessage {
     },
     SessionSnapshot {
         state: TravelState,
-        economy: Economy,
+        economy: Box<Economy>,
         events: Vec<SessionEvent>,
     },
     MovementPreview(game_core::movement::MovementPlan),

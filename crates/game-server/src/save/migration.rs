@@ -3,7 +3,11 @@ use serde_json::{Value, json};
 
 pub(super) fn upgrade(mut data: Value) -> Result<(Value, bool), String> {
     match data.get("schema_version").and_then(Value::as_u64) {
-        Some(3) => Ok((data, false)),
+        Some(4) => Ok((data, false)),
+        Some(3) => {
+            super::planet_migration::upgrade(&mut data)?;
+            Ok((data, true))
+        }
         Some(2) => {
             let player = data
                 .get_mut("player")
@@ -15,6 +19,7 @@ pub(super) fn upgrade(mut data: Value) -> Result<(Value, bool), String> {
                     .map_err(|error| error.to_string())?,
             );
             data["schema_version"] = 3.into();
+            let (data, _) = upgrade(data)?;
             Ok((data, true))
         }
         Some(1) => {

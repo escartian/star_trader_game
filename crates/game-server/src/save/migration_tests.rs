@@ -13,6 +13,7 @@ fn legacy_save_migrates_cargo_and_active_journey_without_resetting_time_or_money
     let expected = session.state.clone();
     let mut value: serde_json::Value =
         serde_json::from_str(&session.export_json().unwrap()).unwrap();
+    make_legacy_markets(&mut value);
     value["schema_version"] = 1.into();
     let mut ship = value["player"]["ships"][0].clone();
     for key in ["cargo", "cargo_capacity", "upgraded"] {
@@ -34,7 +35,7 @@ fn legacy_save_migrates_cargo_and_active_journey_without_resetting_time_or_money
     let (mut restored, notice) = Session::load(&path).unwrap();
     assert!(notice.is_some());
     assert_eq!(restored.state, expected);
-    assert_eq!(restored.economy, session.economy);
+    assert_legacy_assets(&restored, &session);
     assert!(matches!(
         restored.handle_offline(ClientCommand::ContinueTravel {
             ship: ShipId(1),
@@ -76,6 +77,7 @@ fn schema_two_fleets_migrate_without_losing_locations_or_balances() {
     });
     let mut value: serde_json::Value =
         serde_json::from_str(&session.export_json().unwrap()).unwrap();
+    make_legacy_markets(&mut value);
     value["schema_version"] = 2.into();
     value["player"]
         .as_object_mut()
@@ -85,7 +87,7 @@ fn schema_two_fleets_migrate_without_losing_locations_or_balances() {
     let (restored, notice) = Session::load(&path).unwrap();
     assert!(notice.is_some());
     assert_eq!(restored.state, session.state);
-    assert_eq!(restored.economy, session.economy);
+    assert_legacy_assets(&restored, &session);
 }
 
 #[test]
@@ -143,4 +145,94 @@ fn malformed_legacy_player_records_report_load_errors_instead_of_panicking() {
         .unwrap();
         assert!(Session::load(&path).is_err());
     }
+}
+
+fn make_legacy_markets(value: &mut serde_json::Value) {
+    let markets = value["economy"]["markets"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|market| market["is_station"] == true)
+        .map(|market| serde_json::json!({"system":market["id"]["system"],"goods":market["goods"]}))
+        .collect::<Vec<_>>();
+    value["economy"]["markets"] = serde_json::Value::Array(markets);
+    for system in value["systems"].as_array_mut().unwrap() {
+        for body in system["bodies"].as_array_mut().unwrap() {
+            body.as_object_mut().unwrap().remove("planet");
+        }
+    }
+    for key in [
+        "planet_catalog",
+        "market_starting_credits",
+        "shipyard_starting_stock",
+    ] {
+        value["economy"]["rules"]
+            .as_object_mut()
+            .unwrap()
+            .remove(key);
+    }
+}
+
+fn assert_legacy_assets(restored: &Session, original: &Session) {
+    assert_eq!(restored.economy.credits, original.economy.credits);
+    assert_eq!(restored.economy.rules, original.economy.rules);
+    for market in &restored.economy.markets {
+        assert_eq!(market.credits.0, 0);
+        assert_eq!(market.ship_stock, [0; 3]);
+        if market.is_station {
+            assert_eq!(
+                market.goods,
+                original.economy.market(market.id).unwrap().goods
+            );
+        } else {
+            assert!(market.goods.iter().all(|good| good.stock == 0));
+        }
+    }
+}
+
+#[test]
+fn schema_three_body_positions_migrate_without_cloning_stock_into_planets() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("v3.json");
+    let mut session = Session::default();
+    crate::test_support::move_fleet(
+        &mut session,
+        ShipId(1),
+        game_core::movement::MoveTarget::Body {
+            system: game_core::SystemId(1),
+            body: game_core::BodyId(1),
+        },
+    );
+    let mut value: serde_json::Value =
+        serde_json::from_str(&session.export_json().unwrap()).unwrap();
+    make_legacy_markets(&mut value);
+    value["schema_version"] = 3.into();
+    fs::write(&path, value.to_string()).unwrap();
+    let (mut restored, notice) = Session::load(&path).unwrap();
+    assert!(notice.unwrap().contains("start empty"));
+    assert_eq!(restored.state, session.state);
+    assert_legacy_assets(&restored, &session);
+    let market = restored
+        .economy
+        .current_market(&restored.state.ships[0])
+        .unwrap();
+    assert!(!market.is_station);
+    assert!(market.goods.iter().all(|good| good.stock == 0));
+    restored.advance(1);
+    assert!(
+        restored
+            .economy
+            .current_market(&restored.state.ships[0])
+            .unwrap()
+            .goods
+            .iter()
+            .any(|good| good.stock > 0)
+    );
+    assert!(
+        restored
+            .economy
+            .markets
+            .iter()
+            .all(|market| market.credits.0 == 0)
+    );
 }

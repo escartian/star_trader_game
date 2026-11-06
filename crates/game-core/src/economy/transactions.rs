@@ -48,16 +48,25 @@ impl Economy {
             TradeSide::Buy if total > self.credits.0 => {
                 return Err(EconomyError::InsufficientCredits);
             }
+            TradeSide::Buy => {
+                market
+                    .credits
+                    .0
+                    .checked_add(total)
+                    .ok_or(EconomyError::ArithmeticOverflow)?;
+            }
             TradeSide::Sell => {
+                if total > market.credits.0 {
+                    return Err(EconomyError::MarketInsufficientCredits);
+                }
                 self.credits
                     .0
                     .checked_add(total)
                     .ok_or(EconomyError::ArithmeticOverflow)?;
             }
-            _ => {}
         }
         Ok(TradeQuote {
-            system: market.system,
+            market: market.id,
             commodity,
             quantity,
             side,
@@ -89,60 +98,19 @@ impl Economy {
         let market = self
             .markets
             .iter_mut()
-            .find(|market| market.system == quote.system)
+            .find(|market| market.id == quote.market)
             .ok_or(EconomyError::UnknownMarket)?;
         let stock = &mut market.goods[commodity.index()].stock;
         *stock = match side {
             TradeSide::Buy => *stock - quantity,
             TradeSide::Sell => *stock + quantity,
         };
+        market.credits = Credits(match side {
+            TradeSide::Buy => market.credits.0 + quote.total.0,
+            TradeSide::Sell => market.credits.0 - quote.total.0,
+        });
         self.credits = Credits(credits);
         ship.cargo[commodity.index()] = cargo;
         Ok(quote)
-    }
-
-    pub fn refuel(&mut self, ship: &mut Ship, units: u32) -> Result<(), EconomyError> {
-        self.current_market(ship)?;
-        if units == 0 {
-            return Err(EconomyError::InvalidQuantity);
-        }
-        let fuel = ship
-            .fuel
-            .checked_add(units)
-            .ok_or(EconomyError::ArithmeticOverflow)?;
-        if fuel > ship.fuel_capacity {
-            return Err(EconomyError::FuelFull);
-        }
-        let cost = u64::from(units)
-            .checked_mul(self.rules.fuel_unit_price.0)
-            .ok_or(EconomyError::ArithmeticOverflow)?;
-        let credits = self
-            .credits
-            .0
-            .checked_sub(cost)
-            .ok_or(EconomyError::InsufficientCredits)?;
-        self.credits = Credits(credits);
-        ship.fuel = fuel;
-        Ok(())
-    }
-
-    pub fn upgrade_hold(&mut self, ship: &mut Ship) -> Result<(), EconomyError> {
-        self.current_market(ship)?;
-        if ship.upgraded {
-            return Err(EconomyError::AlreadyUpgraded);
-        }
-        let credits = self
-            .credits
-            .0
-            .checked_sub(self.rules.hold_upgrade_price.0)
-            .ok_or(EconomyError::InsufficientCredits)?;
-        let capacity = ship
-            .cargo_capacity
-            .checked_add(self.rules.hold_upgrade_capacity)
-            .ok_or(EconomyError::ArithmeticOverflow)?;
-        self.credits = Credits(credits);
-        ship.cargo_capacity = capacity;
-        ship.upgraded = true;
-        Ok(())
     }
 }

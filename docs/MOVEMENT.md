@@ -53,8 +53,8 @@ intermediate systems or their bodies.
 
 ## Persistence and authority
 
-World save schema 3 stores movement rules and local/body/deep-space locations.
-Schema 1 and 2 saves migrate without changing balances, fleet membership or
+World save schema 4 stores movement rules and local/body/deep-space locations.
+Schema 1–3 saves migrate without changing balances, fleet membership or
 positions. Older active journeys retain their paid fuel and finish through
 **Continue journey**; new movement uses explicit exit/entry/docking actions.
 
@@ -69,5 +69,7 @@ previews but rejects immediate Move commands. Future multiplayer adapters must
 collect player orders for shared turn resolution. Networking/turn collection is
 not implemented by this change.
 
-Planet visits and station docking are implemented. Resource/ship markets remain
-system-port markets; distinct planetary economies are the next roadmap milestone.
+Planet visits and station docking are implemented. Rocky/gas planets and primary
+stations have separate resource/ship markets. Planetary commerce takes place in
+an orbital berth after a body arrival; waypoints, moons and asteroids have no
+markets yet. See [planet economies](PLANET_ECONOMY.md) for finite funds and old saves.

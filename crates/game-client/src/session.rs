@@ -6,6 +6,7 @@ mod navigation;
 mod panel;
 mod saves;
 mod settings;
+mod shipyard;
 use game_core::economy::Economy;
 use game_core::{SystemId, travel::TravelState};
 use game_protocol::{ClientCommand, ServerMessage, SessionEvent};
@@ -38,7 +39,7 @@ impl LocalSession {
             authority,
             active_ship,
             state,
-            economy,
+            economy: *economy,
             market: market::MarketPanel::default(),
             navigation: navigation::NavigationPanel::default(),
             fleet_panel: fleets::FleetPanel::default(),
@@ -136,7 +137,7 @@ impl LocalSession {
                 if self.state.ship(self.active_ship).is_err() {
                     self.active_ship = self.state.ships[0].id;
                 }
-                self.economy = economy;
+                self.economy = *economy;
                 for event in events {
                     let message = match event {
                         SessionEvent::Moved(plan) => format!(
@@ -145,6 +146,12 @@ impl LocalSession {
                             plan.fuel_per_ship,
                             plan.duration_ticks
                         ),
+                        SessionEvent::ShipSold { ship, price } => {
+                            format!("Sold ship {} for {price} cr.", ship.0)
+                        }
+                        SessionEvent::FleetRenamed { fleet } => {
+                            format!("Renamed fleet {}.", fleet.0)
+                        }
                         SessionEvent::ShipPurchased { ship } => {
                             self.active_ship = ship;
                             format!("Purchased {}.", self.selected_ship().name)

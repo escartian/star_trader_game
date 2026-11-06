@@ -110,7 +110,7 @@ bulk advancement matches individual ticks. Future AI/encounters must preserve
 intermediate event ordering rather than assume all tick systems can be batched.
 The player does not press End Turn in single-player; movement consumes ticks.
 
-`game-server/src/save.rs` owns schema-3 authoritative JSON, validation, atomic
+`game-server/src/save.rs` owns schema-4 authoritative JSON, validation, atomic
 replacement and a previous-good backup. Saves contain the world/player/economy
 and their active definitions; continuing does not regenerate markets or apply
 changed startup definitions. The client replaces its session only after load
@@ -136,7 +136,7 @@ session before publication; every member must pass travel checks before fuel is
 charged. Fleet members share a location. Local-body and deep-space positions
 are authoritative. Ships share fleet locations and are illustrated beside their
 body anchors or at deep-space positions. The current primary trade station retains
-its system ID in Docked; planetary markets are next work.
+its system ID in Docked; planetary Orbiting locations resolve a market by body.
 Ship catalog definitions come from config/ships.json, embedded as a fallback.
 Schema-1 migration moves the old global cargo/upgrade into its existing ship.
 
@@ -155,3 +155,22 @@ state, resolves movement ticks, updates markets and publishes one candidate sess
 Ordinary handle_as rejects immediate Move; a future multiplayer turn resolver
 must collect orders before invoking host resolution. It cannot expose that host
 entry point directly as a remote command handler. See MOVEMENT.md for current costs.
+
+## Planet economies and finite shipyards
+
+Planet profiles live on local bodies; `game-core::planet` owns their JSON templates
+and deterministic assignment. Economy owns markets keyed by `(SystemId, BodyId)`
+with finite credit balances and hull inventory. Station flags are validated against
+the saved world's primary station. A body ID alone never identifies a market.
+A planet specialization affects tick production; biome/danger are saved descriptions
+for future encounter logic.
+
+Resource/service/hull transactions transfer credits between the player and local
+market. Hull purchases consume stock, sales restock it and remove empty fleets;
+all publish through candidate-session transactions. Fleet/ship IDs remain monotonic.
+Core rules resolve ship location; the client cannot nominate a remote marketplace.
+
+Schema-4 migration keeps existing station goods/prices and player state. Newly
+introduced planet stock and previously untracked market cash/hulls start empty;
+loading never seeds free funds or duplicates legacy stock. New sessions alone
+allocate configured budgets/inventory. See PLANET_ECONOMY.md for this distinction.

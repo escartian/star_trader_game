@@ -164,3 +164,28 @@ fn selected_ship_trades_into_its_own_hold_and_restores_from_preferences() {
     });
     assert_eq!(restored.state.tick, 0);
 }
+
+#[test]
+fn selling_the_selected_ship_keeps_selection_and_preferences_valid() {
+    let mut host = LocalSession::new(game_server::Session::default());
+    host.command(ClientCommand::BuyShip {
+        ship: ShipId(1),
+        kind: game_core::fleet::ShipKind::Scout,
+        expected_revision: 0,
+    });
+    assert_eq!(host.selected_ship().id, ShipId(2));
+    host.command(ClientCommand::SellShip {
+        ship: ShipId(2),
+        expected_revision: 1,
+    });
+    assert_eq!(host.selected_ship().id, ShipId(1));
+    assert_eq!(host.preferences().active_ship, ShipId(1));
+    assert_eq!(host.state.ships.len(), 1);
+    assert_eq!(host.state.tick, 0);
+    let saved = host.state.clone();
+    host.command(ClientCommand::SellShip {
+        ship: ShipId(2),
+        expected_revision: 1,
+    });
+    assert_eq!(host.state, saved);
+}

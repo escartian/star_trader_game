@@ -5,6 +5,7 @@ pub mod economy;
 pub mod fleet;
 pub mod generation;
 pub mod movement;
+pub mod planet;
 pub mod travel;
 
 /// Stable identity; never use a display name or array index as an entity ID.
@@ -61,6 +62,7 @@ pub struct LocalBody {
     pub name: String,
     pub kind: BodyKind,
     pub position: LocalPosition,
+    pub planet: Option<planet::PlanetProfile>,
 }
 
 /// Display classification; rendering sizes are symbolic, not physical scale.
@@ -97,7 +99,7 @@ pub struct StarSystem {
 
 /// A fixed fixture for the first map prototype, not procedural generation.
 pub fn demo_galaxy() -> Vec<StarSystem> {
-    vec![
+    let mut systems = vec![
         StarSystem {
             id: SystemId(1),
             name: "Sol".into(),
@@ -123,7 +125,9 @@ pub fn demo_galaxy() -> Vec<StarSystem> {
                 z: -9,
             },
         },
-    ]
+    ];
+    planet::PlanetCatalog::default().populate(&mut systems);
+    systems
 }
 
 /// Fixed navigation destinations, not an orbital simulation or astronomical model.
@@ -173,6 +177,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
     ]
     .into_iter()
     .map(|(id, name, kind, x_km, y_km, z_km)| LocalBody {
+        planet: None,
         id,
         name: format!("{system_name} {name}"),
         kind,
@@ -180,3 +185,6 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
     })
     .collect()
 }
+
+#[cfg(test)]
+mod planet_tests;

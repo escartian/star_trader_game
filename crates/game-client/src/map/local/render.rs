@@ -9,10 +9,16 @@ impl LocalView {
         &mut self,
         ui: &mut egui::Ui,
         ships: &[game_core::travel::Ship],
+        fleets: &[game_core::fleet::Fleet],
     ) -> Rect {
         let height = (ui.available_height() * 0.65).clamp(220.0, 540.0);
         let (response, painter) = ui.allocate_painter(
-            Vec2::new(ui.available_width(), height),
+            Vec2::new(
+                ui.available_width()
+                    .min(ui.clip_rect().right() - ui.cursor().left())
+                    .max(1.0),
+                height,
+            ),
             Sense::click_and_drag(),
         );
         let rect = response.rect;
@@ -38,15 +44,6 @@ impl LocalView {
             .hover_pos()
             .map(|p| pick(&self.system, &self.camera, rect, p))
             .unwrap_or_default();
-        if response.clicked() {
-            self.candidates = response
-                .interact_pointer_pos()
-                .map(|p| pick(&self.system, &self.camera, rect, p))
-                .unwrap_or_default();
-            if self.candidates.len() == 1 {
-                self.selected = self.candidates.first().copied();
-            }
-        }
         if !hover.is_empty() {
             response.clone().on_hover_ui(|ui| {
                 for body in self.system.bodies.iter().filter(|b| hover.contains(&b.id)) {
@@ -56,25 +53,24 @@ impl LocalView {
         }
         self.draw_boundary(&painter, rect);
         let star = self.camera.project(DVec3::ZERO, rect);
-        if let Some(body) = self
-            .system
-            .bodies
-            .iter()
-            .find(|b| Some(b.id) == self.selected)
-        {
-            let origin = ships
-                .iter()
-                .find(|ship| ship.id == self.active_ship)
-                .and_then(|ship| self.ship_anchor(&ship.location))
-                .map_or(star, |point| self.camera.project(point, rect));
+        for segment in self.preview_route.windows(2) {
+            let project = |position: game_core::LocalPosition| {
+                let schematic = self
+                    .system
+                    .bodies
+                    .iter()
+                    .find(|body| body.position == position)
+                    .map_or(
+                        super::kilometers(position) / super::KM_PER_VIEW_UNIT,
+                        |body| display_position(&self.system, body),
+                    );
+                self.camera.project(schematic, rect)
+            };
             painter.line_segment(
-                [
-                    origin,
-                    self.camera
-                        .project(display_position(&self.system, body), rect),
-                ],
-                Stroke::new(1.0_f32, Color32::from_rgb(92, 180, 183)),
+                [project(segment[0]), project(segment[1])],
+                Stroke::new(1.5_f32, crate::theme::CYAN),
             );
+            painter.circle_filled(project(segment[1]), 3.0, crate::theme::CYAN);
         }
         let scale = SymbolScale::new(self.camera.zoom);
         visuals::star_with_radius(
@@ -152,7 +148,59 @@ impl LocalView {
                 painter.galley(label.min, galley, Color32::WHITE);
             }
         }
-        self.draw_ships(&painter, rect, ships, &label_bounds, &marker_bounds);
+        let mut reserved_labels = label_bounds;
+        reserved_labels.push(Rect::from_min_size(
+            rect.right_top() + Vec2::new(-174.0, 14.0),
+            Vec2::new(160.0, 35.0),
+        ));
+        self.draw_fleets(
+            &painter,
+            rect,
+            ships,
+            fleets,
+            &reserved_labels,
+            &marker_bounds,
+        );
+        let portal = Rect::from_min_size(
+            rect.right_top() + Vec2::new(-174.0, 14.0),
+            Vec2::new(160.0, 35.0),
+        );
+        painter.rect_filled(portal, 5.0, crate::theme::PANEL);
+        painter.rect_stroke(
+            portal,
+            5.0,
+            Stroke::new(1.0_f32, crate::theme::CYAN),
+            egui::StrokeKind::Inside,
+        );
+        painter.text(
+            portal.center(),
+            egui::Align2::CENTER_CENTER,
+            "DEPART → GALAXY",
+            egui::FontId::monospace(12.0),
+            crate::theme::CYAN,
+        );
+        if response.clicked()
+            && let Some(pointer) = response.interact_pointer_pos()
+        {
+            if portal.contains(pointer) {
+                self.move_request =
+                    Some(game_core::movement::MoveTarget::LeaveSystem(self.system.id));
+            } else if let Some(hit) = crate::map::fleets::pick(&self.fleet_hits, pointer) {
+                self.selection_request = Some(hit.ship);
+                self.active_ship = hit.ship;
+            } else {
+                self.candidates = pick(&self.system, &self.camera, rect, pointer);
+                if self.candidates.len() == 1 {
+                    self.selected = self.candidates.first().copied();
+                    self.move_request =
+                        self.selected
+                            .map(|body| game_core::movement::MoveTarget::Body {
+                                system: self.system.id,
+                                body,
+                            });
+                }
+            }
+        }
         visuals::axes(&painter, rect, self.camera.rotation());
         rect
     }

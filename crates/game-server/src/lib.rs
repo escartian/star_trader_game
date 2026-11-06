@@ -41,11 +41,12 @@ impl Session {
         rules.validate()?;
         let mut systems = game_core::generation::generate_galaxy(seed);
         rules.planet_catalog.populate(&mut systems);
-        let economy = Economy::with_rules(&systems, rules)?;
+        let mut economy = Economy::with_rules(&systems, rules)?;
         let mut state = TravelState::default();
         state.navigation.rng_state = seed;
         state.ships[0].cargo_capacity = economy.rules.cargo_capacity;
         state.ships[0].base_cargo_capacity = economy.rules.cargo_capacity;
+        economy.spawn_traders(&systems, &state.movement_rules);
         Ok(Self {
             systems,
             economy,
@@ -79,6 +80,7 @@ impl Session {
                 systems: self.systems.clone(),
             }),
             command @ (ClientCommand::Move { .. }
+            | ClientCommand::PlotDestination { .. }
             | ClientCommand::ExecuteNavigationRun { .. }
             | ClientCommand::HoldFleet { .. }
             | ClientCommand::CancelCourse { .. }
@@ -90,6 +92,12 @@ impl Session {
             | ClientCommand::MergeFleets { .. }
             | ClientCommand::TransferCargo { .. }) => self.fleet_command(player, command),
             ClientCommand::GetSession => Ok(self.snapshot(Vec::new())),
+            ClientCommand::PreviewDestination { ship, system, body } => {
+                Ok(ServerMessage::DestinationPreview(
+                    self.state
+                        .plan_destination(player, ship, system, body, &self.systems)?,
+                ))
+            }
             ClientCommand::PreviewMove { ship, target } => Ok(ServerMessage::MovementPreview(
                 self.preview_movement(player, ship, &target)?,
             )),
@@ -162,3 +170,9 @@ mod planet_tests;
 mod encounter_tests;
 #[cfg(test)]
 mod navigation_tests;
+
+#[cfg(test)]
+mod npc_tests;
+
+#[cfg(test)]
+mod route_tests;

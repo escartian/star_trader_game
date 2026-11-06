@@ -16,6 +16,9 @@ impl Session {
             ClientCommand::Move {
                 expected_revision, ..
             }
+            | ClientCommand::PlotDestination {
+                expected_revision, ..
+            }
             | ClientCommand::ExecuteNavigationRun { expected_revision }
             | ClientCommand::HoldFleet {
                 expected_revision, ..
@@ -33,6 +36,18 @@ impl Session {
         }
         let mut candidate = self.clone();
         let events = match command {
+            ClientCommand::PlotDestination {
+                ship, system, body, ..
+            } => {
+                let fleet = candidate.state.plot_destination(
+                    player,
+                    ship,
+                    system,
+                    body,
+                    &candidate.systems,
+                )?;
+                vec![NavigationEvent::CoursePlotted(fleet)]
+            }
             ClientCommand::Move { ship, target, .. } => {
                 let fleet =
                     candidate
@@ -62,6 +77,7 @@ impl Session {
                 candidate
                     .economy
                     .advance(candidate.state.movement_rules.ticks_per_navigation_run);
+                candidate.economy.advance_traders(&candidate.systems)?;
                 events
             }
             _ => unreachable!(),

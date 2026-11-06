@@ -19,6 +19,10 @@ impl Session {
                 .validate_location(&ship.location, &self.systems)
                 .map_err(|error| error.to_string())?;
         }
+        for trader in &mut self.economy.traders {
+            trader.state.movement_rules = rules.clone();
+            trader.state.movement_rules.encounter_chance_percent = 0;
+        }
         self.state.movement_rules = rules;
         Ok(())
     }

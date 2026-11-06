@@ -120,3 +120,79 @@ fn double_click_enters_only_an_unambiguous_system() {
     map.select_targets(vec![SystemId(2)], true);
     assert!(map.local.is_some());
 }
+
+#[test]
+fn map_fleet_markers_select_a_fleet_without_plotting_or_advancing_time() {
+    use game_core::{
+        fleet::{FleetId, ShipKind},
+        travel::ShipId,
+    };
+    use game_protocol::ClientCommand;
+    let mut authority = game_server::Session::default();
+    authority.handle(ClientCommand::BuyShip {
+        ship: ShipId(1),
+        kind: ShipKind::Scout,
+        expected_revision: 0,
+    });
+    authority.handle(ClientCommand::SplitFleet {
+        fleet: FleetId(1),
+        ships: vec![ShipId(2)],
+        expected_revision: 1,
+    });
+    let mut map = Map::new(game_core::demo_galaxy(), authority);
+    let ctx = egui::Context::default();
+    let screen = Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1280.0, 900.0)));
+    for _ in 0..2 {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: screen,
+                ..Default::default()
+            },
+            |ctx| map.ui(ctx),
+        );
+    }
+    let point = map
+        .galaxy_fleet_hits
+        .iter()
+        .find(|hit| hit.fleet == FleetId(2))
+        .expect("fleet must be pickable")
+        .bounds
+        .center();
+    for pressed in [true, false] {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: screen,
+                events: vec![
+                    egui::Event::PointerMoved(point),
+                    egui::Event::PointerButton {
+                        pos: point,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+                ..Default::default()
+            },
+            |ctx| map.ui(ctx),
+        );
+    }
+    assert_eq!(map.session.selected_ship().id, ShipId(2));
+    assert_eq!(map.session.run_number(), 0);
+}
+
+#[test]
+fn leaving_and_entering_system_space_switch_views_only_after_a_navigation_run() {
+    use game_core::movement::MoveTarget;
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
+    map.open_selected_system();
+    map.session
+        .capture_movement(MoveTarget::LeaveSystem(SystemId(1)))
+        .unwrap();
+    map.follow_navigation_transitions();
+    assert!(map.local.is_none());
+    map.session
+        .capture_movement(MoveTarget::EnterSystem(SystemId(2)))
+        .unwrap();
+    map.follow_navigation_transitions();
+    assert_eq!(map.local.as_ref().unwrap().system().id, SystemId(2));
+}

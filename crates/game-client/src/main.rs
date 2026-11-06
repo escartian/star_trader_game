@@ -4,6 +4,7 @@ mod map;
 mod options;
 mod preferences;
 mod session;
+mod theme;
 mod units;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -22,7 +22,9 @@ a 15-tick voyage takes at least four runs. Short courses can arrive in one run.
 Long voyages automatically continue on following runs without reissuing orders.
 The shared world advances four ticks regardless of fleet count or course length.
 
-Fuel is charged once when a course first departs. Underway fleets cannot trade,
+Fuel is charged once per leg when that leg departs. A selected destination can
+include safe waypoints, departure, entry and local arrival legs; all are previewed
+for fuel/range before plotting. Underway fleets cannot trade,
 refuel, split/merge, buy/sell hulls or cancel/replot. Queued courses must be cancelled
 before changing fleet membership. Trading/loading/naming/encounter choices do not
 advance the clock. Holding all fleets is a valid deliberate waiting run.
@@ -71,3 +73,8 @@ remote clients; this change does not implement network multiplayer.
 Backward save compatibility is not a prototype requirement. Existing migration
 coverage describes this batch only; future breaking changes may require a new
 session rather than additional migration work.
+
+The map-first interface now selects fleets and destinations directly. Automatic
+multi-leg itineraries continue over runs without re-entering coordinates. Initial
+NPC traders make decisions and advance their own safe routes once per global run;
+market production still executes once. See MAP_CONTROLS.md for current scope.

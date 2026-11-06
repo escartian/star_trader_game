@@ -50,6 +50,7 @@ impl Economy {
             }
         }
         Ok(Self {
+            traders: Vec::new(),
             credits: rules.starting_credits,
             markets,
             rules,

@@ -121,3 +121,13 @@ Local distances, cube extents and waypoint inputs display AU; galaxy distances
 remain ly. Conversion tests cover signed/fractional rounding and invalid input.
 Backward save compatibility is no longer a requirement during prototyping; this
 batch's earlier migration checks are evidence, not a future maintenance promise.
+
+Map-command checks cover actual egui fleet-marker clicks in the outer and local
+maps, body destination intents, safe marker placement around projected stars,
+automatic inner/outer transitions, full destination itineraries and stellar-core
+crossing rejection. NPC checks demonstrate actual hauling over 16 navigation runs,
+cash/commodity conservation after production, player-wallet isolation, save/reload
+replay and rejection of player commands against NPC hulls. GPU destination/traffic
+captures on Apple M5 Pro were visually inspected. Camera/test controls are collapsed
+by default, and map canvas widths are clipped to the actual viewport. Native window
+mouse/DPI/lifecycle checks remain separate, unverified acceptance work.

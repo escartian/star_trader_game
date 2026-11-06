@@ -82,6 +82,8 @@ impl LocalSession {
             "Plot courses for your fleets, then Execute navigation run when every fleet is ready.",
         );
         let rules = self.state.movement_rules.clone();
+        ui.label("Use the map to select your fleet and destination. Routes handle local travel, departure and entry.");
+        egui::CollapsingHeader::new("Advanced coordinates (optional)").show(ui, |ui| {
         if let Some(system) = ship
             .location
             .system()
@@ -169,6 +171,7 @@ impl LocalSession {
                 }
             });
         }
+        });
         self.movement_preview(ui, systems);
     }
 

@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 8;
+pub const PROTOCOL_VERSION: u32 = 9;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -43,6 +43,17 @@ pub enum ClientCommand {
         target: ShipId,
         commodity: Commodity,
         quantity: u32,
+        expected_revision: u64,
+    },
+    PreviewDestination {
+        ship: ShipId,
+        system: SystemId,
+        body: Option<game_core::BodyId>,
+    },
+    PlotDestination {
+        ship: ShipId,
+        system: SystemId,
+        body: Option<game_core::BodyId>,
         expected_revision: u64,
     },
     PreviewMove {
@@ -142,6 +153,7 @@ pub enum ServerMessage {
         economy: Box<Economy>,
         events: Vec<SessionEvent>,
     },
+    DestinationPreview(game_core::movement::CoursePreview),
     MovementPreview(game_core::movement::MovementPlan),
     TradePreview(TradeQuote),
     CommandRejected(CommandError),

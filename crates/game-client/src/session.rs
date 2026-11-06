@@ -1,6 +1,7 @@
 //! Native session adapter. Course planning is separate from shared navigation runs.
 mod fleets;
 mod guide;
+mod map_controls;
 mod market;
 mod navigation;
 mod panel;
@@ -14,6 +15,7 @@ use game_protocol::{ClientCommand, ServerMessage, SessionEvent};
 use std::collections::VecDeque;
 
 pub struct LocalSession {
+    map_target: Option<map_controls::MapTarget>,
     focus_requested: bool,
     authority: game_server::Session,
     state: TravelState,
@@ -38,6 +40,7 @@ impl LocalSession {
         };
         let active_ship = state.ships[0].id;
         Self {
+            map_target: None,
             focus_requested: false,
             authority,
             active_ship,

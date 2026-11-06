@@ -101,6 +101,7 @@ fn two_fleets_plot_independently_and_advance_on_one_shared_run() {
     assert_eq!(session.state.ships[1].fuel, 49);
     let mut expected = original;
     expected.advance(4);
+    expected.advance_traders(&session.systems).unwrap();
     assert_eq!(session.economy, expected);
     let before = session.snapshot(Vec::new());
     assert!(matches!(

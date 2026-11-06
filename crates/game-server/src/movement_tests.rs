@@ -81,7 +81,10 @@ fn a_complete_trip_preserves_cargo_and_saves_at_every_movement_stage() {
             .div_ceil(session.state.movement_rules.ticks_per_navigation_run)
             * session.state.movement_rules.ticks_per_navigation_run;
         let mut expected_markets = session.economy.clone();
-        expected_markets.advance(elapsed);
+        for _ in 0..elapsed / session.state.movement_rules.ticks_per_navigation_run {
+            expected_markets.advance(session.state.movement_rules.ticks_per_navigation_run);
+            expected_markets.advance_traders(&session.systems).unwrap();
+        }
         move_fleet(&mut session, ShipId(1), target);
         assert_eq!(session.state.tick, tick + elapsed);
         assert!(session.state.revision > revision);

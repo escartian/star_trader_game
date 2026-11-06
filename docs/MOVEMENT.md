@@ -7,16 +7,17 @@ per-fleet encounters can pause progress. There is no wall-clock simulation.
 
 ## Use the controls
 
-1. Double-click a star to inspect its system. Select a body and choose **Preview
-   movement to body**, or **Preview docking at trade port**. Plot the course in Navigation, then execute navigation runs.
-2. **Navigation** accepts local X/Y/Z waypoints in AU. An inside target
-   stays in the system; an outside target exits at the first cube face crossed.
-   The six exit buttons choose an axis while retaining the other coordinates.
-3. In deep space, enter waypoint coordinates in light-years, or choose a system
-   by name. Exact system coordinates explicitly request entry. Passing a system
-   along a path never enters or intercepts it.
-4. Entry arrives at the near cube boundary. Inspect the destination system, select
-   its trade port, plot docking and execute runs until arrival before trading/refuelling.
+1. Select a fleet on the map or in Fleet Command. Click a planet, station, moon
+   or asteroid; use the destination card's PLOT COURSE button.
+2. Double-click another system to inspect/select a body there. The itinerary
+   automatically includes departure, entry and safe local arrival legs.
+3. The departure marker selects an outward course; Back to galaxy only changes
+   the view. Actual exits/entries follow the selected fleet between map layers.
+4. Execute navigation runs to advance. Long voyages and approach legs continue
+   across runs; initial plotting never moves the fleet.
+
+Coordinate waypoints and axis controls remain under Navigation → Advanced
+coordinates (optional), rather than the normal interaction flow.
 
 **Focus fleet** in the galaxy and **Focus selected ship** inside a system reveal
 ships outside the current view. **Show system boundary** draws the local cube.
@@ -49,7 +50,8 @@ The default local half-extent is approximately 1.3369 AU. Galaxy views retain ly
   A repeated request for the same location rejects instead of consuming time.
 
 The local star has a configurable exclusion radius (default 1,000,000 km).
-A segment through this sphere rejects; choose a waypoint around it. Body arrival
+Raw advanced segments through this sphere reject. Named destinations generate
+safe local waypoints automatically; deep-space stellar-core crossings reject. Body arrival
 means a symbolic berth/orbit, not a physics simulation or landing. Planet/moon
 radii and collision volumes are not modeled yet. Deep-space paths do not inspect
 intermediate systems or their bodies.

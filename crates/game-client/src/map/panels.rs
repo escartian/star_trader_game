@@ -27,6 +27,9 @@ impl Map {
                         .clicked()
                     {
                         self.selected = Some(system.id);
+                        if self.scene == super::fixtures::Scene::Session {
+                            self.session.select_destination(system.id, None);
+                        }
                     }
                 }
             });
@@ -68,6 +71,9 @@ impl Map {
                                 .clicked()
                             {
                                 self.selected = Some(system.id);
+                                if self.scene == super::fixtures::Scene::Session {
+                                    self.session.select_destination(system.id, None);
+                                }
                             }
                         });
                     }

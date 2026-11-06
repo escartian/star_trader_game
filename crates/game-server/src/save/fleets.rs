@@ -13,7 +13,8 @@ impl SaveData {
         }
         let mut ids = HashSet::new();
         for ship in &self.player.ships {
-            if ship.id.0 == 0
+            if ship.id.0 >= game_core::npc::NPC_ID_BASE
+                || ship.id.0 == 0
                 || !ids.insert(ship.id)
                 || ship.owner != PlayerId(1)
                 || ship.name.is_empty()
@@ -40,7 +41,8 @@ impl SaveData {
         let mut fleets = HashSet::new();
         let mut members = HashSet::new();
         for fleet in &self.player.fleets {
-            if fleet.id.0 == 0
+            if fleet.id.0 >= game_core::npc::NPC_ID_BASE
+                || fleet.id.0 == 0
                 || !fleets.insert(fleet.id)
                 || fleet.owner != PlayerId(1)
                 || fleet.name.is_empty()

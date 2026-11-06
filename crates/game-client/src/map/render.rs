@@ -5,7 +5,12 @@ impl Map {
     pub(super) fn draw_galaxy(&mut self, ui: &mut egui::Ui) -> Rect {
         let height = (ui.available_height() * 0.65).clamp(220.0, 540.0);
         let (response, painter) = ui.allocate_painter(
-            Vec2::new(ui.available_width(), height),
+            Vec2::new(
+                ui.available_width()
+                    .min(ui.clip_rect().right() - ui.cursor().left())
+                    .max(1.0),
+                height,
+            ),
             Sense::click_and_drag(),
         );
         let rect = response.rect;
@@ -32,14 +37,6 @@ impl Map {
             .hover_pos()
             .map(|p| pick(&self.systems, &self.camera, rect, p))
             .unwrap_or_default();
-        if response.clicked() || response.double_clicked() {
-            let candidates = response
-                .interact_pointer_pos()
-                .map(|p| pick(&self.systems, &self.camera, rect, p))
-                .unwrap_or_default();
-            self.select_targets(candidates, response.double_clicked());
-            ui.ctx().request_repaint();
-        }
         if !hover.is_empty() {
             response.clone().on_hover_ui(|ui| {
                 for system in self.systems.iter().filter(|s| hover.contains(&s.id)) {
@@ -113,60 +110,113 @@ impl Map {
                 painter.galley(label_rect.min, galley, Color32::WHITE);
             }
         }
+        self.galaxy_fleet_hits.clear();
         if self.scene == super::fixtures::Scene::Session {
             let art = super::art::Artwork::preload(ui.ctx());
-            for system in &self.systems {
-                let docked: Vec<_> = self
-                    .session
-                    .ships()
-                    .iter()
-                    .filter(|ship| ship.location.system() == Some(system.id))
-                    .collect();
-                if let Some(ship) = docked.first() {
-                    let point =
-                        self.camera.project(position(system), rect) + Vec2::new(-24.0, 22.0);
-                    art.paint(super::art::ArtKind::from(ship.kind), &painter, point, 30.0);
-                    painter.text(
-                        point + Vec2::new(17.0, 0.0),
-                        egui::Align2::LEFT_CENTER,
-                        format!("{} ships", docked.len()),
-                        egui::FontId::proportional(11.0),
-                        Color32::LIGHT_GREEN,
-                    );
+            let mut reserved = labels;
+            reserved.extend(self.systems.iter().map(|system| {
+                Rect::from_center_size(
+                    self.camera.project(position(system), rect),
+                    Vec2::splat(45.0),
+                )
+            }));
+            for fleet in self.session.fleets() {
+                let Some(ship) = fleet
+                    .ships
+                    .first()
+                    .and_then(|id| self.session.ships().iter().find(|ship| ship.id == *id))
+                else {
+                    continue;
+                };
+                let Some(world) = self.session.ship_position(ship.id, &self.systems) else {
+                    continue;
+                };
+                let anchor = self.camera.project(world, rect);
+                if let Some(hit) = super::fleets::paint(
+                    &painter,
+                    &art,
+                    rect,
+                    anchor,
+                    super::fleets::FleetSymbol {
+                        fleet,
+                        ship,
+                        selected: fleet.ships.contains(&self.session.selected_ship().id),
+                    },
+                    &mut reserved,
+                ) {
+                    self.galaxy_fleet_hits.push(hit);
                 }
             }
         }
         if self.scene == super::fixtures::Scene::Session {
-            let art = super::art::Artwork::preload(ui.ctx());
-            for ship in self.session.ships() {
-                if matches!(
-                    ship.location,
-                    game_core::travel::Location::DeepSpace(_)
-                        | game_core::travel::Location::InTransit(_)
-                ) && let Some(world) = self.session.ship_position(ship.id, &self.systems)
-                {
-                    let point = self.camera.project(world, rect);
-                    let offset = Vec2::new(-28.0, 22.0 + (ship.id.0 % 4) as f32 * 22.0);
-                    painter.line_segment(
-                        [point, point + offset],
-                        Stroke::new(1.0_f32, Color32::LIGHT_GREEN),
-                    );
-                    painter.circle_stroke(point, 4.0, Stroke::new(1.0_f32, Color32::LIGHT_GREEN));
-                    art.paint(
-                        super::art::ArtKind::from(ship.kind),
-                        &painter,
-                        point + offset,
-                        28.0,
+            let mut reserved = self
+                .galaxy_fleet_hits
+                .iter()
+                .map(|hit| hit.bounds)
+                .collect::<Vec<_>>();
+            reserved.extend(self.systems.iter().map(|system| {
+                Rect::from_center_size(
+                    self.camera.project(position(system), rect),
+                    Vec2::splat(54.0),
+                )
+            }));
+            for trader in self.session.traffic() {
+                let Some(ship) = trader.state.ships.first() else {
+                    continue;
+                };
+                let Some(world) = trader.state.navigation_position(ship.id, &self.systems) else {
+                    continue;
+                };
+                let world =
+                    glam::DVec3::new(world.x_km as f64, world.y_km as f64, world.z_km as f64)
+                        / game_core::movement::KM_PER_LIGHT_YEAR as f64;
+                let anchor = self.camera.project(world, rect);
+                if let Some(bounds) = super::fleets::place(anchor, rect, &reserved) {
+                    reserved.push(bounds);
+                    let center = bounds.center();
+                    painter
+                        .line_segment([anchor, center], Stroke::new(0.5_f32, crate::theme::AMBER));
+                    painter.circle_stroke(center, 12.0, Stroke::new(1.0_f32, crate::theme::AMBER));
+                    painter.text(
+                        center,
+                        egui::Align2::CENTER_CENTER,
+                        "NPC",
+                        egui::FontId::monospace(9.0),
+                        crate::theme::AMBER,
                     );
                     painter.text(
-                        point + offset + Vec2::new(16.0, 0.0),
-                        egui::Align2::LEFT_CENTER,
-                        format!("#{}", ship.id.0),
-                        egui::FontId::proportional(11.0),
-                        Color32::LIGHT_GREEN,
+                        center + Vec2::new(0.0, 17.0),
+                        egui::Align2::CENTER_TOP,
+                        &trader.name,
+                        egui::FontId::proportional(10.0),
+                        crate::theme::AMBER,
                     );
                 }
             }
+        }
+        if (response.clicked() || response.double_clicked())
+            && let Some(pointer) = response.interact_pointer_pos()
+        {
+            if let Some(hit) = super::fleets::pick(&self.galaxy_fleet_hits, pointer) {
+                self.session.select_map_fleet(hit.ship);
+            } else {
+                let candidates = pick(&self.systems, &self.camera, rect, pointer);
+                self.select_targets(candidates, response.double_clicked());
+                if self.scene == super::fixtures::Scene::Session
+                    && self.candidates.len() == 1
+                    && let Some(system) = self.selected
+                {
+                    self.session.select_destination(system, None);
+                }
+            }
+            ui.ctx().request_repaint();
+        }
+        if let Some(pointer) = response.hover_pos()
+            && let Some(hit) = super::fleets::pick(&self.galaxy_fleet_hits, pointer)
+        {
+            response
+                .clone()
+                .on_hover_text(format!("Select Fleet {}", hit.fleet.0));
         }
         visuals::axes(&painter, rect, self.camera.rotation());
 

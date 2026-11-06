@@ -45,6 +45,34 @@ impl TravelState {
         self.store_course(target, plan)
     }
 
+    pub fn plot_destination(
+        &mut self,
+        player: PlayerId,
+        ship: ShipId,
+        system: crate::SystemId,
+        body: Option<crate::BodyId>,
+        systems: &[StarSystem],
+    ) -> Result<FleetId, FleetMovementError> {
+        let preview = self.plan_destination(player, ship, system, body, systems)?;
+        let first = preview
+            .legs
+            .first()
+            .ok_or(NavigationError::NoCourse)?
+            .clone();
+        let mut targets = preview.targets.into_iter();
+        let target = targets.next().ok_or(NavigationError::NoCourse)?;
+        let fleet = self.store_course(target, first)?;
+        if let Some(order) = self
+            .navigation
+            .orders
+            .iter_mut()
+            .find(|order| order.plan.fleet == fleet)
+        {
+            order.remaining_waypoints = targets.collect();
+        }
+        Ok(fleet)
+    }
+
     pub fn store_course(
         &mut self,
         target: MoveTarget,
@@ -67,6 +95,7 @@ impl TravelState {
             .retain(|order| order.plan.fleet != fleet);
         self.navigation.holds.retain(|id| *id != fleet);
         self.navigation.orders.push(NavigationOrder {
+            remaining_waypoints: Vec::new(),
             remaining_ticks: plan.duration_ticks,
             plan,
             target,

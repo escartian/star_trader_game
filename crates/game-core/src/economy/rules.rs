@@ -16,6 +16,8 @@ pub struct MarketTemplate {
 pub struct EconomyRules {
     pub schema_version: u32,
     pub starting_credits: Credits,
+    #[serde(default = "default_npc_credits")]
+    pub npc_starting_credits: Credits,
     pub cargo_capacity: u32,
     pub fuel_unit_price: Credits,
     pub hold_upgrade_price: Credits,
@@ -34,6 +36,9 @@ pub struct EconomyRules {
     pub ship_catalog: crate::fleet::ShipCatalog,
 }
 
+fn default_npc_credits() -> Credits {
+    Credits(200_000)
+}
 fn default_resale_percent() -> u32 {
     60
 }
@@ -84,7 +89,8 @@ impl EconomyRules {
         {
             return Err("Invalid cargo capacity/upgrade".into());
         }
-        if self.starting_credits.0 > 1_000_000_000_000
+        if self.npc_starting_credits.0 > 1_000_000_000_000
+            || self.starting_credits.0 > 1_000_000_000_000
             || self.fuel_unit_price.0 == 0
             || self.fuel_unit_price.0 > 1_000_000_000
             || self.hold_upgrade_price.0 == 0

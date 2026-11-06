@@ -103,6 +103,8 @@ impl SaveData {
             return Err("Invalid player credits".into());
         }
         self.validate_markets()?;
+        self.economy
+            .validate_traders(&self.systems, self.player.navigation.run)?;
         Ok(())
     }
 }

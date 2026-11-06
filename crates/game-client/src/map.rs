@@ -2,6 +2,8 @@ mod art;
 mod camera;
 mod capture_state;
 mod fixtures;
+mod fleets;
+mod interaction;
 mod local;
 mod panels;
 mod render;
@@ -14,6 +16,10 @@ use game_core::{StarSystem, SystemId};
 use glam::DVec3;
 
 pub struct Map {
+    observed_run: u64,
+    observed_system: Option<SystemId>,
+    observed_location: game_core::travel::Location,
+    galaxy_fleet_hits: Vec<fleets::FleetHit>,
     session_systems: Vec<StarSystem>,
     systems: Vec<StarSystem>,
     selected: Option<SystemId>,
@@ -54,6 +60,10 @@ impl Map {
             .or_else(|| systems.first())
             .map(|s| s.id);
         Self {
+            observed_run: session.run_number(),
+            observed_system: session.current_system(),
+            observed_location: session.selected_ship().location.clone(),
+            galaxy_fleet_hits: Vec::new(),
             session_systems: systems.clone(),
             systems,
             selected,
@@ -139,6 +149,22 @@ impl Map {
     }
 
     pub fn ui(&mut self, ctx: &egui::Context) {
+        crate::theme::apply(ctx);
+        egui::TopBottomPanel::top("command_header").show(ctx, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.colored_label(
+                    crate::theme::CYAN,
+                    egui::RichText::new("STAR TRADER / NAVIGATION COMMAND")
+                        .monospace()
+                        .size(18.0),
+                );
+                ui.small(if self.local.is_some() {
+                    "INNER SYSTEM"
+                } else {
+                    "OUTER GALAXY"
+                });
+            });
+        });
         if let Some(systems) = self.session.take_loaded_galaxy() {
             self.session_systems = systems.clone();
             self.systems = systems;
@@ -165,6 +191,14 @@ impl Map {
         self.session.show_fleets(ctx, &self.session_systems);
         self.session.show_session_controls(ctx);
         self.session.show_navigation(ctx, &self.session_systems);
+        self.follow_navigation_transitions();
+        egui::SidePanel::left("fleet_map_roster")
+            .default_width(220.0)
+            .resizable(false)
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical()
+                    .show(ui, |ui| self.session.map_roster(ui, &self.session_systems));
+            });
         if self.session.take_focus_request() {
             if let Some(system) = self
                 .session
@@ -182,6 +216,10 @@ impl Map {
             }
         }
         if let Some(local) = &mut self.local {
+            local.set_preview_route(
+                self.session
+                    .map_route_points(local.system().id, &self.session_systems),
+            );
             local.set_fleet_context(
                 self.session.selected_ship().id,
                 self.session.system_half_extent_km(),
@@ -189,9 +227,21 @@ impl Map {
             let display_ships = self
                 .session
                 .ships_for_map(local.system(), &self.session_systems);
-            let back = local.ui(ctx, &display_ships);
+            let fleet_records = self.session.fleets().to_vec();
+            let back = local.ui(ctx, &display_ships, &fleet_records);
+            if let Some(ship) = local.take_fleet_selection() {
+                self.session.select_map_fleet(ship);
+            }
             if let Some(target) = local.take_movement_request() {
-                self.session.request_movement(target);
+                match target {
+                    game_core::movement::MoveTarget::Body { system, body } => {
+                        self.session.select_destination(system, Some(body))
+                    }
+                    game_core::movement::MoveTarget::LeaveSystem(system) => {
+                        self.session.select_departure(system)
+                    }
+                    target => self.session.request_movement(target),
+                }
             }
             if back {
                 self.local = None;
@@ -201,8 +251,9 @@ impl Map {
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.heading("Star Trader");
-                ui.label("Offline session • galaxy navigation");
+                ui.label("OUTER GALAXY / select a system to set a course; double-click to inspect");
                 self.session.guide(ui);
+                egui::CollapsingHeader::new("View / camera / test scenes").show(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
                     for scene in [Scene::Session, Scene::Overlap, Scene::Dense] {
                         if ui
@@ -240,6 +291,7 @@ impl Map {
                         self.camera.pitch = 0.0;
                     }
                     ui.add(egui::Slider::new(&mut self.camera.zoom, 0.3..=4.0).text("Zoom"));
+                });
                 });
                 if !ctx.wants_keyboard_input() && ui.input(|i| i.key_pressed(egui::Key::F)) {
                     self.focus_selection();

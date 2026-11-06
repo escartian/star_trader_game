@@ -53,6 +53,9 @@ pub struct LocalView {
     show_boundary: bool,
     half_extent_km: i64,
     active_ship: game_core::travel::ShipId,
+    preview_route: Vec<LocalPosition>,
+    fleet_hits: Vec<crate::map::fleets::FleetHit>,
+    selection_request: Option<game_core::travel::ShipId>,
     move_request: Option<game_core::movement::MoveTarget>,
 }
 
@@ -66,11 +69,18 @@ impl LocalView {
             candidates: Vec::new(),
             pan_tool: false,
             art: None,
+            preview_route: Vec::new(),
+            fleet_hits: Vec::new(),
+            selection_request: None,
             move_request: None,
             show_boundary: false,
             half_extent_km: game_core::movement::MovementRules::default().system_half_extent_km,
             active_ship: game_core::travel::ShipId(1),
         }
+    }
+
+    pub fn set_preview_route(&mut self, route: Vec<LocalPosition>) {
+        self.preview_route = route;
     }
 
     pub fn system(&self) -> &StarSystem {
@@ -84,6 +94,10 @@ impl LocalView {
     ) {
         self.active_ship = active_ship;
         self.half_extent_km = half_extent_km;
+    }
+
+    pub fn take_fleet_selection(&mut self) -> Option<game_core::travel::ShipId> {
+        self.selection_request.take()
     }
 
     pub fn take_movement_request(&mut self) -> Option<game_core::movement::MoveTarget> {
@@ -115,7 +129,12 @@ impl LocalView {
     }
 
     /// Returns true when the player chooses the galaxy breadcrumb or Escape.
-    pub fn ui(&mut self, ctx: &egui::Context, ships: &[game_core::travel::Ship]) -> bool {
+    pub fn ui(
+        &mut self,
+        ctx: &egui::Context,
+        ships: &[game_core::travel::Ship],
+        fleets: &[game_core::fleet::Fleet],
+    ) -> bool {
         // A resumed GPU window has a new egui context; refresh shared handles too.
         self.art = Some(Artwork::preload(ctx));
         let mut back =
@@ -135,7 +154,7 @@ impl LocalView {
                             self.camera.focus_on(anchor);
                         }
                     });
-                    let rect = self.draw_map(ui, ships);
+                    let rect = self.draw_map(ui, ships, fleets);
                     self.details(ui, rect);
                 });
         });
@@ -147,36 +166,40 @@ impl LocalView {
                 *back = true;
             }
             ui.label("/");
-            ui.heading(&self.system.name);
+            ui.heading(format!("{} / INNER SYSTEM", self.system.name));
+            if ui.button("Depart system → galaxy").clicked() {
+                self.move_request =
+                    Some(game_core::movement::MoveTarget::LeaveSystem(self.system.id));
+            }
         });
         ui.label(format!("{} • local system", self.system.star_kind.label()));
-        ui.label(
-            "Select a body to preview fleet movement. Ship offsets are symbolic; distances use astronomical units (AU).",
-        );
-        ui.horizontal_wrapped(|ui| {
-            if ui.button("Reset").clicked() {
-                self.camera = Self::initial_camera();
-            }
-            if ui.button("Focus selection (F)").clicked() {
-                self.focus();
-            }
-            if ui.button("Focus star").clicked() {
-                self.camera.focus_on(DVec3::ZERO);
-            }
-            ui.toggle_value(&mut self.pan_tool, "Pan tool");
-            if ui.button("Top (XZ)").clicked() {
-                self.camera.yaw = 0.0;
-                self.camera.pitch = std::f64::consts::FRAC_PI_2;
-            }
-            if ui.button("Front (XY)").clicked() {
-                self.camera.yaw = 0.0;
-                self.camera.pitch = 0.0;
-            }
-            if ui.button("Side (ZY)").clicked() {
-                self.camera.yaw = std::f64::consts::FRAC_PI_2;
-                self.camera.pitch = 0.0;
-            }
-            ui.add(egui::Slider::new(&mut self.camera.zoom, 0.3..=4.0).text("Zoom"));
+        ui.label("Select fleet → select destination → plot course. Local distances in AU.");
+        egui::CollapsingHeader::new("View / camera controls").show(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                if ui.button("Reset").clicked() {
+                    self.camera = Self::initial_camera();
+                }
+                if ui.button("Focus selection (F)").clicked() {
+                    self.focus();
+                }
+                if ui.button("Focus star").clicked() {
+                    self.camera.focus_on(DVec3::ZERO);
+                }
+                ui.toggle_value(&mut self.pan_tool, "Pan tool");
+                if ui.button("Top (XZ)").clicked() {
+                    self.camera.yaw = 0.0;
+                    self.camera.pitch = std::f64::consts::FRAC_PI_2;
+                }
+                if ui.button("Front (XY)").clicked() {
+                    self.camera.yaw = 0.0;
+                    self.camera.pitch = 0.0;
+                }
+                if ui.button("Side (ZY)").clicked() {
+                    self.camera.yaw = std::f64::consts::FRAC_PI_2;
+                    self.camera.pitch = 0.0;
+                }
+                ui.add(egui::Slider::new(&mut self.camera.zoom, 0.3..=4.0).text("Zoom"));
+            });
         });
         if !ctx.wants_keyboard_input() && ui.input(|i| i.key_pressed(egui::Key::F)) {
             self.focus();
@@ -202,6 +225,10 @@ impl LocalView {
                         .clicked()
                     {
                         self.selected = Some(body.id);
+                        self.move_request = Some(game_core::movement::MoveTarget::Body {
+                            system: self.system.id,
+                            body: body.id,
+                        });
                     }
                 }
             });
@@ -234,9 +261,9 @@ impl LocalView {
             }
             if ui
                 .button(if body.kind == BodyKind::Station {
-                    "Preview docking at trade port"
+                    "Select station as destination"
                 } else {
-                    "Preview movement to body"
+                    "Select as destination"
                 })
                 .clicked()
             {
@@ -280,7 +307,8 @@ impl LocalView {
                 .iter()
                 .find(|body| Some(body.id) == self.selected)
             {
-                art.preview(ArtKind::from(body.kind), ui);
+                egui::CollapsingHeader::new("Sensor image")
+                    .show(ui, |ui| art.preview(ArtKind::from(body.kind), ui));
             }
             art.warnings(ui);
         }

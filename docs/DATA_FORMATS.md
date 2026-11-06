@@ -123,3 +123,10 @@ Backward compatibility is not required during prototyping. The migration paths
 above describe current code, not a promise to support old schemas in future work.
 Local UI distances/inputs use AU while JSON local coordinates remain integer km;
 AU input conversion is checked and rounds to the nearest kilometer.
+
+Navigation orders now include `remaining_waypoints`, an optional list of subsequent
+MoveTargets. All future legs are checked against saved geometry and fuel. Economy
+includes `traders`: identity, personality, wallet, independent hull/navigation state
+and last activity. New sessions seed trader budgets from `npc_starting_credits`.
+Upper-half ship/fleet IDs are reserved for NPCs. Existing sessions without traders
+remain empty; backward compatibility is not a prototype requirement.

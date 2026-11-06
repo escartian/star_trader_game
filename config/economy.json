@@ -105,5 +105,6 @@
     2,
     1
   ],
-  "ship_resale_percent": 60
+  "ship_resale_percent": 60,
+  "npc_starting_credits": 200000
 }

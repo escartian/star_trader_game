@@ -13,7 +13,7 @@ Its “implemented” and “future” sections are tracked separately below.
 | System movement | Local, exit, deep space and explicit entry | All four movement types, km local/absolute positions, explicit entry and station docking |
 | Fleets | Owned ships, fleet details and movement under development | Purchases, per-ship cargo/fuel, split/merge, transfers, fleet travel and saves |
 | Planet economy | Per-planet resources/ships, production, biome, danger, credits | Independent planet/station markets, profiles, production specializations, finite funds and hull stocks |
-| NPCs | Traders and personality under development | No NPC trader simulation yet |
+| NPCs | Traders and personality under development | Two saved cautious/opportunistic traders, real wallets/cargo, fuel-aware routes and run AI |
 | Combat | Backend concepts; first future priority | Pending ship HP/shield/armor/loadout and fleet resolution |
 | Factions | Federation, Empire, Republic, Alliance; second priority | Pending influence, relationships, territories and access |
 | Ship management | Type/size/engine/stats; third priority | Three classes, hull buying/selling and fleet renaming; repair/equipment pending |
@@ -33,6 +33,7 @@ snapshots, with filesystem access isolated in persistence/startup adapters.
 Movement now uses explicit checked unit conversions and tested cube intersections
 instead of copying the original illustrative formulas. No automatic entry merely because a path crosses a system.
 
-Next work restores NPC traders/personality, then combat, factions/ship management
-and missions in the original priority order.
+Initial NPC traders and map-first itineraries are implemented. Next work is combat
+statistics/loadouts and fleet combat, followed by factions, ship management and
+missions in the original priority order.
 No mobile milestone blocks this desktop implementation work.

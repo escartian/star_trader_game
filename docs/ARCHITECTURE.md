@@ -181,3 +181,25 @@ galaxy distances remain light-years. Non-finite/out-of-range AU inputs reject.
 Backward save compatibility is explicitly not a prototyping requirement. Keep
 current-format validation and atomic saves; allow fresh-session resets for future
 breaking schemas rather than making migration support a blocker.
+
+## Map command, safe itineraries and initial traders
+
+The client shares fleet marker geometry between paint and pick, reserves stellar
+silhouettes when placing symbols, and groups fleet members into one selectable
+symbol. View-only breadcrumbs and committed route transitions are separate.
+Destination cards submit body/system intent; coordinate fields remain advanced UI.
+A shared theme styles native panels in interactive and offscreen contexts.
+
+Core destination planning builds a checked itinerary with visibility-graph local
+detours around the star. Entry/exit legs remain explicit in simulation, but are
+planned automatically from map destinations. Navigation stores remaining targets
+and rebuilds each next leg at arrival. Save validation rechecks future legs and
+remaining fuel. Deep-space segment clipping rejects known stellar-core crossings.
+
+Economy owns separate NPC trader wallets and hulls. NPCs use isolated TravelState
+instances and the same destination/navigation rules; their IDs occupy the reserved
+upper half of the ship/fleet ID space. Player commands cannot authorize NPC hulls.
+The run coordinator advances production once, then resolves NPC decisions/routes
+in stable ID order. Existing commerce rules transfer payments to/from the same
+market treasuries; the temporary trader-account adapter restores the player wallet
+on both success and rejection before publishing the candidate session.

@@ -1,20 +1,34 @@
-//! Ship illustrations are tethered to authoritative body/waypoint anchors.
-use super::{KM_PER_VIEW_UNIT, LocalView, display_position, kilometers};
-use crate::map::art::ArtKind;
-use egui::{Color32, Painter, Rect, Stroke, Vec2};
+//! Fleet symbols are grouped, clickable and separated from all star/body silhouettes.
+use super::{KM_PER_VIEW_UNIT, LocalView, display_position, kilometers, scale::SymbolScale};
+use crate::map::fleets;
+use egui::{Rect, Vec2};
 use game_core::{
     BodyKind,
+    fleet::Fleet,
     travel::{Location, Ship},
 };
+use glam::DVec3;
 
 impl LocalView {
     pub fn focus_ship(&mut self, ship: &Ship) {
+        if ship.location.system() == Some(self.system.id) {
+            self.selected = match ship.location {
+                Location::Docked(_) => self
+                    .system
+                    .bodies
+                    .iter()
+                    .find(|body| body.kind == BodyKind::Station)
+                    .map(|body| body.id),
+                Location::Orbiting { body, .. } => Some(body),
+                _ => None,
+            };
+        }
         if let Some(anchor) = self.ship_anchor(&ship.location) {
             self.camera.focus_on(anchor);
         }
     }
 
-    pub(super) fn ship_anchor(&self, location: &Location) -> Option<glam::DVec3> {
+    pub(super) fn ship_anchor(&self, location: &Location) -> Option<DVec3> {
         if location.system() != Some(self.system.id) || !location.stationary() {
             return None;
         }
@@ -38,58 +52,52 @@ impl LocalView {
         }
     }
 
-    pub(super) fn draw_ships(
-        &self,
-        painter: &Painter,
+    pub(super) fn draw_fleets(
+        &mut self,
+        painter: &egui::Painter,
         rect: Rect,
         ships: &[Ship],
+        records: &[Fleet],
         label_bounds: &[Rect],
         marker_bounds: &[Rect],
     ) {
+        self.fleet_hits.clear();
+        let Some(art) = &self.art else {
+            return;
+        };
         let mut reserved = label_bounds.to_vec();
         reserved.extend_from_slice(marker_bounds);
-        for ship in ships.iter().filter(|ship| {
-            ship.location.system() == Some(self.system.id) && ship.location.stationary()
-        }) {
+        let radius = SymbolScale::new(self.camera.zoom).star_radius(self.system.star_kind) + 24.0;
+        reserved.push(Rect::from_center_size(
+            self.camera.project(DVec3::ZERO, rect),
+            Vec2::splat(radius * 2.0),
+        ));
+        for fleet in records {
+            let Some(ship) = fleet
+                .ships
+                .first()
+                .and_then(|id| ships.iter().find(|ship| ship.id == *id))
+            else {
+                continue;
+            };
             let Some(anchor) = self.ship_anchor(&ship.location) else {
                 continue;
             };
             let anchor = self.camera.project(anchor, rect);
-            let offsets = [
-                Vec2::new(50.0, -45.0),
-                Vec2::new(-50.0, 45.0),
-                Vec2::new(50.0, 45.0),
-                Vec2::new(-50.0, -45.0),
-                Vec2::new(85.0, -65.0),
-                Vec2::new(-85.0, 65.0),
-            ];
-            let point = offsets
-                .into_iter()
-                .map(|offset| anchor + offset)
-                .find(|point| {
-                    let bounds = Rect::from_center_size(*point, Vec2::new(42.0, 60.0));
-                    rect.contains_rect(bounds)
-                        && !reserved
-                            .iter()
-                            .any(|other| other.expand(4.0).intersects(bounds))
-                })
-                .unwrap_or(anchor + Vec2::new(50.0, 45.0));
-            reserved.push(Rect::from_center_size(point, Vec2::new(42.0, 60.0)));
-            painter.line_segment([anchor, point], Stroke::new(0.5_f32, Color32::LIGHT_GREEN));
-            painter.circle_stroke(anchor, 3.0, Stroke::new(1.0_f32, Color32::LIGHT_GREEN));
-            if ship.id == self.active_ship {
-                painter.circle_stroke(point, 19.0, Stroke::new(1.0_f32, Color32::LIGHT_GREEN));
+            if let Some(hit) = fleets::paint(
+                painter,
+                art,
+                rect,
+                anchor,
+                fleets::FleetSymbol {
+                    fleet,
+                    ship,
+                    selected: fleet.ships.contains(&self.active_ship),
+                },
+                &mut reserved,
+            ) {
+                self.fleet_hits.push(hit);
             }
-            if let Some(art) = &self.art {
-                art.paint(ArtKind::from(ship.kind), painter, point, 32.0);
-            }
-            painter.text(
-                point + Vec2::new(0.0, 17.0),
-                egui::Align2::CENTER_TOP,
-                format!("#{}", ship.id.0),
-                egui::FontId::proportional(11.0),
-                Color32::LIGHT_GREEN,
-            );
         }
     }
 }

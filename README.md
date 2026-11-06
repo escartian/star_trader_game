@@ -5,6 +5,9 @@ through a readable native map. No game engine, browser, webview or JavaScript.
 
 ## Current prototype
 
+- Click fleets on either map, select a planet/station/point of interest and plot
+  the route from a destination card. Numeric controls are optional advanced tools.
+- Sci-fi command-console panels, fleet cards, route feedback and live NPC traffic.
 - Galaxy navigation: orbit/pan/zoom, presets, focus, overlap chooser,
   double-click system inspection, and separate local views with planets/stations.
 - Blender-authored star, planet, moon, asteroid station and ship models, baked to
@@ -65,20 +68,23 @@ remain light-years; saved simulation coordinates stay in integer kilometers.
 Backward save compatibility is not a requirement during prototyping, so future
 breaking versions may require a fresh session.
 
+See [map controls](docs/MAP_CONTROLS.md) for fleet selection, automatic routes,
+stellar clearance and inner/outer view transitions. Fresh sessions include two
+NPC traders with cautious/opportunistic route choices and real funds/cargo.
+
 ## First delivery
 
-At Sol, open **Market / refuel**, set quantity to 20, and buy food. Open
-**Navigation**, choose **+X** under Exit toward, and **Plot course**. In deep space, choose
-**Enter Meridian** and plot its course. Double-click Meridian to inspect it, select its
-trade port, choose **Preview docking at trade port**, and plot its course. Sell your food,
-refuel, and compare ore or machinery for the return trip. Work toward the hold
-upgrade. Use **Execute navigation run** to progress courses between these stages. Longer
-journeys continue across runs. Double-clicking a star only inspects it.
+At Sol, open **Market / refuel** and buy food. Select your fleet on the map or in
+**Fleet Command**. Double-click Meridian, select its trade port, then choose
+**PLOT COURSE** in the left-hand destination card. Departure, entry and docking
+are planned automatically. Execute navigation runs to progress the itinerary;
+resolve any contacts along the way, then sell and refuel at the destination.
 
-Local/body destinations and coordinate waypoints use the same preview/confirm
-flow. Routes through the star reject; use a waypoint around it. See the complete
-[movement controls and costs](docs/MOVEMENT.md). Mining and orbital physics remain
-unimplemented. Markets belong to individual planets and primary trade stations.
+Within a system, click planets, moons, asteroids or stations to choose them.
+**Back to galaxy** only changes the view; **Depart system → galaxy** selects a
+real departure course. Executed exits/arrivals follow the selected fleet between
+outer/inner views. Safe local approaches route around the star; raw unsafe routes
+reject. Mining and landing physics remain unimplemented.
 
 **Plot course** never advances time or spends fuel. Give each fleet a course or
 **Hold position**, then **Execute navigation run** to advance all fleets and markets
@@ -171,7 +177,8 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [fleets](docs/previews/fleets.png), [movement](docs/previews/navigation.png),
 [system entry](docs/previews/entry.png), [ship near planet](docs/previews/orbit.png),
 [planet market](docs/previews/planet-market.png), [planet shipyard](docs/previews/planet-shipyard.png),
-[run review](docs/previews/run-review.png), [encounter](docs/previews/encounter.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `encounter` (use `--seed 2`). Captures do not test window
+[run review](docs/previews/run-review.png), [map command](docs/previews/destination.png),
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`). Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

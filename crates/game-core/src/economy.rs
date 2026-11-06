@@ -96,6 +96,8 @@ pub struct Market {
 #[serde(deny_unknown_fields)]
 pub struct Economy {
     pub credits: Credits,
+    #[serde(default)]
+    pub traders: Vec<crate::npc::Trader>,
     pub markets: Vec<Market>,
     pub rules: EconomyRules,
 }

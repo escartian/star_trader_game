@@ -16,7 +16,13 @@ fn succeed(session: &mut Session, command: ClientCommand) {
     );
 }
 fn money(session: &Session) -> u128 {
-    u128::from(session.economy.credits.0)
+    session
+        .economy
+        .traders
+        .iter()
+        .map(|trader| u128::from(trader.credits.0))
+        .sum::<u128>()
+        + u128::from(session.economy.credits.0)
         + session
             .economy
             .markets

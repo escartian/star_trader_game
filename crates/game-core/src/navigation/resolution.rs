@@ -113,7 +113,24 @@ impl TravelState {
                 for id in members {
                     self.ship_mut(id)?.location = order.plan.destination.clone();
                 }
-                events.push(NavigationEvent::Arrived(order.plan));
+                events.push(NavigationEvent::Arrived(order.plan.clone()));
+                if !order.remaining_waypoints.is_empty() {
+                    let target = order.remaining_waypoints.remove(0);
+                    let ship = *self
+                        .fleets
+                        .iter()
+                        .find(|fleet| fleet.id == order.plan.fleet)
+                        .and_then(|fleet| fleet.ships.first())
+                        .ok_or(FleetError::UnknownFleet)?;
+                    let plan = self.plan_movement(player, ship, &target, systems)?;
+                    self.navigation.orders.push(super::NavigationOrder {
+                        target,
+                        remaining_ticks: plan.duration_ticks,
+                        plan,
+                        started: false,
+                        remaining_waypoints: order.remaining_waypoints,
+                    });
+                }
             } else {
                 self.navigation.orders.push(order);
             }

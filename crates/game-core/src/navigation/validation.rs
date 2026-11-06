@@ -1,7 +1,7 @@
 use crate::{
     StarSystem,
     fleet::FleetId,
-    travel::{Location, PlayerId, TravelState},
+    travel::{Location, TravelState},
 };
 use std::collections::HashSet;
 
@@ -22,6 +22,7 @@ impl TravelState {
                 || order.remaining_ticks == 0
                 || order.remaining_ticks > order.plan.duration_ticks
                 || (!order.started && order.remaining_ticks != order.plan.duration_ticks)
+                || order.remaining_waypoints.len() > 32
                 || order.plan.revision > self.revision
                 || !order.plan.origin.stationary()
                 || !order.plan.destination.stationary()
@@ -61,6 +62,16 @@ impl TravelState {
             if checked != order.plan {
                 return Err("Saved course differs from authoritative geometry".into());
             }
+            for target in std::iter::once(&order.target).chain(order.remaining_waypoints.iter()) {
+                let plan = preview
+                    .plan_movement(fleet.owner, ship, target, systems)
+                    .map_err(|error| error.to_string())?;
+                for id in &fleet.ships {
+                    let member = preview.ship_mut(*id).map_err(|_| "Unknown course ship")?;
+                    member.fuel -= plan.fuel_per_ship;
+                    member.location = plan.destination.clone();
+                }
+            }
         }
         for ship in &self.ships {
             if let Location::InTransit(fleet) = ship.location
@@ -78,7 +89,11 @@ impl TravelState {
         for fleet in &self.navigation.holds {
             if !held.insert(*fleet)
                 || ordered.contains(fleet)
-                || self.fleet_position(*fleet, PlayerId(1)).is_err()
+                || self
+                    .fleets
+                    .iter()
+                    .find(|record| record.id == *fleet)
+                    .is_none_or(|record| self.fleet_position(*fleet, record.owner).is_err())
             {
                 return Err("Invalid Hold position order".into());
             }

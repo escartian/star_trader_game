@@ -1,6 +1,8 @@
 //! Fleet movement across explicitly separate coordinate spaces.
 mod geometry;
 mod planning;
+mod routing;
+pub use routing::CoursePreview;
 mod rules;
 use crate::{BodyId, GalaxyPosition, LocalPosition, SystemId, fleet::FleetId, travel::Location};
 pub use planning::local_position;
@@ -51,6 +53,7 @@ pub enum MoveTarget {
     },
     DeepSpace(GalaxyPosition),
     EnterSystem(SystemId),
+    LeaveSystem(SystemId),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

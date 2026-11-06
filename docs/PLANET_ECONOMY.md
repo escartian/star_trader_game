@@ -20,8 +20,9 @@ production per tick, capped at the supported production limit. The current econo
 types are agricultural, extraction and industrial.
 
 Biome and danger (Very safe through Insidious) are saved and shown in the inspector
-and market. They are descriptive data for upcoming encounters/factions; no combat
-or danger-dependent encounter simulation is claimed yet.
+and market. Cautious NPC traders avoid dangerous markets; biome remains descriptive data for
+upcoming encounters/factions. No combat or danger-dependent encounter probability
+is claimed yet.
 
 Only Execute navigation run advances production/consumption ticks for the world. Browsing, quotes,
 trading, ship transactions, fleet naming and saving never advance time. Market
@@ -40,7 +41,7 @@ production changes goods, not money. Fuel service currently has unlimited supply
 - Returned hulls are refurbished catalog stock. Fuel and hold upgrades are not
   separately refunded. There are no used-hull identities/loadouts in shipyards yet.
 - Ship stock is finite and does not replenish automatically. Selling hulls restocks
-  it; NPC manufacturing/trade will be separate work.
+  it; NPC hull manufacturing/trading remains future work.
 - Credits transfer between accounts rather than being created or discarded.
   All checks publish one candidate transaction or leave the entire session unchanged.
 
@@ -66,3 +67,8 @@ save slot. Loading again does not rerun the migration or refill depleted markets
 
 Fleet renaming is available under **Fleets / shipyard**. Names are trimmed, contain
 1–64 readable characters and at most 128 UTF-8 bytes. Names do not change IDs.
+
+Initial NPC traders now compete in these same finite markets, with separate
+wallets, cargo and fuel. `npc_starting_credits` explicitly allocates each trader's
+new-session budget. They only act on committed navigation runs, and their trading
+never debits the player wallet. See MAP_CONTROLS.md for personalities and scope.

@@ -108,21 +108,37 @@ landing volumes remain open, independently of the following gameplay work.
 - [x] Per-fleet encounter chance, salvage/distress choices and persisted random state.
 - [x] Schema 5: queued/active courses, holds, contacts, run/rescue counters and RNG.
 - [x] Reject stale execution/reward retries and inconsistent saved orders.
-- [ ] Multi-waypoint itineraries, persistent standby and movement/encounter balance.
+- [x] Automatic destination itineraries: safe local approach, system departure,
+  entry and body arrival, with saved remaining legs.
+- [ ] Persistent standby, manually authored itineraries and movement/encounter balance.
 - [ ] Richer authored contacts, risk factors, inspections, combat and faction outcomes.
 
 See [navigation runs](docs/NAVIGATION_RUNS.md). The run itself is the visible
 campaign advance action; the interface does not call it End Turn.
 
-**Next:** NPC traders with personality and navigation-run decisions, then ship
-combat statistics/loadouts and fleet combat. NPC/combat remain unimplemented.
+## 3b. Map fleet command — implemented foundation
+
+- [x] Clickable fleet symbols and roster cards in inner/outer views.
+- [x] Click a body/system and plot a complete route from an inline destination card.
+- [x] Coordinate tools hidden under advanced controls; no numeric input required.
+- [x] Departure marker, view-only breadcrumb and arrival/exit map following.
+- [x] Stellar-core path rejection, safe local detours and symbol clearance around stars.
+- [x] Sci-fi native command-console styling, route feedback and NPC traffic display.
+
+See [map controls](docs/MAP_CONTROLS.md). Physical mouse/window/DPI acceptance
+remains separate from GPU captures and egui input regression tests.
+
+**Next:** ship combat statistics/loadouts and fleet combat, building on the first
+NPC traders and current navigation/encounter foundations. Combat is not implemented.
 
 ## 4. NPC traders and fleet combat
 
 Restore the original trader/personality direction before extending the economy.
 Combat is the original README's first prioritized expansion.
 
-- [ ] NPC traders with personality, route choice, conserved funds/cargo and tick AI.
+- [x] Initial cautious/opportunist NPC traders with route choice, fuel-aware
+  profitability, real cargo/wallets, finite-market trades and navigation-run AI.
+- [ ] Expanded NPC personalities, interactions, encounters and faction affiliations.
 - [ ] Ship type/size/engine, HP, shields, armor and weapon/loadout definitions.
 - [ ] Carry forward Photon Singularity Beam, Quantum Entanglement Torpedo, Neutron
   Beam, Graviton Pulse and Magnetic Resonance Disruptor as balanceable JSON content.

@@ -172,11 +172,43 @@ impl TravelState {
                 if let Some(system) = systems.iter().find(|system| system.position == *position) {
                     return self.destination(origin, &MoveTarget::EnterSystem(system.id), systems);
                 }
+                if super::routing::crosses_stellar_core(
+                    *start,
+                    end,
+                    systems,
+                    rules.star_exclusion_radius_km,
+                )? {
+                    return Err(MovementError::StarCollision);
+                }
                 Ok((
                     Location::DeepSpace(end),
                     MovementMode::DeepSpace,
                     geometry::distance(start.coordinates(), end.coordinates())?,
                 ))
+            }
+            MoveTarget::LeaveSystem(system) => {
+                let start = local_position(origin, *system, systems)?;
+                let values = geometry::local(start);
+                let largest = values
+                    .iter()
+                    .map(|value| value.unsigned_abs())
+                    .max()
+                    .ok_or(MovementError::Coordinates)?;
+                if largest == 0 {
+                    return Err(MovementError::StarCollision);
+                }
+                let half = i128::from(rules.system_half_extent_km) + 1;
+                let position = geometry::position(
+                    values.map(|value| (i128::from(value) * half / i128::from(largest)) as i64),
+                );
+                self.destination(
+                    origin,
+                    &MoveTarget::Local {
+                        system: *system,
+                        position,
+                    },
+                    systems,
+                )
             }
             MoveTarget::EnterSystem(system) => {
                 let Location::DeepSpace(start) = origin else {
@@ -185,6 +217,14 @@ impl TravelState {
                 let center = system_center(systems, *system)?;
                 let entry = geometry::entry(*start, center, rules.system_half_extent_km)?;
                 let end = geometry::absolute(center, entry)?;
+                if super::routing::crosses_stellar_core(
+                    *start,
+                    end,
+                    systems,
+                    rules.star_exclusion_radius_km,
+                )? {
+                    return Err(MovementError::StarCollision);
+                }
                 Ok((
                     Location::InSystem {
                         system: *system,

@@ -6,6 +6,12 @@ impl Map {
     pub fn prepare_capture(&mut self, view: &str) -> Result<(), String> {
         match view {
             "galaxy" => {}
+            "traffic" => self.session.capture_wait_runs(4),
+            "destination" => {
+                let system = self.systems.first().ok_or("No system to capture")?.clone();
+                self.session.select_destination(system.id, Some(BodyId(1)));
+                self.local = Some(LocalView::new(system));
+            }
             "system" => {
                 let system = self.systems.first().ok_or("No system to capture")?.clone();
                 self.local = Some(LocalView::new(system));

@@ -146,6 +146,7 @@ fn malformed_legacy_player_records_report_load_errors_instead_of_panicking() {
 }
 
 fn make_legacy_markets(value: &mut serde_json::Value) {
+    value["economy"].as_object_mut().unwrap().remove("traders");
     let markets = value["economy"]["markets"]
         .as_array()
         .unwrap()

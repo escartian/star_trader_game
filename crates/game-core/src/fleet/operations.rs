@@ -54,6 +54,9 @@ impl TravelState {
         ships: &[ShipId],
     ) -> Result<FleetId, FleetError> {
         self.fleet_position(id, player)?;
+        if self.next_fleet_id >= crate::npc::NPC_ID_BASE {
+            return Err(FleetError::ArithmeticOverflow);
+        }
         let index = self
             .fleets
             .iter()
@@ -122,7 +125,7 @@ impl TravelState {
         spec: &ShipSpec,
     ) -> Result<ShipId, FleetError> {
         let location = self.fleet_position(fleet, player)?.clone();
-        if self.ships.len() >= 64 {
+        if self.ships.len() >= 64 || self.next_ship_id >= crate::npc::NPC_ID_BASE {
             return Err(FleetError::ShipLimit);
         }
         let next = self

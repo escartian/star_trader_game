@@ -109,6 +109,20 @@ impl MovementRules {
     ) -> Result<(), MovementError> {
         match location {
             Location::DeepSpace(position) => {
+                for system in systems {
+                    let center = SpacePosition::from_galaxy(system.position)?;
+                    if position
+                        .coordinates()
+                        .into_iter()
+                        .zip(center.coordinates())
+                        .all(|(a, b)| {
+                            (i128::from(a) - i128::from(b)).abs()
+                                <= i128::from(self.star_exclusion_radius_km)
+                        })
+                    {
+                        return Err(MovementError::StarCollision);
+                    }
+                }
                 if position
                     .coordinates()
                     .iter()

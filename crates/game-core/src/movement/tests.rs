@@ -96,9 +96,10 @@ fn cube_corner_exit_and_near_face_entry_do_not_mix_spaces() {
 #[test]
 fn crossing_a_system_never_intercepts_but_exact_target_explicitly_enters() {
     let mut state = TravelState::default();
-    state.ships[0].location = Location::DeepSpace(
-        SpacePosition::from_galaxy(GalaxyPosition { x: -2, y: 0, z: 0 }).unwrap(),
-    );
+    state.ships[0].location = Location::DeepSpace(SpacePosition {
+        y_km: 10_000_000,
+        ..SpacePosition::from_galaxy(GalaxyPosition { x: -2, y: 0, z: 0 }).unwrap()
+    });
     let movement = plan(
         &state,
         MoveTarget::DeepSpace(GalaxyPosition { x: 2, y: 0, z: 0 }),
@@ -115,6 +116,12 @@ fn crossing_a_system_never_intercepts_but_exact_target_explicitly_enters() {
     state
         .execute_navigation_run(PlayerId(1), &crate::demo_galaxy())
         .unwrap();
+    while !state.navigation.orders.is_empty() {
+        state.movement_rules.encounter_chance_percent = 0;
+        state
+            .execute_navigation_run(PlayerId(1), &crate::demo_galaxy())
+            .unwrap();
+    }
     assert!(matches!(state.ships[0].location, Location::DeepSpace(_)));
     let entry = plan(
         &state,

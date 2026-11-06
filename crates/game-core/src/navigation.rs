@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 pub struct NavigationOrder {
     pub target: MoveTarget,
+    #[serde(default)]
+    pub remaining_waypoints: Vec<MoveTarget>,
     pub plan: MovementPlan,
     pub remaining_ticks: u64,
     pub started: bool,

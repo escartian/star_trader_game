@@ -59,3 +59,10 @@ No participants have been contacted and no playtest results are claimed here.
 - [ ] Follow a multi-run voyage and verify fuel is charged once at departure.
 - [ ] Resolve a salvage/distress contact, save/continue, and check that the decision
   and cargo/rescue effects occur once. Verify other fleets progressed independently.
+
+- [ ] Click fleet symbols in both map layers and confirm selection matches the roster.
+- [ ] Select a remote planet and plot without typing coordinates. Follow the full
+  departure/entry/arrival itinerary and check the camera follows real transitions.
+- [ ] Change views with breadcrumbs without moving ships; use the departure marker
+  only when intending a real exit. Verify star silhouettes never contain fleet symbols.
+- [ ] Observe NPC traffic after several runs and compare local stock/funds changes.

@@ -47,7 +47,7 @@ fn selected_station_inspector_tessellates_at_phone_and_desktop_sizes() {
                 ..Default::default()
             },
             |ctx| {
-                assert!(!local.ui(ctx, &[]));
+                assert!(!local.ui(ctx, &[], &[]));
             },
         );
         assert!(
@@ -86,4 +86,125 @@ fn schematic_moon_is_separate_pickable_and_keeps_saved_coordinates() {
     );
     assert_eq!(system, original);
     assert_eq!(local.system, original);
+}
+
+#[test]
+fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents() {
+    use game_core::{
+        SystemId,
+        fleet::{FleetId, ShipKind},
+        travel::ShipId,
+    };
+    use game_protocol::{ClientCommand, ServerMessage};
+    let mut authority = game_server::Session::default();
+    authority.handle(ClientCommand::BuyShip {
+        ship: ShipId(1),
+        kind: ShipKind::Scout,
+        expected_revision: 0,
+    });
+    authority.handle(ClientCommand::SplitFleet {
+        fleet: FleetId(1),
+        ships: vec![ShipId(2)],
+        expected_revision: 1,
+    });
+    let ServerMessage::SessionSnapshot { state, .. } = authority.handle(ClientCommand::GetSession)
+    else {
+        panic!("snapshot missing");
+    };
+    let mut local = LocalView::new(game_core::demo_galaxy()[0].clone());
+    let ctx = egui::Context::default();
+    let screen = Some(Rect::from_min_size(
+        Pos2::ZERO,
+        egui::Vec2::new(1200.0, 900.0),
+    ));
+    for _ in 0..2 {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: screen,
+                ..Default::default()
+            },
+            |ctx| {
+                local.ui(ctx, &state.ships, &state.fleets);
+            },
+        );
+    }
+    let fleet_point = local
+        .fleet_hits
+        .iter()
+        .find(|hit| hit.fleet == FleetId(2))
+        .unwrap()
+        .bounds
+        .center();
+    for pressed in [true, false] {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: screen,
+                events: vec![
+                    egui::Event::PointerMoved(fleet_point),
+                    egui::Event::PointerButton {
+                        pos: fleet_point,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+                ..Default::default()
+            },
+            |ctx| {
+                local.ui(ctx, &state.ships, &state.fleets);
+            },
+        );
+    }
+    assert_eq!(local.take_fleet_selection(), Some(ShipId(2)));
+    assert!(local.take_movement_request().is_none());
+    // Body buttons use the same destination intent as canvas picks; neither moves authority.
+    let output = ctx.run(
+        egui::RawInput {
+            screen_rect: screen,
+            ..Default::default()
+        },
+        |ctx| {
+            local.ui(ctx, &state.ships, &state.fleets);
+        },
+    );
+    let point = output
+        .shapes
+        .iter()
+        .find_map(|shape| {
+            if let egui::epaint::Shape::Text(text) = &shape.shape
+                && text.galley.job.text == "Select as destination"
+            {
+                Some(text.pos + text.galley.size() / 2.0)
+            } else {
+                None
+            }
+        })
+        .unwrap();
+    for pressed in [true, false] {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: screen,
+                events: vec![
+                    egui::Event::PointerMoved(point),
+                    egui::Event::PointerButton {
+                        pos: point,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+                ..Default::default()
+            },
+            |ctx| {
+                local.ui(ctx, &state.ships, &state.fleets);
+            },
+        );
+    }
+    assert_eq!(
+        local.take_movement_request(),
+        Some(game_core::movement::MoveTarget::Body {
+            system: SystemId(1),
+            body: BodyId(1)
+        })
+    );
 }

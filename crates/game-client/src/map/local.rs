@@ -1,4 +1,4 @@
-mod bounds;
+mod framing;
 mod labels;
 mod layout;
 mod render;
@@ -50,8 +50,7 @@ pub struct LocalView {
     candidates: Vec<BodyId>,
     pan_tool: bool,
     art: Option<Artwork>,
-    show_boundary: bool,
-    half_extent_km: i64,
+    frame_overview: bool,
     active_ship: game_core::travel::ShipId,
     preview_route: Vec<LocalPosition>,
     fleet_hits: Vec<crate::map::fleets::FleetHit>,
@@ -73,8 +72,7 @@ impl LocalView {
             fleet_hits: Vec::new(),
             selection_request: None,
             move_request: None,
-            show_boundary: false,
-            half_extent_km: game_core::movement::MovementRules::default().system_half_extent_km,
+            frame_overview: true,
             active_ship: game_core::travel::ShipId(1),
         }
     }
@@ -87,13 +85,8 @@ impl LocalView {
         &self.system
     }
 
-    pub fn set_fleet_context(
-        &mut self,
-        active_ship: game_core::travel::ShipId,
-        half_extent_km: i64,
-    ) {
+    pub fn set_fleet_context(&mut self, active_ship: game_core::travel::ShipId) {
         self.active_ship = active_ship;
-        self.half_extent_km = half_extent_km;
     }
 
     pub fn take_fleet_selection(&mut self) -> Option<game_core::travel::ShipId> {
@@ -140,13 +133,27 @@ impl LocalView {
         let mut back =
             !ctx.wants_keyboard_input() && ctx.input(|i| i.key_pressed(egui::Key::Escape));
         egui::CentralPanel::default().show(ctx, |ui| {
+            crate::theme::metal_panel(ui);
             egui::ScrollArea::vertical()
                 .id_salt("local_page")
                 .show(ui, |ui| {
                     self.header(ui, ctx, &mut back);
                     ui.horizontal_wrapped(|ui| {
-                        ui.checkbox(&mut self.show_boundary, "Show system boundary");
-                        if ui.button("Focus selected ship").clicked()
+                        if crate::theme::icons::button(
+                            ui,
+                            crate::theme::icons::Icon::Focus,
+                            "System overview",
+                        )
+                        .clicked()
+                        {
+                            self.frame_overview = true;
+                        }
+                        if crate::theme::icons::button(
+                            ui,
+                            crate::theme::icons::Icon::Focus,
+                            "Focus selected fleet",
+                        )
+                        .clicked()
                             && let Some(ship) =
                                 ships.iter().find(|ship| ship.id == self.active_ship)
                             && let Some(anchor) = self.ship_anchor(&ship.location)
@@ -162,22 +169,18 @@ impl LocalView {
     }
     fn header(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, back: &mut bool) {
         ui.horizontal_wrapped(|ui| {
-            if ui.button("Back to galaxy").clicked() {
+            if crate::theme::icons::button(ui, crate::theme::icons::Icon::Back, "Galaxy").clicked()
+            {
                 *back = true;
             }
             ui.label("/");
             ui.heading(format!("{} / INNER SYSTEM", self.system.name));
-            if ui.button("Depart system → galaxy").clicked() {
-                self.move_request =
-                    Some(game_core::movement::MoveTarget::LeaveSystem(self.system.id));
-            }
         });
-        ui.label(format!("{} • local system", self.system.star_kind.label()));
-        ui.label("Select fleet → select destination → plot course. Local distances in AU.");
         egui::CollapsingHeader::new("View / camera controls").show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 if ui.button("Reset").clicked() {
                     self.camera = Self::initial_camera();
+                    self.frame_overview = true;
                 }
                 if ui.button("Focus selection (F)").clicked() {
                     self.focus();
@@ -204,7 +207,7 @@ impl LocalView {
         if !ctx.wants_keyboard_input() && ui.input(|i| i.key_pressed(egui::Key::F)) {
             self.focus();
         }
-        ui.label("Tap a destination • drag to orbit • Pan tool to move • Escape to galaxy");
+        ui.small("Fleet / destination / plot course • drag to orbit • wheel to zoom • AU");
     }
 
     fn details(&mut self, ui: &mut egui::Ui, rect: Rect) {
@@ -235,11 +238,20 @@ impl LocalView {
         }
         ui.horizontal_wrapped(|ui| {
             for body in &self.system.bodies {
-                if ui
-                    .selectable_label(Some(body.id) == self.selected, &body.name)
+                if self.art.as_ref().is_some_and(|art| {
+                    art.tile(
+                        ui,
+                        ArtKind::from(body.kind),
+                        &body.name,
+                        Some(body.id) == self.selected,
+                    )
                     .clicked()
-                {
+                }) {
                     self.selected = Some(body.id);
+                    self.move_request = Some(game_core::movement::MoveTarget::Body {
+                        system: self.system.id,
+                        body: body.id,
+                    });
                 }
             }
         });

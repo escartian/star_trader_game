@@ -23,9 +23,9 @@ impl LocalView {
                 _ => None,
             };
         }
-        if let Some(anchor) = self.ship_anchor(&ship.location) {
-            self.camera.focus_on(anchor);
-        }
+        // Navigation following retains the star and destinations as spatial context.
+        // Explicit player focus remains available for close inspection.
+        self.frame_overview = true;
     }
 
     pub(super) fn ship_anchor(&self, location: &Location) -> Option<DVec3> {

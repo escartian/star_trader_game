@@ -52,6 +52,7 @@ impl LocalSession {
         );
         self.destination_card(ui, systems);
         ui.separator();
+        let artwork = crate::map::art::Artwork::preload(ui.ctx());
         for fleet in self.state.fleets.clone() {
             let Some(ship) = fleet.ships.first().copied() else {
                 continue;
@@ -77,22 +78,42 @@ impl LocalSession {
                 "AWAITING ORDERS"
             };
             let frame = egui::Frame::group(ui.style()).fill(if selected {
-                egui::Color32::from_rgb(18, 53, 68)
+                egui::Color32::from_rgb(35, 55, 37)
             } else {
                 crate::theme::PANEL
             });
             frame.show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
-                if ui
-                    .selectable_label(selected, egui::RichText::new(&fleet.name).strong())
-                    .clicked()
-                {
-                    self.select_map_fleet(ship);
-                }
-                ui.small(format!("F{} / {} ships", fleet.id.0, fleet.ships.len()));
+                ui.horizontal(|ui| {
+                    if let Ok(hull) = self.state.ship(ship) {
+                        let (rect, response) =
+                            ui.allocate_exact_size(egui::Vec2::splat(48.0), egui::Sense::click());
+                        artwork.paint(
+                            crate::map::art::ArtKind::from(hull.kind),
+                            ui.painter(),
+                            rect.center(),
+                            48.0,
+                        );
+                        if response
+                            .on_hover_text(format!("Select {}", fleet.name))
+                            .clicked()
+                        {
+                            self.select_map_fleet(ship);
+                        }
+                    }
+                    ui.vertical(|ui| {
+                        if ui
+                            .selectable_label(selected, egui::RichText::new(&fleet.name).strong())
+                            .clicked()
+                        {
+                            self.select_map_fleet(ship);
+                        }
+                        ui.small(format!("{} ships", fleet.ships.len()));
+                    });
+                });
                 ui.colored_label(
                     if selected {
-                        crate::theme::CYAN
+                        crate::theme::GREEN
                     } else {
                         crate::theme::AMBER
                     },

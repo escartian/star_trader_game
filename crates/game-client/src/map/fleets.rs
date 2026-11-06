@@ -36,15 +36,18 @@ pub(super) fn paint(
     reserved.push(bounds.expand(3.0));
     let center = bounds.center() - Vec2::new(0.0, 8.0);
     let color = if selected {
-        crate::theme::CYAN
+        crate::theme::GREEN
     } else {
         Color32::from_rgb(150, 185, 205)
     };
     // Tethers do not place fleet symbols at body/star centers.
-    painter.line_segment(
-        [anchor, center],
-        Stroke::new(0.7_f32, color.gamma_multiply(0.5)),
-    );
+    if anchor.distance(center) > 32.0 {
+        painter.line_segment(
+            [anchor, center],
+            Stroke::new(0.7_f32, color.gamma_multiply(0.5)),
+        );
+        painter.circle_stroke(anchor, 3.0, Stroke::new(1.0_f32, color));
+    }
     painter.rect_filled(
         Rect::from_center_size(center, Vec2::splat(42.0)),
         7.0,
@@ -71,6 +74,15 @@ pub(super) fn paint(
 }
 
 pub(super) fn place(anchor: Pos2, viewport: Rect, reserved: &[Rect]) -> Option<Rect> {
+    // Free-flying fleets sit on their course position. Occupied anchors need offsets.
+    let direct = Rect::from_center_size(anchor + Vec2::new(0.0, 8.0), Vec2::new(50.0, 66.0));
+    if viewport.contains_rect(direct)
+        && !reserved
+            .iter()
+            .any(|other| other.expand(5.0).intersects(direct))
+    {
+        return Some(direct);
+    }
     for radius in [72.0, 102.0, 138.0, 180.0, 230.0] {
         for offset in [
             Vec2::new(1.0, -0.65),
@@ -119,5 +131,13 @@ mod tests {
             occupied.push(bounds);
         }
         assert!(place(view.center(), view, &[view]).is_none());
+    }
+
+    #[test]
+    fn free_flying_fleet_symbol_stays_at_its_physical_anchor() {
+        let view = Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 500.0));
+        let anchor = view.center();
+        let bounds = place(anchor, view, &[]).unwrap();
+        assert_eq!(bounds.center() - Vec2::new(0.0, 8.0), anchor);
     }
 }

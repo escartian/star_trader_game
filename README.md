@@ -175,10 +175,11 @@ cargo run -p game-client -- --new --capture /tmp/market.png --capture-view marke
 
 Example captures: [system](docs/previews/system.png), [market](docs/previews/market.png),
 [fleets](docs/previews/fleets.png), [movement](docs/previews/navigation.png),
-[system entry](docs/previews/entry.png), [ship near planet](docs/previews/orbit.png),
+[entry preview](docs/previews/entry.png), [system arrival](docs/previews/arrival.png),
+[local approach](docs/previews/approach.png), [ship near planet](docs/previews/orbit.png),
 [planet market](docs/previews/planet-market.png), [planet shipyard](docs/previews/planet-shipyard.png),
 [run review](docs/previews/run-review.png), [map command](docs/previews/destination.png),
-[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`). Captures do not test window
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`). Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

@@ -22,7 +22,7 @@ impl Map {
                 system: SystemId(1),
                 body: BodyId(1),
             }),
-            "deep-space" | "entry" => {
+            "deep-space" | "entry" | "arrival" | "approach" => {
                 let system = self
                     .session
                     .current_system()
@@ -38,6 +38,17 @@ impl Map {
                 if view == "entry" {
                     self.session
                         .request_movement(MoveTarget::EnterSystem(SystemId(2)));
+                } else if matches!(view, "arrival" | "approach") {
+                    self.follow_navigation_transitions();
+                    self.session
+                        .capture_movement(MoveTarget::EnterSystem(system))?;
+                    self.follow_navigation_transitions();
+                    if view == "approach" {
+                        self.session.capture_navigation_step(MoveTarget::Body {
+                            system,
+                            body: BodyId(2),
+                        })?;
+                    }
                 }
             }
             "orbit" | "planet-market" | "planet-shipyard" => {

@@ -207,4 +207,46 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
             body: BodyId(1)
         })
     );
+    // Image tiles are destinations too, without an extra confirmation below the map.
+    let tile = output
+        .shapes
+        .iter()
+        .rev()
+        .find_map(|shape| {
+            if let egui::epaint::Shape::Text(text) = &shape.shape
+                && text.galley.job.text == "Sol Outer giant"
+            {
+                Some(text.pos + text.galley.size() / 2.0)
+            } else {
+                None
+            }
+        })
+        .unwrap();
+    for pressed in [true, false] {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: screen,
+                events: vec![
+                    egui::Event::PointerMoved(tile),
+                    egui::Event::PointerButton {
+                        pos: tile,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+                ..Default::default()
+            },
+            |ctx| {
+                local.ui(ctx, &state.ships, &state.fleets);
+            },
+        );
+    }
+    assert_eq!(
+        local.take_movement_request(),
+        Some(game_core::movement::MoveTarget::Body {
+            system: SystemId(1),
+            body: BodyId(2),
+        })
+    );
 }

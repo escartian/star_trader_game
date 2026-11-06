@@ -181,6 +181,55 @@ impl Artwork {
         }
     }
 
+    /// Image-first destination control; the name also remains available to assistive UI.
+    pub fn tile(
+        &self,
+        ui: &mut egui::Ui,
+        kind: ArtKind,
+        name: &str,
+        selected: bool,
+    ) -> egui::Response {
+        let (rect, response) = ui.allocate_exact_size(Vec2::new(94.0, 72.0), egui::Sense::click());
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), name)
+        });
+        let color = if selected || response.hovered() {
+            crate::theme::GREEN
+        } else {
+            Color32::from_rgb(72, 91, 85)
+        };
+        ui.painter().rect(
+            rect,
+            4.0,
+            Color32::from_rgb(11, 20, 23),
+            egui::Stroke::new(1.0_f32, color),
+            egui::StrokeKind::Inside,
+        );
+        self.paint(
+            kind,
+            ui.painter(),
+            rect.center_top() + Vec2::new(0.0, 26.0),
+            44.0,
+        );
+        // Wrap long names inside their own tile instead of letting them obscure neighbors.
+        let text = ui.painter().layout(
+            name.into(),
+            egui::FontId::proportional(10.0),
+            if selected {
+                crate::theme::GREEN
+            } else {
+                Color32::from_rgb(190, 209, 200)
+            },
+            rect.width() - 6.0,
+        );
+        ui.painter().galley(
+            egui::pos2(rect.center().x - text.size().x * 0.5, rect.bottom() - 22.0),
+            text,
+            color,
+        );
+        response.on_hover_text(name)
+    }
+
     pub fn warnings(&self, ui: &mut egui::Ui) {
         for error in &self.errors {
             ui.label(error);

@@ -19,18 +19,23 @@ Coordinate tools remain under **Navigation → Advanced coordinates (optional)**
 
 ## Inner / outer transitions
 
-- **Back to galaxy** changes the view only; it never undocks or moves a fleet.
-- **Depart system → galaxy** and the map's departure marker select a real outward
+- **Galaxy** changes the view only; it never undocks or moves a fleet.
+- The map's **DEPART → GALAXY** marker selects a real outward
   course. It must be plotted and progressed through navigation runs.
 - An executed exit switches the selected fleet to the outer map. Completed entry
-  opens the destination's inner view; local arrival follows the selected fleet.
+  opens the destination's inner view. Arrival and transit framing keep the star,
+  destinations and selected fleet together instead of centering on the entry point.
 - Breadcrumbs, INNER SYSTEM / OUTER GALAXY labels and fleet cards distinguish the
   inspected view from the fleet's authoritative location. Holds do not move the camera.
 
 Local labels and input units are AU; galaxy distances are light-years. Rendering
 retains symbolic body/fleet sizes and schematic moon spacing. Fleet symbols are
-placed away from star/body silhouettes and labels. A roster card remains usable
+placed away from star/body silhouettes and labels. In free space they sit directly
+on their physical course position; displaced berth/orbit symbols have an anchor
+and tether. A roster card remains usable
 when a crowded viewport cannot safely place another fleet symbol.
+**System overview** refits the scene; **Focus selected fleet** provides a close
+view. The simulation's system limits have no boundary cube or display toggle.
 
 ## Stellar clearance
 
@@ -47,9 +52,11 @@ and landing physics are still future work.
 
 ## Command-console style and NPC traffic
 
-Native egui panels use a dark blue command-console theme, cyan selections/course
-lines, amber traffic/attention, compact fleet cards and collapsible camera tools.
-This is static native drawing; Blender sprites remain shared cached artwork.
+Native egui panels use brushed gunmetal, beveled highlights, neon-green selections
+and action icons, cyan course lines and amber traffic/attention. Fleet cards show
+their hulls and local destination tiles use celestial/station artwork with names.
+Icons are original native vector drawings, with labeled controls and tooltips.
+The metallic finish is static; Blender sprites remain shared cached artwork.
 
 Fresh sessions spawn **Aster Haul** (cautious) and **Helix Courier** (opportunistic).
 Their read-only traffic entries and amber galaxy markers show genuine persisted

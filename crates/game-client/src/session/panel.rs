@@ -1,4 +1,5 @@
 use super::{LocalSession, navigation::location_label};
+use crate::theme::icons::{Icon, button};
 use game_core::{SystemId, travel::Location};
 
 impl LocalSession {
@@ -22,16 +23,16 @@ impl LocalSession {
                         }
                     }
                 });
-            if ui.button("Fleets / shipyard").clicked() {
+            if button(ui, Icon::Fleets, "Fleets").clicked() {
                 self.fleet_panel.open = true;
             }
-            if ui.button("Session / saves").clicked() {
+            if button(ui, Icon::Save, "Saves").clicked() {
                 self.saves.open = true;
             }
-            if ui.button("Navigation").clicked() {
+            if button(ui, Icon::Navigation, "Navigation").clicked() {
                 self.open_navigation();
             }
-            if ui.button("Market / refuel").clicked() {
+            if button(ui, Icon::Market, "Market").clicked() {
                 self.market.open = true;
             }
             ui.label(format!(
@@ -50,7 +51,7 @@ impl LocalSession {
                 "Navigation run {}",
                 self.state.navigation.run.saturating_add(1)
             ));
-            if ui.button("Execute navigation run").clicked() {
+            if button(ui, Icon::Execute, "Execute navigation run").clicked() {
                 self.request_execute_run();
             }
             ui.label("Unassigned fleets must plot a course or Hold position.");

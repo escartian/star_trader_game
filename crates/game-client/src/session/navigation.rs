@@ -232,6 +232,27 @@ impl LocalSession {
 }
 
 impl LocalSession {
+    /// Advance just one run for a reproducible in-progress local approach capture.
+    pub fn capture_navigation_step(&mut self, target: MoveTarget) -> Result<(), String> {
+        for command in [
+            ClientCommand::Move {
+                ship: self.active_ship,
+                target,
+                expected_revision: self.state.revision,
+            },
+            ClientCommand::ExecuteNavigationRun {
+                expected_revision: self.state.revision + 1,
+            },
+        ] {
+            let response = self.authority.handle_offline(command);
+            if let ServerMessage::CommandRejected(error) = &response {
+                return Err(error.to_string());
+            }
+            self.accept(response);
+        }
+        Ok(())
+    }
+
     /// Capture fixtures execute ordinary commands in a fresh, unsaved session.
     pub fn capture_movement(&mut self, target: MoveTarget) -> Result<(), String> {
         let response = self.authority.handle_offline(ClientCommand::Move {

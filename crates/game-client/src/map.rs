@@ -1,4 +1,4 @@
-mod art;
+pub(crate) mod art;
 mod camera;
 mod capture_state;
 mod fixtures;
@@ -18,7 +18,7 @@ use glam::DVec3;
 pub struct Map {
     observed_run: u64,
     observed_system: Option<SystemId>,
-    observed_location: game_core::travel::Location,
+    observed_position: Option<DVec3>,
     galaxy_fleet_hits: Vec<fleets::FleetHit>,
     session_systems: Vec<StarSystem>,
     systems: Vec<StarSystem>,
@@ -62,7 +62,7 @@ impl Map {
         Self {
             observed_run: session.run_number(),
             observed_system: session.current_system(),
-            observed_location: session.selected_ship().location.clone(),
+            observed_position: session.galaxy_position(&systems),
             galaxy_fleet_hits: Vec::new(),
             session_systems: systems.clone(),
             systems,
@@ -151,9 +151,10 @@ impl Map {
     pub fn ui(&mut self, ctx: &egui::Context) {
         crate::theme::apply(ctx);
         egui::TopBottomPanel::top("command_header").show(ctx, |ui| {
+            crate::theme::metal_panel(ui);
             ui.horizontal_wrapped(|ui| {
                 ui.colored_label(
-                    crate::theme::CYAN,
+                    crate::theme::GREEN,
                     egui::RichText::new("STAR TRADER / NAVIGATION COMMAND")
                         .monospace()
                         .size(18.0),
@@ -180,6 +181,7 @@ impl Map {
         }
         let _ = art::Artwork::preload(ctx);
         egui::TopBottomPanel::bottom("ship_status").show(ctx, |ui| {
+            crate::theme::metal_panel(ui);
             let target = if self.scene == Scene::Session {
                 self.selected
             } else {
@@ -196,6 +198,7 @@ impl Map {
             .default_width(220.0)
             .resizable(false)
             .show(ctx, |ui| {
+                crate::theme::metal_panel(ui);
                 egui::ScrollArea::vertical()
                     .show(ui, |ui| self.session.map_roster(ui, &self.session_systems));
             });
@@ -220,10 +223,7 @@ impl Map {
                 self.session
                     .map_route_points(local.system().id, &self.session_systems),
             );
-            local.set_fleet_context(
-                self.session.selected_ship().id,
-                self.session.system_half_extent_km(),
-            );
+            local.set_fleet_context(self.session.selected_ship().id);
             let display_ships = self
                 .session
                 .ships_for_map(local.system(), &self.session_systems);
@@ -249,6 +249,7 @@ impl Map {
             return;
         }
         egui::CentralPanel::default().show(ctx, |ui| {
+            crate::theme::metal_panel(ui);
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.heading("Star Trader");
                 ui.label("OUTER GALAXY / select a system to set a course; double-click to inspect");

@@ -11,7 +11,7 @@ impl LocalView {
         ships: &[game_core::travel::Ship],
         fleets: &[game_core::fleet::Fleet],
     ) -> Rect {
-        let height = (ui.available_height() * 0.65).clamp(220.0, 540.0);
+        let height = (ui.available_height() * 0.78).clamp(280.0, 620.0);
         let (response, painter) = ui.allocate_painter(
             Vec2::new(
                 ui.available_width()
@@ -23,6 +23,10 @@ impl LocalView {
         );
         let rect = response.rect;
         let painter = painter.with_clip_rect(rect.intersect(ui.clip_rect()));
+        if self.frame_overview {
+            self.fit_overview(rect, ships);
+            self.frame_overview = false;
+        }
         visuals::background(&painter, rect, "SYSTEM / AU");
         if response.dragged_by(egui::PointerButton::Middle)
             || (self.pan_tool && response.dragged_by(egui::PointerButton::Primary))
@@ -51,7 +55,6 @@ impl LocalView {
                 }
             });
         }
-        self.draw_boundary(&painter, rect);
         let star = self.camera.project(DVec3::ZERO, rect);
         for segment in self.preview_route.windows(2) {
             let project = |position: game_core::LocalPosition| {

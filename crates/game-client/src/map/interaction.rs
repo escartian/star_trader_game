@@ -6,15 +6,17 @@ impl Map {
         let run = self.session.run_number();
         if run == self.observed_run {
             self.observed_system = self.session.current_system();
-            self.observed_location = self.session.selected_ship().location.clone();
+            self.observed_position = self.session.galaxy_position(&self.session_systems);
             return;
         }
         self.observed_run = run;
         let current = self.session.current_system();
         let previous = self.observed_system;
         self.observed_system = current;
-        let moved = self.observed_location != self.session.selected_ship().location;
-        self.observed_location = self.session.selected_ship().location.clone();
+        // InTransit(fleet) stays identical across runs; compare physical progress.
+        let position = self.session.galaxy_position(&self.session_systems);
+        let moved = self.observed_position != position;
+        self.observed_position = position;
         if current == previous {
             if moved && let Some(view) = &mut self.local {
                 view.focus_ship(self.session.selected_ship());
@@ -45,6 +47,9 @@ impl Map {
                     .as_ref()
                     .is_some_and(|view| view.system().id == system)
             {
+                if moved && let Some(view) = &mut self.local {
+                    view.focus_ship(self.session.selected_ship());
+                }
                 return;
             }
             self.local = None;

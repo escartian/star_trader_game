@@ -1,3 +1,4 @@
+mod app_icon;
 mod capture;
 mod desktop;
 mod map;
@@ -35,7 +36,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             && options.economy.is_none()
             && (options.save.is_file() || std::path::Path::new(&backup).is_file()));
     let mut startup_notice = settings_notice;
-    let mut session = if should_resume {
+    let mut session = if let Some(name) = &options.scenario {
+        let session = match name.as_str() {
+            "multi-fleet" => game_server::Session::multi_fleet_scenario(options.seed)?,
+            other => return Err(format!("Unknown scenario {other}; available: multi-fleet").into()),
+        };
+        // Written immediately, so the scenario can be reloaded later with --continue.
+        if options.capture.is_none() {
+            session.save(&options.save)?;
+            println!("Saved scenario {name} to {}", options.save.display());
+        }
+        session
+    } else if should_resume {
         let (session, recovery) = game_server::Session::load(&options.save)?;
         if let Some(message) = recovery {
             eprintln!("{message}");

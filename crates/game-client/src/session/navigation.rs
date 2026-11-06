@@ -1,5 +1,7 @@
 //! Movement inputs and confirmation. All costs and destinations come from the host.
 use super::LocalSession;
+use crate::theme::icons::{self, Icon, stat};
+use crate::theme::{CYAN, GREEN};
 use game_core::{
     GalaxyPosition, LocalPosition, StarSystem, SystemId,
     movement::{KM_PER_LIGHT_YEAR, MoveTarget},
@@ -30,7 +32,7 @@ pub fn location_label(location: &Location, systems: &[StarSystem]) -> String {
                 .find(|known| known.id == *system)
                 .and_then(|known| known.bodies.iter().find(|known| known.id == *body))
                 .map_or("Unknown body", |body| body.name.as_str());
-            format!("Near {body}")
+            format!("In orbit of {body}")
         }
         Location::InSystem { system, position } => format!(
             "{}: ({:.4}, {:.4}, {:.4}) AU",
@@ -50,6 +52,46 @@ pub fn location_label(location: &Location, systems: &[StarSystem]) -> String {
     }
 }
 
+/// Compact location: an icon for the kind of place plus its short name.
+pub fn location_chip(location: &Location, systems: &[StarSystem]) -> (Icon, String) {
+    let name = |id| {
+        systems
+            .iter()
+            .find(|system| system.id == id)
+            .map_or_else(|| "Unknown".to_string(), |system| system.name.clone())
+    };
+    match location {
+        Location::Docked(system) => (Icon::Dock, format!("Docked · {} port", name(*system))),
+        Location::Orbiting { system, body } => (
+            Icon::Orbit,
+            format!(
+                "Orbit · {}",
+                systems
+                    .iter()
+                    .find(|known| known.id == *system)
+                    .and_then(|known| known.bodies.iter().find(|known| known.id == *body))
+                    .map_or("Unknown body", |body| body.name.as_str())
+            ),
+        ),
+        Location::InSystem { system, .. } => (Icon::Pin, name(*system)),
+        Location::DeepSpace(_) => (Icon::DeepSpace, "Deep space".into()),
+        Location::InTransit(fleet) => (Icon::Underway, format!("Fleet {}", fleet.0)),
+        Location::Travelling(journey) => (Icon::Underway, name(journey.destination)),
+    }
+}
+
+/// Location chip with the full description as hover text.
+pub fn location_stat(ui: &mut egui::Ui, location: &Location, systems: &[StarSystem]) {
+    let (icon, short) = location_chip(location, systems);
+    // Green = clamped to the trade port; cyan = holding orbit or flying.
+    let color = if matches!(location, Location::Docked(_)) {
+        crate::theme::GREEN
+    } else {
+        crate::theme::CYAN
+    };
+    stat(ui, icon, color, &short, &location_label(location, systems));
+}
+
 impl LocalSession {
     pub fn open_navigation(&mut self) {
         self.navigation.open = true;
@@ -62,28 +104,28 @@ impl LocalSession {
 
     pub fn show_navigation(&mut self, ctx: &egui::Context, systems: &[StarSystem]) {
         let mut open = self.navigation.open;
-        egui::Window::new("Fleet navigation")
-            .open(&mut open)
-            .default_width(600.0)
-            .vscroll(true)
-            .show(ctx, |ui| self.navigation_ui(ui, systems));
+        crate::theme::metal::window(ctx, "Navigation", &mut open, 600.0, |ui| {
+            self.navigation_ui(ui, systems)
+        });
         self.navigation.open = open;
     }
 
     fn navigation_ui(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
         self.run_review(ui, systems);
         let ship = self.selected_ship().clone();
-        ui.label(format!(
-            "{} • {}",
-            ship.name,
-            location_label(&ship.location, systems)
-        ));
-        ui.label(
-            "Plot courses for your fleets, then Execute navigation run when every fleet is ready.",
-        );
+        ui.horizontal_wrapped(|ui| {
+            icons::glyph(ui, Icon::Ship, GREEN, ship.kind.label());
+            ui.strong(&ship.name);
+            location_stat(ui, &ship.location, systems);
+            icons::glyph(
+                ui,
+                Icon::Help,
+                CYAN,
+                "Select a fleet and destination on the map, then Plot course.\nRoutes handle local travel, departure and entry.\nExecute the run when every fleet is ready.",
+            );
+        });
         let rules = self.state.movement_rules.clone();
-        ui.label("Use the map to select your fleet and destination. Routes handle local travel, departure and entry.");
-        egui::CollapsingHeader::new("Advanced coordinates (optional)").show(ui, |ui| {
+        egui::CollapsingHeader::new("Advanced coordinates").show(ui, |ui| {
         if let Some(system) = ship
             .location
             .system()
@@ -185,8 +227,6 @@ impl LocalSession {
             target: target.clone(),
         }) {
             ServerMessage::MovementPreview(plan) => {
-                ui.strong(plan.mode.label());
-                ui.label(location_label(&plan.destination, systems));
                 let distance = if matches!(
                     plan.mode,
                     game_core::movement::MovementMode::Entry
@@ -202,13 +242,31 @@ impl LocalSession {
                         crate::units::kilometers_to_au(plan.distance_km as f64)
                     )
                 };
-                ui.label(format!(
-                    "{distance} • {} fuel per ship at departure • at least {} navigation runs",
-                    plan.fuel_per_ship,
-                    plan.duration_ticks
-                        .div_ceil(self.state.movement_rules.ticks_per_navigation_run)
-                ));
-                if ui.button("Plot course").clicked() {
+                let runs = plan
+                    .duration_ticks
+                    .div_ceil(self.state.movement_rules.ticks_per_navigation_run);
+                let mut plot = false;
+                ui.horizontal_wrapped(|ui| {
+                    ui.strong(plan.mode.label());
+                    location_stat(ui, &plan.destination, systems);
+                    stat(ui, Icon::Distance, CYAN, &distance, "Distance");
+                    stat(
+                        ui,
+                        Icon::Fuel,
+                        CYAN,
+                        &plan.fuel_per_ship.to_string(),
+                        "Fuel per ship, charged at departure",
+                    );
+                    stat(
+                        ui,
+                        Icon::Execute,
+                        GREEN,
+                        &runs.to_string(),
+                        "Navigation runs, at least",
+                    );
+                    plot = icons::button(ui, Icon::Plot, "Plot course").clicked();
+                });
+                if plot {
                     self.command(ClientCommand::Move {
                         ship: self.active_ship,
                         target,
@@ -223,7 +281,9 @@ impl LocalSession {
             }
             _ => {}
         }
-        ui.label(&self.notice);
+        if !self.notice.is_empty() {
+            ui.label(&self.notice);
+        }
     }
 
     pub fn current_system(&self) -> Option<SystemId> {

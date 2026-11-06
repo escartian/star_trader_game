@@ -52,11 +52,51 @@ and landing physics are still future work.
 
 ## Command-console style and NPC traffic
 
-Native egui panels use brushed gunmetal, beveled highlights, neon-green selections
-and action icons, cyan course lines and amber traffic/attention. Fleet cards show
-their hulls and local destination tiles use celestial/station artwork with names.
-Icons are original native vector drawings, with labeled controls and tooltips.
-The metallic finish is static; Blender sprites remain shared cached artwork.
+The map fills the window. Every control floats above it on a polished gunmetal
+card (a tone ramp with a soft diagonal sheen, chamfered corners and bevelled
+edges; static, no brushed lines):
+
+| Card | Position | Contents |
+| --- | --- | --- |
+| Roster | top-left | fleets, status, destination, NPC traffic |
+| View toolbar | top-center | breadcrumb/Depart (system view), camera tools, zoom, guide |
+| Status | top-right | Fleets / Navigation / Market / Session buttons, ship, stats |
+| Run | bottom-left | Execute run, latest event |
+| Selection | bottom-center | selected system or body, destination tiles, traits |
+
+Market, Fleets, Navigation and Session open as centered, movable metal windows.
+The system overview framing reserves the card insets, so bodies are framed into
+the clear middle of the screen.
+
+**Resting states.** A fleet at a body is either **docked** at the system's
+trade port or **in orbit** around a body (that body's orbital berth). There is
+no separate landed state.
+
+| State | Map marker | Chip |
+| --- | --- | --- |
+| Docked | green `F1 DOCKED`, clamp badge, solid clamp line to a bracketed port | `Docked · Sol port` (green) |
+| In orbit | cyan `F1 ORBIT`, orbit badge, dashed orbit ring around the body | `Orbit · Inner world` (cyan) |
+| Flying | `F1 · n`, thin tether | course / position |
+
+A green market badge on the marker, and a **TRADE HERE** button in the
+selection card, appear only when the authoritative economy allows that ship to
+trade where it is. Moons and asteroids have no market. The status card's panel
+buttons are labelled **Fleets**, **Nav**, **Trade** and **Save**.
+
+**Zoom:** the mouse wheel, two-finger trackpad scroll and trackpad pinch zoom
+the hovered map. The map is never inside a scrolling page, so a scroll gesture
+cannot both scroll the page and zoom. Cards and windows take input before the map.
+
+Text uses one face throughout (Rajdhani), with Orbitron for display headings.
+Icons are Blender-authored SVGs (see `assets/README.md`). Values (credits, cargo,
+fuel, tick, location), camera tools, trade/refuel/hold actions, commodities and
+planet traits (economy, specialization, biome, danger pips) appear as glyphs,
+with their text kept as hover help and accessible names. Decisions with
+consequences keep short labels: Plot course, Execute run, encounter choices,
+Save/Load, Refuel and Depart. Explanations sit behind ⓘ and ? glyphs. Rocky
+planets use biome-specific art (temperate, arid, frozen). Touch has no hover,
+so icon meaning on mobile still needs a long-press or legend; that is open,
+along with the other deferred mobile work.
 
 Fresh sessions spawn **Aster Haul** (cautious) and **Helix Courier** (opportunistic).
 Their read-only traffic entries and amber galaxy markers show genuine persisted

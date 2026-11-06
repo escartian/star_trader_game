@@ -19,8 +19,8 @@ pub async fn save(map: &mut Map, path: &Path) -> Result<(), Box<dyn Error>> {
     context.set_visuals(egui::Visuals::dark());
     context.style_mut(|style| style.animation_time = 0.0);
     let mut output = egui::FullOutput::default();
-    // egui sizes new windows over multiple frames; combine their texture uploads.
-    for frame in 0..4 {
+    // egui sizes new windows/areas over multiple frames; combine their texture uploads.
+    for frame in 0..6 {
         output.append(context.run(
             egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(

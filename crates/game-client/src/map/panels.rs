@@ -1,4 +1,5 @@
 use super::{Map, position, visuals};
+use crate::theme::icons::{Icon, button, stat};
 use egui::Rect;
 
 impl Map {
@@ -34,40 +35,54 @@ impl Map {
                 }
             });
         }
+        let mut open = false;
         if let Some(system) = self.systems.iter().find(|s| Some(s.id) == self.selected) {
             let origin = self.route_position();
             let distance = origin.map_or(0.0, |s| s.distance(position(system)));
-            ui.label(format!("{} • {}", system.name, system.star_kind.label()));
-            ui.label(format!(
-                "{distance:.2} light-years from fleet • true 3D distance"
-            ));
-            if !rect.contains(self.camera.project(position(system), rect)) {
-                ui.label("Selection is outside the map. Use Focus selection to reveal it.");
-            }
+            ui.horizontal(|ui| {
+                crate::theme::icons::glyph(
+                    ui,
+                    Icon::Star,
+                    visuals::appearance(system.star_kind).0,
+                    system.star_kind.label(),
+                );
+                ui.strong(&system.name);
+                stat(
+                    ui,
+                    Icon::Distance,
+                    crate::theme::CYAN,
+                    &format!("{distance:.2} ly"),
+                    "Light-years from your fleet (true 3D distance)",
+                );
+                if !rect.contains(self.camera.project(position(system), rect)) {
+                    crate::theme::icons::glyph(
+                        ui,
+                        Icon::Warning,
+                        crate::theme::AMBER,
+                        "Selection is outside the map. Use Focus selection to reveal it.",
+                    );
+                }
+                open = button(ui, Icon::Enter, "Open system").clicked();
+            });
         }
-        if ui
-            .add_enabled(
-                self.selected.is_some(),
-                egui::Button::new("Open selected system"),
-            )
-            .clicked()
-        {
+        if open {
             self.open_selected_system();
         }
-        egui::CollapsingHeader::new("Systems & star legend").show(ui, |ui| {
-            ui.label("Symbolic sizes • background stars are decorative");
+        egui::CollapsingHeader::new("Systems").show(ui, |ui| {
             egui::ScrollArea::vertical()
                 .id_salt("systems")
                 .max_height(160.0)
                 .show(ui, |ui| {
                     for system in &self.systems {
                         ui.horizontal(|ui| {
-                            ui.colored_label(visuals::appearance(system.star_kind).0, "●");
+                            crate::theme::icons::glyph(
+                                ui,
+                                Icon::Star,
+                                visuals::appearance(system.star_kind).0,
+                                system.star_kind.label(),
+                            );
                             if ui
-                                .selectable_label(
-                                    Some(system.id) == self.selected,
-                                    format!("{} — {}", system.name, system.star_kind.label()),
-                                )
+                                .selectable_label(Some(system.id) == self.selected, &system.name)
                                 .clicked()
                             {
                                 self.selected = Some(system.id);

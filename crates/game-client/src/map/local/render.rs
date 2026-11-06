@@ -11,14 +11,8 @@ impl LocalView {
         ships: &[game_core::travel::Ship],
         fleets: &[game_core::fleet::Fleet],
     ) -> Rect {
-        let height = (ui.available_height() * 0.78).clamp(280.0, 620.0);
         let (response, painter) = ui.allocate_painter(
-            Vec2::new(
-                ui.available_width()
-                    .min(ui.clip_rect().right() - ui.cursor().left())
-                    .max(1.0),
-                height,
-            ),
+            ui.available_size().max(Vec2::splat(1.0)),
             Sense::click_and_drag(),
         );
         let rect = response.rect;
@@ -40,9 +34,7 @@ impl LocalView {
             self.camera.pitch = (self.camera.pitch + f64::from(delta.y) * 0.008).clamp(-1.57, 1.57);
         }
         if response.hovered() {
-            self.camera.zoom = (self.camera.zoom
-                * (ui.input(|i| i.smooth_scroll_delta.y) * 0.002).exp())
-            .clamp(0.3, 4.0);
+            self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom);
         }
         let hover = response
             .hover_pos()
@@ -51,7 +43,11 @@ impl LocalView {
         if !hover.is_empty() {
             response.clone().on_hover_ui(|ui| {
                 for body in self.system.bodies.iter().filter(|b| hover.contains(&b.id)) {
-                    ui.label(format!("{} • {}", body.name, body.kind.label()));
+                    ui.label(format!(
+                        "{} • {}",
+                        super::layout::short_name(&self.system, body),
+                        body.kind.label()
+                    ));
                 }
             });
         }
@@ -119,7 +115,7 @@ impl LocalView {
             let painted = self
                 .art
                 .as_ref()
-                .is_some_and(|art| art.paint(ArtKind::from(body.kind), &painter, point, size));
+                .is_some_and(|art| art.paint(ArtKind::for_body(body), &painter, point, size));
             if !painted {
                 painter.circle_filled(point, radius, Color32::LIGHT_BLUE);
             }
@@ -131,7 +127,7 @@ impl LocalView {
                 );
             }
             let galley = painter.layout_no_wrap(
-                body.name.clone(),
+                super::layout::short_name(&self.system, body).to_string(),
                 egui::FontId::proportional(13.0),
                 Color32::WHITE,
             );
@@ -151,11 +147,7 @@ impl LocalView {
                 painter.galley(label.min, galley, Color32::WHITE);
             }
         }
-        let mut reserved_labels = label_bounds;
-        reserved_labels.push(Rect::from_min_size(
-            rect.right_top() + Vec2::new(-174.0, 14.0),
-            Vec2::new(160.0, 35.0),
-        ));
+        let reserved_labels = label_bounds;
         self.draw_fleets(
             &painter,
             rect,
@@ -164,31 +156,10 @@ impl LocalView {
             &reserved_labels,
             &marker_bounds,
         );
-        let portal = Rect::from_min_size(
-            rect.right_top() + Vec2::new(-174.0, 14.0),
-            Vec2::new(160.0, 35.0),
-        );
-        painter.rect_filled(portal, 5.0, crate::theme::PANEL);
-        painter.rect_stroke(
-            portal,
-            5.0,
-            Stroke::new(1.0_f32, crate::theme::CYAN),
-            egui::StrokeKind::Inside,
-        );
-        painter.text(
-            portal.center(),
-            egui::Align2::CENTER_CENTER,
-            "DEPART → GALAXY",
-            egui::FontId::monospace(12.0),
-            crate::theme::CYAN,
-        );
         if response.clicked()
             && let Some(pointer) = response.interact_pointer_pos()
         {
-            if portal.contains(pointer) {
-                self.move_request =
-                    Some(game_core::movement::MoveTarget::LeaveSystem(self.system.id));
-            } else if let Some(hit) = crate::map::fleets::pick(&self.fleet_hits, pointer) {
+            if let Some(hit) = crate::map::fleets::pick(&self.fleet_hits, pointer) {
                 self.selection_request = Some(hit.ship);
                 self.active_ship = hit.ship;
             } else {

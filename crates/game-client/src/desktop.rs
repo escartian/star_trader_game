@@ -129,6 +129,7 @@ impl Graphics {
             event_loop.create_window(
                 Window::default_attributes()
                     .with_title("Star Trader • Offline prototype")
+                    .with_window_icon(crate::app_icon::window_icon())
                     .with_inner_size(winit::dpi::LogicalSize::new(1000.0, 720.0))
                     .with_min_inner_size(winit::dpi::LogicalSize::new(320.0, 480.0)),
             )?,

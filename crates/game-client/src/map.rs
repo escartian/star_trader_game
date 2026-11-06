@@ -7,6 +7,7 @@ mod interaction;
 mod local;
 mod panels;
 mod render;
+mod toolbar;
 mod visuals;
 
 use camera::Camera;
@@ -14,6 +15,7 @@ use egui::{Pos2, Rect};
 use fixtures::Scene;
 use game_core::{StarSystem, SystemId};
 use glam::DVec3;
+use toolbar::CameraAction;
 
 pub struct Map {
     observed_run: u64,
@@ -148,24 +150,27 @@ impl Map {
         }
     }
 
+    /// Developer fixtures stay available but out of the way of the session view.
+    fn test_scenes(&mut self, ui: &mut egui::Ui) {
+        egui::CollapsingHeader::new("Test scenes").show(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                for scene in [Scene::Session, Scene::Overlap, Scene::Dense] {
+                    if ui
+                        .selectable_label(self.scene == scene, scene.label())
+                        .clicked()
+                    {
+                        self.change_scene(scene);
+                    }
+                }
+            });
+            if self.scene != Scene::Session {
+                ui.label("Navigation test scene • separate from your session");
+            }
+        });
+    }
+
     pub fn ui(&mut self, ctx: &egui::Context) {
         crate::theme::apply(ctx);
-        egui::TopBottomPanel::top("command_header").show(ctx, |ui| {
-            crate::theme::metal_panel(ui);
-            ui.horizontal_wrapped(|ui| {
-                ui.colored_label(
-                    crate::theme::GREEN,
-                    egui::RichText::new("STAR TRADER / NAVIGATION COMMAND")
-                        .monospace()
-                        .size(18.0),
-                );
-                ui.small(if self.local.is_some() {
-                    "INNER SYSTEM"
-                } else {
-                    "OUTER GALAXY"
-                });
-            });
-        });
         if let Some(systems) = self.session.take_loaded_galaxy() {
             self.session_systems = systems.clone();
             self.systems = systems;
@@ -180,129 +185,146 @@ impl Map {
             self.candidates.clear();
         }
         let _ = art::Artwork::preload(ctx);
-        egui::TopBottomPanel::bottom("ship_status").show(ctx, |ui| {
-            crate::theme::metal_panel(ui);
-            let target = if self.scene == Scene::Session {
-                self.selected
-            } else {
-                None
-            };
-            self.session.ui(ui, target, &self.session_systems);
-        });
+        self.follow_navigation_transitions();
+        self.handle_focus_request();
+        // The map fills the window; every HUD element floats above it as a card.
+        if self.local.is_some() {
+            self.local_ui(ctx);
+        } else {
+            self.galaxy_ui(ctx);
+        }
+        let target = (self.scene == Scene::Session && self.local.is_none())
+            .then_some(self.selected)
+            .flatten();
+        self.session.roster_card(ctx, &self.session_systems);
+        self.session.hud(ctx, target, &self.session_systems);
         self.session.show_market(ctx, &self.session_systems);
         self.session.show_fleets(ctx, &self.session_systems);
         self.session.show_session_controls(ctx);
         self.session.show_navigation(ctx, &self.session_systems);
-        self.follow_navigation_transitions();
-        egui::SidePanel::left("fleet_map_roster")
-            .default_width(220.0)
-            .resizable(false)
-            .show(ctx, |ui| {
-                crate::theme::metal_panel(ui);
-                egui::ScrollArea::vertical()
-                    .show(ui, |ui| self.session.map_roster(ui, &self.session_systems));
-            });
-        if self.session.take_focus_request() {
-            if let Some(system) = self
-                .session
-                .current_system()
-                .and_then(|id| self.session_systems.iter().find(|system| system.id == id))
-            {
-                let mut view = local::LocalView::new(system.clone());
-                view.focus_ship(self.session.selected_ship());
-                self.local = Some(view);
-            } else {
-                self.local = None;
-                if let Some(position) = self.session.galaxy_position(&self.session_systems) {
-                    self.camera.focus_on(position);
-                }
-            }
-        }
-        if let Some(local) = &mut self.local {
-            local.set_preview_route(
-                self.session
-                    .map_route_points(local.system().id, &self.session_systems),
-            );
-            local.set_fleet_context(self.session.selected_ship().id);
-            let display_ships = self
-                .session
-                .ships_for_map(local.system(), &self.session_systems);
-            let fleet_records = self.session.fleets().to_vec();
-            let back = local.ui(ctx, &display_ships, &fleet_records);
-            if let Some(ship) = local.take_fleet_selection() {
-                self.session.select_map_fleet(ship);
-            }
-            if let Some(target) = local.take_movement_request() {
-                match target {
-                    game_core::movement::MoveTarget::Body { system, body } => {
-                        self.session.select_destination(system, Some(body))
-                    }
-                    game_core::movement::MoveTarget::LeaveSystem(system) => {
-                        self.session.select_departure(system)
-                    }
-                    target => self.session.request_movement(target),
-                }
-            }
-            if back {
-                self.local = None;
-            }
+    }
+
+    fn handle_focus_request(&mut self) {
+        if !self.session.take_focus_request() {
             return;
         }
-        egui::CentralPanel::default().show(ctx, |ui| {
-            crate::theme::metal_panel(ui);
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.heading("Star Trader");
-                ui.label("OUTER GALAXY / select a system to set a course; double-click to inspect");
-                self.session.guide(ui);
-                egui::CollapsingHeader::new("View / camera / test scenes").show(ui, |ui| {
-                ui.horizontal_wrapped(|ui| {
-                    for scene in [Scene::Session, Scene::Overlap, Scene::Dense] {
-                        if ui
-                            .selectable_label(self.scene == scene, scene.label())
-                            .clicked()
-                        {
-                            self.change_scene(scene);
+        if let Some(system) = self
+            .session
+            .current_system()
+            .and_then(|id| self.session_systems.iter().find(|system| system.id == id))
+        {
+            let mut view = local::LocalView::new(system.clone());
+            view.focus_ship(self.session.selected_ship());
+            self.local = Some(view);
+        } else {
+            self.local = None;
+            if let Some(position) = self.session.galaxy_position(&self.session_systems) {
+                self.camera.focus_on(position);
+            }
+        }
+    }
+
+    fn local_ui(&mut self, ctx: &egui::Context) {
+        let Some(local) = &mut self.local else {
+            return;
+        };
+        local.set_preview_route(
+            self.session
+                .map_route_points(local.system().id, &self.session_systems),
+        );
+        local.set_fleet_context(self.session.selected_ship().id);
+        local.set_trade_ready(self.session.trade_ready_ships());
+        local.set_trade_options(self.session.trade_options(local.system().id));
+        let display_ships = self
+            .session
+            .ships_for_map(local.system(), &self.session_systems);
+        let fleet_records = self.session.fleets().to_vec();
+        let back = local.ui(ctx, &display_ships, &fleet_records);
+        if let Some(ship) = local.take_market_request() {
+            // Trading from another fleet in this system switches the selection first.
+            self.session.select_map_fleet(ship);
+            self.session.open_market();
+        }
+        if let Some(ship) = local.take_fleet_selection() {
+            self.session.select_map_fleet(ship);
+        }
+        if let Some(target) = local.take_movement_request() {
+            match target {
+                game_core::movement::MoveTarget::Body { system, body } => {
+                    self.session.select_destination(system, Some(body))
+                }
+                game_core::movement::MoveTarget::LeaveSystem(system) => {
+                    self.session.select_departure(system)
+                }
+                target => self.session.request_movement(target),
+            }
+        }
+        if back {
+            self.local = None;
+        }
+    }
+
+    fn galaxy_ui(&mut self, ctx: &egui::Context) {
+        let rect = egui::CentralPanel::default()
+            .frame(egui::Frame::NONE.fill(egui::Color32::BLACK))
+            .show(ctx, |ui| self.draw_galaxy(ui))
+            .inner;
+        if !ctx.wants_keyboard_input() && ctx.input(|i| i.key_pressed(egui::Key::F)) {
+            self.focus_selection();
+        }
+        crate::theme::metal::card(
+            ctx,
+            "view-toolbar",
+            egui::Align2::CENTER_TOP,
+            egui::vec2(0.0, 10.0),
+            |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        egui::RichText::new("OUTER GALAXY")
+                            .font(crate::theme::fonts::display(ui.ctx(), 14.0))
+                            .color(crate::theme::GREEN),
+                    );
+                });
+                let action = toolbar::camera_toolbar(
+                    ui,
+                    &mut self.camera,
+                    &mut self.pan_tool,
+                    &[
+                        CameraAction::Reset,
+                        CameraAction::FocusSelection,
+                        CameraAction::FocusFleet,
+                    ],
+                    "Outer galaxy (light-years)\nClick: select system and set course\nDouble-click: inspect system\nDrag: orbit • Pan tool: move\nWheel or pinch: zoom",
+                );
+                match action {
+                    Some(CameraAction::Reset) => {
+                        self.camera = Camera::default();
+                        self.candidates.clear();
+                    }
+                    Some(CameraAction::FocusSelection) => self.focus_selection(),
+                    Some(CameraAction::FocusFleet) => {
+                        if let Some(position) = self.route_position() {
+                            self.camera.focus_on(position);
                         }
                     }
-                });
-                if self.scene != Scene::Session {
-                    ui.label("Navigation test scene • separate from your session");
+                    _ => {}
                 }
-                ui.horizontal_wrapped(|ui| {
-                    if ui.button("Reset").clicked() {
-                        self.camera = Camera::default();
-                                        self.candidates.clear();
-                    }
-                    if ui.button("Focus selection (F)").clicked() {
-                        self.focus_selection();
-                    }
-                    if self.scene == Scene::Session && ui.button("Focus fleet").clicked()
-                        && let Some(position) = self.route_position() { self.camera.focus_on(position); }
-                    ui.toggle_value(&mut self.pan_tool, "Pan tool");
-                    if ui.button("Top (XZ)").clicked() {
-                        self.camera.yaw = 0.0;
-                        self.camera.pitch = std::f64::consts::FRAC_PI_2;
-                    }
-                    if ui.button("Front (XY)").clicked() {
-                        self.camera.yaw = 0.0;
-                        self.camera.pitch = 0.0;
-                    }
-                    if ui.button("Side (ZY)").clicked() {
-                        self.camera.yaw = std::f64::consts::FRAC_PI_2;
-                        self.camera.pitch = 0.0;
-                    }
-                    ui.add(egui::Slider::new(&mut self.camera.zoom, 0.3..=4.0).text("Zoom"));
-                });
-                });
-                if !ctx.wants_keyboard_input() && ui.input(|i| i.key_pressed(egui::Key::F)) {
-                    self.focus_selection();
-                }
-                ui.label("Tap to select • double-click to inspect • drag to orbit • Pan tool to move • wheel/slider to zoom");
-                let rect = self.draw_galaxy(ui);
+                ui.set_max_width(440.0);
+                self.session.guide(ui);
+            },
+        );
+        let width = (ctx.screen_rect().width() - 560.0).clamp(300.0, 640.0);
+        crate::theme::metal::card(
+            ctx,
+            "view-selection",
+            egui::Align2::CENTER_BOTTOM,
+            egui::vec2(0.0, -10.0),
+            |ui| {
+                ui.set_max_width(width);
                 self.details(ui, rect);
-
-            });
-        });
+                self.test_scenes(ui);
+            },
+        );
     }
 }
 

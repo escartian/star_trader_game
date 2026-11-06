@@ -10,6 +10,8 @@ pub struct Options {
     pub save: PathBuf,
     pub save_explicit: bool,
     pub economy: Option<PathBuf>,
+    /// Named test scenario to build and save before starting (e.g. "multi-fleet").
+    pub scenario: Option<String>,
 }
 
 impl Options {
@@ -24,6 +26,7 @@ impl Options {
             save: PathBuf::from("data/slot-1.json"),
             save_explicit: false,
             economy: None,
+            scenario: None,
         };
         let mut args = std::env::args().skip(1);
         while let Some(argument) = args.next() {
@@ -31,6 +34,11 @@ impl Options {
                 "--headless" => options.headless = true,
                 "--continue" => options.resume = true,
                 "--new" => options.new = true,
+                "--scenario" => {
+                    options.new = true;
+                    options.scenario =
+                        Some(args.next().ok_or("--scenario needs a name: multi-fleet")?);
+                }
                 "--capture" => {
                     options.capture = Some(args.next().ok_or("--capture needs a PNG path")?.into())
                 }
@@ -57,7 +65,7 @@ impl Options {
                 }
                 _ => {
                     return Err(format!(
-                        "Unknown option {argument}. Options: --headless, --continue, --new, --seed NUMBER, --save PATH, --economy PATH, --capture PATH, --capture-view VIEW"
+                        "Unknown option {argument}. Options: --headless, --continue, --new, --seed NUMBER, --save PATH, --economy PATH, --capture PATH, --capture-view VIEW, --scenario multi-fleet"
                     ));
                 }
             }

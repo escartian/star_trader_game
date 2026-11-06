@@ -58,7 +58,7 @@ visual spacing used to make a local system readable.
 
 ## Implemented navigation baseline
 
-The galaxy's **Open selected system** button enters a separately scaled local
+The galaxy's **Open system** button enters a separately scaled local
 map using fixed snapshot destinations. Local rocky planets, gas giants and trade
 stations are selectable by marker or list; overlapping candidates are listed
 explicitly. **← Galaxy** / Escape returns to the previous galaxy camera, selection

@@ -1,5 +1,7 @@
 //! Spatial fleet selection and destination cards. Coordinate entry is an advanced tool.
-use super::{LocalSession, navigation::location_label};
+use super::{LocalSession, navigation::location_stat};
+use crate::theme::icons::{self, Icon, stat};
+use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{BodyId, StarSystem, SystemId, fleet::Fleet, movement::MoveTarget, travel::ShipId};
 use game_protocol::{ClientCommand, ServerMessage};
 
@@ -45,11 +47,19 @@ impl LocalSession {
     }
 
     pub fn map_roster(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
-        crate::theme::heading(
-            ui,
-            "FLEET COMMAND",
-            "Select fleet / select destination / plot course",
-        );
+        ui.horizontal(|ui| {
+            ui.colored_label(
+                GREEN,
+                egui::RichText::new("FLEETS").font(crate::theme::fonts::display(ui.ctx(), 14.0)),
+            );
+            icons::glyph(
+                ui,
+                Icon::Help,
+                CYAN,
+                "1. Select a fleet\n2. Click a destination on the map\n3. Plot course, then Execute the run",
+            );
+        });
+        ui.separator();
         self.destination_card(ui, systems);
         ui.separator();
         let artwork = crate::map::art::Artwork::preload(ui.ctx());
@@ -58,24 +68,24 @@ impl LocalSession {
                 continue;
             };
             let selected = fleet.ships.contains(&self.active_ship);
-            let status = if self
+            let (status_icon, status) = if self
                 .state
                 .navigation
                 .encounters
                 .iter()
                 .any(|contact| contact.fleet == fleet.id)
             {
-                "CONTACT / decision needed"
+                (Icon::Contact, "CONTACT")
             } else if let Some(order) = self.state.navigation.order(fleet.id) {
                 if order.started {
-                    "UNDERWAY"
+                    (Icon::Underway, "UNDERWAY")
                 } else {
-                    "COURSE READY"
+                    (Icon::Plot, "READY")
                 }
             } else if self.state.navigation.holds.contains(&fleet.id) {
-                "HOLDING"
+                (Icon::Hold, "HOLDING")
             } else {
-                "AWAITING ORDERS"
+                (Icon::Warning, "NEEDS ORDERS")
             };
             let frame = egui::Frame::group(ui.style()).fill(if selected {
                 egui::Color32::from_rgb(35, 55, 37)
@@ -108,17 +118,27 @@ impl LocalSession {
                         {
                             self.select_map_fleet(ship);
                         }
-                        ui.small(format!("{} ships", fleet.ships.len()));
+                        ui.horizontal(|ui| {
+                            stat(
+                                ui,
+                                Icon::Ship,
+                                GREEN,
+                                &fleet.ships.len().to_string(),
+                                "Ships in fleet",
+                            );
+                            let color =
+                                if status_icon == Icon::Warning || status_icon == Icon::Contact {
+                                    AMBER
+                                } else {
+                                    GREEN
+                                };
+                            icons::glyph(ui, status_icon, color, status);
+                        });
                     });
                 });
-                ui.colored_label(
-                    if selected {
-                        crate::theme::GREEN
-                    } else {
-                        crate::theme::AMBER
-                    },
-                    egui::RichText::new(status).monospace().size(10.0),
-                );
+                if matches!(status_icon, Icon::Warning | Icon::Contact) {
+                    ui.colored_label(AMBER, egui::RichText::new(status).small());
+                }
                 if let Some(order) = self.state.navigation.order(fleet.id) {
                     let target = order.remaining_waypoints.last().unwrap_or(&order.target);
                     let destination = match target {
@@ -133,24 +153,33 @@ impl LocalSession {
                             .map_or("Unknown system", |system| system.name.as_str()),
                         _ => "Navigation waypoint",
                     };
-                    ui.small(format!(
-                        "→ {destination} / {} legs",
-                        order.remaining_waypoints.len() + 1
-                    ));
+                    ui.horizontal(|ui| {
+                        stat(ui, Icon::Plot, GREEN, destination, "Destination");
+                        stat(
+                            ui,
+                            Icon::Legs,
+                            CYAN,
+                            &(order.remaining_waypoints.len() + 1).to_string(),
+                            "Route legs remaining",
+                        );
+                    });
                 }
                 if let Ok(ship) = self.state.ship(ship) {
-                    ui.small(location_label(&ship.location, systems));
+                    location_stat(ui, &ship.location, systems);
                 }
             });
         }
         ui.separator();
-        ui.colored_label(
-            crate::theme::AMBER,
-            egui::RichText::new("TRAFFIC / NPC").monospace(),
-        );
+        ui.horizontal(|ui| {
+            icons::glyph(ui, Icon::Contact, AMBER, "Other traders");
+            ui.colored_label(
+                AMBER,
+                egui::RichText::new("TRAFFIC").font(crate::theme::fonts::display(ui.ctx(), 12.0)),
+            );
+        });
         for trader in &self.economy.traders {
-            ui.strong(&trader.name);
-            ui.small(trader.personality.label());
+            ui.strong(&trader.name)
+                .on_hover_text(trader.personality.label());
             ui.small(&trader.last_action);
         }
     }
@@ -163,7 +192,10 @@ impl LocalSession {
                 .map_or("Selected fleet", |fleet| fleet.name.as_str()),
         );
         let Some(target) = self.map_target else {
-            ui.label("Click a planet, station or point of interest on the map.");
+            ui.horizontal(|ui| {
+                icons::glyph(ui, Icon::Pin, CYAN, "No destination selected");
+                ui.small("Pick a destination on the map");
+            });
             return;
         };
         let command = match target {
@@ -180,9 +212,15 @@ impl LocalSession {
         let (fuel, runs, revision) = match self.authority.handle(command) {
             ServerMessage::DestinationPreview(course) => {
                 if let Some(last) = course.legs.last() {
-                    ui.label(location_label(&last.destination, systems));
+                    location_stat(ui, &last.destination, systems);
                 }
-                ui.small(format!("{} route legs / safe approach", course.legs.len()));
+                stat(
+                    ui,
+                    Icon::Legs,
+                    CYAN,
+                    &course.legs.len().to_string(),
+                    "Route legs, including safe approach",
+                );
                 (
                     course
                         .legs
@@ -201,7 +239,13 @@ impl LocalSession {
                 )
             }
             ServerMessage::MovementPreview(plan) => {
-                ui.label("Depart to outer galaxy");
+                stat(
+                    ui,
+                    Icon::DeepSpace,
+                    CYAN,
+                    "Outer galaxy",
+                    "Depart to outer galaxy",
+                );
                 (
                     u64::from(plan.fuel_per_ship),
                     plan.duration_ticks
@@ -215,14 +259,17 @@ impl LocalSession {
             }
             _ => return,
         };
-        ui.label(format!("{fuel} fuel / ship · {runs} runs minimum"));
-        if ui
-            .add_sized(
-                [ui.available_width(), 34.0],
-                egui::Button::new("PLOT COURSE"),
-            )
-            .clicked()
-        {
+        ui.horizontal(|ui| {
+            stat(ui, Icon::Fuel, CYAN, &fuel.to_string(), "Fuel per ship");
+            stat(
+                ui,
+                Icon::Execute,
+                GREEN,
+                &runs.to_string(),
+                "Navigation runs, at least",
+            );
+        });
+        if icons::button(ui, Icon::Plot, "PLOT COURSE").clicked() {
             let command = match target {
                 MapTarget::Destination(system, body) => ClientCommand::PlotDestination {
                     ship: self.active_ship,

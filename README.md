@@ -38,6 +38,12 @@ cargo run -p game-client
 cargo run -p game-client -- --new --seed 42 --save data/slot-2.json
 # Explicitly resume slot 1:
 cargo run -p game-client -- --continue
+# Multi-fleet test save: four fleets (docked, planet orbit, moon orbit, underway).
+# Built with ordinary commands plus a 25,000 cr test budget; reload with --continue:
+cargo run -p game-client -- --scenario multi-fleet --save data/multi-fleet.json
+cargo run -p game-client -- --continue --save data/multi-fleet.json
+# macOS: build target/StarTrader.app with the game icon:
+./tools/package_macos.sh
 # Export a complete initial world/player save as JSON without a window:
 cargo run -p game-client -- --new --headless > /tmp/star-trader-save.json
 # Run all engineering checks:

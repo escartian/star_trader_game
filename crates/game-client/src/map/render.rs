@@ -3,14 +3,8 @@ use egui::{Color32, Rect, Sense, Stroke, Vec2};
 
 impl Map {
     pub(super) fn draw_galaxy(&mut self, ui: &mut egui::Ui) -> Rect {
-        let height = (ui.available_height() * 0.65).clamp(220.0, 540.0);
         let (response, painter) = ui.allocate_painter(
-            Vec2::new(
-                ui.available_width()
-                    .min(ui.clip_rect().right() - ui.cursor().left())
-                    .max(1.0),
-                height,
-            ),
+            ui.available_size().max(Vec2::splat(1.0)),
             Sense::click_and_drag(),
         );
         let rect = response.rect;
@@ -29,9 +23,7 @@ impl Map {
             self.camera.pitch = (self.camera.pitch + f64::from(delta.y) * 0.008).clamp(-1.57, 1.57);
         }
         if response.hovered() {
-            self.camera.zoom = (self.camera.zoom
-                * (ui.input(|i| i.smooth_scroll_delta.y) * 0.002).exp())
-            .clamp(0.3, 4.0);
+            self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom);
         }
         let hover = response
             .hover_pos()
@@ -120,6 +112,7 @@ impl Map {
                     Vec2::splat(45.0),
                 )
             }));
+            let trade_ready = self.session.trade_ready_ships();
             for fleet in self.session.fleets() {
                 let Some(ship) = fleet
                     .ships
@@ -141,6 +134,11 @@ impl Map {
                         fleet,
                         ship,
                         selected: fleet.ships.contains(&self.session.selected_ship().id),
+                        berth: super::fleets::Berth::new(
+                            &ship.location,
+                            trade_ready.contains(&ship.id),
+                            0.0,
+                        ),
                     },
                     &mut reserved,
                 ) {

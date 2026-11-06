@@ -1,6 +1,7 @@
 """Export editable celestial models and transparent static sprites.
 
 blender --background --factory-startup --python tools/art/build_celestials.py
+Append `-- arid-planet frozen-planet` to rebuild only the named sprites.
 No downloaded textures, animation frame sets, or runtime Blender dependency.
 """
 from pathlib import Path
@@ -91,15 +92,29 @@ def export(name, colors, style):
     bpy.ops.render.render(write_still=True)
 
 
+EXPORTS = {
+    **{name: (colors, "star") for name, colors in STAR_COLORS.items()},
+    # Temperate world: deep oceans, green lowlands and pale highlands.
+    "rocky-planet": ([(0.015, 0.06, 0.16), (0.035, 0.2, 0.35),
+        (0.15, 0.32, 0.16), (0.5, 0.46, 0.27), (0.8, 0.85, 0.75)], "ocean"),
+    # Arid world: rust basins, ochre dunes and bleached salt flats.
+    "arid-planet": ([(0.09, 0.025, 0.01), (0.35, 0.1, 0.03),
+        (0.62, 0.3, 0.1), (0.85, 0.62, 0.35)], "desert"),
+    # Frozen world: dark glacial rifts under blue-white ice sheets.
+    "frozen-planet": ([(0.02, 0.06, 0.14), (0.12, 0.3, 0.48),
+        (0.55, 0.75, 0.88), (0.9, 0.96, 1.0)], "ice"),
+    "gas-giant": ([(0.18, 0.1, 0.1), (0.55, 0.27, 0.15),
+        (0.85, 0.63, 0.4), (0.95, 0.86, 0.68)], "bands"),
+    "asteroid": ([(0.055, 0.04, 0.03), (0.25, 0.19, 0.13), (0.55, 0.44, 0.3)], "asteroid"),
+    "moon": ([(0.07, 0.08, 0.1), (0.33, 0.35, 0.38), (0.65, 0.67, 0.7)], "moon"),
+}
+
+
 def main():
-    for name, colors in STAR_COLORS.items():
-        export(name, colors, "star")
-    export("rocky-planet", [(0.015, 0.06, 0.16), (0.035, 0.2, 0.35),
-        (0.15, 0.32, 0.16), (0.5, 0.46, 0.27), (0.8, 0.85, 0.75)], "ocean")
-    export("gas-giant", [(0.18, 0.1, 0.1), (0.55, 0.27, 0.15),
-        (0.85, 0.63, 0.4), (0.95, 0.86, 0.68)], "bands")
-    export("asteroid", [(0.055, 0.04, 0.03), (0.25, 0.19, 0.13), (0.55, 0.44, 0.3)], "asteroid")
-    export("moon", [(0.07, 0.08, 0.1), (0.33, 0.35, 0.38), (0.65, 0.67, 0.7)], "moon")
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    for name, (colors, style) in EXPORTS.items():
+        if not argv or name in argv:
+            export(name, colors, style)
 
 
 if __name__ == "__main__":

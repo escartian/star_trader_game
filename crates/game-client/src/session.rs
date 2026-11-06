@@ -1,5 +1,6 @@
 //! Native session adapter. Course planning is separate from shared navigation runs.
 mod fleets;
+pub use fleets::TradeOption;
 mod guide;
 mod map_controls;
 mod market;
@@ -65,6 +66,16 @@ impl LocalSession {
         self.state
             .ship(self.active_ship)
             .unwrap_or(&self.state.ships[0])
+    }
+
+    /// Ships that the authoritative economy lets trade at their current location.
+    pub fn trade_ready_ships(&self) -> Vec<game_core::travel::ShipId> {
+        self.state
+            .ships
+            .iter()
+            .filter(|ship| self.economy.current_market(ship).is_ok())
+            .map(|ship| ship.id)
+            .collect()
     }
 
     pub fn ships(&self) -> &[game_core::travel::Ship] {

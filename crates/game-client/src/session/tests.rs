@@ -231,3 +231,16 @@ fn executing_a_run_selects_and_highlights_a_fleet_without_orders_first() {
     assert_eq!(host.state.tick, 4);
     assert_eq!(host.selected_ship().location, Location::Docked(SystemId(1)));
 }
+
+#[test]
+fn trade_options_list_only_fleets_at_a_market_in_the_viewed_system() {
+    let session = LocalSession::new(game_server::Session::multi_fleet_scenario(1).unwrap());
+    let home = game_core::SystemId(1);
+    let options = session.trade_options(home);
+    let fleets: Vec<_> = options.iter().map(|option| option.fleet.as_str()).collect();
+    // Docked Home Guard (selected, listed first) and Scout Wing at the planet market;
+    // the moon has no market and the convoy is underway.
+    assert_eq!(fleets, ["Home Guard", "Scout Wing"]);
+    assert!(options[0].selected && !options[1].selected);
+    assert!(session.trade_options(game_core::SystemId(2)).is_empty());
+}

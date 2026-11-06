@@ -1,5 +1,10 @@
 //! Fleet readiness, Civ-style attention and fleet-specific encounter choices.
-use super::{LocalSession, navigation::location_label};
+use super::{
+    LocalSession,
+    navigation::{location_chip, location_label},
+};
+use crate::theme::icons::{self, Icon, stat};
+use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{
     StarSystem,
     economy::Commodity,
@@ -72,15 +77,23 @@ impl LocalSession {
     }
 
     pub(super) fn run_review(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
-        ui.heading(format!(
-            "Navigation run {}",
-            self.state.navigation.run.saturating_add(1)
-        ));
-        ui.label("Fleets move in parallel. Longer courses continue across runs; encounters can delay a fleet.");
-        ui.small(format!(
-            "Rescues recorded: {}",
-            self.state.navigation.rescues
-        ));
+        ui.horizontal_wrapped(|ui| {
+            icons::glyph(ui, Icon::Execute, GREEN, "Navigation run");
+            ui.heading(format!("Run {}", self.state.navigation.run.saturating_add(1)));
+            stat(
+                ui,
+                Icon::Good(Commodity::Medicine),
+                CYAN,
+                &self.state.navigation.rescues.to_string(),
+                "Rescues recorded",
+            );
+            icons::glyph(
+                ui,
+                Icon::Info,
+                CYAN,
+                "Fleets move in parallel. Longer courses continue across runs; encounters can delay a fleet.",
+            );
+        });
         let mut action = None;
         for fleet in self.state.fleets.clone() {
             let order = self.state.navigation.order(fleet.id).cloned();
@@ -99,41 +112,65 @@ impl LocalSession {
                     self.select_ship(*ship);
                     self.focus_requested = true;
                 }
-                if encounter {
-                    ui.colored_label(egui::Color32::YELLOW, "Encounter needs a decision");
+                let (icon, color, status) = if encounter {
+                    (Icon::Contact, AMBER, "Contact: decision needed".to_string())
                 } else if let Some(order) = &order {
-                    ui.label(format!(
-                        "{} • {} runs remaining",
-                        if order.started {
-                            "Underway"
-                        } else {
-                            "Course plotted"
-                        },
-                        order
-                            .remaining_ticks
-                            .div_ceil(self.state.movement_rules.ticks_per_navigation_run)
-                    ));
+                    let runs = order
+                        .remaining_ticks
+                        .div_ceil(self.state.movement_rules.ticks_per_navigation_run);
+                    let state = if order.started {
+                        Icon::Underway
+                    } else {
+                        Icon::Plot
+                    };
+                    (state, GREEN, format!("{runs}"))
                 } else if held {
-                    ui.label("Holding this run");
+                    (Icon::Hold, CYAN, String::new())
                 } else if fleet.ships.iter().any(|id| {
                     self.state
                         .ship(*id)
                         .is_ok_and(|ship| !ship.location.stationary())
                 }) {
-                    ui.label("Saved journey underway");
+                    (Icon::Underway, GREEN, String::new())
                 } else {
-                    ui.colored_label(egui::Color32::YELLOW, "Needs orders");
+                    (Icon::Warning, AMBER, "Needs orders".to_string())
+                };
+                let tip = match icon {
+                    Icon::Underway if order.is_some() => "Underway • runs remaining",
+                    Icon::Plot => "Course plotted • runs remaining",
+                    Icon::Hold => "Holding this run",
+                    Icon::Underway => "Saved journey underway",
+                    Icon::Contact => "Encounter needs a decision",
+                    _ => "Plot a course or Hold position",
+                };
+                stat(ui, icon, color, &status, tip);
+                if let Some(order) = &order {
+                    let (place, name) = location_chip(&order.plan.destination, systems);
+                    stat(
+                        ui,
+                        place,
+                        CYAN,
+                        &name,
+                        &format!(
+                            "Destination: {}",
+                            location_label(&order.plan.destination, systems)
+                        ),
+                    );
                 }
                 if order.as_ref().is_none_or(|order| !order.started)
                     && self.state.fleet_position(fleet.id, fleet.owner).is_ok()
                 {
-                    if !held && ui.button("Hold position").clicked() {
+                    if !held
+                        && icons::icon_button(ui, Icon::Hold, "Hold position this run").clicked()
+                    {
                         action = Some(ClientCommand::HoldFleet {
                             fleet: fleet.id,
                             expected_revision: self.state.revision,
                         });
                     }
-                    if order.is_some() && ui.button("Cancel course").clicked() {
+                    if order.is_some()
+                        && icons::icon_button(ui, Icon::Cancel, "Cancel course").clicked()
+                    {
                         action = Some(ClientCommand::CancelCourse {
                             fleet: fleet.id,
                             expected_revision: self.state.revision,
@@ -141,14 +178,8 @@ impl LocalSession {
                     }
                 }
             });
-            if let Some(order) = &order {
-                ui.small(format!(
-                    "Destination: {}",
-                    location_label(&order.plan.destination, systems)
-                ));
-            }
         }
-        if ui.button("Execute navigation run").clicked() {
+        if icons::button(ui, Icon::Execute, "Execute run").clicked() {
             self.request_execute_run();
         }
         if let Some(command) = action {
@@ -173,23 +204,44 @@ impl LocalSession {
             return;
         };
         ui.group(|ui| {
-            ui.strong(encounter.kind.label());
+            ui.horizontal(|ui| {
+                icons::glyph(ui, Icon::Contact, AMBER, "Contact");
+                ui.strong(encounter.kind.label());
+            });
             let mut choice = None;
-            match encounter.kind {
-                EncounterKind::DebrisField => {
-                    ui.label("Your fleet detects recoverable debris. Investigate to collect one ore, or bypass it.");
-                    let room = fleet.ships.iter().any(|id| self.state.ship(*id).is_ok_and(|ship| ship.cargo_used() < u64::from(ship.cargo_capacity)));
-                    if ui.add_enabled(room, egui::Button::new("Recover salvage")).clicked() { choice = Some(EncounterChoice::Investigate); }
-                    if !room { ui.label("One cargo space required."); }
+            let carries = |test: &dyn Fn(&game_core::travel::Ship) -> bool| {
+                fleet
+                    .ships
+                    .iter()
+                    .any(|id| self.state.ship(*id).is_ok_and(test))
+            };
+            let (text, icon, label, option, blocked) = match encounter.kind {
+                EncounterKind::DebrisField => (
+                    "Your fleet detects recoverable debris. Investigate to collect one ore, or bypass it.",
+                    Icon::Good(Commodity::Ore),
+                    "Salvage +1 ore",
+                    EncounterChoice::Investigate,
+                    (!carries(&|ship| ship.cargo_used() < u64::from(ship.cargo_capacity)))
+                        .then(|| "One cargo space required.".to_string()),
+                ),
+                EncounterKind::DistressSignal => (
+                    "A stranded crew requests one medicine. Assist to record a rescue, or continue past the signal.",
+                    Icon::Good(Commodity::Medicine),
+                    "Assist −1 medicine",
+                    EncounterChoice::Assist,
+                    (!carries(&|ship| ship.cargo[Commodity::Medicine.index()] > 0))
+                        .then(|| "No medicine aboard this fleet.".to_string()),
+                ),
+            };
+            ui.label(text);
+            ui.horizontal(|ui| {
+                if icons::labeled_action(ui, icon, label, blocked).clicked() {
+                    choice = Some(option);
                 }
-                EncounterKind::DistressSignal => {
-                    ui.label("A stranded crew requests one medicine. Assist to record a rescue, or continue past the signal.");
-                    let medicine = fleet.ships.iter().any(|id| self.state.ship(*id).is_ok_and(|ship| ship.cargo[Commodity::Medicine.index()] > 0));
-                    if ui.add_enabled(medicine, egui::Button::new("Assist (1 medicine)")).clicked() { choice = Some(EncounterChoice::Assist); }
-                    if !medicine { ui.label("No medicine aboard this fleet."); }
+                if icons::button(ui, Icon::Bypass, "Bypass").clicked() {
+                    choice = Some(EncounterChoice::Bypass);
                 }
-            }
-            if ui.button("Bypass contact").clicked() { choice = Some(EncounterChoice::Bypass); }
+            });
             if let Some(choice) = choice { self.command(ClientCommand::ResolveEncounter { encounter: encounter.id, choice, expected_revision: self.state.revision }); }
         });
     }

@@ -29,25 +29,25 @@ fn glow(painter: &Painter, center: Pos2, radius: Vec2, color: Color32) {
 }
 
 pub fn background(painter: &Painter, rect: Rect, caption: &str) {
-    painter.rect_filled(rect, 0.0, Color32::from_rgb(4, 8, 19));
+    painter.rect_filled(rect, 0.0, Color32::from_rgb(1, 2, 6));
     for (x, y, r, color) in [
         (
             0.18,
             0.70,
             0.9,
-            Color32::from_rgba_unmultiplied(37, 64, 125, 100),
+            Color32::from_rgba_unmultiplied(30, 50, 105, 45),
         ),
         (
             0.65,
             0.30,
             0.8,
-            Color32::from_rgba_unmultiplied(76, 42, 110, 85),
+            Color32::from_rgba_unmultiplied(62, 34, 95, 38),
         ),
         (
             0.88,
             0.65,
             0.6,
-            Color32::from_rgba_unmultiplied(20, 93, 116, 70),
+            Color32::from_rgba_unmultiplied(16, 75, 95, 30),
         ),
     ] {
         glow(
@@ -141,7 +141,8 @@ fn draw_star(
 
 /// Orientation stays visible even when the focused object has been panned away.
 pub fn axes(painter: &Painter, rect: Rect, rotation: glam::DQuat) {
-    let origin = rect.left_bottom() + Vec2::new(35.0, -35.0);
+    // Bottom-right, clear of the floating run card at the bottom-left.
+    let origin = rect.right_bottom() + Vec2::new(-40.0, -55.0);
     for (axis, label, color) in [
         (glam::DVec3::X, "X", Color32::LIGHT_RED),
         (glam::DVec3::Y, "Y", Color32::LIGHT_GREEN),

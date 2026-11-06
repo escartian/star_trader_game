@@ -2,14 +2,16 @@ mod framing;
 mod labels;
 mod layout;
 mod render;
-use layout::{display_position, moon_parent};
+use layout::{display_position, moon_parent, short_name};
 mod scale;
 mod ships;
 
 use super::{
     art::{ArtKind, Artwork},
     camera::Camera,
+    toolbar::{CameraAction, camera_toolbar},
 };
+use crate::theme::icons::{self, Icon, stat};
 use egui::{Pos2, Rect};
 use game_core::{BodyId, BodyKind, LocalBody, LocalPosition, StarSystem};
 use glam::DVec3;
@@ -54,6 +56,9 @@ pub struct LocalView {
     active_ship: game_core::travel::ShipId,
     preview_route: Vec<LocalPosition>,
     fleet_hits: Vec<crate::map::fleets::FleetHit>,
+    trade_ready: Vec<game_core::travel::ShipId>,
+    trade_options: Vec<crate::session::TradeOption>,
+    market_request: Option<game_core::travel::ShipId>,
     selection_request: Option<game_core::travel::ShipId>,
     move_request: Option<game_core::movement::MoveTarget>,
 }
@@ -70,6 +75,9 @@ impl LocalView {
             art: None,
             preview_route: Vec::new(),
             fleet_hits: Vec::new(),
+            trade_ready: Vec::new(),
+            trade_options: Vec::new(),
+            market_request: None,
             selection_request: None,
             move_request: None,
             frame_overview: true,
@@ -91,6 +99,45 @@ impl LocalView {
 
     pub fn take_fleet_selection(&mut self) -> Option<game_core::travel::ShipId> {
         self.selection_request.take()
+    }
+
+    /// Fleets that can trade in this system, as reported by the session.
+    pub fn set_trade_options(&mut self, options: Vec<crate::session::TradeOption>) {
+        self.trade_options = options;
+    }
+
+    /// Ship whose market should open (selecting its fleet first), if requested.
+    pub fn take_market_request(&mut self) -> Option<game_core::travel::ShipId> {
+        self.market_request.take()
+    }
+
+    fn trade_buttons(&mut self, ui: &mut egui::Ui) {
+        if self.trade_options.is_empty() {
+            return;
+        }
+        ui.horizontal_wrapped(|ui| {
+            for option in &self.trade_options {
+                let place = self
+                    .system
+                    .bodies
+                    .iter()
+                    .find(|body| body.id == option.body)
+                    .map_or("market", |body| short_name(&self.system, body));
+                let response = if option.selected {
+                    icons::button(ui, Icon::Market, &format!("TRADE · {place}"))
+                        .on_hover_text(format!("Open the market at {place}"))
+                } else {
+                    icons::button(ui, Icon::Fleets, &format!("{} · TRADE", option.fleet))
+                        .on_hover_text(format!(
+                            "Switch to {} and open the market at {place}",
+                            option.fleet
+                        ))
+                };
+                if response.clicked() {
+                    self.market_request = Some(option.ship);
+                }
+            }
+        });
     }
 
     pub fn take_movement_request(&mut self) -> Option<game_core::movement::MoveTarget> {
@@ -132,91 +179,99 @@ impl LocalView {
         self.art = Some(Artwork::preload(ctx));
         let mut back =
             !ctx.wants_keyboard_input() && ctx.input(|i| i.key_pressed(egui::Key::Escape));
-        egui::CentralPanel::default().show(ctx, |ui| {
-            crate::theme::metal_panel(ui);
-            egui::ScrollArea::vertical()
-                .id_salt("local_page")
-                .show(ui, |ui| {
-                    self.header(ui, ctx, &mut back);
-                    ui.horizontal_wrapped(|ui| {
-                        if crate::theme::icons::button(
-                            ui,
-                            crate::theme::icons::Icon::Focus,
-                            "System overview",
-                        )
-                        .clicked()
-                        {
-                            self.frame_overview = true;
-                        }
-                        if crate::theme::icons::button(
-                            ui,
-                            crate::theme::icons::Icon::Focus,
-                            "Focus selected fleet",
-                        )
-                        .clicked()
-                            && let Some(ship) =
-                                ships.iter().find(|ship| ship.id == self.active_ship)
-                            && let Some(anchor) = self.ship_anchor(&ship.location)
-                        {
-                            self.camera.focus_on(anchor);
-                        }
-                    });
-                    let rect = self.draw_map(ui, ships, fleets);
-                    self.details(ui, rect);
-                });
-        });
+        let rect = egui::CentralPanel::default()
+            .frame(egui::Frame::NONE.fill(egui::Color32::BLACK))
+            .show(ctx, |ui| self.draw_map(ui, ships, fleets))
+            .inner;
+        crate::theme::metal::card(
+            ctx,
+            "view-toolbar",
+            egui::Align2::CENTER_TOP,
+            egui::vec2(0.0, 10.0),
+            |ui| self.header(ui, ctx, &mut back, ships),
+        );
+        let width = (ctx.screen_rect().width() - 560.0).clamp(300.0, 640.0);
+        crate::theme::metal::card(
+            ctx,
+            "view-selection",
+            egui::Align2::CENTER_BOTTOM,
+            egui::vec2(0.0, -10.0),
+            |ui| {
+                ui.set_max_width(width);
+                self.trade_buttons(ui);
+                self.details(ui, rect);
+            },
+        );
         back
     }
-    fn header(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, back: &mut bool) {
+    fn header(
+        &mut self,
+        ui: &mut egui::Ui,
+        ctx: &egui::Context,
+        back: &mut bool,
+        ships: &[game_core::travel::Ship],
+    ) {
         ui.horizontal_wrapped(|ui| {
-            if crate::theme::icons::button(ui, crate::theme::icons::Icon::Back, "Galaxy").clicked()
-            {
+            if icons::icon_button(ui, Icon::Back, "Back to galaxy (Esc)").clicked() {
                 *back = true;
             }
-            ui.label("/");
-            ui.heading(format!("{} / INNER SYSTEM", self.system.name));
+            ui.label(
+                egui::RichText::new(self.system.name.to_uppercase())
+                    .font(crate::theme::fonts::display(ui.ctx(), 14.0))
+                    .color(crate::theme::GREEN),
+            );
+            if icons::button(ui, Icon::DeepSpace, "Depart")
+                .on_hover_text("Plot a departure from this system to the outer galaxy")
+                .clicked()
+            {
+                self.move_request =
+                    Some(game_core::movement::MoveTarget::LeaveSystem(self.system.id));
+            }
         });
-        egui::CollapsingHeader::new("View / camera controls").show(ui, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                if ui.button("Reset").clicked() {
-                    self.camera = Self::initial_camera();
-                    self.frame_overview = true;
+        let action = camera_toolbar(
+            ui,
+            &mut self.camera,
+            &mut self.pan_tool,
+            &[
+                CameraAction::Overview,
+                CameraAction::FocusFleet,
+                CameraAction::FocusSelection,
+                CameraAction::FocusStar,
+                CameraAction::Reset,
+            ],
+            "Inner system (AU)\nClick a body: select destination, then Plot course\nDrag: orbit • Wheel or pinch: zoom • Esc: galaxy\nMarker sizes are symbolic.",
+        );
+        match action {
+            Some(CameraAction::Reset) => {
+                self.camera = Self::initial_camera();
+                self.frame_overview = true;
+            }
+            Some(CameraAction::Overview) => self.frame_overview = true,
+            Some(CameraAction::FocusSelection) => self.focus(),
+            Some(CameraAction::FocusStar) => self.camera.focus_on(DVec3::ZERO),
+            Some(CameraAction::FocusFleet) => {
+                if let Some(anchor) = ships
+                    .iter()
+                    .find(|ship| ship.id == self.active_ship)
+                    .and_then(|ship| self.ship_anchor(&ship.location))
+                {
+                    self.camera.focus_on(anchor);
                 }
-                if ui.button("Focus selection (F)").clicked() {
-                    self.focus();
-                }
-                if ui.button("Focus star").clicked() {
-                    self.camera.focus_on(DVec3::ZERO);
-                }
-                ui.toggle_value(&mut self.pan_tool, "Pan tool");
-                if ui.button("Top (XZ)").clicked() {
-                    self.camera.yaw = 0.0;
-                    self.camera.pitch = std::f64::consts::FRAC_PI_2;
-                }
-                if ui.button("Front (XY)").clicked() {
-                    self.camera.yaw = 0.0;
-                    self.camera.pitch = 0.0;
-                }
-                if ui.button("Side (ZY)").clicked() {
-                    self.camera.yaw = std::f64::consts::FRAC_PI_2;
-                    self.camera.pitch = 0.0;
-                }
-                ui.add(egui::Slider::new(&mut self.camera.zoom, 0.3..=4.0).text("Zoom"));
-            });
-        });
+            }
+            None => {}
+        }
         if !ctx.wants_keyboard_input() && ui.input(|i| i.key_pressed(egui::Key::F)) {
             self.focus();
         }
-        ui.small("Fleet / destination / plot course • drag to orbit • wheel to zoom • AU");
     }
 
     fn details(&mut self, ui: &mut egui::Ui, rect: Rect) {
         if self.system.bodies.is_empty() {
-            ui.label("No local destinations are catalogued in this test fixture.");
+            ui.label("No local destinations in this test fixture.");
         }
         if self.candidates.len() > 1 {
             ui.group(|ui| {
-                ui.label("Overlapping destinations — choose one:");
+                ui.label("Overlapping — choose one:");
                 for body in self
                     .system
                     .bodies
@@ -224,7 +279,10 @@ impl LocalView {
                     .filter(|b| self.candidates.contains(&b.id))
                 {
                     if ui
-                        .selectable_label(Some(body.id) == self.selected, &body.name)
+                        .selectable_label(
+                            Some(body.id) == self.selected,
+                            short_name(&self.system, body),
+                        )
                         .clicked()
                     {
                         self.selected = Some(body.id);
@@ -241,8 +299,8 @@ impl LocalView {
                 if self.art.as_ref().is_some_and(|art| {
                     art.tile(
                         ui,
-                        ArtKind::from(body.kind),
-                        &body.name,
+                        ArtKind::for_body(body),
+                        short_name(&self.system, body),
                         Some(body.id) == self.selected,
                     )
                     .clicked()
@@ -261,55 +319,64 @@ impl LocalView {
             .iter()
             .find(|b| Some(b.id) == self.selected)
         {
-            ui.label(format!("{} • {}", body.name, body.kind.label()));
-            if let Some(profile) = &body.planet {
-                ui.label(format!(
-                    "{} economy • {} • danger: {}",
-                    profile.economy.label(),
-                    profile.biome.label(),
-                    profile.danger.label()
-                ));
-                ui.label(format!("Production specialization: {} • resource market and shipyard available at this body's orbital berth", profile.specialization.label()));
-            }
-            if ui
-                .button(if body.kind == BodyKind::Station {
-                    "Select station as destination"
-                } else {
-                    "Select as destination"
-                })
-                .clicked()
-            {
+            let mut select = false;
+            ui.horizontal_wrapped(|ui| {
+                ui.strong(short_name(&self.system, body))
+                    .on_hover_text(body.kind.label());
+                if let Some(profile) = &body.planet {
+                    icons::planet_traits(ui, profile);
+                    icons::glyph(
+                        ui,
+                        Icon::Market,
+                        crate::theme::GREEN,
+                        "Resource market and shipyard at this body's orbital berth",
+                    );
+                }
+                stat(
+                    ui,
+                    Icon::Distance,
+                    crate::theme::CYAN,
+                    &format!(
+                        "{:.4} AU",
+                        crate::units::kilometers_to_au(kilometers(body.position).length())
+                    ),
+                    &format!("Distance from {} (true 3D)", self.system.name),
+                );
+                if body.kind == BodyKind::Moon
+                    && let Some(parent) = moon_parent(&self.system, body)
+                {
+                    let distance = kilometers(body.position).distance(kilometers(parent.position));
+                    let note = if display_position(&self.system, body) != view_position(body) {
+                        " • spacing exaggerated in the diagram"
+                    } else {
+                        ""
+                    };
+                    stat(
+                        ui,
+                        Icon::Orbit,
+                        crate::theme::CYAN,
+                        &format!("{:.5} AU", crate::units::kilometers_to_au(distance)),
+                        &format!("Distance from {}{note}", parent.name),
+                    );
+                }
+                if !rect.contains(
+                    self.camera
+                        .project(display_position(&self.system, body), rect),
+                ) {
+                    icons::glyph(
+                        ui,
+                        Icon::Warning,
+                        crate::theme::AMBER,
+                        "Destination is outside the map. Use Focus selection to reveal it.",
+                    );
+                }
+                select = icons::button(ui, Icon::Plot, "Set destination").clicked();
+            });
+            if select {
                 self.move_request = Some(game_core::movement::MoveTarget::Body {
                     system: self.system.id,
                     body: body.id,
                 });
-            }
-            ui.label(format!(
-                "{:.4} AU from {} • true 3D distance",
-                crate::units::kilometers_to_au(kilometers(body.position).length()),
-                self.system.name
-            ));
-            ui.label("Marker sizes are symbolic; local distances use AU, galaxy distances use light-years.");
-            if body.kind == BodyKind::Moon
-                && let Some(parent) = moon_parent(&self.system, body)
-            {
-                let distance = kilometers(body.position).distance(kilometers(parent.position));
-                let note = if display_position(&self.system, body) != view_position(body) {
-                    " • spacing exaggerated in the diagram"
-                } else {
-                    ""
-                };
-                ui.label(format!(
-                    "{:.5} AU from {}{note}",
-                    crate::units::kilometers_to_au(distance),
-                    parent.name
-                ));
-            }
-            if !rect.contains(
-                self.camera
-                    .project(display_position(&self.system, body), rect),
-            ) {
-                ui.label("Destination is outside the map. Use Focus selection to reveal it.");
             }
         }
         if let Some(art) = &self.art {
@@ -320,7 +387,7 @@ impl LocalView {
                 .find(|body| Some(body.id) == self.selected)
             {
                 egui::CollapsingHeader::new("Sensor image")
-                    .show(ui, |ui| art.preview(ArtKind::from(body.kind), ui));
+                    .show(ui, |ui| art.preview(ArtKind::for_body(body), ui));
             }
             art.warnings(ui);
         }

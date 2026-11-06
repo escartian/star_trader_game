@@ -20,3 +20,34 @@ fn all_embedded_art_decodes_with_transparency_and_is_reused_across_views() {
         assert_eq!(texture.id(), cached.textures[kind].id());
     }
 }
+
+#[test]
+fn rocky_planets_use_biome_artwork() {
+    use super::ArtKind;
+    use game_core::planet::Biome;
+    let mut body = game_core::LocalBody {
+        id: game_core::BodyId(1),
+        name: "Test".into(),
+        kind: game_core::BodyKind::RockyPlanet,
+        position: game_core::LocalPosition {
+            x_km: 0,
+            y_km: 0,
+            z_km: 0,
+        },
+        planet: None,
+    };
+    assert_eq!(ArtKind::for_body(&body), ArtKind::RockyPlanet);
+    for (biome, art) in [
+        (Biome::Temperate, ArtKind::RockyPlanet),
+        (Biome::Arid, ArtKind::AridPlanet),
+        (Biome::Frozen, ArtKind::FrozenPlanet),
+    ] {
+        body.planet = Some(game_core::planet::PlanetProfile {
+            economy: game_core::planet::EconomyType::Agricultural,
+            specialization: game_core::economy::Commodity::Food,
+            biome,
+            danger: game_core::planet::Danger::Safe,
+        });
+        assert_eq!(ArtKind::for_body(&body), art);
+    }
+}

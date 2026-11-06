@@ -11,10 +11,16 @@ def surface(name, colors, style="rock"):
     shader.inputs["Roughness"].default_value = 0.72
     coordinates = nodes.new("ShaderNodeTexCoord")
     noise = nodes.new("ShaderNodeTexNoise")
-    noise.inputs["Scale"].default_value = 4 if style == "ocean" else 13
+    noise.inputs["Scale"].default_value = {"ocean": 4, "desert": 7, "ice": 3}.get(style, 13)
     noise.inputs["Detail"].default_value = 5
     links.new(coordinates.outputs["Generated"], noise.inputs["Vector"])
     factor = noise.outputs["Fac"]
+    if style == "ice":
+        # Stretched noise reads as glacial streaks running toward the poles.
+        stretch = nodes.new("ShaderNodeMapping")
+        stretch.inputs["Scale"].default_value = (1, 1, 4)
+        links.new(coordinates.outputs["Generated"], stretch.inputs["Vector"])
+        links.new(stretch.outputs["Vector"], noise.inputs["Vector"])
     if style == "bands":
         wave = nodes.new("ShaderNodeTexWave")
         wave.bands_direction = "Z"
@@ -31,7 +37,7 @@ def surface(name, colors, style="rock"):
     links.new(factor, ramp.inputs["Fac"])
     links.new(ramp.outputs["Color"], shader.inputs["Base Color"])
     bump = nodes.new("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = 0.15 if style in ("ocean", "bands") else 0.45
+    bump.inputs["Strength"].default_value = {"ocean": 0.15, "bands": 0.15, "desert": 0.6, "ice": 0.3}.get(style, 0.45)
     bump.inputs["Distance"].default_value = 0.08
     links.new(noise.outputs["Fac"], bump.inputs["Height"])
     links.new(bump.outputs["Normal"], shader.inputs["Normal"])

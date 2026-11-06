@@ -35,9 +35,13 @@ impl LocalView {
         let center = (low + high) * 0.5;
         self.camera
             .focus_on(rotation.inverse() * DVec3::new(center.x, center.y, 0.0));
-        // Reserve room for symbolic bodies, offset fleet cards and the departure control.
+        // Frame into the area left clear by the floating HUD cards, in points:
+        // roster (left), status (right), toolbar (top) and selection (bottom).
+        let (left, right, top, bottom) = (250.0, 200.0, 110.0, 200.0);
+        self.camera.pan = Vec2::new((left - right) * 0.5, (top - bottom) * 0.5);
         let span = high - low;
-        let usable = (rect.size() - Vec2::new(230.0, 180.0)).max(Vec2::splat(60.0));
+        let usable = (rect.size() - Vec2::new(left + right + 40.0, top + bottom + 40.0))
+            .max(Vec2::splat(60.0));
         let pixels_per_unit =
             (f64::from(usable.x) / span.x.max(1.0)).min(f64::from(usable.y) / span.y.max(1.0));
         self.camera.zoom = (pixels_per_unit * 38.0 / f64::from(rect.width().min(rect.height())))

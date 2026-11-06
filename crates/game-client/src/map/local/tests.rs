@@ -172,7 +172,7 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
         .iter()
         .find_map(|shape| {
             if let egui::epaint::Shape::Text(text) = &shape.shape
-                && text.galley.job.text == "Select as destination"
+                && text.galley.job.text == "Set destination"
             {
                 Some(text.pos + text.galley.size() / 2.0)
             } else {
@@ -214,7 +214,7 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
         .rev()
         .find_map(|shape| {
             if let egui::epaint::Shape::Text(text) = &shape.shape
-                && text.galley.job.text == "Sol Outer giant"
+                && text.galley.job.text == "Outer giant"
             {
                 Some(text.pos + text.galley.size() / 2.0)
             } else {

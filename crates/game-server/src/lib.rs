@@ -5,6 +5,7 @@ mod movement;
 mod navigation;
 mod offline;
 mod save;
+mod scenarios;
 mod shipyard;
 use game_core::economy::Economy;
 use game_core::{

@@ -1,5 +1,6 @@
 //! Fleet marker placement is shared by painting and picking.
 use super::art::{ArtKind, Artwork};
+use crate::theme::icons::Icon;
 use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Stroke, Vec2};
 use game_core::{
     fleet::{Fleet, FleetId},
@@ -17,6 +18,66 @@ pub(super) struct FleetSymbol<'a> {
     pub fleet: &'a Fleet,
     pub ship: &'a Ship,
     pub selected: bool,
+    pub berth: Berth,
+}
+
+/// How a fleet is resting, for presentation only. `trade` is decided by the
+/// authoritative economy (a market is reachable from this exact location).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Berth {
+    /// Flying, waiting at a waypoint, or in deep space.
+    Free,
+    /// Clamped to the system's trade port.
+    Docked { trade: bool },
+    /// Holding orbit around a body; `ring` is the on-screen orbit radius in points
+    /// (0 hides the ring, e.g. at galaxy scale).
+    Orbit { ring: f32, trade: bool },
+}
+
+impl Berth {
+    pub fn new(location: &game_core::travel::Location, trade: bool, ring: f32) -> Self {
+        match location {
+            game_core::travel::Location::Docked(_) => Self::Docked { trade },
+            game_core::travel::Location::Orbiting { .. } => Self::Orbit { ring, trade },
+            _ => Self::Free,
+        }
+    }
+
+    fn tag(self) -> Option<(&'static str, Color32, Icon)> {
+        match self {
+            Self::Free => None,
+            Self::Docked { .. } => Some(("DOCKED", crate::theme::GREEN, Icon::Dock)),
+            Self::Orbit { .. } => Some(("ORBIT", crate::theme::CYAN, Icon::Orbit)),
+        }
+    }
+
+    fn trade(self) -> bool {
+        matches!(
+            self,
+            Self::Docked { trade: true } | Self::Orbit { trade: true, .. }
+        )
+    }
+}
+
+/// Dashed ellipse around the orbited body; flattened to suggest the orbital plane.
+fn orbit_ring(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
+    let segments = 28;
+    for step in (0..segments).step_by(2) {
+        let point = |i: i32| {
+            let angle = i as f32 / segments as f32 * std::f32::consts::TAU;
+            center + Vec2::new(angle.cos() * radius, angle.sin() * radius * 0.45)
+        };
+        painter.line_segment(
+            [point(step), point(step + 1)],
+            Stroke::new(1.2_f32, color.gamma_multiply(0.9)),
+        );
+    }
+}
+
+fn badge(painter: &Painter, center: Pos2, icon: Icon, color: Color32) {
+    painter.circle_filled(center, 8.5, Color32::from_rgb(8, 18, 24));
+    painter.circle_stroke(center, 8.5, Stroke::new(1.0_f32, color));
+    crate::theme::icons::paint_sized(painter, icon, center, 12.0, color);
 }
 
 pub(super) fn paint(
@@ -31,6 +92,7 @@ pub(super) fn paint(
         fleet,
         ship,
         selected,
+        berth,
     } = symbol;
     let bounds = place(anchor, viewport, reserved)?;
     reserved.push(bounds.expand(3.0));
@@ -41,12 +103,42 @@ pub(super) fn paint(
         Color32::from_rgb(150, 185, 205)
     };
     // Tethers do not place fleet symbols at body/star centers.
-    if anchor.distance(center) > 32.0 {
-        painter.line_segment(
-            [anchor, center],
-            Stroke::new(0.7_f32, color.gamma_multiply(0.5)),
-        );
-        painter.circle_stroke(anchor, 3.0, Stroke::new(1.0_f32, color));
+    match berth {
+        Berth::Docked { .. } => {
+            // A solid clamp line and bracket: physically attached to the port.
+            let green = crate::theme::GREEN;
+            painter.line_segment(
+                [anchor, center],
+                Stroke::new(2.0_f32, green.gamma_multiply(0.8)),
+            );
+            let clamp = Rect::from_center_size(anchor, Vec2::splat(14.0));
+            painter.rect_stroke(
+                clamp,
+                2.0,
+                Stroke::new(1.6_f32, green),
+                egui::StrokeKind::Middle,
+            );
+        }
+        Berth::Orbit { ring, .. } => {
+            let cyan = crate::theme::CYAN;
+            if ring > 0.0 {
+                orbit_ring(painter, anchor, ring, cyan);
+            }
+            if anchor.distance(center) > 32.0 {
+                painter.line_segment(
+                    [anchor, center],
+                    Stroke::new(0.7_f32, cyan.gamma_multiply(0.5)),
+                );
+            }
+        }
+        Berth::Free if anchor.distance(center) > 32.0 => {
+            painter.line_segment(
+                [anchor, center],
+                Stroke::new(0.7_f32, color.gamma_multiply(0.5)),
+            );
+            painter.circle_stroke(anchor, 3.0, Stroke::new(1.0_f32, color));
+        }
+        Berth::Free => {}
     }
     painter.rect_filled(
         Rect::from_center_size(center, Vec2::splat(42.0)),
@@ -59,12 +151,27 @@ pub(super) fn paint(
         Stroke::new(if selected { 1.8_f32 } else { 0.7_f32 }, color),
     );
     art.paint(ArtKind::from(ship.kind), painter, center, 34.0);
+    let (label, label_color) = match berth.tag() {
+        Some((tag, tag_color, icon)) => {
+            badge(painter, center + Vec2::new(17.0, -17.0), icon, tag_color);
+            (format!("F{} {tag}", fleet.id.0), tag_color)
+        }
+        None => (format!("F{} · {}", fleet.id.0, fleet.ships.len()), color),
+    };
+    if berth.trade() {
+        badge(
+            painter,
+            center + Vec2::new(-17.0, -17.0),
+            Icon::Market,
+            crate::theme::GREEN,
+        );
+    }
     painter.text(
         center + Vec2::new(0.0, 23.0),
         Align2::CENTER_TOP,
-        format!("F{} · {}", fleet.id.0, fleet.ships.len()),
-        FontId::monospace(11.0),
-        color,
+        label,
+        FontId::proportional(12.0),
+        label_color,
     );
     Some(FleetHit {
         fleet: fleet.id,

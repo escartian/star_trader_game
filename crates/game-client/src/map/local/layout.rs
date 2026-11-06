@@ -36,3 +36,13 @@ pub(super) fn display_position(system: &StarSystem, body: &LocalBody) -> DVec3 {
         .unwrap_or(DVec3::new(1.0, 0.5, -0.8).normalize());
     parent + direction * MIN_MOON_SEPARATION
 }
+
+/// Body names are generated as "<system> <name>"; inside that system's own view
+/// the prefix is redundant, so show just "<name>". Falls back to the full name.
+pub(super) fn short_name<'a>(system: &StarSystem, body: &'a LocalBody) -> &'a str {
+    body.name
+        .strip_prefix(system.name.as_str())
+        .map(str::trim_start)
+        .filter(|rest| !rest.is_empty())
+        .unwrap_or(&body.name)
+}

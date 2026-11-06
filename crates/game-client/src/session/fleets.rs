@@ -1,5 +1,8 @@
 //! Fleet management view; all mutations go through authoritative commands.
 use super::LocalSession;
+use crate::map::art::ArtKind;
+use crate::theme::icons::{self, Icon, stat};
+use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{economy::Commodity, travel::ShipId};
 use game_protocol::ClientCommand;
 
@@ -23,31 +26,69 @@ impl Default for FleetPanel {
     }
 }
 
+/// A player fleet that can trade right now inside the viewed system.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TradeOption {
+    /// First ship in the fleet that has market access; selecting it trades with it.
+    pub ship: ShipId,
+    pub fleet: String,
+    /// The market's body (the trade port when docked).
+    pub body: game_core::BodyId,
+    /// True when this is the currently selected fleet.
+    pub selected: bool,
+}
+
 impl LocalSession {
+    /// Fleets with market access in `system`; the selected fleet is listed first.
+    pub fn trade_options(&self, system: game_core::SystemId) -> Vec<TradeOption> {
+        let mut options: Vec<TradeOption> = self
+            .state
+            .fleets
+            .iter()
+            .filter_map(|fleet| {
+                fleet.ships.iter().find_map(|id| {
+                    let ship = self.state.ship(*id).ok()?;
+                    let market = self.economy.current_market(ship).ok()?;
+                    (market.id.system == system).then(|| TradeOption {
+                        ship: ship.id,
+                        fleet: fleet.name.clone(),
+                        body: market.id.body,
+                        selected: fleet.ships.contains(&self.active_ship),
+                    })
+                })
+            })
+            .collect();
+        options.sort_by_key(|option| !option.selected);
+        options
+    }
+
     pub fn open_fleets(&mut self) {
         self.fleet_panel.open = true;
     }
 
     pub fn show_fleets(&mut self, ctx: &egui::Context, systems: &[game_core::StarSystem]) {
         let mut open = self.fleet_panel.open;
-        egui::Window::new("Fleets and shipyard")
-            .open(&mut open)
-            .default_width(620.0)
-            .vscroll(true)
-            .show(ctx, |ui| self.fleets_ui(ui, systems));
+        crate::theme::metal::window(ctx, "Fleets", &mut open, 620.0, |ui| {
+            self.fleets_ui(ui, systems)
+        });
         self.fleet_panel.open = open;
     }
 
     fn fleets_ui(&mut self, ui: &mut egui::Ui, systems: &[game_core::StarSystem]) {
         let revision = self.state.revision;
         let mut action = None;
-        ui.label(format!(
-            "{} ships • {} fleets • {} credits",
-            self.state.ships.len(),
-            self.state.fleets.len(),
-            self.economy.credits
-        ));
-        ui.label("Plot a course for each fleet, then execute a shared navigation run. Cancel plotted courses before changing fleet membership.");
+        let artwork = crate::map::art::Artwork::preload(ui.ctx());
+        ui.horizontal_wrapped(|ui| {
+            stat(ui, Icon::Ship, GREEN, &self.state.ships.len().to_string(), "Ships owned");
+            stat(ui, Icon::Fleets, GREEN, &self.state.fleets.len().to_string(), "Fleets");
+            stat(ui, Icon::Credits, AMBER, &self.economy.credits.to_string(), "Credits");
+            icons::glyph(
+                ui,
+                Icon::Info,
+                CYAN,
+                "Tick ships to split them into a new fleet. Co-located fleets can merge.\nCancel plotted courses before changing fleet membership.",
+            );
+        });
         for fleet in self.state.fleets.clone() {
             ui.group(|ui| {
                 ui.strong(&fleet.name);
@@ -57,7 +98,6 @@ impl LocalSession {
                         .ship(*id)
                         .expect("validated fleet membership")
                         .clone();
-                    let location = super::navigation::location_label(&ship.location, systems);
                     ui.horizontal_wrapped(|ui| {
                         let mut checked = self.fleet_panel.selection.contains(id);
                         if ui.checkbox(&mut checked, "").changed() {
@@ -66,21 +106,31 @@ impl LocalSession {
                                 self.fleet_panel.selection.push(*id);
                             }
                         }
+                        let (rect, _) =
+                            ui.allocate_exact_size(egui::Vec2::splat(28.0), egui::Sense::hover());
+                        artwork.paint(ArtKind::from(ship.kind), ui.painter(), rect.center(), 28.0);
                         if ui
                             .selectable_label(self.active_ship == *id, &ship.name)
+                            .on_hover_text(ship.kind.label())
                             .clicked()
                         {
                             self.select_ship(*id);
                         }
-                        ui.label(format!(
-                            "{} • fuel {}/{} • cargo {}/{} • {}",
-                            ship.kind.label(),
-                            ship.fuel,
-                            ship.fuel_capacity,
-                            ship.cargo_used(),
-                            ship.cargo_capacity,
-                            location
-                        ));
+                        stat(
+                            ui,
+                            Icon::Fuel,
+                            CYAN,
+                            &format!("{}/{}", ship.fuel, ship.fuel_capacity),
+                            "Fuel / capacity",
+                        );
+                        stat(
+                            ui,
+                            Icon::Cargo,
+                            GREEN,
+                            &format!("{}/{}", ship.cargo_used(), ship.cargo_capacity),
+                            "Cargo used / capacity",
+                        );
+                        super::navigation::location_stat(ui, &ship.location, systems);
                     });
                 }
                 let selected: Vec<_> = fleet
@@ -89,12 +139,16 @@ impl LocalSession {
                     .copied()
                     .filter(|id| self.fleet_panel.selection.contains(id))
                     .collect();
-                if ui
-                    .add_enabled(
-                        !selected.is_empty() && selected.len() < fleet.ships.len(),
-                        egui::Button::new("Split checked ships into new fleet"),
-                    )
-                    .clicked()
+                let can_split = !selected.is_empty() && selected.len() < fleet.ships.len();
+                let blocked = (!can_split)
+                    .then(|| "Tick some, but not all, ships in this fleet first.".to_string());
+                if icons::action(
+                    ui,
+                    Icon::Split,
+                    "Split ticked ships into a new fleet",
+                    blocked,
+                )
+                .clicked()
                 {
                     action = Some(ClientCommand::SplitFleet {
                         fleet: fleet.id,
@@ -110,7 +164,9 @@ impl LocalSession {
                             .ok()
                             .zip(self.state.fleet_position(target.id, target.owner).ok())
                             .is_some_and(|(a, b)| a == b)
-                        && ui.button(format!("Merge into {}", target.name)).clicked()
+                        && icons::button(ui, Icon::Merge, &target.name)
+                            .on_hover_text(format!("Merge into {}", target.name))
+                            .clicked()
                     {
                         action = Some(ClientCommand::MergeFleets {
                             source: fleet.id,
@@ -126,9 +182,11 @@ impl LocalSession {
         if let Ok(fleet) = self.state.fleet_for_ship(ship.id) {
             let id = fleet.id;
             ui.horizontal_wrapped(|ui| {
-                ui.label(format!("Rename {}", fleet.name));
-                ui.text_edit_singleline(&mut self.fleet_panel.rename);
-                if ui.button("Rename fleet").clicked() {
+                icons::glyph(ui, Icon::Rename, CYAN, &format!("Rename {}", fleet.name));
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.fleet_panel.rename).hint_text(&fleet.name),
+                );
+                if icons::icon_button(ui, Icon::Confirm, "Rename fleet").clicked() {
                     action = Some(ClientCommand::RenameFleet {
                         fleet: id,
                         name: self.fleet_panel.rename.clone(),
@@ -141,19 +199,38 @@ impl LocalSession {
             action = Some(command);
         }
         ui.separator();
-        ui.heading(format!("Transfer cargo from {}", ship.name));
-        egui::ComboBox::from_id_salt("transfer_good")
-            .selected_text(self.fleet_panel.commodity.label())
-            .show_ui(ui, |ui| {
-                for good in Commodity::ALL {
-                    ui.selectable_value(&mut self.fleet_panel.commodity, good, good.label());
+        ui.horizontal_wrapped(|ui| {
+            icons::glyph(
+                ui,
+                Icon::Transfer,
+                GREEN,
+                &format!("Transfer cargo from {}", ship.name),
+            );
+            ui.strong(&ship.name);
+            for good in Commodity::ALL {
+                let selected = self.fleet_panel.commodity == good;
+                let response = icons::toggle(ui, Icon::Good(good), good.label(), selected);
+                if response.clicked() {
+                    self.fleet_panel.commodity = good;
                 }
-            });
-        ui.add(egui::DragValue::new(&mut self.fleet_panel.quantity).range(1..=10_000));
+            }
+            ui.add(
+                egui::DragValue::new(&mut self.fleet_panel.quantity)
+                    .range(1..=10_000)
+                    .prefix("×"),
+            );
+        });
         for target in &self.state.ships {
             if target.id != ship.id
                 && target.location == ship.location
-                && ui.button(format!("Transfer to {}", target.name)).clicked()
+                && icons::button(ui, Icon::Transfer, &target.name)
+                    .on_hover_text(format!(
+                        "Transfer {} {} to {}",
+                        self.fleet_panel.quantity,
+                        self.fleet_panel.commodity.label(),
+                        target.name
+                    ))
+                    .clicked()
             {
                 action = Some(ClientCommand::TransferCargo {
                     source: ship.id,
@@ -164,7 +241,12 @@ impl LocalSession {
                 });
             }
         }
-        ui.label(&self.notice);
+        if !self.notice.is_empty() {
+            ui.horizontal_wrapped(|ui| {
+                icons::glyph(ui, Icon::Info, CYAN, "Latest event");
+                ui.label(&self.notice);
+            });
+        }
         if let Some(command) = action {
             self.command(command);
             self.fleet_panel.selection.clear();

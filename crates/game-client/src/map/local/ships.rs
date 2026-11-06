@@ -10,6 +10,11 @@ use game_core::{
 use glam::DVec3;
 
 impl LocalView {
+    /// Ships the authority reports as able to trade where they are.
+    pub fn set_trade_ready(&mut self, ships: Vec<game_core::travel::ShipId>) {
+        self.trade_ready = ships;
+    }
+
     pub fn focus_ship(&mut self, ship: &Ship) {
         if ship.location.system() == Some(self.system.id) {
             self.selected = match ship.location {
@@ -67,7 +72,8 @@ impl LocalView {
         };
         let mut reserved = label_bounds.to_vec();
         reserved.extend_from_slice(marker_bounds);
-        let radius = SymbolScale::new(self.camera.zoom).star_radius(self.system.star_kind) + 24.0;
+        let scale = SymbolScale::new(self.camera.zoom);
+        let radius = scale.star_radius(self.system.star_kind) + 24.0;
         reserved.push(Rect::from_center_size(
             self.camera.project(DVec3::ZERO, rect),
             Vec2::splat(radius * 2.0),
@@ -84,6 +90,17 @@ impl LocalView {
                 continue;
             };
             let anchor = self.camera.project(anchor, rect);
+            let ring = match ship.location {
+                Location::Orbiting { body, .. } => self
+                    .system
+                    .bodies
+                    .iter()
+                    .find(|known| known.id == body)
+                    .map_or(0.0, |body| scale.body_radius(body.kind) + 16.0),
+                _ => 0.0,
+            };
+            let berth =
+                fleets::Berth::new(&ship.location, self.trade_ready.contains(&ship.id), ring);
             if let Some(hit) = fleets::paint(
                 painter,
                 art,
@@ -93,6 +110,7 @@ impl LocalView {
                     fleet,
                     ship,
                     selected: fleet.ships.contains(&self.active_ship),
+                    berth,
                 },
                 &mut reserved,
             ) {

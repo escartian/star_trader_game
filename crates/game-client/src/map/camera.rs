@@ -22,6 +22,14 @@ impl Default for Camera {
     }
 }
 
+/// Wheel/two-finger scroll and trackpad pinch both zoom the hovered map.
+/// The map never sits inside a scroll area, so scrolling cannot also move the page.
+/// `zoom_delta` is egui's multiplicative pinch (and ctrl+wheel) factor; 1.0 = none.
+pub fn zoom_input(ui: &egui::Ui, zoom: f32) -> f32 {
+    let (scroll, pinch) = ui.input(|i| (i.smooth_scroll_delta.y, i.zoom_delta()));
+    (zoom * (scroll * 0.002).exp() * pinch).clamp(0.3, 4.0)
+}
+
 impl Camera {
     pub fn rotation(&self) -> DQuat {
         DQuat::from_rotation_x(self.pitch) * DQuat::from_rotation_y(self.yaw)
@@ -58,5 +66,32 @@ mod tests {
             camera.focus_on(target);
             assert_eq!(camera.project(target, rect), rect.center());
         }
+    }
+}
+
+#[cfg(test)]
+mod zoom_tests {
+    use super::zoom_input;
+
+    fn zoom_after(events: Vec<egui::Event>) -> f32 {
+        let ctx = egui::Context::default();
+        let mut zoom = 1.0;
+        let _ = ctx.run(
+            egui::RawInput {
+                events,
+                ..Default::default()
+            },
+            |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| zoom = zoom_input(ui, zoom));
+            },
+        );
+        zoom
+    }
+
+    #[test]
+    fn trackpad_pinch_zooms_and_is_clamped() {
+        assert!((zoom_after(vec![egui::Event::Zoom(1.5)]) - 1.5).abs() < 1e-4);
+        assert_eq!(zoom_after(vec![egui::Event::Zoom(100.0)]), 4.0);
+        assert_eq!(zoom_after(Vec::new()), 1.0);
     }
 }

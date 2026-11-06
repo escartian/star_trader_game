@@ -11,6 +11,8 @@ pub enum ArtKind {
     RedGiant,
     WhiteDwarf,
     RockyPlanet,
+    AridPlanet,
+    FrozenPlanet,
     GasGiant,
     Moon,
     Asteroid,
@@ -40,6 +42,17 @@ impl From<BodyKind> for ArtKind {
             BodyKind::Moon => Self::Moon,
             BodyKind::Asteroid => Self::Asteroid,
             BodyKind::Station => Self::Station,
+        }
+    }
+}
+
+impl ArtKind {
+    /// Rocky planets show their biome; other bodies use their kind's artwork.
+    pub fn for_body(body: &game_core::LocalBody) -> Self {
+        match (body.kind, body.planet.as_ref().map(|profile| profile.biome)) {
+            (BodyKind::RockyPlanet, Some(game_core::planet::Biome::Arid)) => Self::AridPlanet,
+            (BodyKind::RockyPlanet, Some(game_core::planet::Biome::Frozen)) => Self::FrozenPlanet,
+            (kind, _) => Self::from(kind),
         }
     }
 }
@@ -99,6 +112,16 @@ const SOURCES: &[(ArtKind, &str, &[u8])] = &[
         ArtKind::RockyPlanet,
         "rocky-planet",
         include_bytes!("../../../../assets/sprites/rocky-planet.png"),
+    ),
+    (
+        ArtKind::AridPlanet,
+        "arid-planet",
+        include_bytes!("../../../../assets/sprites/arid-planet.png"),
+    ),
+    (
+        ArtKind::FrozenPlanet,
+        "frozen-planet",
+        include_bytes!("../../../../assets/sprites/frozen-planet.png"),
     ),
     (
         ArtKind::GasGiant,
@@ -189,7 +212,7 @@ impl Artwork {
         name: &str,
         selected: bool,
     ) -> egui::Response {
-        let (rect, response) = ui.allocate_exact_size(Vec2::new(94.0, 72.0), egui::Sense::click());
+        let (rect, response) = ui.allocate_exact_size(Vec2::new(80.0, 66.0), egui::Sense::click());
         response.widget_info(|| {
             egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), name)
         });
@@ -208,13 +231,13 @@ impl Artwork {
         self.paint(
             kind,
             ui.painter(),
-            rect.center_top() + Vec2::new(0.0, 26.0),
-            44.0,
+            rect.center_top() + Vec2::new(0.0, 23.0),
+            38.0,
         );
         // Wrap long names inside their own tile instead of letting them obscure neighbors.
         let text = ui.painter().layout(
             name.into(),
-            egui::FontId::proportional(10.0),
+            egui::FontId::proportional(12.0),
             if selected {
                 crate::theme::GREEN
             } else {

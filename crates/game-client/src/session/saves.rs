@@ -1,5 +1,7 @@
 //! Explicit save/load controls. Failed loads never replace the live authority.
 use super::LocalSession;
+use crate::theme::icons::{self, Icon};
+use crate::theme::{CYAN, GREEN};
 use game_protocol::{ClientCommand, ServerMessage};
 use std::path::PathBuf;
 
@@ -81,10 +83,7 @@ impl LocalSession {
     pub fn show_session_controls(&mut self, ctx: &egui::Context) {
         let previous = self.preferences();
         let mut open = self.saves.open;
-        egui::Window::new("Session and saves")
-            .open(&mut open)
-            .vscroll(true)
-            .show(ctx, |ui| self.controls_ui(ui));
+        crate::theme::metal::window(ctx, "Session", &mut open, 460.0, |ui| self.controls_ui(ui));
         self.saves.open = open;
         if self.preferences() != previous
             && let Err(error) = self.persist_preferences()
@@ -97,9 +96,13 @@ impl LocalSession {
         self.slot_controls(ui);
         ui.separator();
         ui.horizontal(|ui| {
-            ui.label("New galaxy seed");
-            ui.add(egui::DragValue::new(&mut self.saves.seed));
-            if ui.button("New session").clicked() {
+            icons::glyph(ui, Icon::Seed, CYAN, "Galaxy seed for a new session");
+            ui.add(egui::DragValue::new(&mut self.saves.seed))
+                .on_hover_text("Galaxy seed");
+            if icons::button(ui, Icon::New, "New session")
+                .on_hover_text("Start a new galaxy. Autosave uses the selected slot.")
+                .clicked()
+            {
                 match game_server::Session::with_economy(
                     self.saves.seed,
                     self.economy.rules.clone(),
@@ -119,15 +122,24 @@ impl LocalSession {
             }
         });
         ui.separator();
-        ui.label("Plotting, reading, trading and fleet management take no time. Execute navigation run advances fleets and markets together.");
-        ui.checkbox(&mut self.saves.guide, "Show first-delivery guide");
-        ui.checkbox(&mut self.saves.autosave, "Autosave on close / suspend");
-        ui.label("Save slot, guide and autosave choices are remembered.");
-        if !self.notice.is_empty() {
-            ui.label(&self.notice);
-        }
+        ui.horizontal_wrapped(|ui| {
+            icons::glyph(ui, Icon::Settings, CYAN, "Settings are remembered");
+            ui.checkbox(&mut self.saves.guide, "Guide")
+                .on_hover_text("Show the first-delivery guide");
+            ui.checkbox(&mut self.saves.autosave, "Autosave")
+                .on_hover_text("Autosave on close / suspend");
+            icons::glyph(
+                ui,
+                Icon::Info,
+                CYAN,
+                "Plotting, reading, trading and fleet management take no time.\nExecute navigation run advances fleets and markets together.",
+            );
+        });
         ui.separator();
-        ui.heading("Session log");
+        ui.horizontal(|ui| {
+            icons::glyph(ui, Icon::Log, GREEN, "Session log");
+            ui.heading("Log");
+        });
         for message in self.log.iter().rev() {
             ui.label(message);
         }
@@ -135,31 +147,51 @@ impl LocalSession {
 
     fn slot_controls(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            ui.label("Save slot");
-            if ui
-                .add(egui::DragValue::new(&mut self.saves.slot).range(1..=3))
-                .changed()
-            {
-                self.saves
-                    .path
-                    .set_file_name(format!("slot-{}.json", self.saves.slot));
+            icons::glyph(
+                ui,
+                Icon::Save,
+                GREEN,
+                "Save slot. Selecting a slot does not load it; autosave writes to the selected slot and keeps the previous valid save as a backup.",
+            );
+            for slot in 1..=3_u8 {
+                if ui
+                    .selectable_label(self.saves.slot == slot, format!(" {slot} "))
+                    .on_hover_text(format!("Slot {slot}"))
+                    .clicked()
+                {
+                    self.saves.slot = slot;
+                    self.saves
+                        .path
+                        .set_file_name(format!("slot-{}.json", self.saves.slot));
+                }
             }
-        });
-        ui.label(self.saves.path.display().to_string());
-        ui.label("Selecting a slot does not load it. Autosave writes the current session to the selected slot; the previous valid save becomes its backup.");
-        ui.horizontal(|ui| {
-            if ui.button("Save current session").clicked() {
+            icons::glyph(
+                ui,
+                Icon::Info,
+                CYAN,
+                &self.saves.path.display().to_string(),
+            );
+            ui.separator();
+            if icons::button(ui, Icon::Save, "Save").clicked() {
                 let result = self.save_game();
                 self.record(result.map_or_else(
                     |error| format!("Save failed: {error}"),
                     |_| "Session saved.".into(),
                 ));
             }
-            if ui.button("Continue from slot").clicked() {
+            if icons::button(ui, Icon::Load, "Load")
+                .on_hover_text("Replace the current session with the selected save. Save first to keep current progress.")
+                .clicked()
+            {
                 self.load_slot();
                 ui.ctx().request_repaint();
             }
         });
-        ui.label("Continue replaces the current session with the selected save. Save first to keep current progress.");
+        if !self.notice.is_empty() {
+            ui.horizontal_wrapped(|ui| {
+                icons::glyph(ui, Icon::Info, CYAN, "Latest event");
+                ui.label(&self.notice);
+            });
+        }
     }
 }

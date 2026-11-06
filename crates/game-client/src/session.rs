@@ -1,9 +1,10 @@
-//! Offline action adapter. Only successful movement advances simulation ticks.
+//! Native session adapter. Course planning is separate from shared navigation runs.
 mod fleets;
 mod guide;
 mod market;
 mod navigation;
 mod panel;
+mod runs;
 mod saves;
 mod settings;
 mod shipyard;
@@ -13,6 +14,7 @@ use game_protocol::{ClientCommand, ServerMessage, SessionEvent};
 use std::collections::VecDeque;
 
 pub struct LocalSession {
+    focus_requested: bool,
     authority: game_server::Session,
     state: TravelState,
     active_ship: game_core::travel::ShipId,
@@ -36,6 +38,7 @@ impl LocalSession {
         };
         let active_ship = state.ships[0].id;
         Self {
+            focus_requested: false,
             authority,
             active_ship,
             state,
@@ -72,25 +75,54 @@ impl LocalSession {
     }
 
     pub fn galaxy_position(&self, systems: &[game_core::StarSystem]) -> Option<glam::DVec3> {
-        match self.selected_ship().location {
-            game_core::travel::Location::DeepSpace(position) => Some(
+        self.ship_position(self.active_ship, systems)
+    }
+
+    pub fn ship_position(
+        &self,
+        ship: game_core::travel::ShipId,
+        systems: &[game_core::StarSystem],
+    ) -> Option<glam::DVec3> {
+        self.state
+            .navigation_position(ship, systems)
+            .map(|position| {
                 glam::DVec3::new(
                     position.x_km as f64,
                     position.y_km as f64,
                     position.z_km as f64,
-                ) / game_core::movement::KM_PER_LIGHT_YEAR as f64,
-            ),
-            _ => systems
-                .iter()
-                .find(|system| Some(system.id) == self.current_system())
-                .map(|system| {
-                    glam::DVec3::new(
-                        system.position.x as f64,
-                        system.position.y as f64,
-                        system.position.z as f64,
-                    )
-                }),
+                ) / game_core::movement::KM_PER_LIGHT_YEAR as f64
+            })
+    }
+
+    pub fn ships_for_map(
+        &self,
+        system: &game_core::StarSystem,
+        systems: &[game_core::StarSystem],
+    ) -> Vec<game_core::travel::Ship> {
+        let mut ships = self.state.ships.clone();
+        let Ok(center) = game_core::movement::SpacePosition::from_galaxy(system.position) else {
+            return ships;
+        };
+        for ship in &mut ships {
+            if matches!(ship.location, game_core::travel::Location::InTransit(_))
+                && let Some(position) = self.state.navigation_position(ship.id, systems)
+            {
+                let local = game_core::LocalPosition {
+                    x_km: position.x_km - center.x_km,
+                    y_km: position.y_km - center.y_km,
+                    z_km: position.z_km - center.z_km,
+                };
+                if [local.x_km, local.y_km, local.z_km].iter().all(|value| {
+                    value.unsigned_abs() <= self.state.movement_rules.system_half_extent_km as u64
+                }) {
+                    ship.location = game_core::travel::Location::InSystem {
+                        system: system.id,
+                        position: local,
+                    };
+                }
+            }
         }
+        ships
     }
 
     pub fn display_system(&self) -> Option<SystemId> {
@@ -140,12 +172,7 @@ impl LocalSession {
                 self.economy = *economy;
                 for event in events {
                     let message = match event {
-                        SessionEvent::Moved(plan) => format!(
-                            "{} complete: {} fuel per ship, {} ticks.",
-                            plan.mode.label(),
-                            plan.fuel_per_ship,
-                            plan.duration_ticks
-                        ),
+                        SessionEvent::Navigation(event) => runs::event_label(event),
                         SessionEvent::ShipSold { ship, price } => {
                             format!("Sold ship {} for {price} cr.", ship.0)
                         }

@@ -17,7 +17,7 @@ impl LocalView {
         );
         let rect = response.rect;
         let painter = painter.with_clip_rect(rect.intersect(ui.clip_rect()));
-        visuals::background(&painter, rect, "SYSTEM / kilometers");
+        visuals::background(&painter, rect, "SYSTEM / AU");
         if response.dragged_by(egui::PointerButton::Middle)
             || (self.pan_tool && response.dragged_by(egui::PointerButton::Primary))
         {

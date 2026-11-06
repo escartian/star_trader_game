@@ -1,6 +1,5 @@
 use super::{LocalSession, navigation::location_label};
 use game_core::{SystemId, travel::Location};
-use game_protocol::ClientCommand;
 
 impl LocalSession {
     pub fn ui(
@@ -46,14 +45,16 @@ impl LocalSession {
             ));
             ui.label(location_label(&self.selected_ship().location, systems));
         });
-        if matches!(self.selected_ship().location, Location::Travelling(_))
-            && ui.button("Continue journey").clicked()
-        {
-            self.command(ClientCommand::ContinueTravel {
-                ship: self.active_ship,
-                expected_revision: self.state.revision,
-            });
-        }
+        ui.horizontal_wrapped(|ui| {
+            ui.strong(format!(
+                "Navigation run {}",
+                self.state.navigation.run.saturating_add(1)
+            ));
+            if ui.button("Execute navigation run").clicked() {
+                self.request_execute_run();
+            }
+            ui.label("Unassigned fleets must plot a course or Hold position.");
+        });
         if matches!(self.selected_ship().location, Location::DeepSpace(_))
             && let Some(system) = target
             && ui.button("Preview entry into selected system").clicked()

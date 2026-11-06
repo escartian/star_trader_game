@@ -47,7 +47,7 @@ impl LocalSession {
             self.state.fleets.len(),
             self.economy.credits
         ));
-        ui.label("Travel moves the entire selected fleet. Split it to send ships separately.");
+        ui.label("Plot a course for each fleet, then execute a shared navigation run. Cancel plotted courses before changing fleet membership.");
         for fleet in self.state.fleets.clone() {
             ui.group(|ui| {
                 ui.strong(&fleet.name);

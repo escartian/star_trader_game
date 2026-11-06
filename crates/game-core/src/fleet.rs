@@ -141,6 +141,7 @@ impl std::fmt::Display for FleetError {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FleetMovementError {
     Movement(crate::movement::MovementError),
+    Navigation(crate::navigation::NavigationError),
     Travel(crate::travel::TravelError),
     Fleet(FleetError),
 }
@@ -163,8 +164,15 @@ impl std::fmt::Display for FleetMovementError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Movement(error) => error.fmt(f),
+            Self::Navigation(error) => error.fmt(f),
             Self::Travel(error) => error.fmt(f),
             Self::Fleet(error) => error.fmt(f),
         }
+    }
+}
+
+impl From<crate::navigation::NavigationError> for FleetMovementError {
+    fn from(error: crate::navigation::NavigationError) -> Self {
+        Self::Navigation(error)
     }
 }

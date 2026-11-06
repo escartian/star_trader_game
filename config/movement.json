@@ -4,5 +4,7 @@
   "system_half_extent_km": 200000000,
   "star_exclusion_radius_km": 1000000,
   "local_km_per_tick": 50000000,
-  "local_km_per_fuel": 100000000
+  "local_km_per_fuel": 100000000,
+  "ticks_per_navigation_run": 4,
+  "encounter_chance_percent": 12
 }

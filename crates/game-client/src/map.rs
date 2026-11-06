@@ -165,12 +165,31 @@ impl Map {
         self.session.show_fleets(ctx, &self.session_systems);
         self.session.show_session_controls(ctx);
         self.session.show_navigation(ctx, &self.session_systems);
+        if self.session.take_focus_request() {
+            if let Some(system) = self
+                .session
+                .current_system()
+                .and_then(|id| self.session_systems.iter().find(|system| system.id == id))
+            {
+                let mut view = local::LocalView::new(system.clone());
+                view.focus_ship(self.session.selected_ship());
+                self.local = Some(view);
+            } else {
+                self.local = None;
+                if let Some(position) = self.session.galaxy_position(&self.session_systems) {
+                    self.camera.focus_on(position);
+                }
+            }
+        }
         if let Some(local) = &mut self.local {
             local.set_fleet_context(
                 self.session.selected_ship().id,
                 self.session.system_half_extent_km(),
             );
-            let back = local.ui(ctx, self.session.ships());
+            let display_ships = self
+                .session
+                .ships_for_map(local.system(), &self.session_systems);
+            let back = local.ui(ctx, &display_ships);
             if let Some(target) = local.take_movement_request() {
                 self.session.request_movement(target);
             }

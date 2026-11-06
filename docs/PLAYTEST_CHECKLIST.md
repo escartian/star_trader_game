@@ -30,7 +30,7 @@ Mobile builds and device checks are deferred by user direction.
 - [ ] Close normally and relaunch; autosave resumes without re-rolling prices or adding offline time.
 - [ ] Verify a failed save leaves the window open with actionable recovery text.
 - [ ] Recover a deliberately damaged copied primary from its backup; keep real progress untouched.
-- [ ] Confirm ticks advance only on movement; waiting, trading and fleet management leave time unchanged.
+- [ ] Confirm ticks advance only on Execute navigation run; plotting, waiting and trading leave time unchanged.
 - [ ] Select slot 2, save, quit and relaunch; verify remembered slot, active ship, guide and autosave choices.
 
 ## Before expanding scope
@@ -52,3 +52,10 @@ No participants have been contacted and no playtest results are claimed here.
 - [ ] Rename a fleet, save and continue with the same name and ship membership.
 - [ ] Compare a migrated save's empty new treasuries/yards against the explicit
   configured budgets in a fresh slot. Verify no player assets or station goods reset.
+
+- [ ] Split two fleets, plot only one course and click Execute navigation run.
+  Verify the unassigned fleet is selected/highlighted before anything advances.
+- [ ] Hold the other fleet, execute, and confirm both share one world clock step.
+- [ ] Follow a multi-run voyage and verify fuel is charged once at departure.
+- [ ] Resolve a salvage/distress contact, save/continue, and check that the decision
+  and cargo/rescue effects occur once. Verify other fleets progressed independently.

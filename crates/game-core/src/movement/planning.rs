@@ -213,42 +213,6 @@ impl TravelState {
             geometry::distance(geometry::local(start), geometry::local(end))?,
         ))
     }
-
-    /// Apply an authority-generated plan. Host resolution consumes ticks atomically;
-    /// no renderer or untrusted client can supply a plan directly.
-    pub fn resolve_movement(
-        &mut self,
-        player: PlayerId,
-        plan: &MovementPlan,
-    ) -> Result<(), crate::fleet::FleetMovementError> {
-        if self.revision != plan.revision {
-            return Err(TravelError::StaleQuote.into());
-        }
-        let location = self.fleet_position(plan.fleet, player)?;
-        if location != &plan.origin {
-            return Err(TravelError::StaleQuote.into());
-        }
-        let members = self
-            .fleets
-            .iter()
-            .find(|fleet| fleet.id == plan.fleet)
-            .ok_or(crate::fleet::FleetError::UnknownFleet)?
-            .ships
-            .clone();
-        for id in &members {
-            self.ship(*id)?
-                .fuel
-                .checked_sub(plan.fuel_per_ship)
-                .ok_or(TravelError::InsufficientFuel)?;
-        }
-        self.advance(plan.duration_ticks)?;
-        for id in members {
-            let ship = self.ship_mut(id)?;
-            ship.fuel -= plan.fuel_per_ship;
-            ship.location = plan.destination.clone();
-        }
-        Ok(())
-    }
 }
 
 fn system_center(systems: &[StarSystem], id: SystemId) -> Result<SpacePosition, MovementError> {

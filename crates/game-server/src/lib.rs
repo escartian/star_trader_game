@@ -2,13 +2,14 @@
 mod commerce;
 mod fleets;
 mod movement;
+mod navigation;
 mod offline;
 mod save;
 mod shipyard;
 use game_core::economy::Economy;
 use game_core::{
     StarSystem,
-    travel::{PlayerId, TravelError, TravelState},
+    travel::{PlayerId, TravelState},
 };
 use game_protocol::{ClientCommand, CommandError, PROTOCOL_VERSION, ServerMessage, SessionEvent};
 
@@ -42,6 +43,7 @@ impl Session {
         rules.planet_catalog.populate(&mut systems);
         let economy = Economy::with_rules(&systems, rules)?;
         let mut state = TravelState::default();
+        state.navigation.rng_state = seed;
         state.ships[0].cargo_capacity = economy.rules.cargo_capacity;
         state.ships[0].base_cargo_capacity = economy.rules.cargo_capacity;
         Ok(Self {
@@ -76,7 +78,11 @@ impl Session {
                 protocol_version: PROTOCOL_VERSION,
                 systems: self.systems.clone(),
             }),
-            ClientCommand::ContinueTravel { .. } => Err(TravelError::OfflineMovementOnly.into()),
+            command @ (ClientCommand::Move { .. }
+            | ClientCommand::ExecuteNavigationRun { .. }
+            | ClientCommand::HoldFleet { .. }
+            | ClientCommand::CancelCourse { .. }
+            | ClientCommand::ResolveEncounter { .. }) => self.navigation_command(player, command),
             command @ (ClientCommand::BuyShip { .. }
             | ClientCommand::SellShip { .. }
             | ClientCommand::RenameFleet { .. }
@@ -87,7 +93,6 @@ impl Session {
             ClientCommand::PreviewMove { ship, target } => Ok(ServerMessage::MovementPreview(
                 self.preview_movement(player, ship, &target)?,
             )),
-            ClientCommand::Move { .. } => Err(TravelError::OfflineMovementOnly.into()),
             ClientCommand::PreviewTrade {
                 ship,
                 commodity,
@@ -152,3 +157,8 @@ mod movement_tests;
 
 #[cfg(test)]
 mod planet_tests;
+
+#[cfg(test)]
+mod encounter_tests;
+#[cfg(test)]
+mod navigation_tests;

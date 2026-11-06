@@ -10,8 +10,8 @@ use game_protocol::{ClientCommand, ServerMessage};
 #[derive(Default)]
 pub(super) struct NavigationPanel {
     pub open: bool,
-    target: Option<MoveTarget>,
-    local: [i64; 3],
+    pub(super) target: Option<MoveTarget>,
+    local: [f64; 3],
     galaxy: [i64; 3],
 }
 
@@ -33,11 +33,11 @@ pub fn location_label(location: &Location, systems: &[StarSystem]) -> String {
             format!("Near {body}")
         }
         Location::InSystem { system, position } => format!(
-            "{}: ({}, {}, {}) km",
+            "{}: ({:.4}, {:.4}, {:.4}) AU",
             name(*system),
-            position.x_km,
-            position.y_km,
-            position.z_km
+            crate::units::kilometers_to_au(position.x_km as f64),
+            crate::units::kilometers_to_au(position.y_km as f64),
+            crate::units::kilometers_to_au(position.z_km as f64)
         ),
         Location::DeepSpace(position) => format!(
             "Deep space: ({:.5}, {:.5}, {:.5}) ly",
@@ -45,6 +45,7 @@ pub fn location_label(location: &Location, systems: &[StarSystem]) -> String {
             position.y_km as f64 / KM_PER_LIGHT_YEAR as f64,
             position.z_km as f64 / KM_PER_LIGHT_YEAR as f64
         ),
+        Location::InTransit(fleet) => format!("Fleet {} is underway", fleet.0),
         Location::Travelling(journey) => format!("Saved journey to {}", name(journey.destination)),
     }
 }
@@ -70,13 +71,16 @@ impl LocalSession {
     }
 
     fn navigation_ui(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
+        self.run_review(ui, systems);
         let ship = self.selected_ship().clone();
         ui.label(format!(
             "{} • {}",
             ship.name,
             location_label(&ship.location, systems)
         ));
-        ui.label("Only Confirm movement consumes ticks. All ships in the fleet move together.");
+        ui.label(
+            "Plot courses for your fleets, then Execute navigation run when every fleet is ready.",
+        );
         let rules = self.state.movement_rules.clone();
         if let Some(system) = ship
             .location
@@ -84,24 +88,26 @@ impl LocalSession {
             .filter(|_| ship.location.stationary())
         {
             ui.label(format!(
-                "Local cube: ±{} km on each axis",
-                rules.system_half_extent_km
+                "Local cube: ±{:.4} AU on each axis",
+                crate::units::kilometers_to_au(rules.system_half_extent_km as f64)
             ));
-            ui.label("Local waypoint (km); an outside target exits at the first boundary:");
+            ui.label("Local waypoint (AU); an outside target exits at the first boundary:");
             ui.horizontal_wrapped(|ui| {
                 for (axis, value) in ["X", "Y", "Z"].into_iter().zip(&mut self.navigation.local) {
                     ui.label(axis);
-                    ui.add(egui::DragValue::new(value).speed(1_000_000.0));
+                    ui.add(egui::DragValue::new(value).speed(0.01).max_decimals(6));
                 }
                 if ui.button("Preview waypoint").clicked() {
-                    self.navigation.target = Some(MoveTarget::Local {
-                        system,
-                        position: LocalPosition {
-                            x_km: self.navigation.local[0],
-                            y_km: self.navigation.local[1],
-                            z_km: self.navigation.local[2],
-                        },
-                    });
+                    let [x, y, z] = self.navigation.local.map(crate::units::au_to_kilometers);
+                    if let (Some(x_km), Some(y_km), Some(z_km)) = (x, y, z) {
+                        self.navigation.target = Some(MoveTarget::Local {
+                            system,
+                            position: LocalPosition { x_km, y_km, z_km },
+                        });
+                    } else {
+                        self.navigation.target = None;
+                        self.record("Waypoint exceeds the supported coordinate range.".into());
+                    }
                 }
             });
             if let Ok(current) =
@@ -184,18 +190,22 @@ impl LocalSession {
                         | game_core::movement::MovementMode::DeepSpace
                 ) {
                     format!(
-                        "{:.3} ly ({} km)",
-                        plan.distance_km as f64 / KM_PER_LIGHT_YEAR as f64,
-                        plan.distance_km
+                        "{:.3} ly",
+                        plan.distance_km as f64 / KM_PER_LIGHT_YEAR as f64
                     )
                 } else {
-                    format!("{} km", plan.distance_km)
+                    format!(
+                        "{:.4} AU",
+                        crate::units::kilometers_to_au(plan.distance_km as f64)
+                    )
                 };
                 ui.label(format!(
-                    "{distance} • {} fuel per ship • {} simulation ticks",
-                    plan.fuel_per_ship, plan.duration_ticks
+                    "{distance} • {} fuel per ship at departure • at least {} navigation runs",
+                    plan.fuel_per_ship,
+                    plan.duration_ticks
+                        .div_ceil(self.state.movement_rules.ticks_per_navigation_run)
                 ));
-                if ui.button("Confirm movement").clicked() {
+                if ui.button("Plot course").clicked() {
                     self.command(ClientCommand::Move {
                         ship: self.active_ship,
                         target,
@@ -230,7 +240,32 @@ impl LocalSession {
             return Err(error.to_string());
         }
         self.accept(response);
-        Ok(())
+        for _ in 0..128 {
+            if self.state.navigation.orders.is_empty() {
+                return Ok(());
+            }
+            let fleets = self.state.fleets.clone();
+            for fleet in fleets {
+                if self.state.navigation.order(fleet.id).is_none() {
+                    self.command(ClientCommand::HoldFleet {
+                        fleet: fleet.id,
+                        expected_revision: self.state.revision,
+                    });
+                }
+            }
+            let encounters = self.state.navigation.encounters.clone();
+            for encounter in encounters {
+                self.command(ClientCommand::ResolveEncounter {
+                    encounter: encounter.id,
+                    choice: game_core::navigation::EncounterChoice::Bypass,
+                    expected_revision: self.state.revision,
+                });
+            }
+            self.command(ClientCommand::ExecuteNavigationRun {
+                expected_revision: self.state.revision,
+            });
+        }
+        Err("Capture course did not finish within 128 runs".into())
     }
 }
 

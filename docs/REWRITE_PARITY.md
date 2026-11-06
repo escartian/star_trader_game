@@ -18,11 +18,12 @@ Its “implemented” and “future” sections are tracked separately below.
 | Factions | Federation, Empire, Republic, Alliance; second priority | Pending influence, relationships, territories and access |
 | Ship management | Type/size/engine/stats; third priority | Three classes, hull buying/selling and fleet renaming; repair/equipment pending |
 | Missions | Fourth priority: transport, combat, anomalies, bounty, piracy | Trader guide only; shared mission lifecycle pending |
-| Persistence | JSON per-game files and aggregate saves | Validated atomic JSON snapshots, backup recovery; rewrite schemas 1–3→4 migration |
+| Persistence | JSON per-game files and aggregate saves | Validated atomic JSON snapshots, backup recovery; rewrite schemas 1–4→5 migration |
 | Multiplayer | Potential future feature | Authoritative command boundary present; transport/accounts/turn resolver pending |
 
-The owner further specified movement-triggered ticks for single-player, explicit
-multiplayer turns, modular source files under 500 lines, Blender ship/celestial
+The owner initially specified movement-triggered ticks, then replaced that with
+shared navigation runs for all campaign play, Civ-style fleet readiness and
+FTL-style per-fleet encounters. Other requirements include modular source files under 500 lines, Blender ship/celestial
 art, and spy/soldier/pirate progression. Galaxy light-years and local kilometers
 are retained instead of the README's generic units; cubic bounds still apply.
 

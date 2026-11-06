@@ -28,7 +28,7 @@ fn preview_does_not_move_and_confirm_button_resolves_the_authoritative_action() 
         .iter()
         .find_map(|shape| {
             if let Shape::Text(text) = &shape.shape
-                && text.galley.job.text == "Confirm movement"
+                && text.galley.job.text == "Plot course"
             {
                 Some(text.pos + text.galley.size() / 2.0)
             } else {
@@ -51,7 +51,10 @@ fn preview_does_not_move_and_confirm_button_resolves_the_authoritative_action() 
             ],
         );
     }
-    assert_eq!(session.state.tick, 2);
+    assert_eq!(session.state.tick, 0);
+    assert_eq!(session.selected_ship().fuel, 40);
+    session.request_execute_run();
+    assert_eq!(session.state.tick, 4);
     assert_eq!(session.selected_ship().fuel, 39);
     assert_eq!(
         session.selected_ship().location,
@@ -74,6 +77,8 @@ fn impossible_preview_has_no_confirm_button_and_preserves_the_world() {
     let initial = session.state.clone();
     frame(&ctx, &mut session, vec![]);
     let output = frame(&ctx, &mut session, vec![]);
-    assert!(!output.shapes.iter().any(|shape| matches!(&shape.shape, Shape::Text(text) if text.galley.job.text == "Confirm movement")));
+    assert!(!output.shapes.iter().any(
+        |shape| matches!(&shape.shape, Shape::Text(text) if text.galley.job.text == "Plot course")
+    ));
     assert_eq!(session.state, initial);
 }

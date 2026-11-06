@@ -139,12 +139,12 @@ impl Map {
         if self.scene == super::fixtures::Scene::Session {
             let art = super::art::Artwork::preload(ui.ctx());
             for ship in self.session.ships() {
-                if let game_core::travel::Location::DeepSpace(position) = ship.location {
-                    let world = glam::DVec3::new(
-                        position.x_km as f64,
-                        position.y_km as f64,
-                        position.z_km as f64,
-                    ) / game_core::movement::KM_PER_LIGHT_YEAR as f64;
+                if matches!(
+                    ship.location,
+                    game_core::travel::Location::DeepSpace(_)
+                        | game_core::travel::Location::InTransit(_)
+                ) && let Some(world) = self.session.ship_position(ship.id, &self.systems)
+                {
                     let point = self.camera.project(world, rect);
                     let offset = Vec2::new(-28.0, 22.0 + (ship.id.0 % 4) as f32 * 22.0);
                     painter.line_segment(

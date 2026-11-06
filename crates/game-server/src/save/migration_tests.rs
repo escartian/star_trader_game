@@ -1,6 +1,6 @@
 use super::*;
 use game_core::travel::ShipId;
-use game_protocol::{ClientCommand, ServerMessage};
+use game_protocol::ClientCommand;
 
 #[test]
 fn legacy_save_migrates_cargo_and_active_journey_without_resetting_time_or_money() {
@@ -36,14 +36,10 @@ fn legacy_save_migrates_cargo_and_active_journey_without_resetting_time_or_money
     assert!(notice.is_some());
     assert_eq!(restored.state, expected);
     assert_legacy_assets(&restored, &session);
-    assert!(matches!(
-        restored.handle_offline(ClientCommand::ContinueTravel {
-            ship: ShipId(1),
-            expected_revision: expected.revision
-        }),
-        ServerMessage::SessionSnapshot { .. }
-    ));
-    assert_eq!(restored.state.tick, 15);
+    for _ in 0..3 {
+        crate::test_support::execute_quiet_run(&mut restored);
+    }
+    assert_eq!(restored.state.tick, 16);
     restored.save(&path).unwrap();
     assert!(Session::load(&path).unwrap().1.is_none());
 }
@@ -86,7 +82,9 @@ fn schema_two_fleets_migrate_without_losing_locations_or_balances() {
     fs::write(&path, value.to_string()).unwrap();
     let (restored, notice) = Session::load(&path).unwrap();
     assert!(notice.is_some());
-    assert_eq!(restored.state, session.state);
+    let mut expected = session.state.clone();
+    expected.navigation = game_core::navigation::NavigationState::default();
+    assert_eq!(restored.state, expected);
     assert_legacy_assets(&restored, &session);
 }
 
@@ -210,7 +208,9 @@ fn schema_three_body_positions_migrate_without_cloning_stock_into_planets() {
     fs::write(&path, value.to_string()).unwrap();
     let (mut restored, notice) = Session::load(&path).unwrap();
     assert!(notice.unwrap().contains("start empty"));
-    assert_eq!(restored.state, session.state);
+    let mut expected = session.state.clone();
+    expected.navigation = game_core::navigation::NavigationState::default();
+    assert_eq!(restored.state, expected);
     assert_legacy_assets(&restored, &session);
     let market = restored
         .economy

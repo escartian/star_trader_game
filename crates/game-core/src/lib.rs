@@ -5,6 +5,7 @@ pub mod economy;
 pub mod fleet;
 pub mod generation;
 pub mod movement;
+pub mod navigation;
 pub mod planet;
 pub mod travel;
 

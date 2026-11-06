@@ -10,6 +10,8 @@ impl Map {
                 let system = self.systems.first().ok_or("No system to capture")?.clone();
                 self.local = Some(LocalView::new(system));
             }
+            "run-review" => self.session.capture_run_review(),
+            "encounter" => self.session.capture_encounter()?,
             "navigation" => self.session.request_movement(MoveTarget::Body {
                 system: SystemId(1),
                 body: BodyId(1),

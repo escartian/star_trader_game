@@ -3,9 +3,23 @@ use serde_json::{Value, json};
 
 pub(super) fn upgrade(mut data: Value) -> Result<(Value, bool), String> {
     match data.get("schema_version").and_then(Value::as_u64) {
-        Some(4) => Ok((data, false)),
+        Some(5) => Ok((data, false)),
+        Some(4) => {
+            let player = data
+                .get_mut("player")
+                .and_then(Value::as_object_mut)
+                .ok_or("Missing saved player")?;
+            player.insert(
+                "navigation".into(),
+                serde_json::to_value(game_core::navigation::NavigationState::default())
+                    .map_err(|error| error.to_string())?,
+            );
+            data["schema_version"] = 5.into();
+            Ok((data, true))
+        }
         Some(3) => {
             super::planet_migration::upgrade(&mut data)?;
+            let (data, _) = upgrade(data)?;
             Ok((data, true))
         }
         Some(2) => {

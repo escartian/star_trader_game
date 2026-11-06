@@ -5,15 +5,18 @@
 - Start at Sol with one ship, 1000.00 credits, 20 cargo spaces and 40 fuel. Its
   jump range is 20 light-years. All seeded starts retain two reachable markets.
   The initial hold upgrade adds 20 cargo spaces for 1500.00 credits.
-- Galaxy anchors are whole light-years; local coordinates use kilometers. Deep
+- Galaxy anchors are whole light-years; local UI coordinates use AU while the simulation stores integer kilometers. Deep
   space stores absolute kilometers to preserve small system-boundary offsets.
   Cubic bounds default to ±100 ly and ±200,000,000 km. Local travel costs one fuel
   per 100,000,000 km and one tick per 50,000,000 km (ceil, minimum one). Deep-space
   travel/entry costs ceil(distance in ly) fuel/ticks with exact range checks.
-- Everything uses discrete simulation ticks. Only successful player movement
-  advances single-player time; waiting, trading, fleet management, inspecting and
-  rendering consume none. Travel resolves its tick cost immediately, without an
-  End Turn action. Future multiplayer resolves explicit shared turns.
+- Plot a course for each fleet or issue Hold position, then Execute navigation run.
+  Missing orders highlight/select the fleet first. The shared run advances four
+  ticks; fleets progress in parallel and long voyages span multiple runs. Fuel is
+  charged once at departure. Plotting, browsing and trading never advance time.
+- Travelling fleets have a saved per-run encounter roll. Salvage/distress contacts
+  pause that fleet for a decision; other fleets still progress. Resolve contacts
+  before the next run. See [navigation runs](NAVIGATION_RUNS.md).
 - Money is integer hundredths of a credit. Fuel, stock and cargo use whole units.
   The authority validates ownership, location, quantities, capacity, stock, funds
   and revisions before publishing each command. Rejections leave state unchanged.
@@ -23,7 +26,7 @@
   consumption run on ticks. Prices respond to stock within bounds, with a spread.
   Bulk orders price each unit; immediate buy/sell reversal cannot make a profit.
 - First delivery: buy food at Sol, exit the system in Navigation, explicitly enter
-  Meridian, then inspect its trade port and confirm docking. Sell and refuel. Compare
+  Meridian, then inspect its trade port and plot docking and execute runs until arrival. Sell and refuel. Compare
   known markets for return cargo. Fixed-price fuel service costs 2.00 credits/unit
   by default. Earn enough for the cargo upgrade while budgeting for future journeys.
 - Continue restores the exact saved journey, cargo, prices, markets and tick.

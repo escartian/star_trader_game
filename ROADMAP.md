@@ -11,13 +11,20 @@ See [rewrite parity](docs/REWRITE_PARITY.md) for original claims versus current 
 - Pure Rust native client and authoritative Rust session/server; no web frontend.
   Single-player runs both in one process: `cargo run -p game-client`.
 - Integer Cartesian coordinates and configurable cubic boundaries. Galaxy units
-  remain **light-years**, system units **kilometers**, per the owner's preference.
+  remain **light-years**; local views use **AU**. Authoritative system positions
+  remain integer kilometers, converted explicitly for display/input.
   Separate coordinate types and explicit checked conversions must prevent mixing
   spaces. The old generic ±100 local units are not interpreted as ±100 km.
-- Single-player advances discrete ticks **only on successful player movement**.
-  Waiting, reading, trading, fleet management and rendering consume no time. No
-  End Turn action or wall-clock catch-up. AI and markets act on movement ticks.
-  Multiplayer will collect explicit shared turns around the same rules.
+- All campaign play uses explicit **navigation runs**. Plot courses for multiple
+  fleets, review readiness, then **Execute navigation run** to advance all fleets
+  and economies together. Unassigned fleets are selected/highlighted and require
+  a course or explicit Hold. Long journeys span runs; contacts pause individual
+  fleets. This replaces the earlier movement-triggered single-player clock.
+- Working design direction: Heroes of Might and Magic meets Star Trader, with
+  Civ-style fleet readiness and FTL-style encounters. Multiplayer will add shared
+  player readiness around the same discrete, deterministic resolver.
+- Backward save compatibility is not required during prototyping; breaking changes
+  may require a fresh session. Keep current-format validation and atomic persistence.
 - JSON for definitions and player/world saves. One in-memory authority owns live
   state; the original REST routes, per-model file reads and TTL caches are replaced.
 - Modular readable code, at most 500 lines per source file. Rustfmt, strict Clippy,
@@ -35,10 +42,10 @@ See [rewrite parity](docs/REWRITE_PARITY.md) for original claims versus current 
 - [x] Blender-authored celestial/station sprites and schematic moon separation.
 - [x] Stock-sensitive commerce, per-ship holds, refuel and cargo upgrade.
 - [x] Atomic JSON saves, backup recovery, slots, settings and trader onboarding.
-- [x] Action-driven single-player ticks, with no real-time scheduler.
+- [x] Shared navigation-run planning/resolution, with no real-time scheduler.
 - [ ] Manual desktop navigation/DPI/lifecycle acceptance and pacing study.
 
-**Acceptance:** rejected actions preserve state; movement advances the world once;
+**Acceptance:** rejected actions preserve state; a navigation run advances the world once;
 load restores existing state. Automated checks cover these rules. Window/device
 acceptance is separate; see [platform status](docs/PLATFORM_STATUS.md).
 
@@ -73,7 +80,7 @@ hulls have no combat yet; customization and used-hull loadouts remain later work
 - [x] Explicit system entry by ID or exact coordinates, at the near cube face.
   Passing a system along a path never enters it.
 - [x] Shared authoritative previews/commits, whole-fleet fuel/range checks,
-  movement ticks/events, UI confirmation and location-aware ship markers.
+  saved course durations/events, plotted orders and location-aware ship markers.
 - [x] Save schema 3 and migration from schemas 1/2; resume older active journeys.
 - [x] Planet economy type, production specialization, biome and danger rating
   (VerySafe through Insidious); resource market, ship market and local credits.
@@ -93,8 +100,22 @@ have conservation/rejection/save tests. See [planet economies](docs/PLANET_ECONO
 Biome/danger are descriptive until encounters use them. Detailed collision and
 landing volumes remain open, independently of the following gameplay work.
 
-**Next:** NPC traders with personality and movement-tick decisions, then ship
-combat statistics/loadouts and fleet combat. No NPC/combat implementation is claimed.
+## 3a. Navigation runs and encounters — implemented foundation
+
+- [x] Plot/replace/cancel one course per fleet without advancing time or charging fuel.
+- [x] Fleet readiness review, selection/map focus and explicit Hold for unassigned fleets.
+- [x] Shared atomic run resolution, parallel voyage progress and one fuel charge.
+- [x] Per-fleet encounter chance, salvage/distress choices and persisted random state.
+- [x] Schema 5: queued/active courses, holds, contacts, run/rescue counters and RNG.
+- [x] Reject stale execution/reward retries and inconsistent saved orders.
+- [ ] Multi-waypoint itineraries, persistent standby and movement/encounter balance.
+- [ ] Richer authored contacts, risk factors, inspections, combat and faction outcomes.
+
+See [navigation runs](docs/NAVIGATION_RUNS.md). The run itself is the visible
+campaign advance action; the interface does not call it End Turn.
+
+**Next:** NPC traders with personality and navigation-run decisions, then ship
+combat statistics/loadouts and fleet combat. NPC/combat remain unimplemented.
 
 ## 4. NPC traders and fleet combat
 
@@ -110,7 +131,7 @@ Combat is the original README's first prioritized expansion.
 - [ ] Deterministic seeded resolution and explicit hostility/engagement rules.
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
-cargo and rewards remain consistent. NPC actions occur on simulation ticks.
+cargo and rewards remain consistent. NPC actions will resolve at navigation-run boundaries.
 
 ## 5. Factions and ship management
 
@@ -128,7 +149,7 @@ repairs, access and reputation changes persist and cannot duplicate credits/item
 The current first-delivery guide is trader onboarding, not a mission engine.
 Build common objective/deadline/reward rules after movement/combat foundations.
 
-- [ ] Authoritative saved contract lifecycle with tick deadlines and JSON content.
+- [ ] Authoritative saved contract lifecycle with run/tick deadlines and JSON content.
 - [ ] Transport/logistics, combat/escort, exploration/anomalies, bounty hunting and
   piracy of goods/people, matching the original README's mission categories.
 - [ ] Trader, spy/espionage, soldier and pirate routes with appropriate onboarding.

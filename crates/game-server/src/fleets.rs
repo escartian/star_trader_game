@@ -41,6 +41,29 @@ impl Session {
             .checked_add(1)
             .ok_or(TravelError::TimeOverflow)?;
         let mut candidate = self.clone();
+        let structural = matches!(
+            command,
+            ClientCommand::BuyShip { .. }
+                | ClientCommand::SellShip { .. }
+                | ClientCommand::SplitFleet { .. }
+                | ClientCommand::MergeFleets { .. }
+        );
+        match &command {
+            ClientCommand::BuyShip { ship, .. } | ClientCommand::SellShip { ship, .. } => {
+                candidate.state.authorize(player, *ship)?;
+                candidate
+                    .state
+                    .guard_fleet_changes(player, candidate.state.fleet_for_ship(*ship)?.id)?;
+            }
+            ClientCommand::SplitFleet { fleet, .. } => {
+                candidate.state.guard_fleet_changes(player, *fleet)?
+            }
+            ClientCommand::MergeFleets { source, target, .. } => {
+                candidate.state.guard_fleet_changes(player, *source)?;
+                candidate.state.guard_fleet_changes(player, *target)?;
+            }
+            _ => {}
+        }
         let event = match command {
             ClientCommand::BuyShip { ship, kind, .. } => candidate.buy_ship(player, ship, kind)?,
             ClientCommand::SellShip { ship, .. } => candidate.sell_ship(player, ship)?,
@@ -91,6 +114,9 @@ impl Session {
             }
             _ => unreachable!("command was checked above"),
         };
+        if structural {
+            candidate.state.navigation.holds.clear();
+        }
         candidate.state.revision = revision;
         *self = candidate;
         Ok(self.snapshot(vec![event]))

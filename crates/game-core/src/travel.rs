@@ -33,6 +33,7 @@ pub enum Location {
     },
     DeepSpace(crate::movement::SpacePosition),
     Travelling(Journey),
+    InTransit(FleetId),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -71,7 +72,6 @@ pub enum TravelError {
     NotOwner,
     AlreadyTravelling,
     NotTravelling,
-    OfflineMovementOnly,
     AlreadyThere,
     OutOfRange,
     InsufficientFuel,
@@ -87,9 +87,6 @@ impl std::fmt::Display for TravelError {
             Self::UnknownShip => "Unknown ship.",
             Self::NotOwner => "This player does not own the ship.",
             Self::NotTravelling => "The ship has no journey to continue.",
-            Self::OfflineMovementOnly => {
-                "This movement shortcut is only available to the offline host."
-            }
             Self::AlreadyTravelling => "The ship is already travelling.",
             Self::AlreadyThere => "The ship is already at this system.",
             Self::OutOfRange => "Destination exceeds the ship's jump range.",
@@ -105,6 +102,7 @@ impl std::fmt::Display for TravelError {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TravelState {
+    pub navigation: crate::navigation::NavigationState,
     pub movement_rules: crate::movement::MovementRules,
     pub tick: u64,
     pub revision: u64,
@@ -117,6 +115,7 @@ pub struct TravelState {
 impl Default for TravelState {
     fn default() -> Self {
         Self {
+            navigation: crate::navigation::NavigationState::default(),
             movement_rules: crate::movement::MovementRules::default(),
             tick: 0,
             revision: 0,
@@ -289,11 +288,11 @@ impl Location {
             | Self::Orbiting { system, .. }
             | Self::InSystem { system, .. } => Some(*system),
             Self::Travelling(journey) => Some(journey.origin),
-            Self::DeepSpace(_) => None,
+            Self::DeepSpace(_) | Self::InTransit(_) => None,
         }
     }
     pub fn stationary(&self) -> bool {
-        !matches!(self, Self::Travelling(_))
+        !matches!(self, Self::Travelling(_) | Self::InTransit(_))
     }
 }
 

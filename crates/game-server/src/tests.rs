@@ -2,7 +2,7 @@ use super::*;
 use game_core::{
     BodyId, SystemId,
     movement::MoveTarget,
-    travel::{Location, PlayerId, ShipId},
+    travel::{Location, PlayerId, ShipId, TravelError},
 };
 
 fn state(session: &mut Session) -> TravelState {
@@ -64,19 +64,17 @@ fn rejected_commands_leave_the_authoritative_state_unchanged() {
         );
         assert_eq!(state(&mut session), initial);
     }
-    // Future remote adapters must collect orders; they cannot invoke offline timing.
-    assert_eq!(
-        session.handle(ClientCommand::Move {
-            ship: ShipId(1),
-            target: MoveTarget::Body {
-                system: SystemId(1),
-                body: BodyId(1)
-            },
-            expected_revision: 0
-        }),
-        ServerMessage::CommandRejected(TravelError::OfflineMovementOnly.into())
-    );
-    assert_eq!(state(&mut session), initial);
+    let response = session.handle(ClientCommand::Move {
+        ship: ShipId(1),
+        target: MoveTarget::Body {
+            system: SystemId(1),
+            body: BodyId(1),
+        },
+        expected_revision: 0,
+    });
+    assert!(matches!(response, ServerMessage::SessionSnapshot { .. }));
+    assert_eq!(session.state.tick, 0);
+    assert_eq!(session.state.ships[0].location, initial.ships[0].location);
 }
 
 #[test]

@@ -10,10 +10,12 @@ through a readable native map. No game engine, browser, webview or JavaScript.
 - Blender-authored star, planet, moon, asteroid station and ship models, baked to
   transparent sprites. Shared textures preload once; halos/selection stay procedural.
 - Authoritative local/body movement, cubic system exits, deep-space travel and
-  explicit system entry, with whole-fleet fuel/range checks and movement ticks.
+  explicit system entry, with whole-fleet fuel/range checks and shared navigation runs.
 - Per-planet and station markets with finite funds/hull stock, planet economy/biome/
   danger/specialization, stock-sensitive prices and refuelling,
   known-market comparisons and a purchasable cargo-hold upgrade.
+- Fleet course planning, readiness highlighting, Hold orders, parallel navigation
+  runs and individual salvage/distress encounters.
 - Seeded starts, a first-delivery guide, session logs and
   three JSON save slots with validation, atomic replacement and backup recovery.
 
@@ -58,26 +60,35 @@ each member’s fuel/range. Ships appear beside visited bodies/trade ports and a
 Rocky/gas planets have markets at orbital berths; detailed landing/collision
 volumes remain planned.
 
+Local-system distances, boundaries and waypoint inputs use **AU**. Galaxy distances
+remain light-years; saved simulation coordinates stay in integer kilometers.
+Backward save compatibility is not a requirement during prototyping, so future
+breaking versions may require a fresh session.
+
 ## First delivery
 
 At Sol, open **Market / refuel**, set quantity to 20, and buy food. Open
-**Navigation**, choose **+X** under Exit toward, and confirm. In deep space, choose
-**Enter Meridian** and confirm. Double-click Meridian to inspect it, select its
-trade port, choose **Preview docking at trade port**, and confirm. Sell your food,
+**Navigation**, choose **+X** under Exit toward, and **Plot course**. In deep space, choose
+**Enter Meridian** and plot its course. Double-click Meridian to inspect it, select its
+trade port, choose **Preview docking at trade port**, and plot its course. Sell your food,
 refuel, and compare ore or machinery for the return trip. Work toward the hold
-upgrade. Double-clicking a star only inspects it.
+upgrade. Use **Execute navigation run** to progress courses between these stages. Longer
+journeys continue across runs. Double-clicking a star only inspects it.
 
 Local/body destinations and coordinate waypoints use the same preview/confirm
 flow. Routes through the star reject; use a waypoint around it. See the complete
 [movement controls and costs](docs/MOVEMENT.md). Mining and orbital physics remain
 unimplemented. Markets belong to individual planets and primary trade stations.
 
-All simulation uses discrete ticks. Single-player advances ticks only when a
-successful movement action resolves a journey, with no End Turn action. Waiting,
-trading and fleet management consume no time. Multiplayer is planned around
-explicit shared turns; authentication and turn resolution remain pending. Loading
-does not add offline time.
-The initial 20–30 minute upgrade goal remains a pacing hypothesis to playtest.
+**Plot course** never advances time or spends fuel. Give each fleet a course or
+**Hold position**, then **Execute navigation run** to advance all fleets and markets
+together. Missing orders select/highlight the fleet first. Each travelling fleet
+can encounter salvage or a distress signal; resolve contacts in Navigation.
+Random state and choices persist. See [navigation runs](docs/NAVIGATION_RUNS.md).
+
+The game is turn based internally, with navigation runs as the campaign language.
+Single-player no longer advances the whole world when one fleet moves. Multiplayer
+will add shared player readiness; networking/authentication remain unimplemented.
 
 Visit a planet, then open **Market / refuel** to trade there. **Fleets / shipyard**
 shows local hull stock, treasury-funded sale offers and fleet naming controls.
@@ -85,7 +96,7 @@ Markets can run out of money; shipyards can run out of hulls. See
 [planet economies](docs/PLANET_ECONOMY.md).
 
 Older saves preserve player assets and station goods; new treasuries and shipyards
-start empty, and new planetary stock grows through movement ticks. A new game in
+start empty, and new planetary stock grows through navigation runs. A new game in
 another save slot uses the configured starting funds and hull inventory.
 
 ## JSON economy and player data
@@ -159,7 +170,8 @@ cargo run -p game-client -- --new --capture /tmp/market.png --capture-view marke
 Example captures: [system](docs/previews/system.png), [market](docs/previews/market.png),
 [fleets](docs/previews/fleets.png), [movement](docs/previews/navigation.png),
 [system entry](docs/previews/entry.png), [ship near planet](docs/previews/orbit.png),
-[planet market](docs/previews/planet-market.png), [planet shipyard](docs/previews/planet-shipyard.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`. Captures do not test window
+[planet market](docs/previews/planet-market.png), [planet shipyard](docs/previews/planet-shipyard.png),
+[run review](docs/previews/run-review.png), [encounter](docs/previews/encounter.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `encounter` (use `--seed 2`). Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

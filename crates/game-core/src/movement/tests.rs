@@ -17,12 +17,17 @@ fn local_body_movement_and_first_face_exit_use_real_kilometers() {
         system: SystemId(1),
         body: BodyId(1),
     };
-    let movement = plan(&state, target);
+    let movement = plan(&state, target.clone());
     assert_eq!(movement.mode, MovementMode::Local);
     assert_eq!(movement.fuel_per_ship, 1);
-    let duration = movement.duration_ticks;
-    state.resolve_movement(PlayerId(1), &movement).unwrap();
-    assert_eq!(state.tick, duration);
+    state
+        .plot_course(PlayerId(1), ShipId(1), target, &crate::demo_galaxy())
+        .unwrap();
+    assert_eq!(state.tick, 0);
+    state
+        .execute_navigation_run(PlayerId(1), &crate::demo_galaxy())
+        .unwrap();
+    assert_eq!(state.tick, 4);
     assert_eq!(
         state.ships[0].location,
         Location::Orbiting {
@@ -99,7 +104,17 @@ fn crossing_a_system_never_intercepts_but_exact_target_explicitly_enters() {
         MoveTarget::DeepSpace(GalaxyPosition { x: 2, y: 0, z: 0 }),
     );
     assert_eq!(movement.mode, MovementMode::DeepSpace);
-    state.resolve_movement(PlayerId(1), &movement).unwrap();
+    state
+        .plot_course(
+            PlayerId(1),
+            ShipId(1),
+            MoveTarget::DeepSpace(GalaxyPosition { x: 2, y: 0, z: 0 }),
+            &crate::demo_galaxy(),
+        )
+        .unwrap();
+    state
+        .execute_navigation_run(PlayerId(1), &crate::demo_galaxy())
+        .unwrap();
     assert!(matches!(state.ships[0].location, Location::DeepSpace(_)));
     let entry = plan(
         &state,
@@ -203,8 +218,13 @@ fn range_boundary_uses_exact_squared_kilometers_and_checks_every_member() {
             .plan_movement(PlayerId(1), ShipId(1), &target, &crate::demo_galaxy())
             .is_err()
     );
+    state.store_course(target, movement).unwrap();
     let before = state.clone();
-    assert!(state.resolve_movement(PlayerId(1), &movement).is_err());
+    assert!(
+        state
+            .execute_navigation_run(PlayerId(1), &crate::demo_galaxy())
+            .is_err()
+    );
     assert_eq!(state, before);
 }
 

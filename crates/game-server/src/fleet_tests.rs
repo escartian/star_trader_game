@@ -67,7 +67,8 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
             expected_revision: 3,
         },
     );
-    assert_eq!(session.state.tick, 2);
+    crate::test_support::execute_quiet_run(&mut session);
+    assert_eq!(session.state.tick, 4);
     assert_eq!(
         session.state.ships[0].location,
         Location::Docked(SystemId(1))
@@ -89,6 +90,7 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
         ServerMessage::CommandRejected(_)
     ));
     assert_eq!(session.export_json().unwrap(), before);
+    let revision = session.state.revision;
     apply(
         &mut session,
         ClientCommand::Move {
@@ -97,19 +99,21 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
                 system: SystemId(1),
                 body: BodyId(1),
             },
-            expected_revision: 4,
+            expected_revision: revision,
         },
     );
+    crate::test_support::execute_quiet_run(&mut session);
+    let revision = session.state.revision;
     apply(
         &mut session,
         ClientCommand::MergeFleets {
             source: FleetId(2),
             target: FleetId(1),
-            expected_revision: 5,
+            expected_revision: revision,
         },
     );
     assert_eq!(session.state.fleets[0].ships, [ShipId(1), ShipId(2)]);
-    assert_eq!(session.state.tick, 4);
+    assert_eq!(session.state.tick, 8);
     assert_eq!(session.state.ships[1].cargo[0], 3);
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("fleet.json");
@@ -193,7 +197,8 @@ fn fleet_failures_and_stale_retries_never_charge_or_advance_ticks() {
             expected_revision: 1,
         },
     );
-    assert_eq!(session.state.tick, 2);
+    crate::test_support::execute_quiet_run(&mut session);
+    assert_eq!(session.state.tick, 4);
     assert!(session.state.ships.iter().all(|ship| ship.location
         == Location::Orbiting {
             system: SystemId(1),

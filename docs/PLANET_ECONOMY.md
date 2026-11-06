@@ -5,7 +5,7 @@ ship inventory. Gas-giant commerce takes place at an orbital berth. The primary
 station in each system retains a separate market. Moons, asteroids, arbitrary
 waypoints and deep space currently have no markets.
 
-Inspect a planet, choose **Preview movement to body**, then confirm. At the body,
+Inspect a planet, choose **Preview movement to body**, then plot a course and execute navigation runs. At the body,
 open **Market / refuel** or **Fleets / shipyard**. Commerce uses the selected ship's
 actual location, not the body or system being inspected. Every market is identified
 by the pair `(system ID, body ID)`; IDs scoped to different systems never share stock.
@@ -23,7 +23,7 @@ Biome and danger (Very safe through Insidious) are saved and shown in the inspec
 and market. They are descriptive data for upcoming encounters/factions; no combat
 or danger-dependent encounter simulation is claimed yet.
 
-Only successful movement advances production/consumption ticks. Browsing, quotes,
+Only Execute navigation run advances production/consumption ticks for the world. Browsing, quotes,
 trading, ship transactions, fleet naming and saving never advance time. Market
 production changes goods, not money. Fuel service currently has unlimited supply.
 
@@ -51,14 +51,14 @@ balances. A new session created in the GUI retains the active definitions.
 
 ## Older saves
 
-Save schema 4 migrates rewrite schemas 1–3. Player credits, ships, cargo, fuel,
+Save schema 5 stores navigation runs and migrates rewrite schemas 1–4. Player credits, ships, cargo, fuel,
 positions, journeys and fleet membership remain unchanged. Original system-market
 stock and prices remain at their original primary stations and are not copied
 into every planet.
 
 Older saves never tracked market money or hull inventory. Their migrated treasuries
 and shipyards therefore start at **zero**, and newly introduced planetary commodity
-stocks start empty. The migration message states this explicitly. Movement starts
+stocks start empty. The migration message states this explicitly. Executing navigation runs starts
 planetary production; player purchases/services fund local treasuries, and ship
 sales replenish inventory. Existing runs receive no free money or hulls. To try
 the configured starting budgets and stocked yards, start a new game in another

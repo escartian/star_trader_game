@@ -6,7 +6,7 @@ use game_core::{
 };
 
 #[test]
-fn offline_time_advances_only_for_successful_movement() {
+fn plotting_does_not_advance_time_and_navigation_runs_do() {
     use game_core::economy::{Commodity, TradeSide};
     let mut host = LocalSession::new(game_server::Session::default());
     let initial = host.state.clone();
@@ -33,7 +33,9 @@ fn offline_time_advances_only_for_successful_movement() {
         },
         expected_revision: host.state.revision,
     });
-    assert_eq!(host.state.tick, 2);
+    assert_eq!(host.state.tick, 0);
+    host.request_execute_run();
+    assert_eq!(host.state.tick, 4);
     assert_eq!(
         host.state.ships[0].location,
         Location::Orbiting {
@@ -188,4 +190,44 @@ fn selling_the_selected_ship_keeps_selection_and_preferences_valid() {
         expected_revision: 1,
     });
     assert_eq!(host.state, saved);
+}
+
+#[test]
+fn executing_a_run_selects_and_highlights_a_fleet_without_orders_first() {
+    use game_core::fleet::{FleetId, ShipKind};
+    let mut host = LocalSession::new(game_server::Session::default());
+    host.command(ClientCommand::BuyShip {
+        ship: ShipId(1),
+        kind: ShipKind::Scout,
+        expected_revision: 0,
+    });
+    host.command(ClientCommand::SplitFleet {
+        fleet: FleetId(1),
+        ships: vec![ShipId(2)],
+        expected_revision: 1,
+    });
+    host.select_ship(ShipId(1));
+    host.command(ClientCommand::Move {
+        ship: ShipId(1),
+        target: MoveTarget::Body {
+            system: SystemId(1),
+            body: BodyId(1),
+        },
+        expected_revision: 2,
+    });
+    let before = host.state.clone();
+    host.request_execute_run();
+    assert_eq!(host.state, before);
+    assert_eq!(host.selected_ship().id, ShipId(2));
+    assert!(host.take_focus_request());
+    assert!(host.navigation.open);
+    assert!(host.notice.contains("Hold position"));
+    host.command(ClientCommand::HoldFleet {
+        fleet: FleetId(2),
+        expected_revision: host.state.revision,
+    });
+    host.request_execute_run();
+    assert_eq!(host.state.navigation.run, 1);
+    assert_eq!(host.state.tick, 4);
+    assert_eq!(host.selected_ship().location, Location::Docked(SystemId(1)));
 }

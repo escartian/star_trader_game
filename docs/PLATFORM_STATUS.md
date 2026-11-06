@@ -48,7 +48,7 @@ Seeded-start tests check 256 reachable starts. Refreshes never create stock/mone
 
 Save checks cover world/player/journey/economy round trips, schema/invariant
 rejection, failed writes, previous-save backup recovery, and preserving a good backup
-over a damaged primary. Client checks cover movement-triggered ticks, save
+over a damaged primary. Client checks cover explicit navigation runs, save
 restore and a failed load retaining the live session. See docs/DATA_FORMATS.md.
 
 The 20–30 minute first-upgrade target and whether routes are enjoyable require
@@ -94,7 +94,7 @@ port. Fleet UI capture validates layout, not clicking/OS lifecycle behavior.
 Movement now has local/body, cube exit, deep-space and explicit entry flows.
 Checks cover exact fuel/range bounds, star intersection, extreme coordinates,
 whole-fleet rejection, timing/market advancement, saved positions at each stage,
-and schema 1/2→3 migration. An egui pointer-input test clicks Confirm movement;
+and schema 1/2→3 migration. An egui pointer-input test clicks Plot course;
 a preview-only or invalid preview leaves time unchanged. This is not OS window
 or physical-device interaction evidence. Offscreen navigation, entry and planet
 ship-marker captures were rendered on Apple M5 Pro and visually inspected.
@@ -106,3 +106,18 @@ the prior schema-3 executable was migrated through the new CLI: player state and
 station goods matched, with no new cash/hulls or duplicated planetary goods.
 New planetary market/shipyard GPU captures on Apple M5 Pro were visually inspected;
 OS window/lifecycle and player pacing remain unverified.
+
+The navigation-run batch adds shared fleet progress, explicit Holds, attention
+selection/map focus, queued-course save validation and deterministic contacts.
+Tests cover two fleets sharing one clock advance, zero-time planning, readiness
+rejection, long voyages/fuel charge once, reload-stable encounters and reward
+replay rejection. A real save exported by the schema-4 executable migrated to
+schema 5 with existing economy, ships, positions and elapsed ticks unchanged.
+GPU captures of run review (unassigned Fleet 2 highlighted) and a salvage contact
+(seed 2) were rendered on Apple M5 Pro and visually inspected. Physical-window
+interaction and player pacing remain unverified; networking is still pending.
+
+Local distances, cube extents and waypoint inputs display AU; galaxy distances
+remain ly. Conversion tests cover signed/fractional rounding and invalid input.
+Backward save compatibility is no longer a requirement during prototyping; this
+batch's earlier migration checks are evidence, not a future maintenance promise.

@@ -13,6 +13,37 @@ pub(super) fn move_fleet(session: &mut Session, ship: ShipId, target: MoveTarget
         matches!(response, ServerMessage::SessionSnapshot { .. }),
         "{response:?}"
     );
+    for _ in 0..128 {
+        if session.state.navigation.orders.is_empty() {
+            return;
+        }
+        execute_quiet_run(session);
+    }
+    panic!("test course did not arrive");
+}
+
+pub(super) fn execute_quiet_run(session: &mut Session) {
+    let chance = session.state.movement_rules.encounter_chance_percent;
+    session.state.movement_rules.encounter_chance_percent = 0;
+    for fleet in session.state.fleets.clone() {
+        if session.state.navigation.order(fleet.id).is_none()
+            && session.state.fleet_position(fleet.id, fleet.owner).is_ok()
+        {
+            let result = session.handle(ClientCommand::HoldFleet {
+                fleet: fleet.id,
+                expected_revision: session.state.revision,
+            });
+            assert!(matches!(result, ServerMessage::SessionSnapshot { .. }));
+        }
+    }
+    let result = session.handle(ClientCommand::ExecuteNavigationRun {
+        expected_revision: session.state.revision,
+    });
+    assert!(
+        matches!(result, ServerMessage::SessionSnapshot { .. }),
+        "{result:?}"
+    );
+    session.state.movement_rules.encounter_chance_percent = chance;
 }
 
 pub(super) fn travel_to_port(session: &mut Session, destination: SystemId) {

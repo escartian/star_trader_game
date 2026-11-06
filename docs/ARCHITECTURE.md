@@ -27,8 +27,8 @@ currently a print-and-exit fixture; a remote adapter is still planned. Revisit c
 - Use stable IDs; names and list positions are presentation, not identity.
 - Keep galaxy and local coordinates as different types. Record units explicitly.
 - Rules use discrete ticks, with no real-time physics. The authority owns state
-  changes. Offline play advances ticks only on successful player movement;
-  future AI acts on these ticks. Shared multiplayer will collect player
+  changes. Campaign time advances only through shared navigation runs;
+  fleet courses progress in parallel and future AI acts at these boundaries. Shared multiplayer will collect player
   actions and resolve explicit turns. Its order collection/resolution is pending.
   Clock advancement is a host method, deliberately absent from player commands.
 - Seed random generation and persist its necessary state. Rendering never consumes
@@ -88,12 +88,12 @@ without charging fuel twice; this is not full network retry deduplication.
 `handle_as` requires an authenticated identity from a future adapter; its numeric
 argument is not authentication. The one-player fixture rejects other identities.
 
-`game-server/src/offline.rs` dispatches movement to host resolution in movement.rs.
-It publishes a complete fleet location/fuel/tick/market change atomically. Nonmovement commands never advance time. `ContinueTravel` is an
-offline-only action for resuming journeys saved by older builds. The client has
-no wall-clock simulation scheduler. A multiplayer adapter must keep host `advance`
-private and resolve authenticated players' collected orders at turn boundaries.
-Networking, per-player accounts, ordering, reconnect and retry replay remain open.
+`game-server/src/offline.rs` is an in-process identity convenience adapter over the
+same session commands. `game-core::navigation` owns plotted courses, fleet readiness,
+run progress, encounters and deterministic random state. `game-server::navigation`
+resolves a candidate world and advances economy once per run before publication.
+There is no instant-movement or finish-old-journey command. Legacy voyages advance
+on runs. Multiplayer readiness/authentication/transport remain separate pending work.
 
 ## Economy, JSON and shared art
 
@@ -108,9 +108,9 @@ single-player fixture; multiple authenticated accounts are later multiplayer wor
 Production/consumption have closed-form, bounded net changes per tick. Current
 bulk advancement matches individual ticks. Future AI/encounters must preserve
 intermediate event ordering rather than assume all tick systems can be batched.
-The player does not press End Turn in single-player; movement consumes ticks.
+Players plot courses and Execute navigation run; plotting alone consumes no ticks.
 
-`game-server/src/save.rs` owns schema-4 authoritative JSON, validation, atomic
+`game-server/src/save.rs` owns schema-5 authoritative JSON, validation, atomic
 replacement and a previous-good backup. Saves contain the world/player/economy
 and their active definitions; continuing does not regenerate markets or apply
 changed startup definitions. The client replaces its session only after load
@@ -150,11 +150,11 @@ Body arrivals attach to an orbit/berth; local stellar exclusion blocks invalid
 segments. Body collision volumes and planetary landing physics remain unmodeled.
 
 Movement previews validate all fleet members. Inputs contain a target and revision,
-never an executable plan. Offline host resolution rebuilds the plan on current
-state, resolves movement ticks, updates markets and publishes one candidate session.
-Ordinary handle_as rejects immediate Move; a future multiplayer turn resolver
-must collect orders before invoking host resolution. It cannot expose that host
-entry point directly as a remote command handler. See MOVEMENT.md for current costs.
+never an executable plan. Plotting stores authoritative geometry without spending
+fuel/time. On a shared run, departure charges fuel once and sets InTransit; every
+order progresses by the fixed run quantum. Arrivals restore body/local/deep-space
+locations. A future multiplayer coordinator must collect readiness before calling
+shared resolution. See NAVIGATION_RUNS.md for encounter lifecycle and save rules.
 
 ## Planet economies and finite shipyards
 
@@ -174,3 +174,10 @@ Schema-4 migration keeps existing station goods/prices and player state. Newly
 introduced planet stock and previously untracked market cash/hulls start empty;
 loading never seeds free funds or duplicates legacy stock. New sessions alone
 allocate configured budgets/inventory. See PLANET_ECONOMY.md for this distinction.
+
+Local-view distances and coordinate inputs now use AU through the client's units
+adapter (149,597,870.7 km/AU). Core movement and saves retain integer kilometers;
+galaxy distances remain light-years. Non-finite/out-of-range AU inputs reject.
+Backward save compatibility is explicitly not a prototyping requirement. Keep
+current-format validation and atomic saves; allow fresh-session resets for future
+breaking schemas rather than making migration support a blocker.

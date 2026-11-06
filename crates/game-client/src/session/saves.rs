@@ -119,7 +119,7 @@ impl LocalSession {
             }
         });
         ui.separator();
-        ui.label("Only movement advances simulation ticks. Reading, trading and fleet management take no time.");
+        ui.label("Plotting, reading, trading and fleet management take no time. Execute navigation run advances fleets and markets together.");
         ui.checkbox(&mut self.saves.guide, "Show first-delivery guide");
         ui.checkbox(&mut self.saves.autosave, "Autosave on close / suspend");
         ui.label("Save slot, guide and autosave choices are remembered.");

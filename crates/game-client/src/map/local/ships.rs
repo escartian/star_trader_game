@@ -8,6 +8,12 @@ use game_core::{
 };
 
 impl LocalView {
+    pub fn focus_ship(&mut self, ship: &Ship) {
+        if let Some(anchor) = self.ship_anchor(&ship.location) {
+            self.camera.focus_on(anchor);
+        }
+    }
+
     pub(super) fn ship_anchor(&self, location: &Location) -> Option<glam::DVec3> {
         if location.system() != Some(self.system.id) || !location.stationary() {
             return None;

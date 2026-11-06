@@ -25,12 +25,13 @@ unbounded prices/rates, and invalid stocks/capacities. New games load the projec
 file when available or an explicitly supplied `--economy PATH`; packaged builds
 can use the embedded validated defaults. No per-trade filesystem reads occur.
 
-## Session save (schema 4)
+## Session save (schema 5)
 
 Each `data/slot-N.json` stores:
 
 - `systems`: stable IDs, star/body kinds, planet profiles and galaxy/local positions.
-- `player`: tick/revision, movement rules, ships (IDs, owner, class, individual cargo/hold/fuel/range
+- `player`: tick/revision, movement rules, navigation state (run, courses, Holds,
+  encounters, RNG, rescues), ships (IDs, owner, class, individual cargo/hold/fuel/range
   and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters.
 - `economy`: shared player credits, current markets and exact session rules,
   including ship/planet catalogs. Each market records a composite system/body ID,
@@ -109,3 +110,16 @@ Economy schema 1 has additive defaults for `market_starting_credits`,
 The defaults support existing definition files; migration explicitly starts newly
 tracked live balances at zero. Runtime profile definitions, treasuries and hull
 stocks are preserved in saves, rather than rebuilt when opening a panel.
+
+Schema 5 adds explicit navigation planning. Schema 4 migrates with existing market
+balances/inventory and positions intact, with empty navigation orders and a saved
+initial random state. Older versions chain through their previous migrations.
+Loading never executes a run. Course geometry/durations, paid fuel, fleet references,
+Holds, encounter IDs and counter bounds are checked before replacing a session.
+Movement settings add `ticks_per_navigation_run` (default 4, 1–100) and
+`encounter_chance_percent` (default 12, 0–100), with defaults for older definitions.
+
+Backward compatibility is not required during prototyping. The migration paths
+above describe current code, not a promise to support old schemas in future work.
+Local UI distances/inputs use AU while JSON local coordinates remain integer km;
+AU input conversion is checked and rounds to the nearest kilometer.

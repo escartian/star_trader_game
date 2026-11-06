@@ -9,10 +9,13 @@ impl LocalSession {
         let ship = self.selected_ship();
         let hint = if self.state.ships.iter().any(|ship| ship.upgraded) {
             "Goal completed: you purchased the larger cargo hold. Continue exploring trade routes."
-        } else if matches!(ship.location, Location::Travelling(_)) {
-            "A saved journey is in progress. Choose Continue journey to consume the remaining movement ticks."
+        } else if matches!(
+            ship.location,
+            Location::Travelling(_) | Location::InTransit(_)
+        ) {
+            "This fleet is underway. Review its course and any contacts in Navigation, then Execute navigation run to advance all fleets together."
         } else if self.economy.current_market(ship).is_err() {
-            "Use Navigation to enter your destination system from deep space, then visit a planet or dock at its trade port. Movement consumes ticks; inspection does not."
+            "Use Navigation to enter your destination system from deep space, then visit a planet or dock at its trade port. Plotting is free; Execute navigation run advances the world."
         } else if self.economy.credits >= self.economy.rules.hold_upgrade_price {
             "You can afford the hold upgrade. Open Market / refuel and buy it to complete the first earnings goal."
         } else if ship.fuel < 20 {
@@ -21,7 +24,7 @@ impl LocalSession {
             if ship.location == Location::Docked(SystemId(2)) {
                 "At Meridian, open Market / refuel and sell your food. Compare known prices for your return cargo."
             } else {
-                "Open Navigation and exit the system, select Meridian and enter it, then inspect its trade port and dock to sell. Double-click only inspects a system."
+                "Open Navigation and exit the system, select Meridian and enter it, then inspect its trade port and plot docking to sell. Execute navigation runs to progress each course. Double-click only inspects a system."
             }
         } else if ship.location == Location::Docked(SystemId(1)) {
             "First delivery: open Market / refuel, buy food that fits the selected ship, travel to Meridian, and sell it. Work toward the hold upgrade."

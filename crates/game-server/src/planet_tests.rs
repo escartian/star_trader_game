@@ -136,7 +136,7 @@ fn local_treasury_limits_sales_and_purchases_fund_the_market_without_new_money()
         },
     );
     assert_eq!(money(&session), initial);
-    assert_eq!(session.state.tick, 2);
+    assert_eq!(session.state.tick, 4);
 }
 
 #[test]
@@ -209,7 +209,7 @@ fn planet_shipyards_buy_sell_and_restock_without_reusing_ids_or_fleets() {
     assert_eq!(session.state.fleets[0].ships, [ShipId(1), ShipId(3)]);
     assert_eq!(session.state.next_fleet_id, 3);
     assert_eq!(money(&session), initial);
-    assert_eq!(session.state.tick, 2);
+    assert_eq!(session.state.tick, 4);
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("planets.json");
     session.save(&path).unwrap();

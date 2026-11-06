@@ -6,11 +6,22 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 pub struct MovementRules {
     pub schema_version: u32,
+    #[serde(default = "default_run_ticks")]
+    pub ticks_per_navigation_run: u64,
+    #[serde(default = "default_encounter_chance")]
+    pub encounter_chance_percent: u32,
     pub galaxy_half_extent_ly: i64,
     pub system_half_extent_km: i64,
     pub star_exclusion_radius_km: i64,
     pub local_km_per_tick: u64,
     pub local_km_per_fuel: u64,
+}
+
+fn default_run_ticks() -> u64 {
+    4
+}
+fn default_encounter_chance() -> u32 {
+    12
 }
 
 impl Default for MovementRules {
@@ -28,7 +39,9 @@ impl MovementRules {
     }
 
     pub fn validate(&self) -> Result<(), MovementError> {
-        if self.schema_version != 1
+        if !(1..=100).contains(&self.ticks_per_navigation_run)
+            || self.encounter_chance_percent > 100
+            || self.schema_version != 1
             || !(1..=10_000).contains(&self.galaxy_half_extent_ly)
             || !(10..=1_000_000_000).contains(&self.system_half_extent_km)
             || !(1..self.system_half_extent_km).contains(&self.star_exclusion_radius_km)
@@ -145,7 +158,7 @@ impl MovementRules {
                     return Err(MovementError::UnknownBody);
                 }
             }
-            Location::Travelling(_) => {} // Legacy journeys are checked separately on load.
+            Location::Travelling(_) | Location::InTransit(_) => {} // Legacy journeys are checked separately on load.
         }
         Ok(())
     }

@@ -73,6 +73,10 @@ impl LocalView {
         }
     }
 
+    pub fn system(&self) -> &StarSystem {
+        &self.system
+    }
+
     pub fn set_fleet_context(
         &mut self,
         active_ship: game_core::travel::ShipId,
@@ -147,7 +151,7 @@ impl LocalView {
         });
         ui.label(format!("{} • local system", self.system.star_kind.label()));
         ui.label(
-            "Select a body to preview fleet movement. Ship offsets are symbolic; distances use true kilometers.",
+            "Select a body to preview fleet movement. Ship offsets are symbolic; distances use astronomical units (AU).",
         );
         ui.horizontal_wrapped(|ui| {
             if ui.button("Reset").clicked() {
@@ -242,11 +246,11 @@ impl LocalView {
                 });
             }
             ui.label(format!(
-                "{:.0} km from {} • true 3D distance",
-                kilometers(body.position).length(),
+                "{:.4} AU from {} • true 3D distance",
+                crate::units::kilometers_to_au(kilometers(body.position).length()),
                 self.system.name
             ));
-            ui.label("Marker sizes are symbolic; local coordinates are independent of galaxy light-years.");
+            ui.label("Marker sizes are symbolic; local distances use AU, galaxy distances use light-years.");
             if body.kind == BodyKind::Moon
                 && let Some(parent) = moon_parent(&self.system, body)
             {
@@ -256,7 +260,11 @@ impl LocalView {
                 } else {
                     ""
                 };
-                ui.label(format!("{distance:.0} km from {}{note}", parent.name));
+                ui.label(format!(
+                    "{:.5} AU from {}{note}",
+                    crate::units::kilometers_to_au(distance),
+                    parent.name
+                ));
             }
             if !rect.contains(
                 self.camera

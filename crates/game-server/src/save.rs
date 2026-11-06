@@ -25,16 +25,19 @@ struct SaveData {
     economy: Economy,
     #[serde(skip)]
     migrated: bool,
+    #[serde(skip)]
+    migration_from: Option<u64>,
 }
 
 impl Session {
     fn save_data(&self) -> SaveData {
         SaveData {
-            schema_version: 4,
+            schema_version: 5,
             systems: self.systems.clone(),
             player: self.state.clone(),
             economy: self.economy.clone(),
             migrated: false,
+            migration_from: None,
         }
     }
 
@@ -105,8 +108,13 @@ impl Session {
             },
         };
         let recovery = if data.migrated {
+            let message = if data.migration_from.is_some_and(|version| version < 4) {
+                "Upgraded to navigation runs and planetary markets; player assets and station stock preserved. New market treasuries and shipyards start empty."
+            } else {
+                "Upgraded to explicit navigation runs; player assets, market balances and positions preserved. Existing voyages continue when you execute a run."
+            };
             Some(format!(
-                "{}Upgraded older save to planetary markets; player assets and station stock preserved. New market treasuries and shipyards start empty.",
+                "{}{message}",
                 recovery.map_or(String::new(), |message| format!("{message} "))
             ))
         } else {
@@ -131,9 +139,13 @@ fn read(path: &Path) -> Result<SaveData, String> {
     let json = fs::read(path).map_err(|error| error.to_string())?;
     let value: serde_json::Value =
         serde_json::from_slice(&json).map_err(|error| error.to_string())?;
+    let source_version = value
+        .get("schema_version")
+        .and_then(serde_json::Value::as_u64);
     let (value, migrated) = migration::upgrade(value)?;
     let mut data: SaveData = serde_json::from_value(value).map_err(|error| error.to_string())?;
     data.migrated = migrated;
+    data.migration_from = source_version.filter(|_| migrated);
     data.validate()?;
     Ok(data)
 }
@@ -152,3 +164,6 @@ mod migration_tests;
 
 #[cfg(test)]
 mod market_tests;
+
+#[cfg(test)]
+mod navigation_tests;

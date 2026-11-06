@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 7;
+pub const PROTOCOL_VERSION: u32 = 8;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -76,15 +76,27 @@ pub enum ClientCommand {
         ship: ShipId,
         expected_revision: u64,
     },
-    ContinueTravel {
-        ship: ShipId,
+    ExecuteNavigationRun {
+        expected_revision: u64,
+    },
+    HoldFleet {
+        fleet: FleetId,
+        expected_revision: u64,
+    },
+    CancelCourse {
+        fleet: FleetId,
+        expected_revision: u64,
+    },
+    ResolveEncounter {
+        encounter: u64,
+        choice: game_core::navigation::EncounterChoice,
         expected_revision: u64,
     },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SessionEvent {
-    Moved(game_core::movement::MovementPlan),
+    Navigation(game_core::navigation::NavigationEvent),
     Arrived {
         system: SystemId,
         ship: ShipId,

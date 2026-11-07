@@ -81,6 +81,15 @@ pub struct PlanetTemplate {
     pub market_template: usize,
     pub starting_credits: Credits,
     pub ship_stock: [u32; 3],
+    /// Per-commodity multiplier (percent, commodity order) on the market
+    /// template's base prices. Below 100 = local surplus (cheap), above 100 =
+    /// local demand (expensive). Gives each planet its own trade identity.
+    #[serde(default = "neutral_prices")]
+    pub price_percent: [u32; 6],
+}
+
+fn neutral_prices() -> [u32; 6] {
+    [100; 6]
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -116,6 +125,10 @@ impl PlanetCatalog {
                 || template.market_template > 63
                 || template.starting_credits.0 > 1_000_000_000_000
                 || template.ship_stock.iter().any(|stock| *stock > 1000)
+                || template
+                    .price_percent
+                    .iter()
+                    .any(|percent| !(20..=300).contains(percent))
             {
                 return Err("Invalid planet template".into());
             }

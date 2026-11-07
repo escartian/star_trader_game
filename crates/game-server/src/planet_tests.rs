@@ -283,3 +283,49 @@ fn rejected_sales_and_renames_preserve_complete_state() {
     assert_eq!(session.state.fleets[0].name, "Aurora Traders");
     assert_eq!(session.state.tick, 0);
 }
+
+#[test]
+fn planet_markets_sell_their_specialty_cheaply_and_pay_more_for_imports() {
+    use game_core::economy::{Commodity, TradeSide};
+    let session = Session::default();
+    let station = session
+        .economy
+        .markets
+        .iter()
+        .find(|market| market.is_station && market.id.system == game_core::SystemId(1))
+        .unwrap();
+    let planets: Vec<_> = session
+        .economy
+        .markets
+        .iter()
+        .filter(|market| !market.is_station && market.id.system == game_core::SystemId(1))
+        .collect();
+    assert!(!planets.is_empty());
+    for planet in planets {
+        let profile = session.systems[0]
+            .bodies
+            .iter()
+            .find(|body| body.id == planet.id.body)
+            .and_then(|body| body.planet.clone())
+            .unwrap();
+        let price = |market: &game_core::economy::Market, good: Commodity| {
+            let good = &market.goods[good.index()];
+            good.price(TradeSide::Buy, good.stock).0
+        };
+        let specialty = profile.specialization;
+        // At least a third cheaper than the same system's trade port.
+        assert!(
+            price(planet, specialty) * 3 < price(station, specialty) * 2,
+            "{specialty:?} at {:?}",
+            planet.id
+        );
+        // Some import is dearer than at the port, so round trips pay.
+        assert!(
+            Commodity::ALL
+                .into_iter()
+                .any(|good| price(planet, good) > price(station, good) * 11 / 10),
+            "{:?} has no import premium",
+            planet.id
+        );
+    }
+}

@@ -75,7 +75,7 @@ pub fn location_chip(location: &Location, systems: &[StarSystem]) -> (Icon, Stri
         ),
         Location::InSystem { system, .. } => (Icon::Pin, name(*system)),
         Location::DeepSpace(_) => (Icon::DeepSpace, "Deep space".into()),
-        Location::InTransit(fleet) => (Icon::Underway, format!("Fleet {}", fleet.0)),
+        Location::InTransit(_) => (Icon::Underway, "Underway".into()),
         Location::Travelling(journey) => (Icon::Underway, name(journey.destination)),
     }
 }
@@ -290,68 +290,5 @@ impl LocalSession {
         self.selected_ship().location.system()
     }
 }
-
-impl LocalSession {
-    /// Advance just one run for a reproducible in-progress local approach capture.
-    pub fn capture_navigation_step(&mut self, target: MoveTarget) -> Result<(), String> {
-        for command in [
-            ClientCommand::Move {
-                ship: self.active_ship,
-                target,
-                expected_revision: self.state.revision,
-            },
-            ClientCommand::ExecuteNavigationRun {
-                expected_revision: self.state.revision + 1,
-            },
-        ] {
-            let response = self.authority.handle_offline(command);
-            if let ServerMessage::CommandRejected(error) = &response {
-                return Err(error.to_string());
-            }
-            self.accept(response);
-        }
-        Ok(())
-    }
-
-    /// Capture fixtures execute ordinary commands in a fresh, unsaved session.
-    pub fn capture_movement(&mut self, target: MoveTarget) -> Result<(), String> {
-        let response = self.authority.handle_offline(ClientCommand::Move {
-            ship: self.active_ship,
-            target,
-            expected_revision: self.state.revision,
-        });
-        if let ServerMessage::CommandRejected(error) = &response {
-            return Err(error.to_string());
-        }
-        self.accept(response);
-        for _ in 0..128 {
-            if self.state.navigation.orders.is_empty() {
-                return Ok(());
-            }
-            let fleets = self.state.fleets.clone();
-            for fleet in fleets {
-                if self.state.navigation.order(fleet.id).is_none() {
-                    self.command(ClientCommand::HoldFleet {
-                        fleet: fleet.id,
-                        expected_revision: self.state.revision,
-                    });
-                }
-            }
-            let encounters = self.state.navigation.encounters.clone();
-            for encounter in encounters {
-                self.command(ClientCommand::ResolveEncounter {
-                    encounter: encounter.id,
-                    choice: game_core::navigation::EncounterChoice::Bypass,
-                    expected_revision: self.state.revision,
-                });
-            }
-            self.command(ClientCommand::ExecuteNavigationRun {
-                expected_revision: self.state.revision,
-            });
-        }
-        Err("Capture course did not finish within 128 runs".into())
-    }
-}
-
 #[cfg(test)]
 mod tests;

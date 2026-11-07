@@ -25,16 +25,16 @@ unbounded prices/rates, and invalid stocks/capacities. New games load the projec
 file when available or an explicitly supplied `--economy PATH`; packaged builds
 can use the embedded validated defaults. No per-trade filesystem reads occur.
 
-## Session save (schema 5)
+## Session save (schema 6)
 
 Each `data/slot-N.json` stores:
 
 - `systems`: stable IDs, star/body kinds, planet profiles and galaxy/local positions.
 - `player`: tick/revision, movement rules, navigation state (run, courses, Holds,
-  encounters, RNG, rescues), ships (IDs, owner, class, individual cargo/hold/fuel/range
-  and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters.
+  encounters, RNG, rescues), ships (IDs, owner, class, individual cargo/hold/fuel/range,
+  `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters.
 - `economy`: shared player credits, current markets and exact session rules,
-  including ship/planet catalogs. Each market records a composite system/body ID,
+  including ship/planet/combat catalogs. Each market records a composite system/body ID,
   station flag, treasury, hull inventory and commodity balances. Cargo is keyed by commodity name inside each ship.
 
 The root schema is independent of the command protocol version. Money uses
@@ -78,15 +78,30 @@ Fleets are implemented; multiple-player accounts, discovery restrictions and
 remote identity remain planned. Multiplayer will need authenticated per-player state and explicit
 turn resolution around the same rules; a numeric owner ID is not authentication.
 
-## Ship catalog (schema 1)
+## Ship catalog (schema 2)
 
 `config/ships.json` defines unique freighter/scout/patrol entries with `kind`,
-`price` (credit hundredths), `cargo_capacity`, `fuel_capacity` and `range_ly`.
+`price` (credit hundredths), `cargo_capacity`, `fuel_capacity`, `range_ly` and a
+`combat` profile. The profile has `size` (small/medium/large), `hull`, `shields`,
+`armor` (points), `engine` (1–10), `weapon_slots` (0–8) and a default `loadout`
+of weapon IDs (at most `weapon_slots`). Every loadout weapon must exist in the
+combat catalog.
 New games load this project file if available, with embedded defaults as fallback.
 Saves preserve the active catalog. Purchased ships start empty and fully fuelled;
 shipyard inventory is finite and saved by class. Empty-hold hulls can be sold
 while retaining another owned ship, subject to market funds. Starter hold
-capacity still comes from the economy definition. HP/equipment are future data.
+capacity still comes from the economy definition. Ships record `hull_damage`
+(0 = intact; it must stay below the class hull). Customization comes later.
+
+## Combat catalog (schema 1)
+
+`config/combat.json` lists weapons by stable snake_case `id`, each with `name`,
+`damage` (1–10,000), `shots` (1–20), `accuracy_percent` (1–100),
+`shield_efficiency_percent` (0–1000), `armor_penetration` and `description`.
+It ships the original five: Photon Singularity Beam, Quantum Entanglement
+Torpedo, Neutron Beam, Graviton Pulse and Magnetic Resonance Disruptor. New games
+load the project file when present; saves preserve the active catalog. See
+[combat](COMBAT.md) for intended resolution rules.
 
 ## Movement definition (schema 1)
 
@@ -101,7 +116,11 @@ resolved from the saved system's first Station body; Docked retains its system I
 
 `config/planets.json` schema 1 defines rocky/gas profiles: `economy`, `biome`,
 `danger`, `specialization`, market-template index, `starting_credits` (hundredths)
-and `ship_stock` in freighter/scout/patrol order. Economy template indices cycle
+and `ship_stock` in freighter/scout/patrol order. An optional `price_percent`
+(six values in commodity order, 20–300; default 100) scales the template's base
+prices when the market is created. Values below 100 mark a local surplus (the
+specialty is cheap); values above 100 mark local demand (imports pay more).
+Existing saves keep their markets' recorded prices. Economy template indices cycle
 modulo available market templates. A specialization adds two production units per
 tick, capped at 1000. Danger/biome remain descriptive pending encounter simulation.
 
@@ -111,7 +130,10 @@ The defaults support existing definition files; migration explicitly starts newl
 tracked live balances at zero. Runtime profile definitions, treasuries and hull
 stocks are preserved in saves, rather than rebuilt when opening a panel.
 
-Schema 5 adds explicit navigation planning. Schema 4 migrates with existing market
+Schema 6 adds combat data. A v5 save keeps its saved prices, holds, fuel and
+range, gains each class's embedded combat profile, catalog schema 2 and the
+default weapon catalog, and its ships start intact. Schema 5 adds explicit
+navigation planning. Schema 4 migrates with existing market
 balances/inventory and positions intact, with empty navigation orders and a saved
 initial random state. Older versions chain through their previous migrations.
 Loading never executes a run. Course geometry/durations, paid fuel, fleet references,

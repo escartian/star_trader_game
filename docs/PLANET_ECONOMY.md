@@ -16,8 +16,13 @@ by the pair `(system ID, body ID)`; IDs scoped to different systems never share 
 production specialization, a market-template index, starting funds and ship stock.
 Templates cycle by system order within each body kind. Each planet's markets are
 independent even when they share a template. Its specialization adds two units of
-production per tick, capped at the supported production limit. The current economy
-types are agricultural, extraction and industrial.
+production per tick, capped at the supported production limit. Each template's
+`price_percent` gives the planet its own price identity. The specialty sells at
+roughly half the template base price; goods the economy needs (machinery and
+medicine for farms, food for mines, ore for industry) cost 20–40% more. So planets
+in the same system as a trade port are worth a trip; a test checks that each
+planet's specialty is at least a third cheaper than its system's port. The current
+economy types are agricultural, extraction and industrial.
 
 Biome and danger (Very safe through Insidious) are saved and shown in the inspector
 and market. Cautious NPC traders avoid dangerous markets; biome remains descriptive data for

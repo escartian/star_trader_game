@@ -38,6 +38,7 @@ impl LocalSession {
             |ui| {
                 ui.set_max_width(250.0);
                 self.run_ui(ui, target);
+                self.contact_panel(ui);
             },
         );
     }

@@ -89,6 +89,10 @@ impl LocalSession {
                     });
                 }
             });
+            ui.horizontal_wrapped(|ui| {
+                ui.add_space(44.0);
+                combat_chips(ui, &spec.combat, &self.economy.rules.combat_catalog, None);
+            });
         }
         let quote = self.economy.quote_ship_sale(ship);
         let label = quote.as_ref().map_or_else(
@@ -115,4 +119,81 @@ impl LocalSession {
         }
         action
     }
+}
+
+/// Hull integrity, shields, armor, engine and weapons for one ship class.
+/// `damage` shows current integrity for an owned ship; `None` shows a new hull.
+pub(super) fn combat_chips(
+    ui: &mut egui::Ui,
+    combat: &game_core::combat::CombatProfile,
+    weapons: &game_core::combat::CombatCatalog,
+    damage: Option<u32>,
+) {
+    let current = combat.hull.saturating_sub(damage.unwrap_or(0));
+    // Integrity color: green when sound, amber when damaged, red when critical.
+    let integrity = if current * 4 <= combat.hull {
+        egui::Color32::from_rgb(240, 80, 70)
+    } else if current < combat.hull {
+        AMBER
+    } else {
+        GREEN
+    };
+    stat(
+        ui,
+        Icon::Hull,
+        integrity,
+        &format!("{current}/{}", combat.hull),
+        &format!(
+            "{} hull: structure points remaining / maximum",
+            combat.size.label()
+        ),
+    );
+    stat(
+        ui,
+        Icon::Shield,
+        CYAN,
+        &combat.shields.to_string(),
+        "Shields (recharge before each engagement)",
+    );
+    stat(
+        ui,
+        Icon::Armor,
+        CYAN,
+        &combat.armor.to_string(),
+        "Armor: reduces each hit that reaches the hull",
+    );
+    stat(
+        ui,
+        Icon::Engine,
+        CYAN,
+        &combat.engine.to_string(),
+        "Engine rating 1–10: evasion and initiative",
+    );
+    let fitted: Vec<String> = combat
+        .loadout
+        .iter()
+        .map(|id| {
+            weapons.weapon(id).map_or_else(
+                || id.clone(),
+                |weapon| {
+                    format!(
+                        "{}: {} dmg × {}, {}% accuracy, {}% vs shields, {} armor piercing",
+                        weapon.name,
+                        weapon.damage,
+                        weapon.shots,
+                        weapon.accuracy_percent,
+                        weapon.shield_efficiency_percent,
+                        weapon.armor_penetration
+                    )
+                },
+            )
+        })
+        .collect();
+    stat(
+        ui,
+        Icon::Weapon,
+        AMBER,
+        &format!("{}/{}", combat.loadout.len(), combat.weapon_slots),
+        &format!("Weapons fitted / slots\n{}", fitted.join("\n")),
+    );
 }

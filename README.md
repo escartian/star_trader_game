@@ -40,12 +40,14 @@ cargo run -p game-client -- --new --seed 42 --save data/slot-2.json
 cargo run -p game-client -- --continue
 # Multi-fleet test save: four fleets (docked, planet orbit, moon orbit, underway).
 # Built with ordinary commands plus a 25,000 cr test budget; reload with --continue:
-cargo run -p game-client -- --scenario multi-fleet --save data/multi-fleet.json
+cargo run -p game-client --features dev-tools -- --scenario multi-fleet --save data/multi-fleet.json
 cargo run -p game-client -- --continue --save data/multi-fleet.json
 # macOS: build target/StarTrader.app with the game icon:
 ./tools/package_macos.sh
 # Export a complete initial world/player save as JSON without a window:
 cargo run -p game-client -- --new --headless > /tmp/star-trader-save.json
+# Developer tooling (captures, test scenes, scenario saves) is behind the
+# `dev-tools` feature and never ships in a default/release build.
 # Run all engineering checks:
 ./tools/check.sh
 ```
@@ -114,8 +116,9 @@ another save slot uses the configured starting funds and hull inventory.
 ## JSON economy and player data
 
 [config/planets.json](config/planets.json) defines planet profiles, market templates,
-starting budgets and hull stock. [config/ships.json](config/ships.json) defines purchasable hull prices, holds, fuel
-and range. [config/economy.json](config/economy.json) defines starting credits/cargo capacity,
+starting budgets and hull stock. [config/ships.json](config/ships.json) defines purchasable hull prices, holds, fuel,
+range and combat profiles. [config/combat.json](config/combat.json) defines the
+weapons ([combat](docs/COMBAT.md)). [config/economy.json](config/economy.json) defines starting credits/cargo capacity,
 service/upgrade costs, commodity prices and market production/consumption. Money
 uses integer hundredths of a credit: `100000` means `1000.00` credits.
 The explicit commodity order identifies array entries. Custom definitions are
@@ -175,8 +178,8 @@ retain actual positions. Drawing, picking and Focus share that schematic layout.
 Render the real UI to a GPU texture for visual review without a desktop window:
 
 ```sh
-cargo run -p game-client -- --new --capture /tmp/system.png --capture-view system
-cargo run -p game-client -- --new --capture /tmp/market.png --capture-view market
+cargo run -p game-client --features dev-tools -- --new --capture /tmp/system.png --capture-view system
+cargo run -p game-client --features dev-tools -- --new --capture /tmp/market.png --capture-view market
 ```
 
 Example captures: [system](docs/previews/system.png), [market](docs/previews/market.png),

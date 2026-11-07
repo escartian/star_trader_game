@@ -5,6 +5,7 @@ mod movement;
 mod navigation;
 mod offline;
 mod save;
+#[cfg(any(test, feature = "dev-tools"))]
 mod scenarios;
 mod shipyard;
 use game_core::economy::Economy;

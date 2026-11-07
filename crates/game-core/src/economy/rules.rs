@@ -34,6 +34,8 @@ pub struct EconomyRules {
     pub planet_catalog: crate::planet::PlanetCatalog,
     #[serde(default)]
     pub ship_catalog: crate::fleet::ShipCatalog,
+    #[serde(default)]
+    pub combat_catalog: crate::combat::CombatCatalog,
 }
 
 fn default_npc_credits() -> Credits {
@@ -65,6 +67,10 @@ impl EconomyRules {
 
     pub fn validate(&self) -> Result<(), String> {
         self.ship_catalog.validate()?;
+        self.combat_catalog.validate()?;
+        for spec in &self.ship_catalog.ships {
+            spec.combat.validate(&self.combat_catalog)?;
+        }
         self.planet_catalog.validate()?;
         if !(1..=90).contains(&self.ship_resale_percent)
             || self.market_starting_credits.0 > 1_000_000_000_000

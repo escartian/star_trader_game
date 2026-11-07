@@ -52,6 +52,9 @@ pub struct Ship {
     pub fuel_capacity: u32,
     pub range_ly: u32,
     pub location: Location,
+    /// Structure points lost in combat; 0 = intact. Max hull comes from the class.
+    #[serde(default)]
+    pub hull_damage: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -132,6 +135,7 @@ impl Default for TravelState {
                 fuel_capacity: 40,
                 range_ly: 20,
                 location: Location::Docked(SystemId(1)),
+                hull_damage: 0,
             }],
             fleets: vec![Fleet {
                 id: FleetId(1),

@@ -189,6 +189,34 @@ impl LocalSession {
         ui.separator();
     }
 
+    /// Fleets paused by an unresolved contact.
+    pub fn contact_fleets(&self) -> Vec<game_core::fleet::FleetId> {
+        self.state
+            .navigation
+            .encounters
+            .iter()
+            .map(|encounter| encounter.fleet)
+            .collect()
+    }
+
+    /// Decision panel shown beside Execute run while the selected fleet is paused
+    /// by a contact, so the choice never hides inside the Navigation window.
+    pub(super) fn contact_panel(&mut self, ui: &mut egui::Ui) {
+        let Ok(fleet) = self.state.fleet_for_ship(self.active_ship).cloned() else {
+            return;
+        };
+        if !self.contact_fleets().contains(&fleet.id) {
+            return;
+        }
+        ui.separator();
+        ui.horizontal(|ui| {
+            icons::glyph(ui, Icon::Warning, AMBER, "Decision needed");
+            ui.colored_label(AMBER, format!("CONTACT · {}", fleet.name));
+        });
+        ui.small("Paused until you decide; its course continues on the next run.");
+        self.encounter_ui(ui);
+    }
+
     fn encounter_ui(&mut self, ui: &mut egui::Ui) {
         let Ok(fleet) = self.state.fleet_for_ship(self.active_ship).cloned() else {
             return;
@@ -244,50 +272,5 @@ impl LocalSession {
             });
             if let Some(choice) = choice { self.command(ClientCommand::ResolveEncounter { encounter: encounter.id, choice, expected_revision: self.state.revision }); }
         });
-    }
-}
-
-impl LocalSession {
-    pub fn capture_run_review(&mut self) {
-        self.command(ClientCommand::BuyShip {
-            ship: self.active_ship,
-            kind: game_core::fleet::ShipKind::Scout,
-            expected_revision: self.state.revision,
-        });
-        let second = self.active_ship;
-        if let Ok(fleet) = self.state.fleet_for_ship(second) {
-            self.command(ClientCommand::SplitFleet {
-                fleet: fleet.id,
-                ships: vec![second],
-                expected_revision: self.state.revision,
-            });
-        }
-        let first = self.state.ships[0].id;
-        self.command(ClientCommand::Move {
-            ship: first,
-            target: game_core::movement::MoveTarget::Body {
-                system: game_core::SystemId(1),
-                body: game_core::BodyId(1),
-            },
-            expected_revision: self.state.revision,
-        });
-        self.request_execute_run();
-    }
-
-    pub fn capture_encounter(&mut self) -> Result<(), String> {
-        self.command(ClientCommand::Move {
-            ship: self.active_ship,
-            target: game_core::movement::MoveTarget::Body {
-                system: game_core::SystemId(1),
-                body: game_core::BodyId(1),
-            },
-            expected_revision: self.state.revision,
-        });
-        self.request_execute_run();
-        if self.state.navigation.encounters.is_empty() {
-            return Err("Use --new --seed 2 for the encounter capture".into());
-        }
-        self.navigation.open = true;
-        Ok(())
     }
 }

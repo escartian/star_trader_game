@@ -15,6 +15,11 @@ impl LocalView {
         self.trade_ready = ships;
     }
 
+    /// Fleets paused by an unresolved contact, for the marker badge.
+    pub fn set_contacts(&mut self, fleets: Vec<game_core::fleet::FleetId>) {
+        self.contacts = fleets;
+    }
+
     pub fn focus_ship(&mut self, ship: &Ship) {
         if ship.location.system() == Some(self.system.id) {
             self.selected = match ship.location {
@@ -111,6 +116,7 @@ impl LocalView {
                     ship,
                     selected: fleet.ships.contains(&self.active_ship),
                     berth,
+                    contact: self.contacts.contains(&fleet.id),
                 },
                 &mut reserved,
             ) {

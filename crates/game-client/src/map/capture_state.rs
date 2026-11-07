@@ -73,3 +73,46 @@ impl Map {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::map::Map;
+
+    fn map(seed: u64) -> Map {
+        let mut authority = game_server::Session::with_seed(seed);
+        let game_protocol::ServerMessage::GalaxySnapshot { systems, .. } =
+            authority.handle(game_protocol::ClientCommand::GetGalaxy)
+        else {
+            unreachable!()
+        };
+        Map::new(systems, authority)
+    }
+
+    #[test]
+    fn every_capture_view_prepares_from_a_fresh_session() {
+        for view in [
+            "galaxy",
+            "traffic",
+            "destination",
+            "system",
+            "run-review",
+            "navigation",
+            "deep-space",
+            "entry",
+            "arrival",
+            "approach",
+            "orbit",
+            "planet-market",
+            "planet-shipyard",
+            "market",
+            "fleets",
+            "saves",
+        ] {
+            map(1)
+                .prepare_capture(view)
+                .unwrap_or_else(|error| panic!("{view}: {error}"));
+        }
+        map(2).prepare_capture("encounter").unwrap();
+        assert!(map(1).prepare_capture("nonsense").is_err());
+    }
+}

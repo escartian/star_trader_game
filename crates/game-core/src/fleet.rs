@@ -52,7 +52,11 @@ pub struct ShipSpec {
     pub cargo_capacity: u32,
     pub fuel_capacity: u32,
     pub range_ly: u32,
+    pub combat: crate::combat::CombatProfile,
 }
+
+/// Ship catalog schema; version 2 added per-hull combat profiles.
+pub const SHIP_CATALOG_SCHEMA: u32 = 2;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -75,8 +79,14 @@ impl ShipCatalog {
         Ok(catalog)
     }
 
+    pub fn spec(&self, kind: ShipKind) -> Option<&ShipSpec> {
+        self.ships.iter().find(|spec| spec.kind == kind)
+    }
+
+    /// Structural checks; weapon references are checked against the combat
+    /// catalog by `EconomyRules::validate`.
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 1 || self.ships.len() != 3 {
+        if self.schema_version != SHIP_CATALOG_SCHEMA || self.ships.len() != 3 {
             return Err("Unsupported ship catalog".into());
         }
         for (index, ship) in self.ships.iter().enumerate() {

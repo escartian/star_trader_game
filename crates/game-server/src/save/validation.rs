@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 impl SaveData {
     pub(super) fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 5 {
+        if self.schema_version != 6 {
             return Err("Unsupported save schema version".into());
         }
         if self.systems.is_empty() || self.systems.len() > 1024 {
@@ -50,6 +50,15 @@ impl SaveData {
         self.validate_fleets()?;
         self.player.validate_navigation(&self.systems)?;
         for ship in &self.player.ships {
+            let hull = self
+                .economy
+                .rules
+                .ship_catalog
+                .spec(ship.kind)
+                .map_or(0, |spec| spec.combat.hull);
+            if ship.hull_damage >= hull {
+                return Err(format!("{} has impossible hull damage", ship.name));
+            }
             self.player
                 .movement_rules
                 .validate_location(&ship.location, &self.systems)

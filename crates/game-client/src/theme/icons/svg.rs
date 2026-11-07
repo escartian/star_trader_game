@@ -67,6 +67,11 @@ pub fn name(icon: Icon) -> &'static str {
         Icon::Zoom => "zoom",
         Icon::Settings => "settings",
         Icon::Danger => "danger",
+        Icon::Hull => "combat-hull",
+        Icon::Shield => "combat-shield",
+        Icon::Armor => "combat-armor",
+        Icon::Engine => "combat-engine",
+        Icon::Weapon => "combat-weapon",
         Icon::Good(good) => match good {
             Commodity::Food => "good-food",
             Commodity::Ore => "good-ore",

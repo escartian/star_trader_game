@@ -19,6 +19,8 @@ pub(super) struct FleetSymbol<'a> {
     pub ship: &'a Ship,
     pub selected: bool,
     pub berth: Berth,
+    /// Paused by an unresolved contact; overrides the berth tag.
+    pub contact: bool,
 }
 
 /// How a fleet is resting, for presentation only. `trade` is decided by the
@@ -93,6 +95,7 @@ pub(super) fn paint(
         ship,
         selected,
         berth,
+        contact,
     } = symbol;
     let bounds = place(anchor, viewport, reserved)?;
     reserved.push(bounds.expand(3.0));
@@ -151,7 +154,12 @@ pub(super) fn paint(
         Stroke::new(if selected { 1.8_f32 } else { 0.7_f32 }, color),
     );
     art.paint(ArtKind::from(ship.kind), painter, center, 34.0);
-    let (label, label_color) = match berth.tag() {
+    let tag = if contact {
+        Some(("CONTACT", crate::theme::AMBER, Icon::Contact))
+    } else {
+        berth.tag()
+    };
+    let (label, label_color) = match tag {
         Some((tag, tag_color, icon)) => {
             badge(painter, center + Vec2::new(17.0, -17.0), icon, tag_color);
             (format!("F{} {tag}", fleet.id.0), tag_color)

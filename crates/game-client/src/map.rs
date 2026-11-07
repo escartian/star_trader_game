@@ -1,5 +1,6 @@
 pub(crate) mod art;
 mod camera;
+#[cfg(any(test, feature = "dev-tools"))]
 mod capture_state;
 mod fixtures;
 mod fleets;
@@ -79,6 +80,7 @@ impl Map {
         }
     }
 
+    #[cfg(any(test, feature = "dev-tools"))]
     fn change_scene(&mut self, scene: Scene) {
         if self.scene == Scene::Session {
             self.session_selection = self.selected;
@@ -151,6 +153,7 @@ impl Map {
     }
 
     /// Developer fixtures stay available but out of the way of the session view.
+    #[cfg(any(test, feature = "dev-tools"))]
     fn test_scenes(&mut self, ui: &mut egui::Ui) {
         egui::CollapsingHeader::new("Test scenes").show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
@@ -234,6 +237,7 @@ impl Map {
         );
         local.set_fleet_context(self.session.selected_ship().id);
         local.set_trade_ready(self.session.trade_ready_ships());
+        local.set_contacts(self.session.contact_fleets());
         local.set_trade_options(self.session.trade_options(local.system().id));
         let display_ships = self
             .session
@@ -313,7 +317,7 @@ impl Map {
                 self.session.guide(ui);
             },
         );
-        let width = (ctx.screen_rect().width() - 560.0).clamp(300.0, 640.0);
+        let width = (ctx.screen_rect().width() - 600.0).clamp(300.0, 640.0);
         crate::theme::metal::card(
             ctx,
             "view-selection",
@@ -322,6 +326,7 @@ impl Map {
             |ui| {
                 ui.set_max_width(width);
                 self.details(ui, rect);
+                #[cfg(any(test, feature = "dev-tools"))]
                 self.test_scenes(ui);
             },
         );
@@ -330,3 +335,5 @@ impl Map {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod trade_tests;

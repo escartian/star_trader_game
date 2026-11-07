@@ -77,6 +77,7 @@ no separate landed state.
 | Docked | green `F1 DOCKED`, clamp badge, solid clamp line to a bracketed port | `Docked · Sol port` (green) |
 | In orbit | cyan `F1 ORBIT`, orbit badge, dashed orbit ring around the body | `Orbit · Inner world` (cyan) |
 | Flying | `F1 · n`, thin tether | course / position |
+| Paused by a contact | amber `F1 CONTACT` with contact badge | `Underway`; the decision appears under **Execute run** |
 
 A green market badge on the marker, and a **TRADE HERE** button in the
 selection card, appear only when the authoritative economy allows that ship to

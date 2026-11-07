@@ -1,8 +1,11 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "ships": [
-    {"kind":"freighter","price":90000,"cargo_capacity":20,"fuel_capacity":40,"range_ly":20},
-    {"kind":"scout","price":45000,"cargo_capacity":10,"fuel_capacity":50,"range_ly":24},
-    {"kind":"patrol","price":180000,"cargo_capacity":8,"fuel_capacity":36,"range_ly":18}
+    {"kind":"freighter","price":90000,"cargo_capacity":20,"fuel_capacity":40,"range_ly":20,
+     "combat":{"size":"medium","hull":60,"shields":10,"armor":4,"engine":3,"weapon_slots":1,"loadout":["neutron_beam"]}},
+    {"kind":"scout","price":45000,"cargo_capacity":10,"fuel_capacity":50,"range_ly":24,
+     "combat":{"size":"small","hull":30,"shields":15,"armor":1,"engine":8,"weapon_slots":1,"loadout":["graviton_pulse"]}},
+    {"kind":"patrol","price":180000,"cargo_capacity":8,"fuel_capacity":36,"range_ly":18,
+     "combat":{"size":"medium","hull":90,"shields":30,"armor":6,"engine":5,"weapon_slots":3,"loadout":["photon_singularity_beam","quantum_entanglement_torpedo","magnetic_resonance_disruptor"]}}
   ]
 }

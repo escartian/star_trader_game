@@ -151,6 +151,7 @@ impl TravelState {
             fuel_capacity: spec.fuel_capacity,
             range_ly: spec.range_ly,
             location,
+            hull_damage: 0,
         });
         self.fleets[index].ships.push(id);
         self.next_ship_id = next;

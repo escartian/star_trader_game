@@ -62,10 +62,6 @@ impl LocalSession {
         options
     }
 
-    pub fn open_fleets(&mut self) {
-        self.fleet_panel.open = true;
-    }
-
     pub fn show_fleets(&mut self, ctx: &egui::Context, systems: &[game_core::StarSystem]) {
         let mut open = self.fleet_panel.open;
         crate::theme::metal::window(ctx, "Fleets", &mut open, 620.0, |ui| {
@@ -131,6 +127,14 @@ impl LocalSession {
                             "Cargo used / capacity",
                         );
                         super::navigation::location_stat(ui, &ship.location, systems);
+                        if let Some(spec) = self.economy.rules.ship_catalog.spec(ship.kind) {
+                            super::shipyard::combat_chips(
+                                ui,
+                                &spec.combat,
+                                &self.economy.rules.combat_catalog,
+                                Some(ship.hull_damage),
+                            );
+                        }
                     });
                 }
                 let selected: Vec<_> = fleet

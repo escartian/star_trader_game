@@ -57,6 +57,7 @@ pub struct LocalView {
     preview_route: Vec<LocalPosition>,
     fleet_hits: Vec<crate::map::fleets::FleetHit>,
     trade_ready: Vec<game_core::travel::ShipId>,
+    contacts: Vec<game_core::fleet::FleetId>,
     trade_options: Vec<crate::session::TradeOption>,
     market_request: Option<game_core::travel::ShipId>,
     selection_request: Option<game_core::travel::ShipId>,
@@ -76,6 +77,7 @@ impl LocalView {
             preview_route: Vec::new(),
             fleet_hits: Vec::new(),
             trade_ready: Vec::new(),
+            contacts: Vec::new(),
             trade_options: Vec::new(),
             market_request: None,
             selection_request: None,
@@ -190,7 +192,7 @@ impl LocalView {
             egui::vec2(0.0, 10.0),
             |ui| self.header(ui, ctx, &mut back, ships),
         );
-        let width = (ctx.screen_rect().width() - 560.0).clamp(300.0, 640.0);
+        let width = (ctx.screen_rect().width() - 600.0).clamp(300.0, 640.0);
         crate::theme::metal::card(
             ctx,
             "view-selection",

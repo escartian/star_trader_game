@@ -1,6 +1,7 @@
 //! Simulation types and rules. No graphics, networking, or filesystem access.
 use serde::{Deserialize, Serialize};
 
+pub mod combat;
 pub mod economy;
 pub mod fleet;
 pub mod generation;

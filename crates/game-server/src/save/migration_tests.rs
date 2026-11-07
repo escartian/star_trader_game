@@ -237,3 +237,59 @@ fn schema_three_body_positions_migrate_without_cloning_stock_into_planets() {
             .all(|market| market.credits.0 == 0)
     );
 }
+
+/// Rewrite a current save as schema 5: no combat profiles, catalog schema 1, no damage field.
+fn as_schema_five(session: &Session) -> serde_json::Value {
+    let mut value: serde_json::Value =
+        serde_json::from_str(&session.export_json().unwrap()).unwrap();
+    value["schema_version"] = 5.into();
+    let catalog = value.pointer_mut("/economy/rules/ship_catalog").unwrap();
+    catalog["schema_version"] = 1.into();
+    for ship in catalog["ships"].as_array_mut().unwrap() {
+        ship.as_object_mut().unwrap().remove("combat");
+    }
+    value
+        .pointer_mut("/economy/rules")
+        .unwrap()
+        .as_object_mut()
+        .unwrap()
+        .remove("combat_catalog");
+    for ship in value["player"]["ships"].as_array_mut().unwrap() {
+        ship.as_object_mut().unwrap().remove("hull_damage");
+    }
+    value
+}
+
+#[test]
+fn schema_five_saves_gain_combat_profiles_and_start_intact() {
+    let mut session = Session::default();
+    session.economy.rules.ship_catalog.ships[0].price = game_core::economy::Credits(77_700);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("v5.json");
+    std::fs::write(&path, as_schema_five(&session).to_string()).unwrap();
+    let (loaded, notice) = Session::load(&path).unwrap();
+    assert!(notice.is_some(), "migration should be reported");
+    let defaults = game_core::fleet::ShipCatalog::default();
+    for spec in &loaded.economy.rules.ship_catalog.ships {
+        assert_eq!(spec.combat, defaults.spec(spec.kind).unwrap().combat);
+    }
+    // Saved prices are preserved, not replaced by the embedded catalog.
+    assert_eq!(loaded.economy.rules.ship_catalog.ships[0].price.0, 77_700);
+    assert!(loaded.state.ships.iter().all(|ship| ship.hull_damage == 0));
+    assert_eq!(
+        loaded.economy.rules.combat_catalog,
+        game_core::combat::CombatCatalog::default()
+    );
+}
+
+#[test]
+fn hull_damage_at_or_beyond_the_class_hull_is_rejected() {
+    let mut session = Session::default();
+    session.state.ships[0].hull_damage = 59;
+    assert!(session.export_json().is_ok(), "damaged but alive");
+    session.state.ships[0].hull_damage = 60;
+    assert!(
+        session.export_json().is_err(),
+        "a destroyed ship cannot remain in a fleet"
+    );
+}

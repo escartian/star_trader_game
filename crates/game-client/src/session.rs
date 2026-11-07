@@ -1,4 +1,6 @@
 //! Native session adapter. Course planning is separate from shared navigation runs.
+#[cfg(any(test, feature = "dev-tools"))]
+mod capture;
 mod fleets;
 pub use fleets::TradeOption;
 mod guide;
@@ -56,10 +58,6 @@ impl LocalSession {
             notice: String::new(),
             preferences_path: None,
         }
-    }
-
-    pub fn system_half_extent_km(&self) -> i64 {
-        self.state.movement_rules.system_half_extent_km
     }
 
     pub fn selected_ship(&self) -> &game_core::travel::Ship {
@@ -149,10 +147,6 @@ impl LocalSession {
 
     pub fn open_market(&mut self) {
         self.market.open = true;
-    }
-
-    pub fn open_saves(&mut self) {
-        self.saves.open = true;
     }
 
     pub fn notify(&mut self, message: String) {

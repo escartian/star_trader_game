@@ -130,8 +130,8 @@ campaign advance action; the interface does not call it End Turn.
 See [map controls](docs/MAP_CONTROLS.md). Physical mouse/window/DPI acceptance
 remains separate from GPU captures and egui input regression tests.
 
-**Next:** ship combat statistics/loadouts and fleet combat, building on the first
-NPC traders and current navigation/encounter foundations. Combat is not implemented.
+**Next:** a deterministic fleet-combat resolver and readable combat report, built
+on the new hull/weapon data ([combat](docs/COMBAT.md)). Engagements are not yet resolved.
 
 ## 4. NPC traders and fleet combat
 
@@ -141,9 +141,11 @@ Combat is the original README's first prioritized expansion.
 - [x] Initial cautious/opportunist NPC traders with route choice, fuel-aware
   profitability, real cargo/wallets, finite-market trades and navigation-run AI.
 - [ ] Expanded NPC personalities, interactions, encounters and faction affiliations.
-- [ ] Ship type/size/engine, HP, shields, armor and weapon/loadout definitions.
-- [ ] Carry forward Photon Singularity Beam, Quantum Entanglement Torpedo, Neutron
-  Beam, Graviton Pulse and Magnetic Resonance Disruptor as balanceable JSON content.
+- [x] Ship type/size/engine, HP, shields, armor and weapon/loadout definitions
+  (`config/ships.json` schema 2, save schema 6 with migration; see [combat](docs/COMBAT.md)).
+- [x] Carry forward Photon Singularity Beam, Quantum Entanglement Torpedo, Neutron
+  Beam, Graviton Pulse and Magnetic Resonance Disruptor as balanceable JSON content
+  (`config/combat.json`).
 - [ ] Authoritative fleet encounters/combat, target selection, damage/destruction,
   retreat, salvage/rewards and saved results; readable native combat report.
 - [ ] Deterministic seeded resolution and explicit hostility/engagement rules.

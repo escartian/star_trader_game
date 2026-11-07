@@ -137,7 +137,8 @@ charged. Fleet members share a location. Local-body and deep-space positions
 are authoritative. Ships share fleet locations and are illustrated beside their
 body anchors or at deep-space positions. The current primary trade station retains
 its system ID in Docked; planetary Orbiting locations resolve a market by body.
-Ship catalog definitions come from config/ships.json, embedded as a fallback.
+Ship catalog definitions come from config/ships.json and weapons from
+config/combat.json, both embedded as fallbacks. `game-core::combat` validates them.
 Schema-1 migration moves the old global cargo/upgrade into its existing ship.
 
 ## Movement spaces and host resolution

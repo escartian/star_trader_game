@@ -1,12 +1,14 @@
-use game_core::{GalaxyPosition, StarKind, StarSystem, SystemId};
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Scene {
     Session,
+    /// Developer layout fixtures, absent from release builds.
+    #[cfg(any(test, feature = "dev-tools"))]
     Overlap,
+    #[cfg(any(test, feature = "dev-tools"))]
     Dense,
 }
 
+#[cfg(any(test, feature = "dev-tools"))]
 impl Scene {
     pub fn label(self) -> &'static str {
         match self {
@@ -18,7 +20,9 @@ impl Scene {
 }
 
 /// Interface fixtures are never passed back to the authoritative session.
-pub fn systems(scene: Scene) -> Vec<StarSystem> {
+#[cfg(any(test, feature = "dev-tools"))]
+pub fn systems(scene: Scene) -> Vec<game_core::StarSystem> {
+    use game_core::{GalaxyPosition, StarKind, StarSystem, SystemId};
     let kinds = [
         StarKind::YellowDwarf,
         StarKind::RedDwarf,

@@ -22,5 +22,13 @@ serde.workspace = true
 serde_json.workspace = true
 tempfile = "=3.27.0"
 
+[features]
+# Capture rendering, test scenes and scenario saves. Off by default so release
+# builds ship without them: `cargo run -p game-client --features dev-tools -- ...`
+dev-tools = ["game-server/dev-tools"]
+
+[dev-dependencies]
+game-server = { workspace = true, features = ["dev-tools"] }
+
 [lints]
 workspace = true

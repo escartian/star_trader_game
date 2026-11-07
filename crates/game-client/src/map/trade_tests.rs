@@ -1,0 +1,99 @@
+//! Trade buttons open the market where the chosen fleet actually is.
+use super::*;
+
+fn frame(ctx: &egui::Context, map: &mut Map, events: Vec<egui::Event>) -> egui::FullOutput {
+    ctx.run(
+        egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, egui::vec2(1280.0, 900.0))),
+            events,
+            ..Default::default()
+        },
+        |ctx| map.ui(ctx),
+    )
+}
+
+fn texts(output: &egui::FullOutput) -> Vec<(String, Pos2)> {
+    output
+        .shapes
+        .iter()
+        .filter_map(|shape| match &shape.shape {
+            egui::epaint::Shape::Text(text) => Some((
+                text.galley.job.text.clone(),
+                text.pos + text.galley.size() / 2.0,
+            )),
+            _ => None,
+        })
+        .collect()
+}
+
+fn click(ctx: &egui::Context, map: &mut Map, label: &str) {
+    let mut output = frame(ctx, map, Vec::new());
+    for _ in 0..3 {
+        output = frame(ctx, map, Vec::new());
+    }
+    let (_, point) = texts(&output)
+        .into_iter()
+        .find(|(text, _)| text == label)
+        .unwrap_or_else(|| panic!("no {label:?} in {:?}", texts(&output)));
+    for pressed in [true, false] {
+        frame(
+            ctx,
+            map,
+            vec![
+                egui::Event::PointerMoved(point),
+                egui::Event::PointerButton {
+                    pos: point,
+                    button: egui::PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+    }
+}
+
+#[test]
+fn switching_fleet_trade_opens_the_planet_market_it_orbits() {
+    let ctx = egui::Context::default();
+    let authority = game_server::Session::multi_fleet_scenario(1).unwrap();
+    let systems = match authority
+        .clone()
+        .handle(game_protocol::ClientCommand::GetGalaxy)
+    {
+        game_protocol::ServerMessage::GalaxySnapshot { systems, .. } => systems,
+        _ => unreachable!(),
+    };
+    let mut map = Map::new(systems, authority);
+    map.open_selected_system();
+    click(&ctx, &mut map, "Scout Wing · TRADE");
+    let mut output = frame(&ctx, &mut map, Vec::new());
+    for _ in 0..3 {
+        output = frame(&ctx, &mut map, Vec::new());
+    }
+    let shown: Vec<_> = texts(&output).into_iter().map(|(text, _)| text).collect();
+    assert!(shown.iter().any(|text| text == "MARKET"), "{shown:?}");
+    assert!(
+        shown.iter().any(|text| text == "Sol Inner world"),
+        "{shown:?}"
+    );
+    assert_eq!(
+        map.session.selected_ship().kind,
+        game_core::fleet::ShipKind::Scout
+    );
+}
+
+#[test]
+fn a_contact_can_be_resolved_from_the_run_card_without_opening_navigation() {
+    let ctx = egui::Context::default();
+    let mut authority = game_server::Session::with_seed(2);
+    let systems = match authority.handle(game_protocol::ClientCommand::GetGalaxy) {
+        game_protocol::ServerMessage::GalaxySnapshot { systems, .. } => systems,
+        _ => unreachable!(),
+    };
+    let mut map = Map::new(systems, authority);
+    map.session.capture_encounter().unwrap();
+    map.session.close_navigation();
+    assert!(!map.session.contact_fleets().is_empty());
+    click(&ctx, &mut map, "Bypass");
+    assert!(map.session.contact_fleets().is_empty());
+}

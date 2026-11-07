@@ -288,21 +288,6 @@ impl LocalSession {
         }
     }
 }
-
-impl LocalSession {
-    pub fn capture_wait_runs(&mut self, count: usize) {
-        for _ in 0..count {
-            for fleet in self.state.fleets.clone() {
-                self.command(ClientCommand::HoldFleet {
-                    fleet: fleet.id,
-                    expected_revision: self.state.revision,
-                });
-            }
-            self.request_execute_run();
-        }
-    }
-}
-
 impl LocalSession {
     pub fn map_route_points(
         &mut self,

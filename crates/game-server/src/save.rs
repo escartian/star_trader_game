@@ -1,4 +1,5 @@
 //! Versioned authoritative JSON. Loading never regenerates worlds or prices.
+mod combat_migration;
 mod fleets;
 mod markets;
 mod migration;
@@ -32,7 +33,7 @@ struct SaveData {
 impl Session {
     fn save_data(&self) -> SaveData {
         SaveData {
-            schema_version: 5,
+            schema_version: 6,
             systems: self.systems.clone(),
             player: self.state.clone(),
             economy: self.economy.clone(),

@@ -1,4 +1,5 @@
 mod app_icon;
+#[cfg(feature = "dev-tools")]
 mod capture;
 mod desktop;
 mod map;
@@ -11,7 +12,7 @@ mod units;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut options = options::Options::parse()?;
     let settings_path = std::path::PathBuf::from(preferences::DEFAULT_PATH);
-    let loaded_settings = if options.capture.is_some() {
+    let loaded_settings = if options.capturing() {
         Ok(preferences::Preferences::default())
     } else {
         preferences::Preferences::load(&settings_path)
@@ -36,17 +37,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             && options.economy.is_none()
             && (options.save.is_file() || std::path::Path::new(&backup).is_file()));
     let mut startup_notice = settings_notice;
-    let mut session = if let Some(name) = &options.scenario {
-        let session = match name.as_str() {
-            "multi-fleet" => game_server::Session::multi_fleet_scenario(options.seed)?,
-            other => return Err(format!("Unknown scenario {other}; available: multi-fleet").into()),
-        };
-        // Written immediately, so the scenario can be reloaded later with --continue.
-        if options.capture.is_none() {
-            session.save(&options.save)?;
-            println!("Saved scenario {name} to {}", options.save.display());
-        }
-        session
+    #[cfg(feature = "dev-tools")]
+    let scenario = options.scenario.clone();
+    #[cfg(not(feature = "dev-tools"))]
+    let scenario: Option<String> = None;
+    let mut session = if let Some(name) = &scenario {
+        dev_scenario(name, &options)?
     } else if should_resume {
         let (session, recovery) = game_server::Session::load(&options.save)?;
         if let Some(message) = recovery {
@@ -55,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         session
     } else {
-        let economy_path = options.economy.or_else(|| {
+        let economy_path = options.economy.clone().or_else(|| {
             std::path::Path::new("config/economy.json")
                 .is_file()
                 .then(|| "config/economy.json".into())
@@ -69,6 +65,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             rules.ship_catalog = game_core::fleet::ShipCatalog::from_json(
                 &std::fs::read_to_string("config/ships.json")?,
             )?;
+        }
+        if std::path::Path::new("config/combat.json").is_file() {
+            rules.combat_catalog = game_core::combat::CombatCatalog::from_json(
+                &std::fs::read_to_string("config/combat.json")?,
+            )?;
+            rules.validate()?;
         }
         if std::path::Path::new("config/planets.json").is_file() {
             rules.planet_catalog = game_core::planet::PlanetCatalog::from_json(
@@ -93,7 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("Unable to start local galaxy session".into());
     };
     let mut map = map::Map::new(systems, session);
-    let persist_settings = if options.capture.is_none() {
+    let persist_settings = if !options.capturing() {
         Some(settings_path)
     } else {
         None
@@ -102,9 +104,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(message) = startup_notice {
         map.notify(message);
     }
+    #[cfg(feature = "dev-tools")]
     if let Some(path) = options.capture {
         map.prepare_capture(&options.capture_view)?;
         return pollster::block_on(capture::save(&mut map, &path));
     }
     desktop::run(map)
+}
+
+/// Build a named test scenario and save it immediately, so `--continue` can reload it.
+#[cfg(feature = "dev-tools")]
+fn dev_scenario(
+    name: &str,
+    options: &options::Options,
+) -> Result<game_server::Session, Box<dyn std::error::Error>> {
+    let session = match name {
+        "multi-fleet" => game_server::Session::multi_fleet_scenario(options.seed)?,
+        other => return Err(format!("Unknown scenario {other}; available: multi-fleet").into()),
+    };
+    if !options.capturing() {
+        session.save(&options.save)?;
+        println!("Saved scenario {name} to {}", options.save.display());
+    }
+    Ok(session)
+}
+
+#[cfg(not(feature = "dev-tools"))]
+fn dev_scenario(
+    _: &str,
+    _: &options::Options,
+) -> Result<game_server::Session, Box<dyn std::error::Error>> {
+    unreachable!("scenarios are parsed only in dev-tools builds")
 }

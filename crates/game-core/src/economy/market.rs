@@ -38,6 +38,13 @@ impl Economy {
                         planet.starting_credits,
                         planet.ship_stock,
                     );
+                    // Local surplus and demand: scale base prices per commodity.
+                    for (good, percent) in market.goods.iter_mut().zip(planet.price_percent) {
+                        good.base_price = Credits(
+                            (u128::from(good.base_price.0) * u128::from(percent) / 100).max(1)
+                                as u64,
+                        );
+                    }
                     // Specialization creates an actual production advantage, independent
                     // of rendering and without increasing initial commodity stock.
                     market.goods[planet.profile.specialization.index()].production = market.goods

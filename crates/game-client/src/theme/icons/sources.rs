@@ -36,6 +36,26 @@ pub const SOURCES: &[(&str, &str)] = &[
         include_str!("../../../../../assets/icons/clock.svg"),
     ),
     (
+        "combat-armor",
+        include_str!("../../../../../assets/icons/combat-armor.svg"),
+    ),
+    (
+        "combat-engine",
+        include_str!("../../../../../assets/icons/combat-engine.svg"),
+    ),
+    (
+        "combat-hull",
+        include_str!("../../../../../assets/icons/combat-hull.svg"),
+    ),
+    (
+        "combat-shield",
+        include_str!("../../../../../assets/icons/combat-shield.svg"),
+    ),
+    (
+        "combat-weapon",
+        include_str!("../../../../../assets/icons/combat-weapon.svg"),
+    ),
+    (
         "confirm",
         include_str!("../../../../../assets/icons/confirm.svg"),
     ),

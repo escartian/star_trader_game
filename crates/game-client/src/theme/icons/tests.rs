@@ -59,6 +59,11 @@ fn all_icons() -> Vec<Icon> {
         Icon::Zoom,
         Icon::Settings,
         Icon::Danger,
+        Icon::Hull,
+        Icon::Shield,
+        Icon::Armor,
+        Icon::Engine,
+        Icon::Weapon,
     ];
     icons.extend(Commodity::ALL.map(Icon::Good));
     icons.extend(

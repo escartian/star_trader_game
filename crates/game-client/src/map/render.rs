@@ -113,6 +113,7 @@ impl Map {
                 )
             }));
             let trade_ready = self.session.trade_ready_ships();
+            let contacts = self.session.contact_fleets();
             for fleet in self.session.fleets() {
                 let Some(ship) = fleet
                     .ships
@@ -139,6 +140,7 @@ impl Map {
                             trade_ready.contains(&ship.id),
                             0.0,
                         ),
+                        contact: contacts.contains(&fleet.id),
                     },
                     &mut reserved,
                 ) {

@@ -12,16 +12,35 @@ Plotting one fleet's course never advances other fleets or markets.
    consumed. You can replace or cancel a course before it departs.
 3. Give every other fleet a course or an explicit **Wait** order. Navigation shows
    each fleet's status and destination; Navigation and the map's fleet cards both
-   offer Wait for fleets that need orders. Clicking **Execute navigation run** with an
-   unassigned fleet selects/highlights it and focuses its map location first.
-4. Once all fleets are ready, **Execute navigation run** advances all assigned
-   fleets in parallel and updates markets once.
+   offer Wait for fleets that need orders. Pressing **Advance** (or the single-run
+   clock button) with an unassigned fleet selects/highlights it and focuses its
+   map location first; nothing advances.
+4. Once all fleets are ready, **Advance** executes navigation runs one after
+   another (see below). Each run advances all assigned fleets in parallel and
+   updates markets once. The clock button beside it executes exactly one run.
 
 A Wait is always issued by the player, never assumed: a fleet that has just
 arrived, was split off or had its course cancelled needs orders again. Once given,
 a Wait lasts across runs until you plot a new course for that fleet, so waiting
 fleets do not need re-confirming every run. Splits, merges and hull sales keep
 the Wait of every fleet that still exists. The save field remains `holds`.
+
+## Advance to next event
+
+**Advance** repeats ordinary navigation runs about three times per second
+(0.35 s apart, so each step shows on the map) and stops after the run in which:
+
+- a contact needs a decision: the fleet is selected and its decision card opens
+  under the run controls;
+- a fleet completes its route and needs orders: the fleet is selected and the
+  map focuses it (intermediate itinerary legs do not stop an advance);
+- no fleet is underway, e.g. every fleet is Waiting, so Advance acts as one run;
+- a run is rejected, or a 64-run safety limit is reached.
+
+**Stop** ends an advance after its latest completed run. Loading or starting a
+session cancels it. Advance never changes the rules: every step is the same
+command as a single run, so the results and saves are identical to pressing the
+clock button repeatedly.
 
 Each run currently advances four internal ticks (`ticks_per_navigation_run` in
 config/movement.json). Course durations retain their distance-based calculations;
@@ -73,7 +92,9 @@ run. Course geometry, membership, counters and encounter references are validate
 
 The authoritative session owns the entire resolution transaction. A stale run
 request rejects without advancing twice. Solo play can execute after its fleets
-are ready. Multiplayer still needs authenticated accounts, readiness collection,
+are ready. Advance is client-side repetition of that single-run command; in
+multiplayer it maps to standing readiness that lapses on the same stop conditions.
+Multiplayer still needs authenticated accounts, readiness collection,
 order visibility and reconnect rules before shared execution can be exposed to
 remote clients; this change does not implement network multiplayer.
 

@@ -1,5 +1,6 @@
 //! Reproducible test scenarios built through ordinary authoritative commands.
-//! The only non-command step is an explicit, documented test budget grant.
+//! The only non-command steps are an explicit, documented test budget grant and
+//! the encounter-chance override that makes contact tests deterministic.
 use super::Session;
 use game_core::{
     BodyId, BodyKind, SystemId,
@@ -62,6 +63,12 @@ impl Session {
         }
         session.state.movement_rules.encounter_chance_percent = chance;
         Ok(session)
+    }
+
+    /// Test hook: the per-run encounter chance in percent (clamped to 100) for
+    /// every later roll, e.g. 0 for uneventful voyages or 100 for a contact.
+    pub fn set_encounter_chance(&mut self, percent: u32) {
+        self.state.movement_rules.encounter_chance_percent = percent.min(100);
     }
 
     fn body(&self, system: SystemId, kind: impl Fn(BodyKind) -> bool) -> Result<BodyId, String> {

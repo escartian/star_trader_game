@@ -188,6 +188,10 @@ impl Map {
             self.candidates.clear();
         }
         let _ = art::Artwork::preload(ctx);
+        // Step an advance before following transitions so the camera tracks this frame's run.
+        if let Some(delay) = self.session.drive_advance(ctx.input(|input| input.time)) {
+            ctx.request_repaint_after(std::time::Duration::from_secs_f64(delay));
+        }
         self.follow_navigation_transitions();
         self.handle_focus_request();
         // The map fills the window; every HUD element floats above it as a card.

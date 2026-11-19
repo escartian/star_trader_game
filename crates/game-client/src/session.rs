@@ -1,4 +1,5 @@
 //! Native session adapter. Course planning is separate from shared navigation runs.
+mod advance;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture;
 mod combat_report;
@@ -21,6 +22,8 @@ use std::collections::VecDeque;
 pub struct LocalSession {
     map_target: Option<map_controls::MapTarget>,
     focus_requested: bool,
+    /// Present while "Advance to next event" is repeating navigation runs.
+    advance: Option<advance::Advance>,
     authority: game_server::Session,
     state: TravelState,
     active_ship: game_core::travel::ShipId,
@@ -48,6 +51,7 @@ impl LocalSession {
         Self {
             map_target: None,
             focus_requested: false,
+            advance: None,
             authority,
             active_ship,
             state,
@@ -234,5 +238,7 @@ impl LocalSession {
     }
 }
 
+#[cfg(test)]
+mod advance_tests;
 #[cfg(test)]
 mod tests;

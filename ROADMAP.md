@@ -17,7 +17,9 @@ commerce, combat, factions and missions define the destination.
   fleets, review readiness, then **Execute navigation run** to advance all fleets
   and economies together. Unassigned fleets are selected/highlighted and require
   a course or explicit Wait, which lasts until replaced by a course. Long
-  journeys span runs; contacts pause individual fleets. This replaces the earlier movement-triggered single-player clock.
+  journeys span runs; contacts pause individual fleets. **Advance** repeats runs
+  until an event needs the player. This replaces the earlier movement-triggered
+  single-player clock.
 - Working design direction: Heroes of Might and Magic meets Star Trader, with
   Civ-style fleet readiness and FTL-style encounters. Multiplayer will add shared
   player readiness around the same discrete, deterministic resolver.
@@ -109,6 +111,8 @@ landing volumes remain open, independently of the following gameplay work.
 - [x] Automatic destination itineraries: safe local approach, system departure,
   entry and body arrival, with saved remaining legs.
 - [x] Persistent standby: an explicit Wait lasts across runs until a new course.
+- [x] Advance to next event: paced repeated runs that stop on contacts, arrivals
+  needing orders, idle fleets or Stop; a clock button keeps single-run stepping.
 - [ ] Manually authored itineraries and movement/encounter balance.
 - [ ] Richer authored contacts, risk factors, inspections, combat and faction outcomes.
 

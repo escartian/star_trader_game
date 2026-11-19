@@ -16,6 +16,12 @@ impl Map {
                 let system = self.systems.first().ok_or("No system to capture")?.clone();
                 self.local = Some(LocalView::new(system));
             }
+            "advance" => {
+                // The first capture frame executes the advance's first run.
+                let system = self.systems.first().ok_or("No system to capture")?.clone();
+                self.session.capture_advance()?;
+                self.local = Some(LocalView::new(system));
+            }
             "run-review" => self.session.capture_run_review(),
             "encounter" => self.session.capture_encounter()?,
             "combat" => self.session.capture_combat()?,
@@ -96,6 +102,7 @@ mod tests {
             "traffic",
             "destination",
             "system",
+            "advance",
             "run-review",
             "navigation",
             "deep-space",

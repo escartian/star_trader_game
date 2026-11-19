@@ -10,7 +10,7 @@
   Cubic bounds default to ±100 ly and ±200,000,000 km. Local travel costs one fuel
   per 100,000,000 km and one tick per 50,000,000 km (ceil, minimum one). Deep-space
   travel/entry costs ceil(distance in ly) fuel/ticks with exact range checks.
-- Plot a course for each fleet or order it to Wait, then Execute navigation run.
+- Plot a course for each fleet or order it to Wait, then press Advance.
   Missing orders highlight/select the fleet first. The shared run advances four
   ticks; fleets progress in parallel and long voyages span multiple runs. Fuel is
   charged once at departure. Plotting, browsing and trading never advance time.
@@ -26,7 +26,8 @@
   consumption run on ticks. Prices respond to stock within bounds, with a spread.
   Bulk orders price each unit; immediate buy/sell reversal cannot make a profit.
 - First delivery: buy food at Sol, exit the system in Navigation, explicitly enter
-  Meridian, then inspect its trade port and plot docking and execute runs until arrival. Sell and refuel. Compare
+  Meridian, then inspect its trade port, plot docking and Advance until arrival.
+  Sell and refuel. Compare
   known markets for return cargo. Fixed-price fuel service costs 2.00 credits/unit
   by default. Earn enough for the cargo upgrade while budgeting for future journeys.
 - Continue restores the exact saved journey, cargo, prices, markets and tick.

@@ -53,6 +53,8 @@ impl LocalSession {
     }
 
     fn replace_authority(&mut self, authority: game_server::Session) {
+        // A loaded or new session must never inherit an advance from the old one.
+        self.advance = None;
         self.navigation = super::navigation::NavigationPanel::default();
         self.authority = authority;
         let message = self.authority.handle(ClientCommand::GetSession);
@@ -132,7 +134,7 @@ impl LocalSession {
                 ui,
                 Icon::Info,
                 CYAN,
-                "Plotting, reading, trading and fleet management take no time.\nExecute navigation run advances fleets and markets together.",
+                "Plotting, reading, trading and fleet management take no time.\nOnly navigation runs (Advance or the clock button) move fleets and markets.",
             );
         });
         ui.separator();

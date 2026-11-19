@@ -56,7 +56,7 @@ impl LocalSession {
                 ui,
                 Icon::Help,
                 CYAN,
-                "1. Select a fleet\n2. Click a destination on the map\n3. Plot course, then Execute the run",
+                "1. Select a fleet\n2. Click a destination on the map\n3. Plot course, then Advance",
             );
         });
         ui.separator();

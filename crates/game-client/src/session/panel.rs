@@ -142,15 +142,7 @@ impl LocalSession {
 
     fn run_ui(&mut self, ui: &mut egui::Ui, target: Option<SystemId>) {
         ui.horizontal(|ui| {
-            let run = self.state.navigation.run.saturating_add(1);
-            if button(ui, Icon::Execute, &format!("EXECUTE RUN {run}"))
-                .on_hover_text(
-                    "Advances every fleet and market together.\nUnassigned fleets need a course or a Wait order.",
-                )
-                .clicked()
-            {
-                self.request_execute_run();
-            }
+            self.run_controls(ui);
             if matches!(self.selected_ship().location, Location::DeepSpace(_))
                 && let Some(system) = target
                 && icon_button(ui, Icon::Enter, "Preview entry into selected system").clicked()

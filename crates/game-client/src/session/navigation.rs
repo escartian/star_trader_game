@@ -121,7 +121,7 @@ impl LocalSession {
                 ui,
                 Icon::Help,
                 CYAN,
-                "Select a fleet and destination on the map, then Plot course.\nRoutes handle local travel, departure and entry.\nExecute the run when every fleet is ready.",
+                "Select a fleet and destination on the map, then Plot course.\nRoutes handle local travel, departure and entry.\nPress Advance once every fleet has a course or a Wait order.",
             );
         });
         let rules = self.state.movement_rules.clone();

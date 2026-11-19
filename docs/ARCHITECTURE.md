@@ -107,7 +107,9 @@ single-player fixture; multiple authenticated accounts are later multiplayer wor
 Production/consumption have closed-form, bounded net changes per tick. Current
 bulk advancement matches individual ticks. Future AI/encounters must preserve
 intermediate event ordering rather than assume all tick systems can be batched.
-Players plot courses and Execute navigation run; plotting alone consumes no ticks.
+Players plot courses and execute navigation runs; plotting alone consumes no ticks.
+The client's Advance control only repeats the single-run command until an event
+needs the player; it adds no authoritative rules.
 
 `game-server/src/save.rs` owns schema-5 authoritative JSON, validation, atomic
 replacement and a previous-good backup. Saves contain the world/player/economy

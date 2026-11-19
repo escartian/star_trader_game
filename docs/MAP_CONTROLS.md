@@ -7,7 +7,7 @@ which member's hold is used for trading/services.
 
 Click a planet, station, moon or asteroid to select a destination. The left-hand
 course card shows the approach, total fuel per ship and minimum navigation runs.
-Choose **PLOT COURSE**, then **Execute navigation run** once all fleets have
+Choose **PLOT COURSE**, then **ADVANCE** once all fleets have
 courses or explicit Wait orders (fleet cards that need orders offer **Wait**).
 Target picking, painting and fleet hit boxes share the same screen positions;
 overlapping body targets still have an explicit chooser.
@@ -62,7 +62,7 @@ edges; static, no brushed lines):
 | Roster | top-left | fleets, status, destination, NPC traffic |
 | View toolbar | top-center | breadcrumb/Depart (system view), camera tools, zoom, guide |
 | Status | top-right | Fleets / Navigation / Market / Session buttons, ship, stats |
-| Run | bottom-left | Execute run, latest event |
+| Run | bottom-left | Advance / Stop, single-run clock button, latest event, contact decision |
 | Selection | bottom-center | selected system or body, destination tiles, traits |
 
 Market, Fleets, Navigation and Session open as centered, movable metal windows.
@@ -78,7 +78,7 @@ no separate landed state.
 | Docked | green `F1 DOCKED`, clamp badge, solid clamp line to a bracketed port | `Docked · Sol port` (green) |
 | In orbit | cyan `F1 ORBIT`, orbit badge, dashed orbit ring around the body | `Orbit · Inner world` (cyan) |
 | Flying | `F1 · n`, thin tether | course / position |
-| Paused by a contact | amber `F1 CONTACT` with contact badge | `Underway`; the decision appears under **Execute run** |
+| Paused by a contact | amber `F1 CONTACT` with contact badge | `Underway`; the decision appears under **Advance** |
 
 A green market badge on the marker, and a **TRADE HERE** button in the
 selection card, appear only when the authoritative economy allows that ship to
@@ -94,7 +94,7 @@ Icons are Blender-authored SVGs (see `assets/README.md`). Values (credits, cargo
 fuel, tick, location), camera tools, trade/refuel/hold actions, commodities and
 planet traits (economy, specialization, biome, danger pips) appear as glyphs,
 with their text kept as hover help and accessible names. Decisions with
-consequences keep short labels: Plot course, Execute run, encounter choices,
+consequences keep short labels: Plot course, Advance/Stop, encounter choices,
 Save/Load, Refuel and Depart. Explanations sit behind ⓘ and ? glyphs. Rocky
 planets use biome-specific art (temperate, arid, frozen). Touch has no hover,
 so icon meaning on mobile still needs a long-press or legend; that is open,

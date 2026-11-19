@@ -51,6 +51,21 @@ impl LocalSession {
         self.request_execute_run();
     }
 
+    /// Plots the selected fleet's route into system 2 and starts advancing along it.
+    pub fn capture_advance(&mut self) -> Result<(), String> {
+        self.command(ClientCommand::PlotDestination {
+            ship: self.active_ship,
+            system: game_core::SystemId(2),
+            body: None,
+            expected_revision: self.state.revision,
+        });
+        if self.state.navigation.orders.is_empty() {
+            return Err(format!("Advance capture could not plot: {}", self.notice));
+        }
+        self.toggle_advance();
+        Ok(())
+    }
+
     pub fn capture_encounter(&mut self) -> Result<(), String> {
         self.command(ClientCommand::Move {
             ship: self.active_ship,

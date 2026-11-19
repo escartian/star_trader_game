@@ -47,17 +47,7 @@ impl LocalSession {
 
     pub fn request_execute_run(&mut self) {
         if let Some(fleet) = self.state.navigation_attention(game_server::LOCAL_PLAYER) {
-            if let Some(ship) = self
-                .state
-                .fleets
-                .iter()
-                .find(|record| record.id == fleet)
-                .and_then(|record| record.ships.first())
-                .copied()
-            {
-                self.select_ship(ship);
-            }
-            self.focus_requested = true;
+            self.focus_fleet(fleet);
             self.navigation.open = true;
             self.navigation.target = None;
             let reason = if self
@@ -184,9 +174,7 @@ impl LocalSession {
             });
         }
         ui.horizontal(|ui| {
-            if icons::button(ui, Icon::Execute, "Execute run").clicked() {
-                self.request_execute_run();
-            }
+            self.run_controls(ui);
             if self.state.navigation.last_combat.is_some()
                 && icons::icon_button(ui, Icon::Weapon, "Open the latest combat report").clicked()
             {

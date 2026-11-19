@@ -30,7 +30,7 @@ Mobile builds and device checks are deferred by user direction.
 - [ ] Close normally and relaunch; autosave resumes without re-rolling prices or adding offline time.
 - [ ] Verify a failed save leaves the window open with actionable recovery text.
 - [ ] Recover a deliberately damaged copied primary from its backup; keep real progress untouched.
-- [ ] Confirm ticks advance only on Execute navigation run; plotting, waiting and trading leave time unchanged.
+- [ ] Confirm ticks advance only through navigation runs (Advance or the clock button); plotting, waiting and trading leave time unchanged.
 - [ ] Select slot 2, save, quit and relaunch; verify remembered slot, active ship, guide and autosave choices.
 
 ## Before expanding scope
@@ -53,10 +53,14 @@ No participants have been contacted and no playtest results are claimed here.
 - [ ] Compare a migrated save's empty new treasuries/yards against the explicit
   configured budgets in a fresh slot. Verify no player assets or station goods reset.
 
-- [ ] Split two fleets, plot only one course and click Execute navigation run.
+- [ ] Split two fleets, plot only one course and click Advance.
   Verify the unassigned fleet is selected/highlighted before anything advances.
 - [ ] Order the other fleet to Wait, execute, and confirm both share one world clock step.
 - [ ] Execute further runs and confirm the waiting fleet is not asked for orders again.
+- [ ] Advance a multi-leg route to another system: ships visibly step each run, the
+  camera follows exit/entry, and the advance stops on arrival with the fleet focused.
+- [ ] Press Stop mid-advance; confirm no further runs execute. Advance into a contact
+  and confirm its decision card is shown under the run controls.
 - [ ] Follow a multi-run voyage and verify fuel is charged once at departure.
 - [ ] Resolve a salvage/distress contact, save/continue, and check that the decision
   and cargo/rescue effects occur once. Verify other fleets progressed independently.

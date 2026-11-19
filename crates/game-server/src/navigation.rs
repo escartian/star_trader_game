@@ -65,11 +65,12 @@ impl Session {
             }
             ClientCommand::ResolveEncounter {
                 encounter, choice, ..
-            } => vec![
-                candidate
-                    .state
-                    .resolve_encounter(player, encounter, choice)?,
-            ],
+            } => vec![candidate.state.resolve_encounter(
+                player,
+                encounter,
+                choice,
+                &self.economy.rules,
+            )?],
             ClientCommand::ExecuteNavigationRun { .. } => {
                 let events = candidate
                     .state

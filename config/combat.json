@@ -2,7 +2,7 @@
   "schema_version": 1,
   "weapons": [
     {"id":"photon_singularity_beam","name":"Photon Singularity Beam","damage":14,"shots":1,"accuracy_percent":90,"shield_efficiency_percent":120,"armor_penetration":3,"description":"Collapsed-light lance; accurate heavy damage that cuts shields and armor alike."},
-    {"id":"quantum_entanglement_torpedo","name":"Quantum Entanglement Torpedo","damage":30,"shots":1,"accuracy_percent":65,"shield_efficiency_percent":50,"armor_penetration":8,"description":"Slow phased warhead; often misses, but slips past shields and punches through armor."},
+    {"id":"quantum_entanglement_torpedo","name":"Quantum Entanglement Torpedo","damage":30,"shots":1,"accuracy_percent":65,"shield_efficiency_percent":50,"armor_penetration":8,"description":"Slow phased warhead; often misses and shields blunt it, but it punches through armor."},
     {"id":"neutron_beam","name":"Neutron Beam","damage":7,"shots":2,"accuracy_percent":85,"shield_efficiency_percent":100,"armor_penetration":2,"description":"Reliable general-purpose beam fitted to civilian hulls."},
     {"id":"graviton_pulse","name":"Graviton Pulse","damage":5,"shots":3,"accuracy_percent":92,"shield_efficiency_percent":150,"armor_penetration":0,"description":"Rapid gravity waves; strong against shields, weak against armor."},
     {"id":"magnetic_resonance_disruptor","name":"Magnetic Resonance Disruptor","damage":4,"shots":2,"accuracy_percent":90,"shield_efficiency_percent":250,"armor_penetration":0,"description":"Shield breaker; little hull damage. Later slices may add system disruption."}

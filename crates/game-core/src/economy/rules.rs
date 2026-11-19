@@ -20,6 +20,9 @@ pub struct EconomyRules {
     pub npc_starting_credits: Credits,
     pub cargo_capacity: u32,
     pub fuel_unit_price: Credits,
+    /// Price per hull point repaired at a market (credits in cents).
+    #[serde(default = "default_repair_price")]
+    pub repair_point_price: Credits,
     pub hold_upgrade_price: Credits,
     pub hold_upgrade_capacity: u32,
     pub commodity_order: [Commodity; 6],
@@ -40,6 +43,9 @@ pub struct EconomyRules {
 
 fn default_npc_credits() -> Credits {
     Credits(200_000)
+}
+fn default_repair_price() -> Credits {
+    Credits(500)
 }
 fn default_resale_percent() -> u32 {
     60
@@ -99,6 +105,8 @@ impl EconomyRules {
             || self.starting_credits.0 > 1_000_000_000_000
             || self.fuel_unit_price.0 == 0
             || self.fuel_unit_price.0 > 1_000_000_000
+            || self.repair_point_price.0 == 0
+            || self.repair_point_price.0 > 1_000_000_000
             || self.hold_upgrade_price.0 == 0
             || self.hold_upgrade_price.0 > 1_000_000_000_000
         {

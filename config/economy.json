@@ -3,6 +3,7 @@
   "starting_credits": 100000,
   "cargo_capacity": 20,
   "fuel_unit_price": 200,
+  "repair_point_price": 500,
   "hold_upgrade_price": 150000,
   "hold_upgrade_capacity": 20,
   "commodity_order": [

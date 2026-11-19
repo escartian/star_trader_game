@@ -22,6 +22,10 @@ impl Session {
             | ClientCommand::UpgradeHold {
                 ship,
                 expected_revision,
+            }
+            | ClientCommand::RepairShip {
+                ship,
+                expected_revision,
             } => (ship, expected_revision),
             _ => unreachable!("only commerce commands reach this handler"),
         };
@@ -58,6 +62,10 @@ impl Session {
             ClientCommand::UpgradeHold { .. } => {
                 economy.upgrade_hold(state.ship_mut(ship)?)?;
                 SessionEvent::HoldUpgraded
+            }
+            ClientCommand::RepairShip { .. } => {
+                let cost = economy.repair(state.ship_mut(ship)?)?;
+                SessionEvent::Repaired { ship, cost }
             }
             _ => unreachable!("command was validated above"),
         };

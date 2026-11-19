@@ -1,7 +1,7 @@
 use super::{Encounter, EncounterChoice, EncounterKind, NavigationError, NavigationEvent};
 use crate::{
     StarSystem,
-    economy::Commodity,
+    economy::{Commodity, EconomyRules},
     fleet::{FleetError, FleetMovementError},
     travel::{Location, PlayerId, TravelError, TravelState},
 };
@@ -85,15 +85,23 @@ impl TravelState {
                     .next_encounter_id
                     .checked_add(1)
                     .ok_or(TravelError::TimeOverflow)?;
+                let kind = if (roll >> 40).is_multiple_of(3) {
+                    EncounterKind::Raiders
+                } else if (roll >> 32) & 1 == 0 {
+                    EncounterKind::DebrisField
+                } else {
+                    EncounterKind::DistressSignal
+                };
+                let hostiles = match kind {
+                    EncounterKind::Raiders => self.raider_group(order.plan.fleet)?,
+                    _ => Vec::new(),
+                };
                 let encounter = Encounter {
                     id: self.navigation.next_encounter_id,
                     fleet: order.plan.fleet,
-                    kind: if (roll >> 32) & 1 == 0 {
-                        EncounterKind::DebrisField
-                    } else {
-                        EncounterKind::DistressSignal
-                    },
+                    kind,
                     run,
+                    hostiles,
                 };
                 self.navigation.next_encounter_id = next;
                 self.navigation.encounters.push(encounter.clone());
@@ -144,6 +152,7 @@ impl TravelState {
         player: PlayerId,
         encounter_id: u64,
         choice: EncounterChoice,
+        rules: &EconomyRules,
     ) -> Result<NavigationEvent, FleetMovementError> {
         let encounter = self
             .navigation
@@ -166,6 +175,10 @@ impl TravelState {
             .checked_add(1)
             .ok_or(TravelError::TimeOverflow)?;
         let outcome = match (encounter.kind, choice) {
+            (EncounterKind::Raiders, EncounterChoice::Fight | EncounterChoice::Evade) => {
+                self.resolve_raiders(&encounter, &fleet, choice, rules)?
+            }
+            (EncounterKind::Raiders, _) => return Err(NavigationError::InvalidChoice.into()),
             (_, EncounterChoice::Bypass) => "Contact bypassed; course can resume.".to_owned(),
             (EncounterKind::DebrisField, EncounterChoice::Investigate) => {
                 let id = fleet

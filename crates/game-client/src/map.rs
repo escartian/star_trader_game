@@ -205,6 +205,7 @@ impl Map {
         self.session.show_fleets(ctx, &self.session_systems);
         self.session.show_session_controls(ctx);
         self.session.show_navigation(ctx, &self.session_systems);
+        self.session.show_combat_report(ctx);
     }
 
     fn handle_focus_request(&mut self) {

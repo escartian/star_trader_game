@@ -129,6 +129,7 @@ pub enum EconomyError {
     StockFull,
     FuelFull,
     AlreadyUpgraded,
+    NoDamage,
     ArithmeticOverflow,
 }
 
@@ -148,6 +149,7 @@ impl std::fmt::Display for EconomyError {
             Self::StockFull => "The market cannot store that much cargo.",
             Self::FuelFull => "That amount would exceed the fuel tank capacity.",
             Self::AlreadyUpgraded => "The cargo hold is already upgraded.",
+            Self::NoDamage => "This ship has no hull damage to repair.",
             Self::ArithmeticOverflow => {
                 "The transaction exceeds supported quantity or credit limits."
             }

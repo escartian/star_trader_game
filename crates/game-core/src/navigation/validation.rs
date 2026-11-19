@@ -107,12 +107,23 @@ impl TravelState {
                 || !encounter_fleets.insert(encounter.fleet)
                 || encounter.run == 0
                 || encounter.run > self.navigation.run
+                || (encounter.kind == super::EncounterKind::Raiders)
+                    != !encounter.hostiles.is_empty()
+                || encounter.hostiles.len() > super::hostile::MAX_RAIDERS
                 || !self
                     .navigation
                     .order(encounter.fleet)
                     .is_some_and(|order| order.started)
             {
                 return Err("Invalid fleet encounter".into());
+            }
+        }
+        if let Some(report) = &self.navigation.last_combat {
+            report.validate()?;
+            if report.encounter >= self.navigation.next_encounter_id
+                || report.run > self.navigation.run
+            {
+                return Err("Combat report refers to a future encounter".into());
             }
         }
         Ok(())

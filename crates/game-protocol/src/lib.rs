@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 9;
+pub const PROTOCOL_VERSION: u32 = 10;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -87,6 +87,11 @@ pub enum ClientCommand {
         ship: ShipId,
         expected_revision: u64,
     },
+    /// Restore all lost hull points at the ship's current market.
+    RepairShip {
+        ship: ShipId,
+        expected_revision: u64,
+    },
     ExecuteNavigationRun {
         expected_revision: u64,
     },
@@ -140,6 +145,10 @@ pub enum SessionEvent {
         units: u32,
     },
     HoldUpgraded,
+    Repaired {
+        ship: ShipId,
+        cost: game_core::economy::Credits,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

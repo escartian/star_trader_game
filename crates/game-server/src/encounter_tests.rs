@@ -61,6 +61,7 @@ fn encounter_rolls_and_choices_survive_reload_without_duplicate_rewards() {
         let choice = match encounter.kind {
             EncounterKind::DebrisField => EncounterChoice::Investigate,
             EncounterKind::DistressSignal => EncounterChoice::Bypass,
+            EncounterKind::Raiders => EncounterChoice::Fight,
         };
         let revision = restored.state.revision;
         succeed(
@@ -110,8 +111,8 @@ fn distress_assistance_requires_cargo_and_records_one_rescue() {
     // Find a deterministic seed whose first encounter is a distress signal.
     for seed in 0..100 {
         session.state.navigation.rng_state = seed;
-        let mut probe = session.state.navigation.clone();
-        if (probe.rolls() >> 32) & 1 == 1 {
+        let roll = session.state.navigation.clone().rolls();
+        if (roll >> 32) & 1 == 1 && !(roll >> 40).is_multiple_of(3) {
             break;
         }
     }

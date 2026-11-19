@@ -1,6 +1,7 @@
 //! Native session adapter. Course planning is separate from shared navigation runs.
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture;
+mod combat_report;
 mod fleets;
 pub use fleets::TradeOption;
 mod guide;
@@ -27,6 +28,7 @@ pub struct LocalSession {
     market: market::MarketPanel,
     navigation: navigation::NavigationPanel,
     fleet_panel: fleets::FleetPanel,
+    combat_report: combat_report::CombatReportPanel,
     saves: saves::SavePanel,
     log: VecDeque<String>,
     loaded_galaxy: Option<Vec<game_core::StarSystem>>,
@@ -42,6 +44,7 @@ impl LocalSession {
             unreachable!("a fresh local session must return its own snapshot")
         };
         let active_ship = state.ships[0].id;
+        let combat_report = combat_report::CombatReportPanel::seen(&state);
         Self {
             map_target: None,
             focus_requested: false,
@@ -52,6 +55,7 @@ impl LocalSession {
             market: market::MarketPanel::default(),
             navigation: navigation::NavigationPanel::default(),
             fleet_panel: fleets::FleetPanel::default(),
+            combat_report,
             saves: saves::SavePanel::default(),
             log: VecDeque::new(),
             loaded_galaxy: None,
@@ -214,6 +218,9 @@ impl LocalSession {
                             quote.total
                         ),
                         SessionEvent::Refuelled { units } => format!("Purchased {units} fuel."),
+                        SessionEvent::Repaired { ship, cost } => {
+                            format!("Repaired ship {} for {cost} cr.", ship.0)
+                        }
                         SessionEvent::HoldUpgraded => {
                             "Cargo hold upgraded. First earnings goal completed!".into()
                         }

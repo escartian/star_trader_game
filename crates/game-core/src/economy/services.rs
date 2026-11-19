@@ -61,4 +61,37 @@ impl Economy {
         ship.upgraded = true;
         Ok(())
     }
+
+    /// Cost to restore every lost hull point at the current market.
+    pub fn repair_quote(&self, ship: &Ship) -> Result<Credits, EconomyError> {
+        self.current_market(ship)?;
+        if ship.hull_damage == 0 {
+            return Err(EconomyError::NoDamage);
+        }
+        u64::from(ship.hull_damage)
+            .checked_mul(self.rules.repair_point_price.0)
+            .map(Credits)
+            .ok_or(EconomyError::ArithmeticOverflow)
+    }
+
+    /// Full hull repair; the market treasury receives the payment.
+    pub fn repair(&mut self, ship: &mut Ship) -> Result<Credits, EconomyError> {
+        let cost = self.repair_quote(ship)?;
+        let id = self.current_market(ship)?.id;
+        let credits = self
+            .credits
+            .0
+            .checked_sub(cost.0)
+            .ok_or(EconomyError::InsufficientCredits)?;
+        let market_credits = self
+            .market(id)?
+            .credits
+            .0
+            .checked_add(cost.0)
+            .ok_or(EconomyError::ArithmeticOverflow)?;
+        self.market_mut(id)?.credits = Credits(market_credits);
+        self.credits = Credits(credits);
+        ship.hull_damage = 0;
+        Ok(cost)
+    }
 }

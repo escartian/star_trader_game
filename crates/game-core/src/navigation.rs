@@ -1,6 +1,8 @@
 //! Plot fleet courses, then advance all fleets through one shared navigation run.
+mod hostile;
 mod orders;
 mod position;
+pub use hostile::evade_chance_percent;
 pub use position::space_position;
 mod resolution;
 mod validation;
@@ -25,12 +27,15 @@ pub struct NavigationOrder {
 pub enum EncounterKind {
     DebrisField,
     DistressSignal,
+    /// Hostile raiders; resolved by fighting or attempting to evade.
+    Raiders,
 }
 impl EncounterKind {
     pub fn label(self) -> &'static str {
         match self {
             Self::DebrisField => "Salvage contact",
             Self::DistressSignal => "Distress signal",
+            Self::Raiders => "Raider contact",
         }
     }
 }
@@ -40,6 +45,10 @@ pub enum EncounterChoice {
     Investigate,
     Assist,
     Bypass,
+    /// Raiders only: resolve a full engagement.
+    Fight,
+    /// Raiders only: one engine-based escape roll; failure forces a fight.
+    Evade,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -49,6 +58,9 @@ pub struct Encounter {
     pub fleet: FleetId,
     pub kind: EncounterKind,
     pub run: u64,
+    /// Hostile hulls for `Raiders`; empty for every other kind.
+    #[serde(default)]
+    pub hostiles: Vec<crate::fleet::ShipKind>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -61,6 +73,9 @@ pub struct NavigationState {
     pub rng_state: u64,
     pub next_encounter_id: u64,
     pub rescues: u64,
+    /// The most recent engagement, kept readable across saves.
+    #[serde(default)]
+    pub last_combat: Option<Box<crate::combat::CombatReport>>,
 }
 impl Default for NavigationState {
     fn default() -> Self {
@@ -72,6 +87,7 @@ impl Default for NavigationState {
             rng_state: 0,
             next_encounter_id: 1,
             rescues: 0,
+            last_combat: None,
         }
     }
 }

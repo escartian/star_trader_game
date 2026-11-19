@@ -1,4 +1,8 @@
-"""Original ship models and transparent map sprites; Blender is authoring-only."""
+"""Original freighter and patrol models and transparent map sprites.
+
+Blender is authoring-only. The scout sprite comes from the AI courier model instead
+(tools/art/clean_ai_courier.py), so it is not built here.
+"""
 from pathlib import Path
 import sys
 import bpy
@@ -31,11 +35,10 @@ def build(kind):
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
     titanium = material("Titanium hull", (0.32, 0.43, 0.53), 0.6)
-    blue = material("Blue panels", (0.035, 0.24, 0.45), 0.45)
     orange = material("Cargo pods", (0.88, 0.32, 0.06), 0.35)
     canopy = material("Canopy", (0.025, 0.16, 0.21), 0.8)
     glow = material("Engine blue", (0.08, 0.6, 1), emission=3)
-    hull(kind, blue if kind == "scout" else titanium)
+    hull(kind, titanium)
     box("Cockpit", (0, 0.65, 0.48), (0.48, 1.0, 0.2), canopy)
     for side in [-1, 1]:
         box("Engine housing", (side * 0.65, -1.35, 0.1), (0.5, 1.1, 0.5), titanium)
@@ -43,9 +46,6 @@ def build(kind):
         if kind == "freighter":
             for index in range(3):
                 box("Freight container", (side * 1.05, index * 0.8 - 1, 0.05), (0.65, 0.7, 0.6), orange)
-        elif kind == "scout":
-            box("Swept wing", (side * 1.0, -0.25, -0.05), (1.6, 0.65, 0.13), blue, side * 0.5)
-            box("Sensor boom", (side * 0.45, 1.6, 0), (0.1, 1.0, 0.1), titanium)
         else:
             box("Armored wing", (side * 1.0, -0.2, 0), (1.1, 1.3, 0.3), titanium, side * 0.3)
             box("Forward hardpoint", (side * 1.1, 0.9, 0.1), (0.15, 1.3, 0.15), orange)
@@ -74,5 +74,5 @@ def build(kind):
 
 
 if __name__ == "__main__":
-    for kind in ["freighter", "scout", "patrol"]:
+    for kind in ["freighter", "patrol"]:
         build(kind)

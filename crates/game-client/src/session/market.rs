@@ -190,6 +190,20 @@ impl LocalSession {
                 &format!("+{}", self.economy.rules.hold_upgrade_capacity),
                 &tip,
             );
+            ui.separator();
+            let (blocked, tip) = match self.economy.repair_quote(&ship) {
+                Ok(cost) => (
+                    None,
+                    format!("Repair {} hull points for {cost} cr", ship.hull_damage),
+                ),
+                Err(error) => (Some(error.to_string()), "Repair hull".to_string()),
+            };
+            if icons::action(ui, Icon::Hull, &tip, blocked).clicked() {
+                action = Some(ClientCommand::RepairShip {
+                    ship: ship.id,
+                    expected_revision: self.state.revision,
+                });
+            }
         });
         self.known_prices(ui, systems);
         if !self.notice.is_empty() {

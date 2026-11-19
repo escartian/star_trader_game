@@ -115,14 +115,7 @@ impl LocalSession {
                     });
                 }
             }
-            let encounters = self.state.navigation.encounters.clone();
-            for encounter in encounters {
-                self.command(ClientCommand::ResolveEncounter {
-                    encounter: encounter.id,
-                    choice: game_core::navigation::EncounterChoice::Bypass,
-                    expected_revision: self.state.revision,
-                });
-            }
+            self.capture_resolve_contacts();
             self.command(ClientCommand::ExecuteNavigationRun {
                 expected_revision: self.state.revision,
             });
@@ -142,5 +135,64 @@ impl LocalSession {
             }
             self.request_execute_run();
         }
+    }
+}
+
+impl LocalSession {
+    /// Fight raiders and bypass every other contact so capture courses continue.
+    fn capture_resolve_contacts(&mut self) {
+        use game_core::navigation::{EncounterChoice, EncounterKind};
+        for encounter in self.state.navigation.encounters.clone() {
+            let choice = match encounter.kind {
+                EncounterKind::Raiders => EncounterChoice::Fight,
+                _ => EncounterChoice::Bypass,
+            };
+            self.command(ClientCommand::ResolveEncounter {
+                encounter: encounter.id,
+                choice,
+                expected_revision: self.state.revision,
+            });
+        }
+    }
+
+    /// Shuttle between two bodies until the first raider fight, then show its report.
+    pub fn capture_combat(&mut self) -> Result<(), String> {
+        for leg in 0..400_u64 {
+            if self.state.navigation.last_combat.is_some() {
+                self.combat_report.open = true;
+                return Ok(());
+            }
+            let fleet = self
+                .state
+                .fleet_for_ship(self.active_ship)
+                .map_err(|e| e.to_string())?
+                .id;
+            if self.state.navigation.order(fleet).is_none() {
+                let ship = self.selected_ship();
+                let missing = ship.fuel_capacity - ship.fuel;
+                if missing > 0 && self.economy.current_market(ship).is_ok() {
+                    self.command(ClientCommand::Refuel {
+                        ship: self.active_ship,
+                        units: missing,
+                        expected_revision: self.state.revision,
+                    });
+                }
+                self.command(ClientCommand::PlotDestination {
+                    ship: self.active_ship,
+                    system: game_core::SystemId(1),
+                    // Station (3) and inner world (1) both have markets for fuel.
+                    body: Some(game_core::BodyId(if leg % 2 == 0 { 1 } else { 3 })),
+                    expected_revision: self.state.revision,
+                });
+            }
+            self.capture_resolve_contacts();
+            self.command(ClientCommand::ExecuteNavigationRun {
+                expected_revision: self.state.revision,
+            });
+        }
+        Err(format!(
+            "No raider contact within 400 runs: {}",
+            self.notice
+        ))
     }
 }

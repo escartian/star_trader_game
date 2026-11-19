@@ -44,17 +44,17 @@ other fleets continue. Resolve outstanding contacts before executing the next ru
 - **Salvage contact:** recover one ore if any member has room, or bypass the field.
 - **Distress signal:** spend one medicine from this fleet to assist and record a
   rescue, or bypass the contact. The rescue counter persists across saves.
+- **Raider contact** (one roll in three): **Fight** or try to **Evade**; raiders
+  cannot be bypassed. See [combat](COMBAT.md) for the group, odds and outcomes.
 
-The initial contacts establish the encounter/choice/save lifecycle. They do not
-include combat, NPC trade, reputation rewards or branching authored story chains
-yet. Piracy, inspections, damage, equipment checks and richer outcomes remain
-roadmap work built on this lifecycle.
+NPC trade, reputation rewards, inspections and branching authored story chains
+remain roadmap work built on this lifecycle.
 
 Random state is seeded and saved. Rolls use stable fleet-ID order, not the order
 in which you plotted courses. Reloading the same planning state and executing the
 same run produces the same contacts. Resolving a contact cannot duplicate rewards
 through retries or reloads. Salvage explicitly creates the recovered ore; rescue
-assistance consumes medicine. No credits are granted by these initial contacts.
+assistance consumes medicine; raider wrecks yield ore. No contact grants credits yet.
 
 ## Saves and multiplayer
 

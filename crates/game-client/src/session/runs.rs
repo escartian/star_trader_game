@@ -8,7 +8,7 @@ use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{
     StarSystem,
     economy::Commodity,
-    navigation::{EncounterChoice, EncounterKind, NavigationEvent},
+    navigation::{EncounterChoice, EncounterKind, NavigationEvent, evade_chance_percent},
 };
 use game_protocol::ClientCommand;
 
@@ -179,9 +179,16 @@ impl LocalSession {
                 }
             });
         }
-        if icons::button(ui, Icon::Execute, "Execute run").clicked() {
-            self.request_execute_run();
-        }
+        ui.horizontal(|ui| {
+            if icons::button(ui, Icon::Execute, "Execute run").clicked() {
+                self.request_execute_run();
+            }
+            if self.state.navigation.last_combat.is_some()
+                && icons::icon_button(ui, Icon::Weapon, "Open the latest combat report").clicked()
+            {
+                self.open_combat_report();
+            }
+        });
         if let Some(command) = action {
             self.command(command);
         }
@@ -236,6 +243,10 @@ impl LocalSession {
                 icons::glyph(ui, Icon::Contact, AMBER, "Contact");
                 ui.strong(encounter.kind.label());
             });
+            if encounter.kind == EncounterKind::Raiders {
+                self.raider_ui(ui, &fleet, &encounter);
+                return;
+            }
             let mut choice = None;
             let carries = |test: &dyn Fn(&game_core::travel::Ship) -> bool| {
                 fleet
@@ -260,6 +271,7 @@ impl LocalSession {
                     (!carries(&|ship| ship.cargo[Commodity::Medicine.index()] > 0))
                         .then(|| "No medicine aboard this fleet.".to_string()),
                 ),
+                EncounterKind::Raiders => unreachable!("handled by raider_ui"),
             };
             ui.label(text);
             ui.horizontal(|ui| {
@@ -272,5 +284,45 @@ impl LocalSession {
             });
             if let Some(choice) = choice { self.command(ClientCommand::ResolveEncounter { encounter: encounter.id, choice, expected_revision: self.state.revision }); }
         });
+    }
+
+    fn raider_ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        fleet: &game_core::fleet::Fleet,
+        encounter: &game_core::navigation::Encounter,
+    ) {
+        let catalog = &self.economy.rules.ship_catalog;
+        let engine = |kind| catalog.spec(kind).map_or(1, |spec| spec.combat.engine);
+        let slowest = fleet
+            .ships
+            .iter()
+            .filter_map(|id| self.state.ship(*id).ok())
+            .map(|ship| engine(ship.kind))
+            .min()
+            .unwrap_or(1);
+        let fastest = encounter.hostiles.iter().map(|kind| engine(*kind)).max();
+        let chance = evade_chance_percent(slowest, fastest.unwrap_or(1));
+        let names: Vec<_> = encounter.hostiles.iter().map(|kind| kind.label()).collect();
+        ui.label(format!(
+            "Hostile raiders close in: {}. Fight them, or try to outrun them; a failed escape forces the fight.",
+            names.join(", ")
+        ));
+        let mut choice = None;
+        ui.horizontal(|ui| {
+            if icons::button(ui, Icon::Weapon, "Fight").clicked() {
+                choice = Some(EncounterChoice::Fight);
+            }
+            if icons::button(ui, Icon::Engine, &format!("Evade {chance}%")).clicked() {
+                choice = Some(EncounterChoice::Evade);
+            }
+        });
+        if let Some(choice) = choice {
+            self.command(ClientCommand::ResolveEncounter {
+                encounter: encounter.id,
+                choice,
+                expected_revision: self.state.revision,
+            });
+        }
     }
 }

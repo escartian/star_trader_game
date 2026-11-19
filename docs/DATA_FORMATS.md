@@ -31,7 +31,7 @@ Each `data/slot-N.json` stores:
 
 - `systems`: stable IDs, star/body kinds, planet profiles and galaxy/local positions.
 - `player`: tick/revision, movement rules, navigation state (run, courses, Holds,
-  encounters, RNG, rescues), ships (IDs, owner, class, individual cargo/hold/fuel/range,
+  encounters with raider `hostiles`, RNG, rescues, `last_combat` report), ships (IDs, owner, class, individual cargo/hold/fuel/range,
   `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters.
 - `economy`: shared player credits, current markets and exact session rules,
   including ship/planet/combat catalogs. Each market records a composite system/body ID,
@@ -101,7 +101,8 @@ capacity still comes from the economy definition. Ships record `hull_damage`
 It ships the original five: Photon Singularity Beam, Quantum Entanglement
 Torpedo, Neutron Beam, Graviton Pulse and Magnetic Resonance Disruptor. New games
 load the project file when present; saves preserve the active catalog. See
-[combat](COMBAT.md) for intended resolution rules.
+[combat](COMBAT.md) for resolution rules. Economy `repair_point_price`
+(hundredths per hull point, default 500) prices market repairs.
 
 ## Movement definition (schema 1)
 
@@ -138,6 +139,9 @@ balances/inventory and positions intact, with empty navigation orders and a save
 initial random state. Older versions chain through their previous migrations.
 Loading never executes a run. Course geometry/durations, paid fuel, fleet references,
 Holds, encounter IDs and counter bounds are checked before replacing a session.
+Schema 6 also accepts additive `hostiles` (required exactly on raider contacts, at
+most 3) and an optional `last_combat` report whose damage, indices and encounter
+reference must be consistent.
 Movement settings add `ticks_per_navigation_run` (default 4, 1–100) and
 `encounter_chance_percent` (default 12, 0–100), with defaults for older definitions.
 

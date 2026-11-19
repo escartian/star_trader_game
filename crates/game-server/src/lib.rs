@@ -120,7 +120,8 @@ impl Session {
             }
             command @ (ClientCommand::Trade { .. }
             | ClientCommand::Refuel { .. }
-            | ClientCommand::UpgradeHold { .. }) => self.commerce(player, command),
+            | ClientCommand::UpgradeHold { .. }
+            | ClientCommand::RepairShip { .. }) => self.commerce(player, command),
         }
     }
 
@@ -168,6 +169,8 @@ mod movement_tests;
 #[cfg(test)]
 mod planet_tests;
 
+#[cfg(test)]
+mod combat_tests;
 #[cfg(test)]
 mod encounter_tests;
 #[cfg(test)]

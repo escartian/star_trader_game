@@ -61,12 +61,11 @@ resolves identity from the connection and checks all ownership, location, funds
 and capacity rules. Request IDs support safe retry; state revisions expose stale
 quotes. Persistence and transport errors must not leave partial transactions.
 
-## Migration from the original
+## Relationship to the original
 
-The project owner is escartian, author of the original repository. Preserve its
-fleet, planetary economy, combat, faction and mission direction; reuse source or
-assets where appropriate. The README parity review is in REWRITE_PARITY.md.
-Port rules into the core rather than transplanting web handlers or TTL caches.
+The project owner is escartian, author of the original repository. Source or
+assets may be reused where they fit, but rules belong in the core rather than
+transplanted web handlers or TTL caches.
 Keep galaxy light-years and local kilometers distinct, with cubic boundaries.
 Original web-save import is separate, still unimplemented work.
 

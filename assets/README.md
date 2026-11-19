@@ -96,13 +96,17 @@ under `~/Library/Application Support/StarTrader`.
 
 ## Ship hulls
 
-`source/freighter.blend`, `source/scout.blend` and `source/patrol.blend` are
-original editable models. `sprites/` contains their transparent 256px exports.
-Rebuild using Blender in background mode:
+`source/freighter.blend` and `source/patrol.blend` are original editable models.
+`sprites/` contains their transparent 256px exports. Rebuild using Blender in
+background mode:
 
 ```sh
 /Applications/Blender.app/Contents/MacOS/Blender --background --python tools/art/build_ships.py
 ```
 
-Freighters have cargo pods, scouts swept wings and patrol ships hardpoints.
+Freighters have cargo pods and patrol ships hardpoints. The scout uses the AI
+courier: `source/ai-courier.blend` is a vertex-colored model generated locally
+from a concept image with ComfyUI/TRELLIS.2, then remeshed and decimated.
+`tools/art/clean_ai_courier.py` rebuilds it and renders `sprites/scout.png` with
+the same camera and lights; `tools/comfyui/README.md` covers the full pipeline.
 These are static ship illustrations; combat equipment is not implemented yet.

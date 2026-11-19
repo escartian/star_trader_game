@@ -1,10 +1,8 @@
 # Native Rust implementation roadmap
 
 This is escartian's rewrite of their own [Star Trader game](https://github.com/escartian/star_trader_game#star-trader-game).
-The original README was reviewed on 2026-11-05. Its fleet management, planetary
-commerce, combat, factions and mission ambitions define the destination. The
-current trading loop is an implementation foundation, not the entire game.
-See [rewrite parity](docs/REWRITE_PARITY.md) for original claims versus current evidence.
+The rewrite now exceeds the original's feature set. Fleet management, planetary
+commerce, combat, factions and missions define the destination.
 
 ## Decisions carried forward
 
@@ -65,7 +63,7 @@ acceptance is separate; see [platform status](docs/PLATFORM_STATUS.md).
 **Acceptance:** split, move independently, rendezvous and merge; preserve each
 ship's cargo, fuel and identity through save/load. These flows have behavior tests.
 Planet/station shipyards have finite inventory and treasury-funded sales. Patrol
-hulls have no combat yet; customization and used-hull loadouts remain later work.
+hulls fight raiders (milestone 4); customization and used-hull loadouts remain later work.
 
 ## 3. Restore the original movement and planetary world model — in progress
 
@@ -130,8 +128,8 @@ campaign advance action; the interface does not call it End Turn.
 See [map controls](docs/MAP_CONTROLS.md). Physical mouse/window/DPI acceptance
 remains separate from GPU captures and egui input regression tests.
 
-**Next:** a deterministic fleet-combat resolver and readable combat report, built
-on the new hull/weapon data ([combat](docs/COMBAT.md)). Engagements are not yet resolved.
+**Next:** explicit hostility/engagement rules for NPC and faction fleets, mid-fight
+retreat and combat balance from playtests ([combat](docs/COMBAT.md)).
 
 ## 4. NPC traders and fleet combat
 
@@ -146,19 +144,24 @@ Combat is the original README's first prioritized expansion.
 - [x] Carry forward Photon Singularity Beam, Quantum Entanglement Torpedo, Neutron
   Beam, Graviton Pulse and Magnetic Resonance Disruptor as balanceable JSON content
   (`config/combat.json`).
-- [ ] Authoritative fleet encounters/combat, target selection, damage/destruction,
-  retreat, salvage/rewards and saved results; readable native combat report.
-- [ ] Deterministic seeded resolution and explicit hostility/engagement rules.
+- [x] Authoritative raider encounters: Fight/Evade, focus-fire targeting,
+  damage/destruction, salvage, saved results and a readable native combat report.
+- [x] Deterministic seeded resolution (seed saved in the report), round limit and
+  disengagement; last-ship rule; paid hull repairs at markets.
+- [ ] Explicit hostility/engagement rules for NPC/faction fleets, mid-fight retreat,
+  player target selection and credit bounties.
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
-cargo and rewards remain consistent. NPC actions will resolve at navigation-run boundaries.
+cargo and rewards remain consistent. Raider fights meet this with behavior and
+save tests. NPC actions will resolve at navigation-run boundaries.
 
 ## 5. Factions and ship management
 
 - [ ] Federation, Empire, Republic and Alliance with influence and relationships.
 - [ ] Influence affects NPC fleets, territory and trade access/opportunities.
 - [ ] Reputation, law/inspections, wanted status and police response.
-- [ ] Repairs, maintenance, detailed ship statistics, equipment and customization.
+- [ ] Repairs (full hull repair at markets exists), maintenance, detailed ship
+  statistics, equipment and customization.
 - [ ] Fleet summaries and batch management that remain readable as ownership grows.
 
 **Acceptance:** allegiance, equipment and damage affect actionable decisions;

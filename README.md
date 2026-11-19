@@ -18,13 +18,16 @@ through a readable native map. No game engine, browser, webview or JavaScript.
   danger/specialization, stock-sensitive prices and refuelling,
   known-market comparisons and a purchasable cargo-hold upgrade.
 - Fleet course planning, readiness highlighting, Hold orders, parallel navigation
-  runs and individual salvage/distress encounters.
+  runs and individual salvage, distress and raider encounters.
+- Deterministic fleet combat against raiders, with a saved combat report,
+  destroyed ships, salvage and paid hull repairs.
 - Seeded starts, a first-delivery guide, session logs and
   three JSON save slots with validation, atomic replacement and backup recovery.
 
 Owned ships support buying/selling, individual holds, fleet split/merge, renaming
 and cargo transfers.
-Multiplayer, discovery, combat and contracts are not implemented.
+Multiplayer, discovery, factions and contracts are not implemented. Combat is
+limited to raider contacts.
 Mobile build work is deferred at the user's request. Desktop interaction, pacing
 and device lifecycle still need manual/playtest evidence; see [platform status](docs/PLATFORM_STATUS.md).
 
@@ -97,7 +100,8 @@ reject. Mining and landing physics remain unimplemented.
 **Plot course** never advances time or spends fuel. Give each fleet a course or
 **Hold position**, then **Execute navigation run** to advance all fleets and markets
 together. Missing orders select/highlight the fleet first. Each travelling fleet
-can encounter salvage or a distress signal; resolve contacts in Navigation.
+can encounter salvage, a distress signal or raiders; resolve contacts in Navigation.
+Fights open a combat report; repair damaged hulls in the Market window.
 Random state and choices persist. See [navigation runs](docs/NAVIGATION_RUNS.md).
 
 The game is turn based internally, with navigation runs as the campaign language.
@@ -188,10 +192,9 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [local approach](docs/previews/approach.png), [ship near planet](docs/previews/orbit.png),
 [planet market](docs/previews/planet-market.png), [planet shipyard](docs/previews/planet-shipyard.png),
 [run review](docs/previews/run-review.png), [map command](docs/previews/destination.png),
-[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`). Captures do not test window
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`. Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).
-The [parity review](docs/REWRITE_PARITY.md) and [roadmap](ROADMAP.md) carry its
-fleet, planetary commerce, combat, faction and mission scope forward. Original
-web-save import remains unimplemented.
+The [roadmap](ROADMAP.md) tracks fleet, planetary commerce, combat, faction and
+mission work. Original web-save import remains unimplemented.

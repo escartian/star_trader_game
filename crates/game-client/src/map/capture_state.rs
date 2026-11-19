@@ -18,6 +18,7 @@ impl Map {
             }
             "run-review" => self.session.capture_run_review(),
             "encounter" => self.session.capture_encounter()?,
+            "combat" => self.session.capture_combat()?,
             "navigation" => self.session.request_movement(MoveTarget::Body {
                 system: SystemId(1),
                 body: BodyId(1),
@@ -113,6 +114,9 @@ mod tests {
                 .unwrap_or_else(|error| panic!("{view}: {error}"));
         }
         map(2).prepare_capture("encounter").unwrap();
+        let mut combat = map(1);
+        combat.prepare_capture("combat").unwrap();
+        assert!(combat.session.combat_report_open());
         assert!(map(1).prepare_capture("nonsense").is_err());
     }
 }

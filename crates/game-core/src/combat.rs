@@ -1,6 +1,11 @@
 //! Data-driven combat definitions: weapons and per-hull combat profiles.
 //! Units are abstract game points: hull/shield/armor "points", engine is a 1–10
-//! rating used for evasion and initiative. No combat is resolved here yet.
+//! rating used for evasion and initiative. Engagements resolve in `engagement`.
+pub mod engagement;
+pub mod report;
+mod rng;
+pub use engagement::{CombatantSetup, Side};
+pub use report::{CombatOutcome, CombatReport};
 use serde::{Deserialize, Serialize};
 
 /// Physical size class; later rules may restrict loadouts or targeting by size.
@@ -22,10 +27,10 @@ impl HullSize {
     }
 }
 
-/// One weapon definition. Intended resolution (next slice): each of `shots`
-/// rolls against `accuracy_percent` (reduced by target evasion); a hit deals
-/// `damage` to shields scaled by `shield_efficiency_percent`, and any remainder
-/// reaches the hull after armor, which `armor_penetration` partly ignores.
+/// One weapon definition. Each of `shots` rolls against `accuracy_percent`
+/// (reduced by target evasion); a hit deals `damage` to shields scaled by
+/// `shield_efficiency_percent`, and any remainder reaches the hull after armor,
+/// which `armor_penetration` partly ignores. See `engagement` for exact rules.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct WeaponSpec {
@@ -130,6 +135,8 @@ impl CombatProfile {
     }
 }
 
+#[cfg(test)]
+mod engagement_tests;
 #[cfg(test)]
 mod tests {
     use super::*;

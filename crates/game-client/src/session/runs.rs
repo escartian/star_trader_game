@@ -20,7 +20,10 @@ pub(super) fn event_label(event: NavigationEvent) -> String {
         ),
         NavigationEvent::CourseCancelled(fleet) => format!("Cancelled Fleet {}'s course.", fleet.0),
         NavigationEvent::Holding(fleet) => {
-            format!("Fleet {} will hold position for this run.", fleet.0)
+            format!(
+                "Fleet {} will wait here until you give it a new course.",
+                fleet.0
+            )
         }
         NavigationEvent::Arrived(plan) => {
             format!("Fleet {} arrived: {}.", plan.fleet.0, plan.mode.label())
@@ -66,7 +69,7 @@ impl LocalSession {
             {
                 "Resolve this fleet's encounter first."
             } else {
-                "This fleet needs a course or an explicit Hold position order."
+                "This fleet needs a course or an explicit Wait order."
             };
             self.record(reason.into());
             return;
@@ -125,7 +128,7 @@ impl LocalSession {
                     };
                     (state, GREEN, format!("{runs}"))
                 } else if held {
-                    (Icon::Hold, CYAN, String::new())
+                    (Icon::Hold, CYAN, "Waiting".to_string())
                 } else if fleet.ships.iter().any(|id| {
                     self.state
                         .ship(*id)
@@ -138,10 +141,10 @@ impl LocalSession {
                 let tip = match icon {
                     Icon::Underway if order.is_some() => "Underway • runs remaining",
                     Icon::Plot => "Course plotted • runs remaining",
-                    Icon::Hold => "Holding this run",
+                    Icon::Hold => "Waiting until you plot a new course",
                     Icon::Underway => "Saved journey underway",
                     Icon::Contact => "Encounter needs a decision",
-                    _ => "Plot a course or Hold position",
+                    _ => "Plot a course or order this fleet to Wait",
                 };
                 stat(ui, icon, color, &status, tip);
                 if let Some(order) = &order {
@@ -161,7 +164,8 @@ impl LocalSession {
                     && self.state.fleet_position(fleet.id, fleet.owner).is_ok()
                 {
                     if !held
-                        && icons::icon_button(ui, Icon::Hold, "Hold position this run").clicked()
+                        && icons::icon_button(ui, Icon::Hold, "Wait here until new orders")
+                            .clicked()
                     {
                         action = Some(ClientCommand::HoldFleet {
                             fleet: fleet.id,

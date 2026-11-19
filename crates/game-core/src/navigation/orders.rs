@@ -132,6 +132,15 @@ impl TravelState {
         Ok(())
     }
 
+    /// Drops Wait orders whose fleet no longer exists (sold, merged away). Wait
+    /// orders on surviving fleets are untouched: only the player replaces them.
+    pub fn prune_holds(&mut self) {
+        let fleets = &self.fleets;
+        self.navigation
+            .holds
+            .retain(|id| fleets.iter().any(|fleet| fleet.id == *id));
+    }
+
     pub fn cancel_course(
         &mut self,
         player: PlayerId,

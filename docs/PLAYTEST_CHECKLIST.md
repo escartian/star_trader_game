@@ -55,7 +55,8 @@ No participants have been contacted and no playtest results are claimed here.
 
 - [ ] Split two fleets, plot only one course and click Execute navigation run.
   Verify the unassigned fleet is selected/highlighted before anything advances.
-- [ ] Hold the other fleet, execute, and confirm both share one world clock step.
+- [ ] Order the other fleet to Wait, execute, and confirm both share one world clock step.
+- [ ] Execute further runs and confirm the waiting fleet is not asked for orders again.
 - [ ] Follow a multi-run voyage and verify fuel is charged once at departure.
 - [ ] Resolve a salvage/distress contact, save/continue, and check that the decision
   and cargo/rescue effects occur once. Verify other fleets progressed independently.

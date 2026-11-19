@@ -115,7 +115,8 @@ impl Session {
             _ => unreachable!("command was checked above"),
         };
         if structural {
-            candidate.state.navigation.holds.clear();
+            // Fleets created by a split start without orders; surviving fleets keep theirs.
+            candidate.state.prune_holds();
         }
         candidate.state.revision = revision;
         *self = candidate;

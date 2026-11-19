@@ -71,7 +71,7 @@ uses saved definitions. New Session in the GUI preserves the current definitions
 Client commands contain a ship, target and expected revision. The host rebuilds
 the plan from authoritative world coordinates and validates all fleet members.
 Both in-process and authenticated session adapters use the same command rules.
-A solo run requires a course or Hold for each fleet and resolved contacts. Future
+A solo run requires a course or Wait order for each fleet and resolved contacts. Future
 multiplayer adapters must collect all players' readiness before shared resolution;
 networking and multiplayer readiness are not implemented by this change.
 

@@ -95,7 +95,7 @@ impl TravelState {
                     .find(|record| record.id == *fleet)
                     .is_none_or(|record| self.fleet_position(*fleet, record.owner).is_err())
             {
-                return Err("Invalid Hold position order".into());
+                return Err("Invalid Wait order".into());
             }
         }
         let mut encounters = HashSet::new();

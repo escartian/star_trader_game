@@ -10,7 +10,7 @@
   Cubic bounds default to ±100 ly and ±200,000,000 km. Local travel costs one fuel
   per 100,000,000 km and one tick per 50,000,000 km (ceil, minimum one). Deep-space
   travel/entry costs ceil(distance in ly) fuel/ticks with exact range checks.
-- Plot a course for each fleet or issue Hold position, then Execute navigation run.
+- Plot a course for each fleet or order it to Wait, then Execute navigation run.
   Missing orders highlight/select the fleet first. The shared run advances four
   ticks; fleets progress in parallel and long voyages span multiple runs. Fuel is
   charged once at departure. Plotting, browsing and trading never advance time.

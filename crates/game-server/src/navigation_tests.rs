@@ -113,8 +113,18 @@ fn two_fleets_plot_independently_and_advance_on_one_shared_run() {
     assert_eq!(session.snapshot(Vec::new()), before);
 }
 
+fn wait(session: &mut Session, fleet: FleetId) {
+    succeed(
+        session,
+        ClientCommand::HoldFleet {
+            fleet,
+            expected_revision: session.state.revision,
+        },
+    );
+}
+
 #[test]
-fn unassigned_fleets_require_explicit_holds_and_holds_expire_after_a_run() {
+fn unassigned_fleets_need_an_explicit_wait_that_lasts_until_a_new_course() {
     let mut session = two_fleets();
     plot(&mut session, ShipId(1), body(1));
     let before = session.snapshot(Vec::new());
@@ -125,25 +135,85 @@ fn unassigned_fleets_require_explicit_holds_and_holds_expire_after_a_run() {
         ServerMessage::CommandRejected(NavigationError::NeedsOrders(FleetId(2)).into())
     );
     assert_eq!(session.snapshot(Vec::new()), before);
-    let revision = session.state.revision;
-    succeed(
-        &mut session,
-        ClientCommand::HoldFleet {
-            fleet: FleetId(2),
-            expected_revision: revision,
-        },
-    );
+    wait(&mut session, FleetId(2));
     run(&mut session);
     assert_eq!(
         session.state.ships[1].location,
         Location::Docked(SystemId(1))
     );
     assert_eq!(session.state.ships[1].fuel, 50);
-    assert!(session.state.navigation.holds.is_empty());
+    // Fleet 1 arrived and has no orders, so it needs attention; Fleet 2's Wait stands.
+    assert_eq!(session.state.navigation.holds, [FleetId(2)]);
     assert_eq!(
         session.state.navigation_attention(LOCAL_PLAYER),
         Some(FleetId(1))
     );
+    wait(&mut session, FleetId(1));
+    run(&mut session);
+    run(&mut session);
+    assert_eq!(session.state.navigation.run, 3);
+    plot(&mut session, ShipId(2), body(4));
+    assert_eq!(session.state.navigation.holds, [FleetId(1)]);
+    run(&mut session);
+    // After arriving, Fleet 2 needs a deliberate new order rather than waiting by default.
+    assert_eq!(
+        session.state.navigation_attention(LOCAL_PLAYER),
+        Some(FleetId(2))
+    );
+}
+
+#[test]
+fn fleet_changes_keep_waits_only_for_fleets_that_still_exist() {
+    let mut session = two_fleets();
+    wait(&mut session, FleetId(1));
+    wait(&mut session, FleetId(2));
+    let revision = session.state.revision;
+    succeed(
+        &mut session,
+        ClientCommand::BuyShip {
+            ship: ShipId(1),
+            kind: ShipKind::Scout,
+            expected_revision: revision,
+        },
+    );
+    let revision = session.state.revision;
+    succeed(
+        &mut session,
+        ClientCommand::SplitFleet {
+            fleet: FleetId(1),
+            ships: vec![ShipId(3)],
+            expected_revision: revision,
+        },
+    );
+    // The split-off fleet starts without orders; the others keep their Waits.
+    assert_eq!(session.state.navigation.holds, [FleetId(1), FleetId(2)]);
+    assert_eq!(
+        session.state.navigation_attention(LOCAL_PLAYER),
+        Some(FleetId(3))
+    );
+    wait(&mut session, FleetId(3));
+    let revision = session.state.revision;
+    succeed(
+        &mut session,
+        ClientCommand::SellShip {
+            ship: ShipId(3),
+            expected_revision: revision,
+        },
+    );
+    assert_eq!(session.state.navigation.holds, [FleetId(1), FleetId(2)]);
+    let revision = session.state.revision;
+    succeed(
+        &mut session,
+        ClientCommand::MergeFleets {
+            source: FleetId(2),
+            target: FleetId(1),
+            expected_revision: revision,
+        },
+    );
+    assert_eq!(session.state.navigation.holds, [FleetId(1)]);
+    session.state.validate_navigation(&session.systems).unwrap();
+    run(&mut session);
+    assert_eq!(session.state.navigation.holds, [FleetId(1)]);
 }
 
 #[test]

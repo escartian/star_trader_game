@@ -74,7 +74,7 @@ impl TravelState {
         // One shared clock advance, regardless of fleet count or course length.
         self.advance(ticks)?;
         self.navigation.run = run;
-        self.navigation.holds.clear();
+        // Wait orders deliberately survive the run; only a new course replaces one.
         let mut events = Vec::new();
         self.navigation.orders.clear();
         for mut order in orders {

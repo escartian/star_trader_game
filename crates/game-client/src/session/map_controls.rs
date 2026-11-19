@@ -83,7 +83,7 @@ impl LocalSession {
                     (Icon::Plot, "READY")
                 }
             } else if self.state.navigation.holds.contains(&fleet.id) {
-                (Icon::Hold, "HOLDING")
+                (Icon::Hold, "WAITING")
             } else {
                 (Icon::Warning, "NEEDS ORDERS")
             };
@@ -138,6 +138,17 @@ impl LocalSession {
                 });
                 if matches!(status_icon, Icon::Warning | Icon::Contact) {
                     ui.colored_label(AMBER, egui::RichText::new(status).small());
+                }
+                if status_icon == Icon::Warning
+                    && self.state.fleet_position(fleet.id, fleet.owner).is_ok()
+                    && icons::button(ui, Icon::Hold, "Wait")
+                        .on_hover_text("Keep this fleet here until you plot a new course")
+                        .clicked()
+                {
+                    self.command(ClientCommand::HoldFleet {
+                        fleet: fleet.id,
+                        expected_revision: self.state.revision,
+                    });
                 }
                 if let Some(order) = self.state.navigation.order(fleet.id) {
                     let target = order.remaining_waypoints.last().unwrap_or(&order.target);

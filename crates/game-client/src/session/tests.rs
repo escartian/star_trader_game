@@ -221,7 +221,7 @@ fn executing_a_run_selects_and_highlights_a_fleet_without_orders_first() {
     assert_eq!(host.selected_ship().id, ShipId(2));
     assert!(host.take_focus_request());
     assert!(host.navigation.open);
-    assert!(host.notice.contains("Hold position"));
+    assert!(host.notice.contains("Wait order"));
     host.command(ClientCommand::HoldFleet {
         fleet: FleetId(2),
         expected_revision: host.state.revision,

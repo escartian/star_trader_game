@@ -17,7 +17,7 @@ through a readable native map. No game engine, browser, webview or JavaScript.
 - Per-planet and station markets with finite funds/hull stock, planet economy/biome/
   danger/specialization, stock-sensitive prices and refuelling,
   known-market comparisons and a purchasable cargo-hold upgrade.
-- Fleet course planning, readiness highlighting, Hold orders, parallel navigation
+- Fleet course planning, readiness highlighting, persistent Wait orders, parallel navigation
   runs and individual salvage, distress and raider encounters.
 - Deterministic fleet combat against raiders, with a saved combat report,
   destroyed ships, salvage and paid hull repairs.
@@ -98,8 +98,8 @@ outer/inner views. Safe local approaches route around the star; raw unsafe route
 reject. Mining and landing physics remain unimplemented.
 
 **Plot course** never advances time or spends fuel. Give each fleet a course or
-**Hold position**, then **Execute navigation run** to advance all fleets and markets
-together. Missing orders select/highlight the fleet first. Each travelling fleet
+a **Wait** order (it lasts until you plot a new course), then **Execute navigation
+run** to advance all fleets and markets together. Missing orders select/highlight the fleet first. Each travelling fleet
 can encounter salvage, a distress signal or raiders; resolve contacts in Navigation.
 Fights open a combat report; repair damaged hulls in the Market window.
 Random state and choices persist. See [navigation runs](docs/NAVIGATION_RUNS.md).

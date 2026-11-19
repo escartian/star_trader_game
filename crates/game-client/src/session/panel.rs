@@ -145,7 +145,7 @@ impl LocalSession {
             let run = self.state.navigation.run.saturating_add(1);
             if button(ui, Icon::Execute, &format!("EXECUTE RUN {run}"))
                 .on_hover_text(
-                    "Advances every fleet and market together.\nUnassigned fleets must plot a course or Hold position.",
+                    "Advances every fleet and market together.\nUnassigned fleets need a course or a Wait order.",
                 )
                 .clicked()
             {

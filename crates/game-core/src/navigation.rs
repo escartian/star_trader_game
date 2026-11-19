@@ -68,6 +68,9 @@ pub struct Encounter {
 pub struct NavigationState {
     pub run: u64,
     pub orders: Vec<NavigationOrder>,
+    /// Explicit Wait orders (shown as "Wait" in the client). A Wait is always
+    /// player-issued and lasts across runs until the fleet receives a course or
+    /// stops existing. A fleet never has both a Wait and a course.
     pub holds: Vec<FleetId>,
     pub encounters: Vec<Encounter>,
     pub rng_state: u64,
@@ -132,7 +135,7 @@ impl std::fmt::Display for NavigationError {
         match self {
             Self::NeedsOrders(fleet) => write!(
                 f,
-                "Fleet {} needs a course or Hold position before executing this navigation run.",
+                "Fleet {} needs a course or a Wait order before executing this navigation run.",
                 fleet.0
             ),
             Self::EncounterPending(fleet) => write!(

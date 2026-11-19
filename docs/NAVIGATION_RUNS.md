@@ -10,11 +10,18 @@ Plotting one fleet's course never advances other fleets or markets.
 1. Select a fleet and preview a local/body, exit, deep-space or entry course.
 2. Choose **Plot course**. The fleet stays put; no fuel, ticks or random rolls are
    consumed. You can replace or cancel a course before it departs.
-3. Give every other fleet a course or **Hold position**. Navigation shows each
-   fleet's status and destination. Clicking **Execute navigation run** with an
+3. Give every other fleet a course or an explicit **Wait** order. Navigation shows
+   each fleet's status and destination; Navigation and the map's fleet cards both
+   offer Wait for fleets that need orders. Clicking **Execute navigation run** with an
    unassigned fleet selects/highlights it and focuses its map location first.
 4. Once all fleets are ready, **Execute navigation run** advances all assigned
-   fleets in parallel and updates markets once. Holds expire after this run.
+   fleets in parallel and updates markets once.
+
+A Wait is always issued by the player, never assumed: a fleet that has just
+arrived, was split off or had its course cancelled needs orders again. Once given,
+a Wait lasts across runs until you plot a new course for that fleet, so waiting
+fleets do not need re-confirming every run. Splits, merges and hull sales keep
+the Wait of every fleet that still exists. The save field remains `holds`.
 
 Each run currently advances four internal ticks (`ticks_per_navigation_run` in
 config/movement.json). Course durations retain their distance-based calculations;
@@ -27,7 +34,7 @@ include safe waypoints, departure, entry and local arrival legs; all are preview
 for fuel/range before plotting. Underway fleets cannot trade,
 refuel, split/merge, buy/sell hulls or cancel/replot. Queued courses must be cancelled
 before changing fleet membership. Trading/loading/naming/encounter choices do not
-advance the clock. Holding all fleets is a valid deliberate waiting run.
+advance the clock. Ordering every fleet to Wait is a valid deliberate waiting run.
 
 Local-system displays and waypoint inputs use AU; authoritative positions remain
 integer kilometers. Galaxy coordinates are displayed in light-years. Rendering
@@ -36,7 +43,7 @@ Existing paid voyages from older saves progress on navigation runs too.
 
 ## Encounters
 
-Each travelling fleet gets its own encounter roll per run. Holding fleets do not
+Each travelling fleet gets its own encounter roll per run. Waiting fleets do not
 roll. The default probability is 12%, configurable through
 `encounter_chance_percent`. A contact pauses that fleet's progress for the run;
 other fleets continue. Resolve outstanding contacts before executing the next run.
@@ -58,7 +65,7 @@ assistance consumes medicine; raider wrecks yield ore. No contact grants credits
 
 ## Saves and multiplayer
 
-Save schema 5 stores run number, queued/active courses, Holds, encounters, rescue
+Save schema 5 stores run number, queued/active courses, Wait orders, encounters, rescue
 count and random-generator state. Schemas 1–4 migrate without moving ships or
 resetting balances. Schema-4 market money/inventory is preserved; older planetary
 migrations retain their documented empty new accounts. Loading never executes a

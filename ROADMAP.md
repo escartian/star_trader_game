@@ -16,8 +16,8 @@ commerce, combat, factions and missions define the destination.
 - All campaign play uses explicit **navigation runs**. Plot courses for multiple
   fleets, review readiness, then **Execute navigation run** to advance all fleets
   and economies together. Unassigned fleets are selected/highlighted and require
-  a course or explicit Hold. Long journeys span runs; contacts pause individual
-  fleets. This replaces the earlier movement-triggered single-player clock.
+  a course or explicit Wait, which lasts until replaced by a course. Long
+  journeys span runs; contacts pause individual fleets. This replaces the earlier movement-triggered single-player clock.
 - Working design direction: Heroes of Might and Magic meets Star Trader, with
   Civ-style fleet readiness and FTL-style encounters. Multiplayer will add shared
   player readiness around the same discrete, deterministic resolver.
@@ -101,14 +101,15 @@ landing volumes remain open, independently of the following gameplay work.
 ## 3a. Navigation runs and encounters — implemented foundation
 
 - [x] Plot/replace/cancel one course per fleet without advancing time or charging fuel.
-- [x] Fleet readiness review, selection/map focus and explicit Hold for unassigned fleets.
+- [x] Fleet readiness review, selection/map focus and explicit Wait for unassigned fleets.
 - [x] Shared atomic run resolution, parallel voyage progress and one fuel charge.
 - [x] Per-fleet encounter chance, salvage/distress choices and persisted random state.
 - [x] Schema 5: queued/active courses, holds, contacts, run/rescue counters and RNG.
 - [x] Reject stale execution/reward retries and inconsistent saved orders.
 - [x] Automatic destination itineraries: safe local approach, system departure,
   entry and body arrival, with saved remaining legs.
-- [ ] Persistent standby, manually authored itineraries and movement/encounter balance.
+- [x] Persistent standby: an explicit Wait lasts across runs until a new course.
+- [ ] Manually authored itineraries and movement/encounter balance.
 - [ ] Richer authored contacts, risk factors, inspections, combat and faction outcomes.
 
 See [navigation runs](docs/NAVIGATION_RUNS.md). The run itself is the visible

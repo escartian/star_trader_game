@@ -8,8 +8,9 @@ which member's hold is used for trading/services.
 Click a planet, station, moon or asteroid to select a destination. The left-hand
 course card shows the approach, total fuel per ship and minimum navigation runs.
 Choose **PLOT COURSE**, then **Execute navigation run** once all fleets have
-courses or explicit Holds. Target picking, painting and fleet hit boxes share the
-same screen positions; overlapping body targets still have an explicit chooser.
+courses or explicit Wait orders (fleet cards that need orders offer **Wait**).
+Target picking, painting and fleet hit boxes share the same screen positions;
+overlapping body targets still have an explicit chooser.
 
 A destination in another system builds departure, entry and arrival legs for you.
 Double-clicking a system opens its inner view for inspection; choose a body there
@@ -26,7 +27,7 @@ Coordinate tools remain under **Navigation → Advanced coordinates (optional)**
   opens the destination's inner view. Arrival and transit framing keep the star,
   destinations and selected fleet together instead of centering on the entry point.
 - Breadcrumbs, INNER SYSTEM / OUTER GALAXY labels and fleet cards distinguish the
-  inspected view from the fleet's authoritative location. Holds do not move the camera.
+  inspected view from the fleet's authoritative location. Wait orders do not move the camera.
 
 Local labels and input units are AU; galaxy distances are light-years. Rendering
 retains symbolic body/fleet sizes and schematic moon spacing. Fleet symbols are

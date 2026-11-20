@@ -181,8 +181,11 @@ Combat is the original README's first prioritized expansion.
 - [x] Raider bounties by hull, paid once per battle for destroyed raiders.
 - [x] NPC traders meet raiders off-screen (auto-resolved tactical battles):
   fought off, escaped by dumping cargo, or destroyed and refitted at home.
-- [ ] Hostility rules for faction fleets, persistent raider fleets that roam and
-  pursue across runs, and player interactions with NPC traders (piracy, hails).
+- [x] Roaming raider bands: one per system but home, hunting exposed fleets
+  (docked or landed fleets are safe), patrolling dangerous planets, striking
+  with their real ships, backing off after fights and returning when wiped out.
+- [ ] Hostility rules for faction fleets, bands that cross systems or hunt NPC
+  traders, and player interactions with NPC traders (piracy, hails).
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
 cargo and rewards remain consistent. Raider fights meet this with behavior and

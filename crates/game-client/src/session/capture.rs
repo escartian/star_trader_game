@@ -123,6 +123,38 @@ impl LocalSession {
     }
 
     /// Capture fixtures execute ordinary commands in a fresh, unsaved session.
+    /// Flies into Meridian until its raider band hunts the fleet (or strikes).
+    pub fn capture_hunted(&mut self) -> Result<(), String> {
+        self.command(ClientCommand::PlotDestination {
+            ship: self.active_ship,
+            system: game_core::SystemId(2),
+            body: Some(game_core::BodyId(2)),
+            expected_revision: self.state.revision,
+        });
+        for _ in 0..40 {
+            let hunted = self
+                .state
+                .navigation
+                .bands
+                .iter()
+                .any(|band| band.hunting.is_some());
+            let struck = self
+                .state
+                .navigation
+                .encounters
+                .iter()
+                .any(|contact| contact.band.is_some());
+            if hunted || struck {
+                return Ok(());
+            }
+            self.capture_resolve_contacts();
+            self.command(ClientCommand::ExecuteNavigationRun {
+                expected_revision: self.state.revision,
+            });
+        }
+        Err(format!("No band hunted the fleet: {}", self.notice))
+    }
+
     /// Lands the active fleet, orders it to wait and executes `runs` runs.
     pub fn capture_landing(&mut self, runs: usize) -> Result<(), String> {
         let fleet = self

@@ -148,6 +148,7 @@ impl LocalView {
             }
         }
         let reserved_labels = label_bounds;
+        self.draw_bands(&painter, rect);
         self.draw_fleets(
             &painter,
             rect,

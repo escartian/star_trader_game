@@ -49,6 +49,7 @@ impl Session {
         state.ships[0].cargo_capacity = economy.rules.cargo_capacity;
         state.ships[0].base_cargo_capacity = economy.rules.cargo_capacity;
         economy.spawn_traders(&systems, &state.movement_rules);
+        state.spawn_raider_bands(&systems);
         Ok(Self {
             systems,
             economy,
@@ -182,6 +183,8 @@ mod movement_tests;
 #[cfg(test)]
 mod planet_tests;
 
+#[cfg(test)]
+mod band_tests;
 #[cfg(test)]
 mod battle_tests;
 #[cfg(test)]

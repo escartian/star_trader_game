@@ -139,6 +139,11 @@ impl TravelState {
         let exists = |id: FleetId| fleets.iter().any(|fleet| fleet.id == id);
         self.navigation.holds.retain(|id| exists(*id));
         self.navigation.routes.retain(|route| exists(route.fleet));
+        for band in &mut self.navigation.bands {
+            if band.hunting.is_some_and(|fleet| !exists(fleet)) {
+                band.hunting = None;
+            }
+        }
     }
 
     pub fn cancel_course(

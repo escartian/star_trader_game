@@ -36,7 +36,7 @@ fn snapshots_and_previews_do_not_mutate_authority_or_advance_time() {
             ServerMessage::MovementPreview(_)
         ));
     }
-    assert_eq!(state(&mut session), TravelState::default());
+    assert_eq!(state(&mut session), Session::default().state);
 }
 
 #[test]

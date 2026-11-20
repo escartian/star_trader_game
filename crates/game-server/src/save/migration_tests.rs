@@ -10,7 +10,11 @@ fn legacy_save_migrates_cargo_and_active_journey_without_resetting_time_or_money
     session.state.ships[0].cargo[0] = 7;
     crate::test_support::legacy_depart(&mut session);
     session.advance(4);
-    let expected = session.state.clone();
+    let mut expected = session.state.clone();
+    // Navigation state starts fresh on migration: legacy saves have no raider bands.
+    expected.navigation.bands.clear();
+    expected.navigation.next_band_id = 1;
+    expected.navigation.band_rng = 0;
     let mut value: serde_json::Value =
         serde_json::from_str(&session.export_json().unwrap()).unwrap();
     make_legacy_markets(&mut value);

@@ -118,6 +118,13 @@ mined per ship per run on moons and asteroids). Older definitions without the
 last two load with defaults. Ship locations add `Landed { system, body }`, which
 must name a rocky planet, moon or asteroid.
 
+Navigation adds roaming raider `bands` (id, system, local `position` and
+`heading`, `ships`, optional `hunting` fleet, `cooldown` runs), `band_respawns`
+(system and due run), `next_band_id` and the bands' own `band_rng`; all are
+omitted or defaulted when absent. A raider contact may name the `band` that
+struck; such a contact may target a waiting fleet, and its hostiles must match
+the band's ships.
+
 Bodies may carry an `orbit`: `period_ticks`, `epoch` (km offset at tick 0 from
 what they circle) and an optional `parent` body for moons (one level only).
 Saved `position` is recomputed from the orbit for the saved tick on load. Bodies

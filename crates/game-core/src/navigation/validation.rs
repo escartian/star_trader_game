@@ -131,14 +131,12 @@ impl TravelState {
                 || (encounter.kind == super::EncounterKind::Raiders)
                     != !encounter.hostiles.is_empty()
                 || encounter.hostiles.len() > super::hostile::MAX_SAVED_RAIDERS
-                || !self
-                    .navigation
-                    .order(encounter.fleet)
-                    .is_some_and(|order| order.started)
+                || !self.encounter_source_valid(encounter)
             {
                 return Err("Invalid fleet encounter".into());
             }
         }
+        self.validate_bands(systems)?;
         if let Some(report) = &self.navigation.last_combat {
             report.validate()?;
             if report.encounter >= self.navigation.next_encounter_id
@@ -146,6 +144,62 @@ impl TravelState {
             {
                 return Err("Combat report refers to a future encounter".into());
             }
+        }
+        Ok(())
+    }
+
+    /// A random contact pauses a fleet under way; a band's strike may also
+    /// catch a waiting fleet, but its band must still exist in that system.
+    fn encounter_source_valid(&self, encounter: &super::Encounter) -> bool {
+        match encounter.band {
+            None => self
+                .navigation
+                .order(encounter.fleet)
+                .is_some_and(|order| order.started),
+            Some(band) => {
+                encounter.kind == super::EncounterKind::Raiders
+                    && self
+                        .navigation
+                        .bands
+                        .iter()
+                        .any(|known| known.id == band && known.ships == encounter.hostiles)
+            }
+        }
+    }
+
+    fn validate_bands(&self, systems: &[StarSystem]) -> Result<(), String> {
+        let navigation = &self.navigation;
+        let half = self.movement_rules.system_half_extent_km;
+        let inside = |position: crate::LocalPosition| {
+            [position.x_km, position.y_km, position.z_km]
+                .iter()
+                .all(|value| value.abs() <= half)
+        };
+        let known_system = |id| systems.iter().any(|system| system.id == id);
+        let mut ids = HashSet::new();
+        for band in &navigation.bands {
+            if band.id == 0
+                || band.id >= navigation.next_band_id
+                || !ids.insert(band.id)
+                || !known_system(band.system)
+                || !inside(band.position)
+                || !inside(band.heading)
+                || band.ships.is_empty()
+                || band.ships.len() > super::hostile::MAX_SAVED_RAIDERS
+                || band.cooldown > super::raiders::COOLDOWN_RUNS
+                || band
+                    .hunting
+                    .is_some_and(|fleet| !self.fleets.iter().any(|known| known.id == fleet))
+            {
+                return Err("Invalid raider band".into());
+            }
+        }
+        if navigation.band_respawns.iter().any(|(system, at)| {
+            !known_system(*system)
+                || *at > navigation.run.saturating_add(super::raiders::RESPAWN_RUNS)
+        }) || navigation.bands.len() + navigation.band_respawns.len() > systems.len()
+        {
+            return Err("Invalid raider band respawn".into());
         }
         Ok(())
     }

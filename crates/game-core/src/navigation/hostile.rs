@@ -73,6 +73,9 @@ impl TravelState {
                 self.navigation
                     .encounters
                     .retain(|record| record.id != encounter.id);
+                if let Some(band) = encounter.band {
+                    self.band_after_contact(band, &[]);
+                }
                 return Ok(NavigationEvent::EncounterResolved {
                     fleet: fleet.id,
                     outcome: format!("Evaded the raiders ({chance}% chance)."),

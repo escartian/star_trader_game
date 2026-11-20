@@ -87,6 +87,16 @@ impl Map {
                 view.focus_ship(self.session.selected_ship());
                 self.local = Some(view);
             }
+            "raiders" => {
+                self.session.capture_hunted()?;
+                let system = self
+                    .session_systems
+                    .iter()
+                    .find(|system| system.id == game_core::SystemId(2))
+                    .ok_or("Meridian is missing")?
+                    .clone();
+                self.local = Some(LocalView::new(system));
+            }
             "market" => self.session.open_market(),
             "fleets" => self.session.open_fleets(),
             "saves" => self.session.open_saves(),
@@ -127,6 +137,7 @@ mod tests {
             "approach",
             "orbit",
             "landed",
+            "raiders",
             "planet-market",
             "planet-shipyard",
             "market",

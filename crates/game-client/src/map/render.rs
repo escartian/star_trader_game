@@ -160,6 +160,25 @@ impl Map {
                     Vec2::splat(54.0),
                 )
             }));
+            // A red diamond beside each system that holds a raider band.
+            for band in self.session.raider_bands() {
+                let Some(system) = self.systems.iter().find(|known| known.id == band.system) else {
+                    continue;
+                };
+                let at = self.camera.project(position(system), rect) + Vec2::new(15.0, -15.0);
+                let red = crate::battle::scene::HOSTILE;
+                let points = vec![
+                    at + Vec2::new(0.0, -5.0),
+                    at + Vec2::new(5.0, 0.0),
+                    at + Vec2::new(0.0, 5.0),
+                    at + Vec2::new(-5.0, 0.0),
+                ];
+                painter.add(egui::Shape::convex_polygon(
+                    points,
+                    red.gamma_multiply(0.5),
+                    Stroke::new(1.0_f32, red),
+                ));
+            }
             for trader in self.session.traffic() {
                 let Some(world) = self.session.trader_display_position(trader, &self.systems)
                 else {

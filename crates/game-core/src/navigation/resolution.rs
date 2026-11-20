@@ -117,6 +117,7 @@ impl TravelState {
                     kind,
                     run,
                     hostiles,
+                    band: None,
                 };
                 self.navigation.next_encounter_id = next;
                 self.navigation.encounters.push(encounter.clone());
@@ -154,6 +155,7 @@ impl TravelState {
                 self.navigation.orders.push(order);
             }
         }
+        events.extend(self.move_bands(player, run, systems)?);
         events.extend(self.mine(systems)?);
         events.push(NavigationEvent::RunExecuted(run));
         Ok(events)

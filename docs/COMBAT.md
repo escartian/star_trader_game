@@ -203,6 +203,32 @@ After the fight:
   It is a reward from outside the market economy, not a trade.
 - Surviving fleets resume their course on the next run.
 
+## Roaming raider bands
+
+Raiders also roam as persistent bands you can see coming
+(`game-core/src/navigation/raiders.rs`):
+
+- Each system except the home system holds one band: two scouts, or a patrol
+  ship leading a scout one time in three. Bands stay in their system and are
+  saved with the world.
+- After every run, each band hunts the nearest of your fleets in the open within
+  150 million km. Fleets docked at a station or landed on a surface are safe;
+  fleets in orbit or in flight are not. Without a quarry it patrols near a body,
+  preferring dangerous planets (danger ratings weight the choice; stations are
+  avoided).
+- A band moves up to 100 million km per run (half a fleet's local speed),
+  routing around planets. You can outrun one, or fly at it to pick a fight.
+- Within 5 million km it strikes: a raider contact with the band's real ships
+  (Fight, Auto-resolve or Evade).
+- Destroyed raiders leave the band; after any fight or escape it backs off for 3
+  runs. A band wiped out returns to its system 20 runs later.
+- With `encounter_chance_percent` at 0 bands still roam but never strike.
+- The system map shows bands as red diamonds tagged with their ships ("HUNTING"
+  while chasing), with a dashed line toward their heading; the galaxy map marks
+  systems that hold one; a hunted fleet's card warns "Raiders closing in".
+
+Random raider contacts during voyages still happen as before.
+
 ## NPC traders and raiders
 
 NPC traders face raiders too. After each run in which a trader was under way,
@@ -241,6 +267,6 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 ## Not yet implemented
 
 A GPU renderer with a depth buffer, morale effects on accuracy, faction
-hostility rules, persistent raider fleets that roam and pursue across runs,
+hostility rules, raider bands crossing between systems or striking NPC traders,
 attacking or hailing NPC traders, loadout changes and partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

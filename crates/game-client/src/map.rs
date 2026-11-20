@@ -268,6 +268,7 @@ impl Map {
         local.set_fleet_context(self.session.selected_ship().id);
         local.set_trade_ready(self.session.trade_ready_ships());
         local.set_contacts(self.session.contact_fleets());
+        local.set_bands(self.session.raider_bands().to_vec());
         local.set_trade_options(self.session.trade_options(local.system().id));
         let display_ships = self
             .session

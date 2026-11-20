@@ -28,6 +28,8 @@ through a readable native map. No game engine, browser, webview or JavaScript.
   a finish (engine initiative, movement,
   weapon ranges, withdrawal) that you command or auto-resolve, with a saved
   combat report, destroyed ships, salvage, raider bounties and paid hull repairs.
+- Roaming raider bands in every system but home that hunt fleets in the open;
+  dock or land to hide, outrun them or fight them for the bounty.
 - Seeded starts, a first-delivery guide, session logs and
   three JSON save slots with validation, atomic replacement and backup recovery.
 
@@ -209,7 +211,7 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [run review](docs/previews/run-review.png), [advancing](docs/previews/advance.png),
 [trade route](docs/previews/trade-route.png),
 [map command](docs/previews/destination.png),
-[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [landed and mining](docs/previews/landed.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`, `battle`, `battle-close`, `landed`. Captures do not test window
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [landed and mining](docs/previews/landed.png), [raider band strikes](docs/previews/raiders.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`, `battle`, `battle-close`, `landed`, `raiders`. Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

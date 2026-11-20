@@ -3,6 +3,8 @@ mod battle;
 mod hostile;
 mod landing;
 mod next_leg;
+mod raiders;
+pub use raiders::RaiderBand;
 mod orders;
 mod position;
 pub use battle::{ActiveBattle, BattleAction};
@@ -67,6 +69,9 @@ pub struct Encounter {
     /// Hostile hulls for `Raiders`; empty for every other kind.
     #[serde(default)]
     pub hostiles: Vec<crate::fleet::ShipKind>,
+    /// The roaming band that struck, if this contact is one (see `raiders`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub band: Option<u64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,6 +96,21 @@ pub struct NavigationState {
     /// The raider battle being played, if any; its encounter stays pending.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub battle: Option<Box<ActiveBattle>>,
+    /// Roaming raider bands, one per system but the home system.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bands: Vec<RaiderBand>,
+    /// (system, run) a wiped-out band returns.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub band_respawns: Vec<(crate::SystemId, u64)>,
+    #[serde(default = "first_band_id")]
+    pub next_band_id: u64,
+    /// The bands' own random stream (other contact rolls never depend on it).
+    #[serde(default)]
+    pub band_rng: u64,
+}
+
+fn first_band_id() -> u64 {
+    1
 }
 impl Default for NavigationState {
     fn default() -> Self {
@@ -105,6 +125,10 @@ impl Default for NavigationState {
             last_combat: None,
             routes: Vec::new(),
             battle: None,
+            bands: Vec::new(),
+            band_respawns: Vec::new(),
+            next_band_id: 1,
+            band_rng: 0,
         }
     }
 }

@@ -25,6 +25,10 @@ impl LocalSession {
         }
     }
 
+    pub fn raider_bands(&self) -> &[game_core::navigation::RaiderBand] {
+        &self.state.navigation.bands
+    }
+
     pub fn traffic(&self) -> &[game_core::npc::Trader] {
         &self.economy.traders
     }
@@ -148,6 +152,18 @@ impl LocalSession {
                 });
                 if matches!(status_icon, Icon::Warning | Icon::Contact) {
                     ui.colored_label(AMBER, egui::RichText::new(status).small());
+                }
+                if self
+                    .state
+                    .navigation
+                    .bands
+                    .iter()
+                    .any(|band| band.hunting == Some(fleet.id))
+                {
+                    ui.colored_label(
+                        crate::battle::scene::HOSTILE,
+                        egui::RichText::new("Raiders closing in. Dock or land to hide.").small(),
+                    );
                 }
                 if status_icon == Icon::Warning
                     && self.state.fleet_position(fleet.id, fleet.owner).is_ok()

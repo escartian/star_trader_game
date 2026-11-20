@@ -1,6 +1,7 @@
 mod framing;
 mod labels;
 mod layout;
+mod raiders;
 mod render;
 use layout::{display_position, moon_parent, short_name};
 mod scale;
@@ -58,6 +59,8 @@ pub struct LocalView {
     fleet_hits: Vec<crate::map::fleets::FleetHit>,
     trade_ready: Vec<game_core::travel::ShipId>,
     contacts: Vec<game_core::fleet::FleetId>,
+    /// Roaming raider bands (drawn when in this system).
+    bands: Vec<game_core::navigation::RaiderBand>,
     trade_options: Vec<crate::session::TradeOption>,
     market_request: Option<game_core::travel::ShipId>,
     selection_request: Option<game_core::travel::ShipId>,
@@ -78,6 +81,7 @@ impl LocalView {
             fleet_hits: Vec::new(),
             trade_ready: Vec::new(),
             contacts: Vec::new(),
+            bands: Vec::new(),
             trade_options: Vec::new(),
             market_request: None,
             selection_request: None,
@@ -85,6 +89,10 @@ impl LocalView {
             frame_overview: true,
             active_ship: game_core::travel::ShipId(1),
         }
+    }
+
+    pub fn set_bands(&mut self, bands: Vec<game_core::navigation::RaiderBand>) {
+        self.bands = bands;
     }
 
     pub fn set_preview_route(&mut self, route: Vec<LocalPosition>) {

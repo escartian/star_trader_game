@@ -8,6 +8,7 @@ pub use fleets::TradeOption;
 mod guide;
 mod map_controls;
 mod market;
+mod motion;
 mod navigation;
 mod panel;
 mod runs;
@@ -15,15 +16,35 @@ mod saves;
 mod settings;
 mod shipyard;
 use game_core::economy::Economy;
-use game_core::{SystemId, travel::TravelState};
+use game_core::{
+    SystemId,
+    movement::{KM_PER_LIGHT_YEAR, SpacePosition},
+    navigation::NavigationEvent,
+    travel::TravelState,
+};
 use game_protocol::{ClientCommand, ServerMessage, SessionEvent};
 use std::collections::VecDeque;
+
+/// Galaxy-space kilometers to the light-year coordinates the galaxy map draws in.
+fn light_years(position: SpacePosition) -> glam::DVec3 {
+    glam::DVec3::new(
+        position.x_km as f64,
+        position.y_km as f64,
+        position.z_km as f64,
+    ) / KM_PER_LIGHT_YEAR as f64
+}
 
 pub struct LocalSession {
     map_target: Option<map_controls::MapTarget>,
     focus_requested: bool,
     /// Present while "Advance to next event" is repeating navigation runs.
     advance: Option<advance::Advance>,
+    /// The latest run's display glide, until it has played out.
+    motion: Option<motion::Motion>,
+    /// Latest UI clock reading, in seconds.
+    clock: f64,
+    /// Glide length in seconds; 0 when the UI has animations off.
+    glide_seconds: f64,
     authority: game_server::Session,
     state: TravelState,
     active_ship: game_core::travel::ShipId,
@@ -52,6 +73,9 @@ impl LocalSession {
             map_target: None,
             focus_requested: false,
             advance: None,
+            motion: None,
+            clock: 0.0,
+            glide_seconds: motion::GLIDE_SECONDS,
             authority,
             active_ship,
             state,
@@ -105,28 +129,41 @@ impl LocalSession {
     ) -> Option<glam::DVec3> {
         self.state
             .navigation_position(ship, systems)
-            .map(|position| {
-                glam::DVec3::new(
-                    position.x_km as f64,
-                    position.y_km as f64,
-                    position.z_km as f64,
-                ) / game_core::movement::KM_PER_LIGHT_YEAR as f64
-            })
+            .map(light_years)
     }
 
+    /// Where the galaxy map draws an own ship: like `ship_position`, but gliding
+    /// after each run. Camera-follow logic keeps using `ship_position`.
+    pub fn display_ship_position(
+        &self,
+        ship: game_core::travel::ShipId,
+        systems: &[game_core::StarSystem],
+    ) -> Option<glam::DVec3> {
+        self.display_position(ship, systems).map(light_years)
+    }
+
+    /// Own ships as the system map draws them: in-transit ships, and resting ships
+    /// still gliding in from the latest run, become free-flying local positions.
     pub fn ships_for_map(
         &self,
         system: &game_core::StarSystem,
         systems: &[game_core::StarSystem],
     ) -> Vec<game_core::travel::Ship> {
         let mut ships = self.state.ships.clone();
-        let Ok(center) = game_core::movement::SpacePosition::from_galaxy(system.position) else {
+        let Ok(center) = SpacePosition::from_galaxy(system.position) else {
             return ships;
         };
+        let gliding = self.gliding();
         for ship in &mut ships {
-            if matches!(ship.location, game_core::travel::Location::InTransit(_))
-                && let Some(position) = self.state.navigation_position(ship.id, systems)
-            {
+            let in_transit = matches!(ship.location, game_core::travel::Location::InTransit(_));
+            if !in_transit && !gliding {
+                continue;
+            }
+            let Some(position) = self.display_position(ship.id, systems) else {
+                continue;
+            };
+            // A resting ship keeps its berth marker unless it is still gliding in.
+            if in_transit || Some(position) != self.state.navigation_position(ship.id, systems) {
                 let local = game_core::LocalPosition {
                     x_km: position.x_km - center.x_km,
                     y_km: position.y_km - center.y_km,
@@ -181,11 +218,19 @@ impl LocalSession {
                 economy,
                 events,
             } => {
-                self.state = state;
+                let before = std::mem::replace(&mut self.state, state);
+                let economy_before = std::mem::replace(&mut self.economy, *economy);
+                if events.iter().any(|event| {
+                    matches!(
+                        event,
+                        SessionEvent::Navigation(NavigationEvent::RunExecuted(_))
+                    )
+                }) {
+                    self.motion = Some(motion::Motion::new(before, economy_before.traders));
+                }
                 if self.state.ship(self.active_ship).is_err() {
                     self.active_ship = self.state.ships[0].id;
                 }
-                self.economy = *economy;
                 for event in events {
                     let message = match event {
                         SessionEvent::Navigation(event) => runs::event_label(event),
@@ -240,5 +285,7 @@ impl LocalSession {
 
 #[cfg(test)]
 mod advance_tests;
+#[cfg(test)]
+mod motion_tests;
 #[cfg(test)]
 mod tests;

@@ -29,6 +29,9 @@ Coordinate tools remain under **Navigation → Advanced coordinates (optional)**
 - Breadcrumbs, INNER SYSTEM / OUTER GALAXY labels and fleet cards distinguish the
   inspected view from the fleet's authoritative location. Wait orders do not move the camera.
 
+Each run's movement plays out as a short glide on both maps, including NPC
+traffic. A ship arriving at a body or port flies in, then takes its berth marker.
+
 Local labels and input units are AU; galaxy distances are light-years. Rendering
 retains symbolic body/fleet sizes and schematic moon spacing. Fleet symbols are
 placed away from star/body silhouettes and labels. In free space they sit directly

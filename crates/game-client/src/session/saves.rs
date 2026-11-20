@@ -53,8 +53,9 @@ impl LocalSession {
     }
 
     fn replace_authority(&mut self, authority: game_server::Session) {
-        // A loaded or new session must never inherit an advance from the old one.
+        // A loaded or new session must never inherit an advance or glide from the old one.
         self.advance = None;
+        self.motion = None;
         self.navigation = super::navigation::NavigationPanel::default();
         self.authority = authority;
         let message = self.authority.handle(ClientCommand::GetSession);

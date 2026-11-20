@@ -59,6 +59,8 @@ No participants have been contacted and no playtest results are claimed here.
 - [ ] Execute further runs and confirm the waiting fleet is not asked for orders again.
 - [ ] Advance a multi-leg route to another system: ships visibly step each run, the
   camera follows exit/entry, and the advance stops on arrival with the fleet focused.
+- [ ] Watch an advance on both maps: ships and NPC traffic glide continuously
+  between runs, and a ship arriving at a body flies in before taking its berth.
 - [ ] Press Stop mid-advance; confirm no further runs execute. Advance into a contact
   and confirm its decision card is shown under the run controls.
 - [ ] Follow a multi-run voyage and verify fuel is charged once at departure.

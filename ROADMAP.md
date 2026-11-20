@@ -129,6 +129,8 @@ campaign advance action; the interface does not call it End Turn.
 - [x] Sci-fi native command-console styling, route feedback and NPC traffic display.
 - [x] Context-preserving arrival/transit framing without a system boundary overlay;
   free-space fleet anchors, neon-green gunmetal panels, action icons and image tiles.
+- [x] Run motion: ships and NPC traffic glide between pre- and post-run positions
+  (display only), continuous across the runs of an Advance.
 
 See [map controls](docs/MAP_CONTROLS.md). Physical mouse/window/DPI acceptance
 remains separate from GPU captures and egui input regression tests.

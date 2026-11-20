@@ -122,7 +122,7 @@ impl Map {
                 else {
                     continue;
                 };
-                let Some(world) = self.session.ship_position(ship.id, &self.systems) else {
+                let Some(world) = self.session.display_ship_position(ship.id, &self.systems) else {
                     continue;
                 };
                 let anchor = self.camera.project(world, rect);
@@ -161,15 +161,10 @@ impl Map {
                 )
             }));
             for trader in self.session.traffic() {
-                let Some(ship) = trader.state.ships.first() else {
+                let Some(world) = self.session.trader_display_position(trader, &self.systems)
+                else {
                     continue;
                 };
-                let Some(world) = trader.state.navigation_position(ship.id, &self.systems) else {
-                    continue;
-                };
-                let world =
-                    glam::DVec3::new(world.x_km as f64, world.y_km as f64, world.z_km as f64)
-                        / game_core::movement::KM_PER_LIGHT_YEAR as f64;
                 let anchor = self.camera.project(world, rect);
                 if let Some(bounds) = super::fleets::place(anchor, rect, &reserved) {
                     reserved.push(bounds);

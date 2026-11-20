@@ -58,6 +58,10 @@ advance the clock. Ordering every fleet to Wait is a valid deliberate waiting ru
 Local-system displays and waypoint inputs use AU; authoritative positions remain
 integer kilometers. Galaxy coordinates are displayed in light-years. Rendering
 interpolates active course positions from saved progress; it never advances time.
+After each run, own ships and NPC traders glide for 0.35 s from their pre-run to
+their post-run positions (the Advance interval, so an advance reads as one
+continuous voyage). The glide is display-only; camera-follow, saves and rules use
+the authoritative positions, and captures (animations off) show final positions.
 Existing paid voyages from older saves progress on navigation runs too.
 
 ## Encounters

@@ -188,8 +188,10 @@ impl Map {
             self.candidates.clear();
         }
         let _ = art::Artwork::preload(ctx);
-        // Step an advance before following transitions so the camera tracks this frame's run.
-        if let Some(delay) = self.session.drive_advance(ctx.input(|input| input.time)) {
+        // Step an advance and run glides before following transitions, so the camera
+        // tracks this frame's run. Captures turn animation off and show final positions.
+        let animate = ctx.style().animation_time > 0.0;
+        if let Some(delay) = self.session.frame(ctx.input(|input| input.time), animate) {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64(delay));
         }
         self.follow_navigation_transitions();

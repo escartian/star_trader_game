@@ -51,6 +51,12 @@ impl Session {
             return Err(TravelError::StaleQuote.into());
         }
         let mut candidate = self.clone();
+        let reported = candidate
+            .state
+            .navigation
+            .last_combat
+            .as_ref()
+            .map(|report| report.encounter);
         // A fleet given explicit orders leaves its trade route.
         let mut ordered = None;
         let mut events = match command {
@@ -153,6 +159,18 @@ impl Session {
                 fleet,
                 reason: "Route ended by new orders.".into(),
             });
+        }
+        // A battle that ended with this command pays its raider bounty, once.
+        if let Some(report) = &candidate.state.navigation.last_combat
+            && Some(report.encounter) != reported
+        {
+            candidate.economy.credits = candidate
+                .economy
+                .credits
+                .0
+                .checked_add(report.bounty.0)
+                .map(game_core::economy::Credits)
+                .ok_or(TravelError::TimeOverflow)?;
         }
         *self = candidate;
         Ok(self.snapshot(events.into_iter().map(SessionEvent::Navigation).collect()))

@@ -1,15 +1,17 @@
 //! Fixed-unit commerce. Prices, stock and cargo are authoritative simulation data.
 use serde::{Deserialize, Serialize};
+mod bounties;
 pub(crate) mod cargo_json;
 mod market;
 mod rules;
+pub use bounties::RaiderBounties;
 pub use rules::{EconomyRules, MarketTemplate};
 mod services;
 mod shipyard;
 mod transactions;
 use crate::{BodyId, SystemId, travel::Ship};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Credits(pub u64);
 
 impl std::fmt::Display for Credits {

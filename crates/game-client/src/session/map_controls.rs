@@ -203,7 +203,12 @@ impl LocalSession {
         for trader in &self.economy.traders {
             ui.strong(&trader.name)
                 .on_hover_text(trader.personality.label());
-            ui.small(&trader.last_action);
+            // Raid news stands out from routine hauling.
+            if trader.last_action.contains("raid") {
+                ui.colored_label(AMBER, egui::RichText::new(&trader.last_action).small());
+            } else {
+                ui.small(&trader.last_action);
+            }
         }
     }
 

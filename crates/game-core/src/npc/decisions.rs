@@ -13,16 +13,29 @@ impl Economy {
         let mut traders = self.traders.clone();
         traders.sort_by_key(|trader| trader.id);
         for trader in &mut traders {
-            if trader.state.navigation.orders.is_empty() {
+            let refitting = trader.refit_runs > 0;
+            if trader.state.navigation.orders.is_empty() && !refitting {
                 self.decide(trader, systems)?;
             }
             let player = trader.state.ships[0].owner;
             if trader.state.navigation.orders.is_empty() {
                 trader.state.hold_fleet(player, trader.state.fleets[0].id)?;
             }
+            let underway = !trader.state.navigation.orders.is_empty();
             trader.state.execute_navigation_run(player, systems)?;
+            if refitting {
+                trader.refit_runs -= 1;
+                trader.last_action = match trader.refit_runs {
+                    0 => "Refitted after a raid; back in service".into(),
+                    left => format!("Refitting after a raid ({left} runs left)"),
+                };
+                continue;
+            }
             if trader.state.navigation.orders.is_empty() && trader.state.ships[0].cargo_used() > 0 {
                 trader.last_action = "Arrived with cargo; preparing local sale".into();
+            }
+            if underway {
+                self.raid(trader, systems)?;
             }
         }
         self.traders = traders;
@@ -52,6 +65,13 @@ impl Economy {
         if trader.state.ships[0].cargo_used() > 0 {
             trader.last_action = "Waiting for buyer funds or storage".into();
             return Ok(());
+        }
+        if trader.state.ships[0].hull_damage > 0 {
+            // Raid damage is repaired at the first market, paid from the wallet.
+            let player_wallet = std::mem::replace(&mut self.credits, trader.credits);
+            let _ = self.repair(&mut trader.state.ships[0]);
+            trader.credits = self.credits;
+            self.credits = player_wallet;
         }
         let missing = trader.state.ships[0].fuel_capacity - trader.state.ships[0].fuel;
         if missing > 0 {

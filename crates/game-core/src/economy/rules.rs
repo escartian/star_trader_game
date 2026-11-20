@@ -39,6 +39,17 @@ pub struct EconomyRules {
     pub ship_catalog: crate::fleet::ShipCatalog,
     #[serde(default)]
     pub combat_catalog: crate::combat::CombatCatalog,
+    /// Bounty per destroyed raider hull (defaults for older definitions).
+    #[serde(default)]
+    pub raider_bounties: super::RaiderBounties,
+    /// Percent chance per run that an NPC trader under way meets raiders.
+    #[serde(default = "default_npc_raid_chance")]
+    pub npc_raid_chance_percent: u32,
+}
+
+/// The player's 12% contact chance × one contact in three being raiders.
+fn default_npc_raid_chance() -> u32 {
+    4
 }
 
 fn default_npc_credits() -> Credits {
@@ -109,6 +120,8 @@ impl EconomyRules {
             || self.repair_point_price.0 > 1_000_000_000
             || self.hold_upgrade_price.0 == 0
             || self.hold_upgrade_price.0 > 1_000_000_000_000
+            || !self.raider_bounties.valid()
+            || self.npc_raid_chance_percent > 100
         {
             return Err("Invalid initial credits or service prices".into());
         }

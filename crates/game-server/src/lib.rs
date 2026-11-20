@@ -194,6 +194,8 @@ mod landing_tests;
 mod navigation_tests;
 #[cfg(test)]
 mod orbit_tests;
+#[cfg(test)]
+mod raid_tests;
 
 #[cfg(test)]
 mod npc_tests;

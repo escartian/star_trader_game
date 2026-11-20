@@ -145,12 +145,15 @@ impl TravelState {
         if !battle.finished() {
             return Ok(NavigationEvent::BattleTurn { fleet: open.fleet });
         }
-        self.conclude_battle()
+        self.conclude_battle(rules)
     }
 
     /// Writes a finished battle back to the fleet, files the combat report and
     /// clears the encounter.
-    fn conclude_battle(&mut self) -> Result<NavigationEvent, FleetMovementError> {
+    fn conclude_battle(
+        &mut self,
+        rules: &EconomyRules,
+    ) -> Result<NavigationEvent, FleetMovementError> {
         let open = self
             .navigation
             .battle
@@ -170,6 +173,7 @@ impl TravelState {
             .cloned()
             .ok_or(FleetError::UnknownFleet)?;
         let result = open.battle.engagement();
+        let bounty = raider_bounty(&result.combatants, rules)?;
         let mut report = CombatReport {
             encounter: encounter.id,
             fleet: fleet.id,
@@ -185,6 +189,7 @@ impl TravelState {
             salvage_ore: 0,
             cargo_lost: 0,
             crippled: None,
+            bounty,
         };
         self.apply_engagement(&fleet, &mut report)?;
         if open.battle.surrendered {
@@ -273,4 +278,19 @@ impl TravelState {
         }
         Ok(())
     }
+}
+
+/// Bounty for every raider destroyed; raiders that fled pay nothing.
+pub(crate) fn raider_bounty(
+    combatants: &[crate::combat::engagement::CombatantResult],
+    rules: &EconomyRules,
+) -> Result<crate::economy::Credits, FleetMovementError> {
+    combatants
+        .iter()
+        .filter(|ship| ship.side == Side::Hostile && ship.destroyed)
+        .try_fold(0_u64, |total, ship| {
+            total.checked_add(rules.raider_bounties.of(ship.kind).0)
+        })
+        .map(crate::economy::Credits)
+        .ok_or(TravelError::TimeOverflow.into())
 }

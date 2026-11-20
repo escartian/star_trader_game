@@ -1,5 +1,6 @@
 //! NPC commerce uses the same routes, hulls, cargo and finite-money rules as players.
 mod decisions;
+mod raids;
 use crate::{
     StarSystem,
     economy::{Credits, Economy, MarketId},
@@ -7,6 +8,7 @@ use crate::{
     movement::MovementRules,
     travel::{Location, PlayerId, ShipId, TravelState},
 };
+pub use raids::REFIT_RUNS;
 use serde::{Deserialize, Serialize};
 
 pub const NPC_ID_BASE: u64 = 1 << 63;
@@ -33,6 +35,13 @@ pub struct Trader {
     pub credits: Credits,
     pub state: TravelState,
     pub last_action: String,
+    /// Runs left being refitted after raiders destroyed the ship (0 = trading).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub refit_runs: u32,
+}
+
+fn is_zero(value: &u32) -> bool {
+    *value == 0
 }
 
 impl Economy {
@@ -80,6 +89,7 @@ impl Economy {
                 credits: self.rules.npc_starting_credits,
                 state,
                 last_action: "Awaiting the next navigation run".into(),
+                refit_runs: 0,
             });
         }
     }
@@ -103,6 +113,7 @@ impl Economy {
                 || trader.state.ships.len() != 1
                 || trader.state.fleets.len() != 1
                 || trader.state.navigation.run != run
+                || trader.refit_runs > REFIT_RUNS
             {
                 return Err("Invalid NPC trader".into());
             }
@@ -123,6 +134,11 @@ impl Economy {
                 || ship.upgraded
                 || ship.cargo_capacity != ship.base_cargo_capacity
                 || !trader.state.navigation.encounters.is_empty()
+                || self
+                    .rules
+                    .ship_catalog
+                    .spec(ship.kind)
+                    .is_none_or(|spec| ship.hull_damage >= spec.combat.hull)
             {
                 return Err("Invalid NPC hull or fleet".into());
             }

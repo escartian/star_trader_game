@@ -107,5 +107,11 @@
     1
   ],
   "ship_resale_percent": 60,
-  "npc_starting_credits": 200000
+  "npc_starting_credits": 200000,
+  "raider_bounties": {
+    "freighter": 10000,
+    "scout": 15000,
+    "patrol": 40000
+  },
+  "npc_raid_chance_percent": 4
 }

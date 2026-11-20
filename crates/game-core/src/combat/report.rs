@@ -55,6 +55,10 @@ pub struct CombatReport {
     pub cargo_lost: u32,
     /// The last owned ship is never lost; it limps away at 1 hull point.
     pub crippled: Option<ShipId>,
+    /// Bounty earned for the raiders destroyed (credits in cents); the host
+    /// pays it once, when the battle ends.
+    #[serde(default)]
+    pub bounty: crate::economy::Credits,
 }
 
 /// Generous bound for one saved shot list (8 weapons × 20 shots × 16 ships).
@@ -67,6 +71,7 @@ impl CombatReport {
             || count > MAX_COMBATANTS
             || self.rounds.is_empty()
             || self.rounds.len() > MAX_ROUNDS as usize
+            || self.bounty.0 > 1_000_000_000_000
             || self.combatants.iter().any(|ship| {
                 ship.final_damage > ship.hull
                     || ship.starting_damage >= ship.hull

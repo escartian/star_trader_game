@@ -68,6 +68,15 @@ fn report_ui(ui: &mut egui::Ui, report: &CombatReport) {
         ));
     });
     ui.horizontal_wrapped(|ui| {
+        if report.bounty.0 > 0 {
+            stat(
+                ui,
+                Icon::Credits,
+                GREEN,
+                &format!("+{} cr", report.bounty),
+                "Bounty paid for the raiders destroyed",
+            );
+        }
         if report.salvage_ore > 0 {
             stat(
                 ui,
@@ -83,7 +92,7 @@ fn report_ui(ui: &mut egui::Ui, report: &CombatReport) {
                 Icon::Cargo,
                 AMBER,
                 &format!("−{}", report.cargo_lost),
-                "Cargo lost with destroyed ships",
+                "Cargo lost with destroyed ships, or seized on surrender",
             );
         }
     });

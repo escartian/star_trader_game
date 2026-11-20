@@ -27,7 +27,7 @@ through a readable native map. No game engine, browser, webview or JavaScript.
 - Turn-based battles against raiders on a 3D grid with 3D ship models, fought to
   a finish (engine initiative, movement,
   weapon ranges, withdrawal) that you command or auto-resolve, with a saved
-  combat report, destroyed ships, salvage and paid hull repairs.
+  combat report, destroyed ships, salvage, raider bounties and paid hull repairs.
 - Seeded starts, a first-delivery guide, session logs and
   three JSON save slots with validation, atomic replacement and backup recovery.
 
@@ -90,7 +90,8 @@ breaking versions may require a fresh session.
 
 See [map controls](docs/MAP_CONTROLS.md) for fleet selection, automatic routes,
 stellar clearance and inner/outer view transitions. Fresh sessions include two
-NPC traders with cautious/opportunistic route choices and real funds/cargo.
+NPC traders with cautious/opportunistic route choices and real funds/cargo; they
+meet raiders too, fight them off-screen and can lose cargo or be put out of service.
 
 ## First delivery
 

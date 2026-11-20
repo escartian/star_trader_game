@@ -104,7 +104,10 @@ It ships the original five: Photon Singularity Beam, Quantum Entanglement
 Torpedo, Neutron Beam, Graviton Pulse and Magnetic Resonance Disruptor. New games
 load the project file when present; saves preserve the active catalog. See
 [combat](COMBAT.md) for resolution rules. Economy `repair_point_price`
-(hundredths per hull point, default 500) prices market repairs.
+(hundredths per hull point, default 500) prices market repairs. `raider_bounties`
+(hundredths per destroyed raider, by hull: `freighter`, `scout`, `patrol`) and
+`npc_raid_chance_percent` (0–100, default 4) load with defaults when absent. A
+combat report adds `bounty` (hundredths, default 0).
 
 ## Movement definition (schema 1)
 
@@ -170,6 +173,8 @@ AU input conversion is checked and rounds to the nearest kilometer.
 Navigation orders now include `remaining_waypoints`, an optional list of subsequent
 MoveTargets. All future legs are checked against saved geometry and fuel. Economy
 includes `traders`: identity, personality, wallet, independent hull/navigation state
-and last activity. New sessions seed trader budgets from `npc_starting_credits`.
+and last activity, plus `refit_runs` (0–8, omitted when 0) while a trader destroyed
+by raiders is out of service. A trader's hull damage must stay below its class
+hull. New sessions seed trader budgets from `npc_starting_credits`.
 Upper-half ship/fleet IDs are reserved for NPCs. Existing sessions without traders
 remain empty; backward compatibility is not a prototype requirement.

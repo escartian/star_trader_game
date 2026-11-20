@@ -178,7 +178,11 @@ Combat is the original README's first prioritized expansion.
   fleeing raiders count as a victory. Battle grids grow with the fleets (a
   10-cell cube for a duel, up to 17).
 - [ ] A GPU mesh renderer with a depth buffer (the egui painter sorts faces).
-- [ ] Explicit hostility/engagement rules for NPC/faction fleets and credit bounties.
+- [x] Raider bounties by hull, paid once per battle for destroyed raiders.
+- [x] NPC traders meet raiders off-screen (auto-resolved tactical battles):
+  fought off, escaped by dumping cargo, or destroyed and refitted at home.
+- [ ] Hostility rules for faction fleets, persistent raider fleets that roam and
+  pursue across runs, and player interactions with NPC traders (piracy, hails).
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
 cargo and rewards remain consistent. Raider fights meet this with behavior and

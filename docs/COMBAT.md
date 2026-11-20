@@ -196,7 +196,31 @@ After the fight:
 - **Victory:** each destroyed raider yields 2 ore, loaded into free cargo space
   in fleet order; anything that does not fit is lost. Raiders that fled leave
   no wreck to salvage.
+- **Bounty:** port authorities pay for every raider destroyed, whatever the
+  outcome: scout 150.00 cr, patrol 400.00 cr, freighter 100.00 cr
+  (`economy.json` → `raider_bounties`). A raider that fled pays nothing. The
+  bounty is shown in the combat report and credited once, when the battle ends.
+  It is a reward from outside the market economy, not a trade.
 - Surviving fleets resume their course on the next run.
+
+## NPC traders and raiders
+
+NPC traders face raiders too. After each run in which a trader was under way,
+it is attacked with `npc_raid_chance_percent` (default 4%: the player's 12%
+contact chance × one contact in three being raiders) by one scout, or two one
+time in three. The fight is the same tactical battle, auto-resolved for both
+sides, so retreats apply:
+
+- **Fought off:** the trader keeps its cargo.
+- **Escaped:** the trader dumped its whole cargo to get away.
+- **Destroyed:** the cargo is lost and the trader is refitted at its home port,
+  out of service for 8 runs before trading again.
+
+Damage sticks until the trader next stops at a market, where it repairs from its
+own wallet into the market's treasury. Results show in the traffic panel (raid
+news in amber). Over 400 runs the two starting traders met about 18 raids;
+a few cost them their cargo, and a single freighter is very rarely destroyed
+because it withdraws when badly damaged.
 
 ## Repairs
 
@@ -216,7 +240,7 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 
 ## Not yet implemented
 
-A GPU renderer with a depth buffer, morale effects on accuracy, NPC/faction
-hostility rules, credit
-bounties, raider pursuit across runs, loadout changes and partial repairs. See the
+A GPU renderer with a depth buffer, morale effects on accuracy, faction
+hostility rules, persistent raider fleets that roam and pursue across runs,
+attacking or hailing NPC traders, loadout changes and partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

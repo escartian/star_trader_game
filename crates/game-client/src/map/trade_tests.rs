@@ -171,6 +171,13 @@ fn a_contact_can_be_resolved_from_the_run_card_without_opening_navigation() {
     map.session.capture_encounter().unwrap();
     map.session.close_navigation();
     assert!(!map.session.contact_fleets().is_empty());
-    click(&ctx, &mut map, "Bypass");
+    // The pass button reads by contact ("Leave it", "Decline", "Bypass", …).
+    let kind = map.session.pending_contact_kind().unwrap();
+    let aboard = crate::session::contact_aboard_nothing();
+    click(
+        &ctx,
+        &mut map,
+        crate::session::contact_pass_label(kind, &aboard),
+    );
     assert!(map.session.contact_fleets().is_empty());
 }

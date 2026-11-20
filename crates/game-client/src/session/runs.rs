@@ -68,6 +68,18 @@ pub(super) fn event_label(event: NavigationEvent) -> String {
 }
 
 impl LocalSession {
+    /// The kind of the selected fleet's pending contact (tests).
+    #[cfg(test)]
+    pub fn pending_contact_kind(&self) -> Option<EncounterKind> {
+        let fleet = self.state.fleet_for_ship(self.active_ship).ok()?.id;
+        self.state
+            .navigation
+            .encounters
+            .iter()
+            .find(|encounter| encounter.fleet == fleet)
+            .map(|encounter| encounter.kind)
+    }
+
     pub fn take_focus_request(&mut self) -> bool {
         std::mem::take(&mut self.focus_requested)
     }
@@ -277,35 +289,31 @@ impl LocalSession {
                     .iter()
                     .any(|id| self.state.ship(*id).is_ok_and(test))
             };
-            let (text, icon, label, option, blocked) = match encounter.kind {
-                EncounterKind::DebrisField => (
-                    "Your fleet detects recoverable debris. Investigate to collect one ore, or bypass it.",
-                    Icon::Good(Commodity::Ore),
-                    "Salvage +1 ore",
-                    EncounterChoice::Investigate,
-                    (!carries(&|ship| ship.cargo_used() < u64::from(ship.cargo_capacity)))
-                        .then(|| "One cargo space required.".to_string()),
-                ),
-                EncounterKind::DistressSignal => (
-                    "A stranded crew requests one medicine. Assist to record a rescue, or continue past the signal.",
-                    Icon::Good(Commodity::Medicine),
-                    "Assist −1 medicine",
-                    EncounterChoice::Assist,
-                    (!carries(&|ship| ship.cargo[Commodity::Medicine.index()] > 0))
-                        .then(|| "No medicine aboard this fleet.".to_string()),
-                ),
-                EncounterKind::Raiders => unreachable!("handled by raider_ui"),
-            };
-            ui.label(text);
+            let offer = super::contacts::offer(
+                encounter.kind,
+                &super::contacts::Aboard {
+                    free_space: carries(&|ship| ship.cargo_used() < u64::from(ship.cargo_capacity)),
+                    medicine: carries(&|ship| ship.cargo[Commodity::Medicine.index()] > 0),
+                    cargo: carries(&|ship| ship.cargo_used() > 0),
+                },
+            );
+            ui.label(offer.text);
             ui.horizontal(|ui| {
-                if icons::labeled_action(ui, icon, label, blocked).clicked() {
-                    choice = Some(option);
+                let blocked = offer.blocked.map(str::to_owned);
+                if icons::labeled_action(ui, offer.icon, offer.act, blocked).clicked() {
+                    choice = Some(offer.choice);
                 }
-                if icons::button(ui, Icon::Bypass, "Bypass").clicked() {
+                if icons::button(ui, Icon::Bypass, offer.pass).clicked() {
                     choice = Some(EncounterChoice::Bypass);
                 }
             });
-            if let Some(choice) = choice { self.command(ClientCommand::ResolveEncounter { encounter: encounter.id, choice, expected_revision: self.state.revision }); }
+            if let Some(choice) = choice {
+                self.command(ClientCommand::ResolveEncounter {
+                    encounter: encounter.id,
+                    choice,
+                    expected_revision: self.state.revision,
+                });
+            }
         });
     }
 

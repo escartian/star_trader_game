@@ -131,7 +131,13 @@ orbits (moons around planets). Navigation plans use their positions at the curre
   sell/refuel/buy at each stop, contacts as usual; an empty hold pauses the route
   until Resume, and failures end it.
 - [ ] Manually authored itineraries and movement/encounter balance.
-- [ ] Richer authored contacts, risk factors, inspections, combat and faction outcomes.
+- [x] One flagship under direct command; secondary fleets on standing orders
+  (Wait, trade route, patrol a system) that settle their own contacts.
+- [x] Ten peaceful contact kinds (salvage, convoys, cargo pods, customs,
+  authority escorts, anomalies, comets, probes, debris, distress) beside raiders.
+- [x] New-game setup: galaxy size, starting credits, inflation, danger,
+  campaign length and Trader goal; generated star and body names.
+- [ ] Faction outcomes for law contacts, branching authored story chains.
 
 See [navigation runs](docs/NAVIGATION_RUNS.md). The run itself is the visible
 campaign advance action; the interface does not call it End Turn.

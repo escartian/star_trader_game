@@ -1,5 +1,6 @@
 //! Plot fleet courses, then advance all fleets through one shared navigation run.
 mod battle;
+mod contacts;
 mod haven;
 mod hostile;
 mod landing;
@@ -37,13 +38,44 @@ pub enum EncounterKind {
     DistressSignal,
     /// Hostile raiders; resolved by fighting or attempting to evade.
     Raiders,
+    DerelictFreighter,
+    MerchantConvoy,
+    CargoPod,
+    CustomsInspection,
+    /// A port authority cutter under raider pressure asks for an escort.
+    AuthorityCutter,
+    Anomaly,
+    Comet,
+    LostProbe,
 }
 impl EncounterKind {
+    /// Every contact a run can roll besides raiders (see `contacts`).
+    pub const PEACEFUL: [EncounterKind; 10] = [
+        Self::DebrisField,
+        Self::DistressSignal,
+        Self::DerelictFreighter,
+        Self::MerchantConvoy,
+        Self::CargoPod,
+        Self::CustomsInspection,
+        Self::AuthorityCutter,
+        Self::Anomaly,
+        Self::Comet,
+        Self::LostProbe,
+    ];
+
     pub fn label(self) -> &'static str {
         match self {
             Self::DebrisField => "Salvage contact",
             Self::DistressSignal => "Distress signal",
             Self::Raiders => "Raider contact",
+            Self::DerelictFreighter => "Derelict freighter",
+            Self::MerchantConvoy => "Merchant convoy",
+            Self::CargoPod => "Drifting cargo pod",
+            Self::CustomsInspection => "Customs inspection",
+            Self::AuthorityCutter => "Authority cutter",
+            Self::Anomaly => "Sensor anomaly",
+            Self::Comet => "Comet",
+            Self::LostProbe => "Lost survey probe",
         }
     }
 }
@@ -59,6 +91,10 @@ pub enum EncounterChoice {
     Evade,
     /// Raiders only: fight the whole battle at once with the AI on both sides.
     AutoResolve,
+    /// Customs: submit to the inspection and pay its fee.
+    Comply,
+    /// Merchant convoy: sell it cargo.
+    Trade,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -112,6 +148,10 @@ pub struct NavigationState {
     /// The bands' own random stream (other contact rolls never depend on it).
     #[serde(default)]
     pub band_rng: u64,
+    /// Credits (in cents, at a new game's price level) a contact just earned
+    /// or cost; the host settles it into the wallet at once, so saves hold 0.
+    #[serde(default, skip_serializing_if = "is_zero_payout")]
+    pub payout: i64,
     /// The Raider Haven; `None` only in a one-system galaxy.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub haven: Option<RaiderHaven>,
@@ -122,6 +162,10 @@ pub struct NavigationState {
     /// Secondary fleets guarding a system (see `patrols`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub patrols: Vec<crate::patrols::Patrol>,
+}
+
+fn is_zero_payout(value: &i64) -> bool {
+    *value == 0
 }
 
 fn first_band_id() -> u64 {
@@ -144,6 +188,7 @@ impl Default for NavigationState {
             band_respawns: Vec::new(),
             next_band_id: 1,
             band_rng: 0,
+            payout: 0,
             haven: None,
             flagship: None,
             patrols: Vec::new(),
@@ -254,6 +299,8 @@ pub enum NavigationError {
     NotAtHaven,
     /// The campaign is lost or out of time; only saves and loads remain.
     CampaignOver,
+    /// A convoy has nothing to buy from an empty hold.
+    NothingToSell,
     /// Direct orders go to the flagship; other fleets run standing orders.
     NotFlagship,
     /// The flagship takes direct orders and cannot run a patrol.
@@ -315,6 +362,7 @@ impl std::fmt::Display for NavigationError {
             Self::FlagshipCommanded => f.write_str(
                 "The flagship takes your direct orders. Make another fleet the flagship first.",
             ),
+            Self::NothingToSell => f.write_str("There is no cargo aboard to sell."),
             Self::CampaignOver => {
                 f.write_str("The campaign is over. Load a save or start a new game.")
             }

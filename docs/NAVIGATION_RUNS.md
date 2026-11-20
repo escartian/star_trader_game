@@ -135,20 +135,31 @@ roll. The default probability is 12%, configurable through
 `encounter_chance_percent`. A contact pauses that fleet's progress for the run;
 other fleets continue. Resolve outstanding contacts before executing the next run.
 
-- **Salvage contact:** recover one ore if any member has room, or bypass the field.
-- **Distress signal:** spend one medicine from this fleet to assist and record a
-  rescue, or bypass the contact. The rescue counter persists across saves.
-- **Raider contact** (one roll in three): **Fight** or try to **Evade**; raiders
-  cannot be bypassed. See [combat](COMBAT.md) for the group, odds and outcomes.
+**Raider contact** (one roll in three): **Fight** or try to **Evade**; raiders
+cannot be bypassed. See [combat](COMBAT.md) for the group, odds and outcomes.
+Otherwise one of ten peaceful contacts, equally likely; each can be passed by:
 
-NPC trade, reputation rewards, inspections and branching authored story chains
-remain roadmap work built on this lifecycle.
+| Contact | Act | Outcome |
+| --- | --- | --- |
+| Salvage (debris) | Salvage | 1 ore |
+| Distress signal | Assist | −1 medicine, a rescue recorded |
+| Derelict freighter | Salvage | 2–6 units of a random good, space allowing |
+| Merchant convoy | Trade | up to 5 units of your most valuable cargo at 120% of list price |
+| Drifting cargo pod | Open | 3 units of a random good; one time in four a trap damages a hull (never fatally) |
+| Customs inspection | Comply | 20 cr fee; **Refuse** risks a 100 cr fine one time in two |
+| Authority cutter | Escort | 150 cr; three times in ten a hull takes damage |
+| Sensor anomaly | Scan | six times in ten, survey data worth 80 cr |
+| Comet | Harvest | up to 10 fuel per ship |
+| Lost survey probe | Recover | 120 cr reward |
+
+Credits are at a new game's prices and scale with inflation; a fine never takes
+the wallet below zero. Faction reputation from law contacts arrives with factions.
 
 Random state is seeded and saved. Rolls use stable fleet-ID order, not the order
 in which you plotted courses. Reloading the same planning state and executing the
 same run produces the same contacts. Resolving a contact cannot duplicate rewards
-through retries or reloads. Salvage explicitly creates the recovered ore; rescue
-assistance consumes medicine; raider wrecks yield ore. No contact grants credits yet.
+through retries or reloads. A contact's credits (`payout`) are settled into the
+wallet by the host in the same command, so saves always hold zero.
 
 ## Saves and multiplayer
 

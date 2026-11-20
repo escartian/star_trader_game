@@ -201,8 +201,9 @@ impl Session {
             }
         }
         // A battle that ended with this command pays its raider bounty, once,
-        // at today's price level (the report records what was paid).
+        // and a contact's reward or fee reaches the wallet.
         candidate.pay_new_bounty(&mut paid)?;
+        candidate.settle_payout();
         *self = candidate;
         Ok(self.snapshot(events.into_iter().map(SessionEvent::Navigation).collect()))
     }

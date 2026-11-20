@@ -65,6 +65,7 @@ fn encounter_rolls_and_choices_survive_reload_without_duplicate_rewards() {
             EncounterKind::DebrisField => EncounterChoice::Investigate,
             EncounterKind::DistressSignal => EncounterChoice::Bypass,
             EncounterKind::Raiders => EncounterChoice::AutoResolve,
+            _ => EncounterChoice::Bypass,
         };
         let revision = restored.state.revision;
         succeed(

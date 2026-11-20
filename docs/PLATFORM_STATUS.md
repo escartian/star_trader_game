@@ -190,3 +190,11 @@ replay and rejection of player commands against NPC hulls. GPU destination/traff
 captures on Apple M5 Pro were visually inspected. Camera/test controls are collapsed
 by default, and map canvas widths are clipped to the actual viewport. Native window
 mouse/DPI/lifecycle checks remain separate, unverified acceptance work.
+
+Flagship, contacts and setup: offscreen captures of the Session panel's new-game
+setup (1280 × 800), the Fleets sheet with the flagship badge and secondary
+fleets' standing orders (1280 × 800 and 390 × 844, `--scenario multi-fleet
+--capture-view roster`) and a cargo-pod contact card (1280 × 800, `--seed 2
+--capture-view encounter`) were visually inspected. Patrol tours, automatic
+contacts and every contact kind are covered by server tests; patrols over many
+runs and the balance of contact rewards have not been playtested.

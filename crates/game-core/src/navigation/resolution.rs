@@ -1,7 +1,7 @@
 use super::{Encounter, EncounterChoice, EncounterKind, NavigationError, NavigationEvent};
 use crate::{
     StarSystem,
-    economy::{Commodity, EconomyRules},
+    economy::EconomyRules,
     fleet::{FleetError, FleetId, FleetMovementError},
     travel::{Location, PlayerId, TravelError, TravelState},
 };
@@ -113,6 +113,7 @@ impl TravelState {
                     .checked_add(1)
                     .ok_or(TravelError::TimeOverflow)?;
                 let raiders = (roll >> 40).is_multiple_of(3);
+                let peaceful = &EncounterKind::PEACEFUL;
                 if raiders && on_lane.contains(&order.plan.fleet) {
                     // Patrolled lane: the raider contact never happens.
                     self.navigation.orders.push(order);
@@ -120,10 +121,8 @@ impl TravelState {
                 }
                 let kind = if raiders {
                     EncounterKind::Raiders
-                } else if (roll >> 32) & 1 == 0 {
-                    EncounterKind::DebrisField
                 } else {
-                    EncounterKind::DistressSignal
+                    peaceful[((roll >> 32) % peaceful.len() as u64) as usize]
                 };
                 let hostiles = match kind {
                     EncounterKind::Raiders => self.raider_group(order.plan.fleet)?,
@@ -218,40 +217,7 @@ impl TravelState {
             self.revision = revision;
             return Ok(event);
         }
-        let outcome = match (encounter.kind, choice) {
-            (_, EncounterChoice::Bypass) => "Contact bypassed; course can resume.".to_owned(),
-            (EncounterKind::DebrisField, EncounterChoice::Investigate) => {
-                let id = fleet
-                    .ships
-                    .iter()
-                    .find(|id| {
-                        self.ship(**id)
-                            .is_ok_and(|ship| ship.cargo_used() < u64::from(ship.cargo_capacity))
-                    })
-                    .ok_or(NavigationError::CargoFull)?;
-                self.ship_mut(*id)?.cargo[Commodity::Ore.index()] += 1;
-                "Recovered one ore from the debris field.".into()
-            }
-            (EncounterKind::DistressSignal, EncounterChoice::Assist) => {
-                let rescues = self
-                    .navigation
-                    .rescues
-                    .checked_add(1)
-                    .ok_or(TravelError::TimeOverflow)?;
-                let id = fleet
-                    .ships
-                    .iter()
-                    .find(|id| {
-                        self.ship(**id)
-                            .is_ok_and(|ship| ship.cargo[Commodity::Medicine.index()] > 0)
-                    })
-                    .ok_or(NavigationError::MissingMedicine)?;
-                self.ship_mut(*id)?.cargo[Commodity::Medicine.index()] -= 1;
-                self.navigation.rescues = rescues;
-                "Delivered one medicine; rescue recorded in the ship's log.".into()
-            }
-            _ => return Err(NavigationError::InvalidChoice.into()),
-        };
+        let outcome = self.resolve_contact(&encounter, &fleet, choice, rules)?;
         self.navigation
             .encounters
             .retain(|record| record.id != encounter_id);

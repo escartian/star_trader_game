@@ -146,6 +146,9 @@ impl TravelState {
         self.validate_bands(systems)?;
         self.validate_haven(systems)?;
         self.validate_patrols(systems)?;
+        if self.navigation.payout != 0 {
+            return Err("Unsettled contact payout".into());
+        }
         if let Some(report) = &self.navigation.last_combat {
             report.validate()?;
             if report.encounter >= self.navigation.next_encounter_id

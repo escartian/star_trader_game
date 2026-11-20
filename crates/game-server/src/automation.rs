@@ -55,6 +55,16 @@ impl Session {
         Ok(())
     }
 
+    /// Moves what a contact earned or cost into the wallet, at today's price
+    /// level; a fine never takes the wallet below zero.
+    pub(super) fn settle_payout(&mut self) {
+        let payout = std::mem::take(&mut self.state.navigation.payout);
+        let level = i128::from(self.economy.price_level_ppm);
+        let cents = i128::from(payout) * level / i128::from(PRICE_LEVEL_UNIT);
+        let wallet = i128::from(self.economy.credits.0) + cents;
+        self.economy.credits = Credits(wallet.clamp(0, i128::from(u64::MAX)) as u64);
+    }
+
     /// Settles every pending contact of a secondary fleet; returns the outcomes.
     pub(super) fn settle_secondary_contacts(
         &mut self,
@@ -73,10 +83,24 @@ impl Session {
         let mut events = Vec::new();
         for encounter in pending {
             let choice = self.automatic_choice(encounter.fleet, encounter.kind);
-            let event =
-                self.state
-                    .resolve_encounter(player, encounter.id, choice, &self.economy.rules)?;
+            let rules = &self.economy.rules;
+            // A choice the fleet cannot make (a full hold, nothing to sell)
+            // falls back to passing the contact by.
+            let feasible = self
+                .state
+                .clone()
+                .resolve_encounter(player, encounter.id, choice, rules)
+                .is_ok();
+            let choice = if feasible {
+                choice
+            } else {
+                EncounterChoice::Bypass
+            };
+            let event = self
+                .state
+                .resolve_encounter(player, encounter.id, choice, rules)?;
             self.pay_new_bounty(paid)?;
+            self.settle_payout();
             events.push(event);
         }
         Ok(events)
@@ -98,6 +122,14 @@ impl Session {
             .unwrap_or_default();
         match kind {
             EncounterKind::Raiders => EncounterChoice::AutoResolve,
+            EncounterKind::DerelictFreighter
+            | EncounterKind::CargoPod
+            | EncounterKind::Anomaly
+            | EncounterKind::Comet
+            | EncounterKind::LostProbe => EncounterChoice::Investigate,
+            EncounterKind::MerchantConvoy => EncounterChoice::Trade,
+            EncounterKind::CustomsInspection => EncounterChoice::Comply,
+            EncounterKind::AuthorityCutter => EncounterChoice::Assist,
             EncounterKind::DebrisField
                 if ships
                     .iter()

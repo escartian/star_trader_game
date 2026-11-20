@@ -6,6 +6,7 @@ mod battle_controls;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture;
 mod combat_report;
+mod contacts;
 mod fleets;
 mod victory;
 pub use fleets::TradeOption;
@@ -20,6 +21,8 @@ mod panel;
 mod routes;
 mod runs;
 mod saves;
+#[cfg(test)]
+pub(crate) use contacts::{contact_aboard_nothing, contact_pass_label};
 pub(crate) use setup::{setup_controls, setup_summary};
 mod settings;
 mod setup;

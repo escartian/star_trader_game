@@ -238,6 +238,8 @@ mod campaign_tests;
 #[cfg(test)]
 mod combat_tests;
 #[cfg(test)]
+mod contact_tests;
+#[cfg(test)]
 mod encounter_tests;
 #[cfg(test)]
 mod flagship_tests;

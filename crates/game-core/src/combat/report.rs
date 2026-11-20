@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub enum CombatOutcome {
     /// No hostile ship was left fighting: destroyed or fled.
     Victory,
-    /// Every player ship in the fleet was destroyed (one may survive crippled).
+    /// Every player ship in the fleet was destroyed.
     Defeat,
     /// Both sides still had ships: a side withdrew or both stopped firing.
     Disengaged,
@@ -53,7 +53,8 @@ pub struct CombatReport {
     /// Cargo units lost with destroyed (or crippled) player ships, or seized
     /// on surrender.
     pub cargo_lost: u32,
-    /// The last owned ship is never lost; it limps away at 1 hull point.
+    /// The player's last owned ship, destroyed in this battle: the campaign
+    /// is lost. (The field name predates game over, when it limped away.)
     pub crippled: Option<ShipId>,
     /// Bounty earned for the raiders destroyed (credits in cents); the host
     /// pays it once, when the battle ends.

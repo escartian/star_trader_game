@@ -13,7 +13,7 @@ use game_protocol::{ClientCommand, ServerMessage, SessionEvent};
 
 /// The starting freighter waiting in the open in system 2, `gap` km from the
 /// band there.
-fn near_band(gap: i64) -> Session {
+pub(super) fn near_band(gap: i64) -> Session {
     let mut session = Session::default();
     let band = session.state.navigation.bands[0].clone();
     assert_eq!(band.system, SystemId(2));

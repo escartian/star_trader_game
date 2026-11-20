@@ -29,7 +29,7 @@ impl LocalView {
             self.camera.pan += ui.input(|i| i.pointer.delta());
         }
         if response.hovered() {
-            self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom);
+            self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom, 0.3);
         }
         let hover = response
             .hover_pos()
@@ -145,6 +145,7 @@ impl LocalView {
                 painter.galley(label.min, galley, Color32::WHITE);
             }
         }
+        self.draw_campaign(&painter, rect);
         self.draw_bands(&painter, rect);
         self.draw_fleets(&painter, rect, ships, fleets, &label_bounds);
         if response.clicked()

@@ -2,7 +2,7 @@ use super::{Encounter, EncounterChoice, EncounterKind, NavigationError, Navigati
 use crate::{
     StarSystem,
     economy::{Commodity, EconomyRules},
-    fleet::{FleetError, FleetMovementError},
+    fleet::{FleetError, FleetId, FleetMovementError},
     travel::{Location, PlayerId, TravelError, TravelState},
 };
 
@@ -12,8 +12,19 @@ impl TravelState {
         player: PlayerId,
         systems: &[StarSystem],
     ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
+        self.execute_navigation_run_with(player, systems, &[])
+    }
+
+    /// [`Self::execute_navigation_run`], with `on_lane` naming fleets whose
+    /// trade routes run on a chartered shipping lane: raiders never strike them.
+    pub fn execute_navigation_run_with(
+        &mut self,
+        player: PlayerId,
+        systems: &[StarSystem],
+        on_lane: &[FleetId],
+    ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
         let mut candidate = self.clone();
-        let events = candidate.resolve_run(player, systems)?;
+        let events = candidate.resolve_run(player, systems, on_lane)?;
         *self = candidate;
         Ok(events)
     }
@@ -22,6 +33,7 @@ impl TravelState {
         &mut self,
         player: PlayerId,
         systems: &[StarSystem],
+        on_lane: &[FleetId],
     ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
         if let Some(encounter) = self.navigation.encounters.first() {
             return Err(NavigationError::EncounterPending(encounter.fleet).into());
@@ -100,7 +112,13 @@ impl TravelState {
                     .next_encounter_id
                     .checked_add(1)
                     .ok_or(TravelError::TimeOverflow)?;
-                let kind = if (roll >> 40).is_multiple_of(3) {
+                let raiders = (roll >> 40).is_multiple_of(3);
+                if raiders && on_lane.contains(&order.plan.fleet) {
+                    // Patrolled lane: the raider contact never happens.
+                    self.navigation.orders.push(order);
+                    continue;
+                }
+                let kind = if raiders {
                     EncounterKind::Raiders
                 } else if (roll >> 32) & 1 == 0 {
                     EncounterKind::DebrisField
@@ -118,6 +136,7 @@ impl TravelState {
                     run,
                     hostiles,
                     band: None,
+                    haven: false,
                 };
                 self.navigation.next_encounter_id = next;
                 self.navigation.encounters.push(encounter.clone());
@@ -155,7 +174,7 @@ impl TravelState {
                 self.navigation.orders.push(order);
             }
         }
-        events.extend(self.move_bands(player, run, systems)?);
+        events.extend(self.move_bands(player, run, systems, on_lane)?);
         events.extend(self.mine(systems)?);
         events.push(NavigationEvent::RunExecuted(run));
         Ok(events)

@@ -6,6 +6,7 @@ mod desktop;
 mod map;
 mod options;
 mod preferences;
+mod seed;
 mod session;
 mod theme;
 mod units;
@@ -34,7 +35,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     backup.push(".bak");
     let should_resume = options.resume
         || (!options.new
-            && options.seed == 0
             && options.economy.is_none()
             && (options.save.is_file() || std::path::Path::new(&backup).is_file()));
     let mut startup_notice = settings_notice;
@@ -122,7 +122,16 @@ fn fresh_session(
             &std::fs::read_to_string("config/planets.json")?,
         )?;
     }
-    let mut authority = game_server::Session::with_economy(options.seed, rules)?;
+    let seed = if options.seed_explicit || options.capturing() {
+        options.seed
+    } else {
+        seed::new_seed()
+    };
+    let mut authority = if options.capturing() && !options.galaxy_explicit {
+        game_server::Session::with_economy(seed, rules)?
+    } else {
+        game_server::Session::with_galaxy(seed, rules, options.galaxy)?
+    };
     if std::path::Path::new("config/movement.json").is_file() {
         authority.set_movement_rules(game_core::movement::MovementRules::from_json(
             &std::fs::read_to_string("config/movement.json")?,

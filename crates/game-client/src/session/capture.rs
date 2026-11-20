@@ -192,6 +192,12 @@ impl LocalSession {
             return Err(error.to_string());
         }
         self.accept(response);
+        self.capture_follow_courses()
+    }
+
+    /// Executes runs (fighting raiders, bypassing other contacts, holding idle
+    /// fleets) until no course is left.
+    fn capture_follow_courses(&mut self) -> Result<(), String> {
         for _ in 0..128 {
             if self.state.navigation.orders.is_empty() {
                 return Ok(());
@@ -243,6 +249,38 @@ impl LocalSession {
                 expected_revision: self.state.revision,
             });
         }
+    }
+
+    /// Flies the active fleet to the Raider Haven's body; returns its system.
+    pub fn capture_haven(&mut self) -> Result<game_core::SystemId, String> {
+        let haven = self
+            .state
+            .navigation
+            .haven
+            .clone()
+            .ok_or("No Raider Haven")?;
+        let response = self
+            .authority
+            .handle_offline(ClientCommand::PlotDestination {
+                ship: self.active_ship,
+                system: haven.system,
+                body: Some(haven.body),
+                expected_revision: self.state.revision,
+            });
+        if let ServerMessage::CommandRejected(error) = &response {
+            return Err(error.to_string());
+        }
+        self.accept(response);
+        self.capture_follow_courses()?;
+        // A band may strike on arrival; settle it so the Assault prompt shows.
+        self.capture_resolve_contacts();
+        self.combat_report = super::combat_report::CombatReportPanel::seen(&self.state);
+        Ok(haven.system)
+    }
+
+    /// The Victory panel over the map.
+    pub fn capture_victory(&mut self) {
+        self.victory.open = true;
     }
 
     /// Shuttle between two bodies until the first raider fight, then show its report.

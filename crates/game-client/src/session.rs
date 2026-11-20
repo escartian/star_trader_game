@@ -7,6 +7,7 @@ mod battle_controls;
 mod capture;
 mod combat_report;
 mod fleets;
+mod victory;
 pub use fleets::TradeOption;
 mod guide;
 mod landing;
@@ -19,6 +20,7 @@ mod panel;
 mod routes;
 mod runs;
 mod saves;
+pub(crate) use saves::galaxy_controls;
 mod settings;
 mod shell;
 pub use shell::SheetTab;
@@ -65,6 +67,7 @@ pub struct LocalSession {
     combat_report: combat_report::CombatReportPanel,
     battle: battle::BattlePanel,
     saves: saves::SavePanel,
+    victory: victory::VictoryPanel,
     log: VecDeque<String>,
     loaded_galaxy: Option<Vec<game_core::StarSystem>>,
     notice: String,
@@ -80,6 +83,7 @@ impl LocalSession {
         };
         let active_ship = state.ships[0].id;
         let combat_report = combat_report::CombatReportPanel::seen(&state);
+        let victory = victory::VictoryPanel::seen(&state);
         Self {
             map_target: None,
             focus_requested: false,
@@ -98,6 +102,7 @@ impl LocalSession {
             combat_report,
             battle: battle::BattlePanel::default(),
             saves: saves::SavePanel::default(),
+            victory,
             log: VecDeque::new(),
             loaded_galaxy: None,
             notice: String::new(),
@@ -291,6 +296,15 @@ impl LocalSession {
                         }
                         SessionEvent::HoldUpgraded => {
                             "Cargo hold upgraded. First earnings goal completed!".into()
+                        }
+                        SessionEvent::CharterBought { cost } => format!(
+                            "Port charter bought for {cost} cr. This port now pays you its share."
+                        ),
+                        SessionEvent::RunLimitSet { runs: Some(runs) } => {
+                            format!("The campaign now ends on score at run {runs}.")
+                        }
+                        SessionEvent::RunLimitSet { runs: None } => {
+                            "The campaign is open-ended.".into()
                         }
                     };
                     self.record(message);

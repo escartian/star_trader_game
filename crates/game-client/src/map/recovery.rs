@@ -1,5 +1,6 @@
 //! The startup save chooser keeps every session idle until the player picks a game.
 use super::Map;
+use game_core::generation::GalaxyConfig;
 use std::{
     fs,
     io::ErrorKind,
@@ -49,6 +50,7 @@ pub(super) struct SaveRecovery {
     entries: Vec<SaveEntry>,
     pending_delete: Option<PathBuf>,
     message: Option<String>,
+    galaxy: GalaxyConfig,
 }
 
 impl SaveRecovery {
@@ -82,6 +84,7 @@ impl SaveRecovery {
             entries,
             pending_delete: None,
             message: None,
+            galaxy: GalaxyConfig::default(),
         }
     }
 
@@ -132,6 +135,9 @@ impl Map {
                     ui.label("Load a saved game or start a new one in an empty slot.");
                 }
                 ui.separator();
+                ui.heading("New map size");
+                crate::session::galaxy_controls(ui, &mut recovery.galaxy);
+                ui.separator();
                 for entry in recovery.entries.clone() {
                     ui.group(|ui| {
                         ui.strong(&entry.label);
@@ -162,9 +168,10 @@ impl Map {
                                         recovery.refresh();
                                         recovery.message = Some("This slot changed. Choose it again.".into());
                                     } else {
-                                        match self.session.start_new_at(entry.path.clone(), 0) {
+                                        let seed = crate::seed::new_seed();
+                                        match self.session.start_new_at(entry.path.clone(), seed, recovery.galaxy) {
                                             Ok(()) => {
-                                                self.notify("New game started. This slot will save on close.".into());
+                                                self.notify(format!("New map (seed {seed}, {} systems, {} ly radius, up to {} objects per system). This slot will save on close.", recovery.galaxy.systems, recovery.galaxy.radius_ly, recovery.galaxy.max_objects));
                                                 finished = true;
                                             }
                                             Err(error) => recovery.message = Some(error),

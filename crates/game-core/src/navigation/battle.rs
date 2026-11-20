@@ -213,13 +213,16 @@ impl TravelState {
             report.outcome.label(),
             report.rounds.len()
         );
+        let destroyed: Vec<_> = report
+            .side(Side::Hostile)
+            .filter(|ship| ship.destroyed)
+            .map(|ship| ship.kind)
+            .collect();
         if let Some(band) = encounter.band {
-            let destroyed: Vec<_> = report
-                .side(Side::Hostile)
-                .filter(|ship| ship.destroyed)
-                .map(|ship| ship.kind)
-                .collect();
             self.band_after_contact(band, &destroyed);
+        }
+        if encounter.haven {
+            self.haven_after_contact(&destroyed);
         }
         self.navigation.last_combat = Some(Box::new(report));
         self.navigation

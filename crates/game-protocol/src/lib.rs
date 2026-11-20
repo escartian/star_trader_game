@@ -92,6 +92,21 @@ pub enum ClientCommand {
         ship: ShipId,
         expected_revision: u64,
     },
+    /// Buy the charter of the port where `ship` is (see `economy::charters`).
+    BuyCharter {
+        ship: ShipId,
+        expected_revision: u64,
+    },
+    /// Assault the Raider Haven with `fleet`, from orbit at its body.
+    AssaultHaven {
+        fleet: FleetId,
+        expected_revision: u64,
+    },
+    /// End the campaign on score at this run (`None`: open-ended).
+    SetRunLimit {
+        runs: Option<u64>,
+        expected_revision: u64,
+    },
     ExecuteNavigationRun {
         expected_revision: u64,
     },
@@ -168,6 +183,12 @@ pub enum SessionEvent {
         quantity: u32,
     },
     Traded(TradeQuote),
+    CharterBought {
+        cost: game_core::economy::Credits,
+    },
+    RunLimitSet {
+        runs: Option<u64>,
+    },
     Refuelled {
         units: u32,
     },

@@ -255,7 +255,11 @@ impl LocalSession {
         ui.group(|ui| {
             ui.horizontal(|ui| {
                 icons::glyph(ui, Icon::Contact, AMBER, "Contact");
-                ui.strong(encounter.kind.label());
+                ui.strong(if encounter.haven {
+                    "Raider Haven assault"
+                } else {
+                    encounter.kind.label()
+                });
             });
             if encounter.kind == EncounterKind::Raiders {
                 self.raider_ui(ui, &fleet, &encounter);
@@ -328,10 +332,17 @@ impl LocalSession {
             ui.label(format!("Battle in progress against {}.", names.join(", ")));
             return;
         }
-        ui.label(format!(
-            "Hostile raiders close in: {}. Fight them turn by turn, let the fight play out automatically, or try to outrun them; a failed escape starts the battle.",
-            names.join(", ")
-        ));
+        ui.label(if encounter.haven {
+            format!(
+                "The Haven's garrison stands ready: {}. Fight it turn by turn, let it play out automatically, or call the assault off.",
+                names.join(", ")
+            )
+        } else {
+            format!(
+                "Hostile raiders close in: {}. Fight them turn by turn, let the fight play out automatically, or try to outrun them; a failed escape starts the battle.",
+                names.join(", ")
+            )
+        });
         let mut choice = None;
         ui.horizontal(|ui| {
             if icons::button(ui, Icon::Weapon, "Fight")
@@ -346,7 +357,12 @@ impl LocalSession {
             {
                 choice = Some(EncounterChoice::AutoResolve);
             }
-            if icons::button(ui, Icon::Engine, &format!("Evade {chance}%")).clicked() {
+            let evade = if encounter.haven {
+                "Call off".to_owned()
+            } else {
+                format!("Evade {chance}%")
+            };
+            if icons::button(ui, Icon::Engine, &evade).clicked() {
                 choice = Some(EncounterChoice::Evade);
             }
         });

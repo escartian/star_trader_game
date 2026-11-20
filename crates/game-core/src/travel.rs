@@ -119,6 +119,9 @@ pub struct TravelState {
     pub fleets: Vec<Fleet>,
     pub next_ship_id: u64,
     pub next_fleet_id: u64,
+    /// Run limit and how the campaign ended (see `campaign`).
+    #[serde(default)]
+    pub campaign: crate::campaign::Campaign,
 }
 
 impl Default for TravelState {
@@ -151,6 +154,7 @@ impl Default for TravelState {
             }],
             next_ship_id: 2,
             next_fleet_id: 2,
+            campaign: crate::campaign::Campaign::default(),
         }
     }
 }

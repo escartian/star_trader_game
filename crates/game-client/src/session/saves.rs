@@ -2,6 +2,7 @@
 use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use crate::theme::{CYAN, GREEN};
+use game_core::generation::GalaxyConfig;
 use game_protocol::{ClientCommand, ServerMessage};
 use std::path::Path;
 use std::path::PathBuf;
@@ -11,6 +12,8 @@ pub(super) struct SavePanel {
     pub path: PathBuf,
     pub(super) slot: u8,
     seed: u64,
+    fixed_seed: bool,
+    galaxy: GalaxyConfig,
     pub guide: bool,
     pub autosave: bool,
 }
@@ -22,6 +25,8 @@ impl Default for SavePanel {
             path: "data/slot-1.json".into(),
             slot: 1,
             seed: 0,
+            fixed_seed: false,
+            galaxy: GalaxyConfig::default(),
             guide: true,
             autosave: true,
         }
@@ -66,8 +71,14 @@ impl LocalSession {
         Ok(recovery)
     }
 
-    pub fn start_new_at(&mut self, path: PathBuf, seed: u64) -> Result<(), String> {
-        let mut authority = game_server::Session::with_economy(seed, self.economy.rules.clone())?;
+    pub fn start_new_at(
+        &mut self,
+        path: PathBuf,
+        seed: u64,
+        galaxy: GalaxyConfig,
+    ) -> Result<(), String> {
+        let mut authority =
+            game_server::Session::with_galaxy(seed, self.economy.rules.clone(), galaxy)?;
         authority.set_movement_rules(self.state.movement_rules.clone())?;
         self.replace_authority(authority);
         self.set_save_path(path);
@@ -87,6 +98,8 @@ impl LocalSession {
         self.authority = authority;
         let message = self.authority.handle(ClientCommand::GetSession);
         self.accept(message);
+        // A loaded game's existing end is not announced again.
+        self.victory = super::victory::VictoryPanel::seen(&self.state);
         if let ServerMessage::GalaxySnapshot { systems, .. } =
             self.authority.handle(ClientCommand::GetGalaxy)
         {
@@ -125,19 +138,32 @@ impl LocalSession {
     fn controls_ui(&mut self, ui: &mut egui::Ui) {
         self.slot_controls(ui);
         ui.separator();
-        ui.horizontal(|ui| {
-            icons::glyph(ui, Icon::Seed, CYAN, "Galaxy seed for a new session");
-            ui.add(egui::DragValue::new(&mut self.saves.seed))
-                .on_hover_text("Galaxy seed");
+        galaxy_controls(ui, &mut self.saves.galaxy);
+        ui.horizontal_wrapped(|ui| {
+            icons::glyph(ui, Icon::Seed, CYAN, "Map seed for a new session");
+            ui.checkbox(&mut self.saves.fixed_seed, "Use fixed seed");
+            ui.add_enabled(
+                self.saves.fixed_seed,
+                egui::DragValue::new(&mut self.saves.seed),
+            )
+            .on_hover_text("The same seed and map size make the same map. Leave this off for a new map each time.");
             if icons::button(ui, Icon::New, "New session")
-                .on_hover_text("Start a new galaxy. Autosave uses the selected slot.")
+                .on_hover_text("Start a new map. Autosave uses the selected slot.")
                 .clicked()
             {
-                match self.start_new_at(self.saves.path.clone(), self.saves.seed) {
+                let seed = if self.saves.fixed_seed {
+                    self.saves.seed
+                } else {
+                    crate::seed::new_seed()
+                };
+                match self.start_new_at(self.saves.path.clone(), seed, self.saves.galaxy) {
                     Ok(()) => {
-                        self.record(
-                            "New session started. Autosave uses the selected slot; choose another slot to preserve an older run.".into(),
-                        );
+                        self.record(format!(
+                            "New map (seed {seed}, {} systems, {} ly radius, up to {} objects per system). Autosave uses the selected slot; choose another slot to preserve an older run.",
+                            self.saves.galaxy.systems,
+                            self.saves.galaxy.radius_ly,
+                            self.saves.galaxy.max_objects
+                        ));
                         ui.ctx().request_repaint();
                     }
                     Err(error) => self.record(error),
@@ -217,4 +243,23 @@ impl LocalSession {
             });
         }
     }
+}
+
+/// Shared by the startup chooser and in-game new-session controls.
+pub(crate) fn galaxy_controls(ui: &mut egui::Ui, config: &mut GalaxyConfig) {
+    ui.horizontal_wrapped(|ui| {
+        ui.label("STAR SYSTEMS");
+        ui.add(egui::DragValue::new(&mut config.systems).range(4..=150));
+        ui.label("MAP RADIUS (ly)");
+        ui.add(egui::DragValue::new(&mut config.radius_ly).range(20..=95));
+        ui.label("MAX OBJECTS / SYSTEM");
+        ui.add(egui::DragValue::new(&mut config.max_objects).range(6..=15));
+        ui.small("Includes the star and trade port");
+    });
+    let area = std::f64::consts::PI * f64::from(config.radius_ly).powi(2);
+    ui.small(format!(
+        "Up to {} ly across · target density {:.1} systems per 1,000 ly². Every system is reachable by hops of 20 ly or less.",
+        u32::from(config.radius_ly) * 2,
+        f64::from(config.systems) * 1000.0 / area
+    ));
 }

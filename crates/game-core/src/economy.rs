@@ -2,9 +2,11 @@
 use serde::{Deserialize, Serialize};
 mod bounties;
 pub(crate) mod cargo_json;
+mod charters;
 mod market;
 mod rules;
 pub use bounties::RaiderBounties;
+pub use charters::{CampaignRules, Charter};
 pub use rules::{EconomyRules, MarketTemplate};
 mod services;
 mod shipyard;
@@ -103,6 +105,9 @@ pub struct Economy {
     pub traders: Vec<crate::npc::Trader>,
     pub markets: Vec<Market>,
     pub rules: EconomyRules,
+    /// Port charters bought so far (see `charters`). Omitted from saves when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub charters: Vec<Charter>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -133,6 +138,7 @@ pub enum EconomyError {
     FuelFull,
     AlreadyUpgraded,
     NoDamage,
+    AlreadyChartered,
     ArithmeticOverflow,
 }
 
@@ -153,6 +159,7 @@ impl std::fmt::Display for EconomyError {
             Self::FuelFull => "That amount would exceed the fuel tank capacity.",
             Self::AlreadyUpgraded => "The cargo hold is already upgraded.",
             Self::NoDamage => "This ship has no hull damage to repair.",
+            Self::AlreadyChartered => "This port's charter has already been sold.",
             Self::ArithmeticOverflow => {
                 "The transaction exceeds supported quantity or credit limits."
             }

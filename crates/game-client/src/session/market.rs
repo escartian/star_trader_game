@@ -81,6 +81,7 @@ impl LocalSession {
                 "Prices in credits for the first unit. Hover an order button for its total:\nbulk orders price every unit along the stock curve. Max fills your hold;\nAll sells everything this market can pay for.",
             );
         });
+        self.charter_row(ui, &ship, market.id);
         let mut action = self.trade_table(ui, &ship, &market, systems);
         ui.separator();
         ui.horizontal_wrapped(|ui| {
@@ -193,6 +194,29 @@ impl LocalSession {
                 CYAN,
                 "Current buy / sell unit prices at known markets. Prices may change while you travel.",
             );
+            if ui.available_width() < 620.0 {
+                for commodity in Commodity::ALL {
+                    ui.group(|ui| {
+                        ui.set_width(ui.available_width());
+                        ui.horizontal(|ui| {
+                            icons::commodity(ui, commodity);
+                            ui.strong(commodity.label());
+                        });
+                        for market in &self.economy.markets {
+                            let good = &market.goods[commodity.index()];
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label(market_name(systems, market.id));
+                                ui.weak(format!(
+                                    "Buy {} · Sell {} cr",
+                                    good.price(TradeSide::Buy, good.stock),
+                                    good.price(TradeSide::Sell, good.stock)
+                                ));
+                            });
+                        }
+                    });
+                }
+                return;
+            }
             egui::ScrollArea::horizontal()
                 .id_salt("known_prices")
                 .show(ui, |ui| {

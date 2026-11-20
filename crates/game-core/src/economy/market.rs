@@ -61,6 +61,7 @@ impl Economy {
             credits: rules.starting_credits,
             markets,
             rules,
+            charters: Vec::new(),
         })
     }
 

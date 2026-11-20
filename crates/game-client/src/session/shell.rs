@@ -128,6 +128,7 @@ impl LocalSession {
     pub fn sheet_header(&mut self, ui: &mut egui::Ui) {
         self.guide(ui);
         self.contact_panel(ui);
+        self.haven_prompt(ui);
     }
 
     /// The Fleets page: the ship used for trading, then every fleet.
@@ -174,6 +175,11 @@ impl LocalSession {
                 "Courses, readiness and contacts",
             ),
             (
+                Icon::Star,
+                "Victory",
+                "Roads to victory, score, the Raider Haven and campaign length",
+            ),
+            (
                 Icon::Save,
                 "Session & saves",
                 "Save, load, settings, guide and log",
@@ -188,6 +194,7 @@ impl LocalSession {
                     0 => self.market.open = true,
                     1 => self.fleet_panel.open = true,
                     2 => self.open_navigation(),
+                    3 => self.victory.open = true,
                     _ => self.saves.open = true,
                 }
             }

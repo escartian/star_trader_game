@@ -132,9 +132,12 @@ impl Session {
                 vec![routes::cancel_route(&mut candidate.state, player, fleet)?]
             }
             ClientCommand::ExecuteNavigationRun { .. } => {
-                let mut events = candidate
-                    .state
-                    .execute_navigation_run(player, &candidate.systems)?;
+                let on_lane = candidate.lane_fleets(player);
+                let mut events = candidate.state.execute_navigation_run_with(
+                    player,
+                    &candidate.systems,
+                    &on_lane,
+                )?;
                 // The run moved the clock: bodies move on along their orbits.
                 game_core::orbits::place(&mut candidate.systems, candidate.state.tick);
                 candidate

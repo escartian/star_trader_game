@@ -601,6 +601,7 @@ dependencies = [
  "egui",
  "egui-wgpu",
  "egui-winit",
+ "fastrand",
  "game-core",
  "game-protocol",
  "game-server",

@@ -4,9 +4,10 @@ mod camera;
 mod capture_state;
 mod fixtures;
 mod fleets;
+mod galaxy_campaign;
 mod galaxy_fleets;
 mod interaction;
-mod local;
+pub(crate) mod local;
 mod orbit_view;
 mod panels;
 mod recovery;
@@ -83,6 +84,7 @@ impl Map {
             .find(|s| Some(s.id) == session.display_system())
             .or_else(|| systems.first())
             .map(|s| s.id);
+        let zoom = camera::overview_zoom(&systems);
         Self {
             observed_run: session.run_number(),
             observed_system: session.current_system(),
@@ -91,7 +93,10 @@ impl Map {
             session_systems: systems.clone(),
             systems,
             selected,
-            camera: Camera::default(),
+            camera: Camera {
+                zoom,
+                ..Camera::default()
+            },
             candidates: Vec::new(),
             scene: Scene::Session,
             session_selection: selected,
@@ -201,6 +206,7 @@ impl Map {
             return;
         }
         if let Some(systems) = self.session.take_loaded_galaxy() {
+            let zoom = camera::overview_zoom(&systems);
             self.session_systems = systems.clone();
             self.systems = systems;
             self.scene = Scene::Session;
@@ -210,7 +216,10 @@ impl Map {
                 .or_else(|| self.systems.first().map(|system| system.id));
             self.session_selection = self.selected;
             self.local = None;
-            self.camera = Camera::default();
+            self.camera = Camera {
+                zoom,
+                ..Camera::default()
+            };
             self.candidates.clear();
         }
         let _ = art::Artwork::preload(ctx);
@@ -240,6 +249,7 @@ impl Map {
         self.session.show_navigation(ctx, &self.session_systems);
         self.session.show_battle(ctx);
         self.session.show_combat_report(ctx);
+        self.session.show_victory(ctx, &self.session_systems);
         // Taps on the strip or sheet may ask for another page: show it at once.
         if let Some(tab) = self.session.take_sheet_request() {
             self.sheet = tab;
@@ -297,6 +307,7 @@ impl Map {
         local.set_trade_ready(self.session.trade_ready_ships());
         local.set_contacts(self.session.contact_fleets());
         local.set_bands(self.session.raider_bands().to_vec());
+        local.set_campaign_marks(self.session.campaign_marks());
         local.set_headings(self.session.fleet_headings(&self.session_systems));
         local.set_trade_options(self.session.trade_options(local.system().id));
         let display_ships = self

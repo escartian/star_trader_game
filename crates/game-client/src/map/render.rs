@@ -15,7 +15,7 @@ impl Map {
             self.camera.pan += ui.input(|i| i.pointer.delta());
         }
         if response.hovered() {
-            self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom);
+            self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom, 0.15);
         }
         let hover = response
             .hover_pos()
@@ -96,6 +96,7 @@ impl Map {
         }
         self.galaxy_fleet_hits.clear();
         if self.scene == super::fixtures::Scene::Session {
+            self.draw_galaxy_campaign(&painter, rect);
             self.draw_galaxy_fleets(ui, &painter, rect, &labels);
             self.draw_galaxy_threats(ui, &painter, rect);
         }

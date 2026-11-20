@@ -1,3 +1,6 @@
+mod campaign;
+pub use campaign::CampaignMarks;
+pub(crate) use campaign::fortress;
 mod framing;
 mod labels;
 mod layout;
@@ -70,6 +73,8 @@ pub struct LocalView {
     )>,
     /// Roaming raider bands (drawn when in this system).
     bands: Vec<game_core::navigation::RaiderBand>,
+    /// The Raider Haven and chartered ports (see `campaign`).
+    campaign: CampaignMarks,
     trade_options: Vec<crate::session::TradeOption>,
     market_request: Option<game_core::travel::ShipId>,
     selection_request: Option<game_core::travel::ShipId>,
@@ -92,6 +97,7 @@ impl LocalView {
             trade_ready: Vec::new(),
             contacts: Vec::new(),
             bands: Vec::new(),
+            campaign: CampaignMarks::default(),
             headings: Vec::new(),
             trade_options: Vec::new(),
             market_request: None,

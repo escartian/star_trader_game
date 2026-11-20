@@ -3,6 +3,10 @@
 //! and positions are validated before writing.
 use super::*;
 use game_core::travel::ShipId;
+use game_core::{
+    campaign::{CampaignEnd, Road},
+    fleet::ShipKind,
+};
 
 fn load_value(value: &serde_json::Value) -> Result<(Session, Option<String>), String> {
     let directory = tempfile::tempdir().unwrap();
@@ -118,4 +122,36 @@ fn hull_damage_at_or_beyond_the_class_hull_is_rejected() {
         session.export_json().is_err(),
         "a destroyed ship cannot remain in a fleet"
     );
+}
+
+#[test]
+fn forged_campaign_ends_and_garrisons_cannot_be_saved() {
+    let mut session = Session::default();
+    session.state.campaign.ended = Some(CampaignEnd::Won {
+        road: Road::Pirate,
+        run: 0,
+    });
+    assert!(session.export_json().is_err(), "locked road");
+    session.state.campaign.ended = Some(CampaignEnd::Won {
+        road: Road::Soldier,
+        run: 0,
+    });
+    assert!(session.export_json().is_err(), "standing Haven");
+    session.state.campaign.ended = Some(CampaignEnd::Lost { run: 0 });
+    assert!(session.export_json().is_err(), "living ship");
+    session.state.campaign.ended = Some(CampaignEnd::TimeUp { run: 0 });
+    assert!(session.export_json().is_err(), "no campaign length");
+    session.state.campaign.ended = None;
+    session.state.campaign.run_limit = Some(1);
+    session.state.navigation.run = 1;
+    assert!(
+        session.export_json().is_err(),
+        "expired campaign still live"
+    );
+
+    let mut session = Session::default();
+    session.state.navigation.haven.as_mut().unwrap().garrison[0] = ShipKind::Freighter;
+    assert!(session.export_json().is_err(), "foreign garrison hull");
+    session.state.navigation.haven.as_mut().unwrap().garrison[0] = ShipKind::Scout;
+    assert!(session.export_json().is_err(), "too many scouts");
 }

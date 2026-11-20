@@ -105,7 +105,7 @@ fn report_ui(ui: &mut egui::Ui, report: &CombatReport) {
         ui.colored_label(
             AMBER,
             format!(
-                "{} limped away crippled at 1 hull point; its cargo was seized.",
+                "{} was your last ship. With it gone, the campaign is over.",
                 entry.name
             ),
         );

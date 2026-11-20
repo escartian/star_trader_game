@@ -144,6 +144,7 @@ impl TravelState {
             }
         }
         self.validate_bands(systems)?;
+        self.validate_haven(systems)?;
         if let Some(report) = &self.navigation.last_combat {
             report.validate()?;
             if report.encounter >= self.navigation.next_encounter_id
@@ -158,6 +159,14 @@ impl TravelState {
     /// A random contact pauses a fleet under way; a band's strike may also
     /// catch a waiting fleet, but its band must still exist in that system.
     fn encounter_source_valid(&self, encounter: &super::Encounter) -> bool {
+        if encounter.haven {
+            return encounter.band.is_none()
+                && self
+                    .navigation
+                    .haven
+                    .as_ref()
+                    .is_some_and(|haven| haven.standing() && haven.garrison == encounter.hostiles);
+        }
         match encounter.band {
             None => self
                 .navigation

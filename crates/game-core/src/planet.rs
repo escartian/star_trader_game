@@ -29,6 +29,10 @@ pub enum Biome {
     Arid,
     Frozen,
     Gas,
+    Ocean,
+    Jungle,
+    Volcanic,
+    Barren,
 }
 impl Biome {
     pub fn label(self) -> &'static str {
@@ -37,6 +41,10 @@ impl Biome {
             Self::Arid => "Arid",
             Self::Frozen => "Frozen",
             Self::Gas => "Gas atmosphere",
+            Self::Ocean => "Ocean",
+            Self::Jungle => "Jungle",
+            Self::Volcanic => "Volcanic",
+            Self::Barren => "Barren",
         }
     }
 }

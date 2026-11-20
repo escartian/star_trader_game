@@ -1,6 +1,6 @@
 # Phone-first rework
 
-Status: **phone shell, flat play and hex battles implemented; victory work remains.** This plan reworks the interface,
+Status: **phases 1–5 implemented (phone shell, flat play, hex battles, victory framework); unlocks remain.** This plan reworks the interface,
 the map and battles around a phone-sized screen, and gives the game a goal.
 Where it conflicts with [map design](MAP_DESIGN.md) (3D map on a 2D screen) or
 [combat](COMBAT.md) (3D battle grid), this document wins once each phase lands.
@@ -148,23 +148,28 @@ sessions and for multiplayer.
 
 | Road | Win condition | Builds on | Needs |
 | --- | --- | --- | --- |
-| Trader | Net worth of 1,000,000 cr, **or** the trade charters of three ports (bought from port authorities) | Markets, routes, fleets | Charters (new) |
+| Trader | Net worth of 25,000 cr (first proposed as 1,000,000; see [campaign](CAMPAIGN.md)), **or** the trade charters of three ports | Markets, routes, fleets | Charters (new) |
 | Soldier | Destroy the Raider Haven (a large defended battle) | Battles, bands, bounties | Haven (new) |
 | Diplomat / Spy | Highest standing with a great power, then broker the frontier treaty | Factions, reputation, missions | Milestones 5 and 6 |
 | Pirate | Take over the Raider Haven and become its master | Piracy, wanted status | Milestones 5 and 6 |
 
 **Score** (for run limits and multiplayer): net worth, plus charters, haven
-damage and faction standing, each converted to points in a published formula.
+damage and faction standing, each converted to points in a published formula
+(see [campaign](CAMPAIGN.md)).
+
+The implemented numbers, the Haven's rules and the charter details are in
+[campaign](CAMPAIGN.md); the notes below record the original intent.
 
 **Losing.** If your last ship is destroyed, the game is over. Fleeing is always
 possible (Evade, withdrawing from your edge, surrender), so this replaces today's
 rule that spares the last ship crippled.
 
 **Raider Haven.** Placed per seed, always in a system far from the starting zone.
-Destroying it is a big set-piece battle: the Haven's own defences plus several
-bands, near the board's largest size.
+Destroying it is a big set-piece battle near the board's largest size. As built,
+its garrison is three patrols and five scouts of existing hulls; a dedicated
+Haven hull is later work.
 
-**Trade charters** (proposed). A charter is a port authority's licence, bought once
+**Trade charters** (implemented as proposed: 5,000 cr, 2% share). A charter is a port authority's licence, bought once
 at a high price:
 - **Shipping lanes:** two chartered ports are joined by a patrolled lane. Your
   trade routes along it are never struck by raiders, and the lane is drawn as a
@@ -228,8 +233,11 @@ Each phase ships on its own, keeps `./tools/check.sh` green and adds captures at
    view, tap-to-aim then Fire, Climb/Dive buttons and a stacked layout below
    700 points. Schema 8; schema-7 saves auto-resolve an open 3D battle on load.
    Balance tables are in [combat](COMBAT.md).
-5. **Victory framework:** Victory panel, score, campaign length, Raider Haven
-   (bands spawn from it; destroying it wins), trade charters.
+5. **Victory framework** (done): Victory panel (Menu), published score,
+   campaign length (open-ended, 200, 400 or 800 runs), game over when the last
+   ship is lost, the Raider Haven (assault from orbit; destroying it wins; bands
+   stop returning once it falls) and trade charters with port share and
+   shipping lanes. See [campaign](CAMPAIGN.md).
 6. **Unlocks:** progressive disclosure and guide cards.
 
 Diplomat/Spy and Pirate roads follow factions and missions (milestones 5 and 6).

@@ -18,6 +18,41 @@ fn json_round_trip_preserves_journey_markets_money_and_ticks() {
 }
 
 #[test]
+fn largest_generated_world_saves_and_loads_without_regeneration() {
+    let config = game_core::generation::GalaxyConfig {
+        systems: 150,
+        radius_ly: 95,
+        max_objects: 15,
+    };
+    let session =
+        Session::with_galaxy(42, game_core::economy::EconomyRules::default(), config).unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("large.json");
+    session.save(&path).unwrap();
+    let (mut loaded, _) = Session::load(&path).unwrap();
+    assert_eq!(loaded.systems, session.systems);
+    assert_eq!(loaded.economy, session.economy);
+    assert_eq!(loaded.state, session.state);
+    assert!(fs::metadata(path).unwrap().len() <= super::MAX_SAVE_BYTES);
+    let hold = loaded.handle(game_protocol::ClientCommand::HoldFleet {
+        fleet: game_core::fleet::FleetId(1),
+        expected_revision: loaded.state.revision,
+    });
+    assert!(matches!(
+        hold,
+        game_protocol::ServerMessage::SessionSnapshot { .. }
+    ));
+    let run = loaded.handle(game_protocol::ClientCommand::ExecuteNavigationRun {
+        expected_revision: loaded.state.revision,
+    });
+    assert!(matches!(
+        run,
+        game_protocol::ServerMessage::SessionSnapshot { .. }
+    ));
+    assert_eq!(loaded.state.navigation.run, 1);
+}
+
+#[test]
 fn damaged_primary_recovers_previous_save_and_invalid_schema_is_rejected() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("slot.json");

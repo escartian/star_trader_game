@@ -1,4 +1,5 @@
 //! Authoritative rules shared by offline hosting and future remote transports.
+mod campaign;
 mod commerce;
 mod fleets;
 mod movement;
@@ -41,7 +42,25 @@ impl Session {
         rules: game_core::economy::EconomyRules,
     ) -> Result<Self, String> {
         rules.validate()?;
-        let mut systems = game_core::generation::generate_galaxy(seed);
+        let systems = game_core::generation::generate_galaxy(seed);
+        Self::from_generated(seed, rules, systems)
+    }
+
+    pub fn with_galaxy(
+        seed: u64,
+        rules: game_core::economy::EconomyRules,
+        config: game_core::generation::GalaxyConfig,
+    ) -> Result<Self, String> {
+        rules.validate()?;
+        let systems = game_core::generation::generate_galaxy_with(seed, config)?;
+        Self::from_generated(seed, rules, systems)
+    }
+
+    fn from_generated(
+        seed: u64,
+        rules: game_core::economy::EconomyRules,
+        mut systems: Vec<StarSystem>,
+    ) -> Result<Self, String> {
         rules.planet_catalog.populate(&mut systems);
         let mut economy = Economy::with_rules(&systems, rules)?;
         let mut state = TravelState::default();
@@ -82,8 +101,18 @@ impl Session {
     ) -> Result<ServerMessage, CommandError> {
         // The initial world has one player; don't disclose its state to another identity.
         self.state.authorize(player, self.state.ships[0].id)?;
+        self.campaign_gate(&command)?;
         // Every rule reads body positions for the current tick.
         game_core::orbits::place(&mut self.systems, self.state.tick);
+        let message = self.dispatch(player, command)?;
+        Ok(self.record_campaign_end(player, message))
+    }
+
+    fn dispatch(
+        &mut self,
+        player: PlayerId,
+        command: ClientCommand,
+    ) -> Result<ServerMessage, CommandError> {
         match command {
             ClientCommand::GetGalaxy => Ok(ServerMessage::GalaxySnapshot {
                 protocol_version: PROTOCOL_VERSION,
@@ -135,6 +164,9 @@ impl Session {
             | ClientCommand::Refuel { .. }
             | ClientCommand::UpgradeHold { .. }
             | ClientCommand::RepairShip { .. }) => self.commerce(player, command),
+            command @ (ClientCommand::BuyCharter { .. }
+            | ClientCommand::AssaultHaven { .. }
+            | ClientCommand::SetRunLimit { .. }) => self.campaign_command(player, command),
         }
     }
 
@@ -187,6 +219,8 @@ mod planet_tests;
 mod band_tests;
 #[cfg(test)]
 mod battle_tests;
+#[cfg(test)]
+mod campaign_tests;
 #[cfg(test)]
 mod combat_tests;
 #[cfg(test)]

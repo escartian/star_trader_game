@@ -46,6 +46,9 @@ pub struct EconomyRules {
     /// Percent chance per run that an NPC trader under way meets raiders.
     #[serde(default = "default_npc_raid_chance")]
     pub npc_raid_chance_percent: u32,
+    /// Victory goals, charter price and port share (defaults for older definitions).
+    #[serde(default)]
+    pub campaign: super::CampaignRules,
 }
 
 /// The player's 12% contact chance × one contact in three being raiders.
@@ -123,6 +126,7 @@ impl EconomyRules {
             || self.hold_upgrade_price.0 > 1_000_000_000_000
             || !self.raider_bounties.valid()
             || self.npc_raid_chance_percent > 100
+            || !self.campaign.valid()
         {
             return Err("Invalid initial credits or service prices".into());
         }

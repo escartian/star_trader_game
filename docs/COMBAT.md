@@ -208,9 +208,9 @@ After the fight:
 
 - Owned ships keep the damage from the report. Destroyed ships and their cargo are
   removed; an emptied fleet is removed along with its course.
-- **Last ship rule:** the player's last owned ship is never destroyed. It survives
-  at 1 hull point and its cargo is seized. This avoids a game-over state that the
-  design does not yet define.
+- **Losing the last ship ends the campaign** (see [campaign](CAMPAIGN.md)): the
+  report marks it destroyed, the game freezes, and its wreck stays on record at
+  1 hull point with its cargo lost so the final state still saves and loads.
 - **Victory:** each destroyed raider yields 2 ore, loaded into free cargo space
   in fleet order; anything that does not fit is lost. Raiders that fled leave
   no wreck to salvage.

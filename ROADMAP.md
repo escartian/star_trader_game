@@ -41,6 +41,9 @@ for decisions and phases; it takes precedence over conflicting older map/battle 
 - [x] Separate core, protocol, server library and native client crates.
 - [x] In-process offline session with validated commands, revisions and events.
 - [x] Seeded flat galaxy with reachable starting markets; distinct ly/km types.
+  New games offer 4–150 systems, a 20–95 ly radius and 6–15 total objects per
+  system (60/70/8 by default), with varied stars, planets, moons and asteroids;
+  seed 0 retains the fixed test fixture.
 - [x] Orbit/pan/zoom, focus, presets, overlap chooser and double-click inspection.
 - [x] Starfield/nebula background, star-type colors/glows/sizes, local system view.
 - [x] Blender-authored celestial/station sprites and schematic moon separation.
@@ -148,6 +151,10 @@ campaign advance action; the interface does not call it End Turn.
 
 See [map controls](docs/MAP_CONTROLS.md). Physical mouse/window/DPI acceptance
 remains separate from GPU captures and egui input regression tests.
+
+**Campaign (phone-first phase 5):** roads to victory, score, campaign length,
+game over, the Raider Haven and port charters are implemented; see
+[campaign](docs/CAMPAIGN.md).
 
 **Next:** explicit hostility/engagement rules for NPC and faction fleets, mid-fight
 retreat and combat balance from playtests ([combat](docs/COMBAT.md)).

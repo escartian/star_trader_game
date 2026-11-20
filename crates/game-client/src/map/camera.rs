@@ -26,9 +26,25 @@ impl Default for Camera {
 /// Wheel/two-finger scroll and trackpad pinch both zoom the hovered map.
 /// The map never sits inside a scroll area, so scrolling cannot also move the page.
 /// `zoom_delta` is egui's multiplicative pinch (and ctrl+wheel) factor; 1.0 = none.
-pub fn zoom_input(ui: &egui::Ui, zoom: f32) -> f32 {
+pub fn zoom_input(ui: &egui::Ui, zoom: f32, minimum: f32) -> f32 {
     let (scroll, pinch) = ui.input(|i| (i.smooth_scroll_delta.y, i.zoom_delta()));
-    (zoom * (scroll * 0.002).exp() * pinch).clamp(0.3, 4.0)
+    (zoom * (scroll * 0.002).exp() * pinch).clamp(minimum, 4.0)
+}
+
+/// Fit a large galaxy's farthest star at startup; smaller fixtures stay at 1×.
+pub fn overview_zoom(systems: &[game_core::StarSystem]) -> f32 {
+    if systems.len() <= 10 {
+        return 1.0;
+    }
+    let radius = systems
+        .iter()
+        .map(|system| {
+            let x = system.position.x as f64;
+            let z = system.position.z as f64;
+            x.hypot(z)
+        })
+        .fold(1.0_f64, f64::max);
+    (17.0 / radius).clamp(0.15, 1.0) as f32
 }
 
 impl Camera {
@@ -68,6 +84,22 @@ mod tests {
             assert_eq!(camera.project(target, rect), rect.center());
         }
     }
+
+    #[test]
+    fn large_map_starts_at_an_overview_scale() {
+        let small = game_core::generation::generate_galaxy(0);
+        assert_eq!(overview_zoom(&small), 1.0);
+        let large = game_core::generation::generate_galaxy_with(
+            42,
+            game_core::generation::GalaxyConfig {
+                systems: 150,
+                radius_ly: 95,
+                max_objects: 8,
+            },
+        )
+        .unwrap();
+        assert!(overview_zoom(&large) < 0.3);
+    }
 }
 
 #[cfg(test)]
@@ -83,7 +115,7 @@ mod zoom_tests {
                 ..Default::default()
             },
             |ctx| {
-                egui::CentralPanel::default().show(ctx, |ui| zoom = zoom_input(ui, zoom));
+                egui::CentralPanel::default().show(ctx, |ui| zoom = zoom_input(ui, zoom, 0.15));
             },
         );
         zoom
@@ -93,6 +125,7 @@ mod zoom_tests {
     fn trackpad_pinch_zooms_and_is_clamped() {
         assert!((zoom_after(vec![egui::Event::Zoom(1.5)]) - 1.5).abs() < 1e-4);
         assert_eq!(zoom_after(vec![egui::Event::Zoom(100.0)]), 4.0);
+        assert_eq!(zoom_after(vec![egui::Event::Zoom(0.001)]), 0.15);
         assert_eq!(zoom_after(Vec::new()), 1.0);
     }
 }

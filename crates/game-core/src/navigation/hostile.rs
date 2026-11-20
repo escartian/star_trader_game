@@ -59,6 +59,16 @@ impl TravelState {
             return Err(NavigationError::BattleUnderway.into());
         }
         let evading = choice == EncounterChoice::Evade;
+        if evading && encounter.haven {
+            // The player started this assault; calling it off always works.
+            self.navigation
+                .encounters
+                .retain(|record| record.id != encounter.id);
+            return Ok(NavigationEvent::EncounterResolved {
+                fleet: fleet.id,
+                outcome: "Assault on the Raider Haven called off.".into(),
+            });
+        }
         if evading {
             let catalog = &rules.ship_catalog;
             let engine = |kind| catalog.spec(kind).map_or(1, |spec| spec.combat.engine);
@@ -128,8 +138,9 @@ impl TravelState {
     }
 
     /// Writes hull damage back, removes destroyed ships (and an emptied fleet
-    /// with its course), and loads salvage. The player's last owned ship is
-    /// never removed: it survives crippled at 1 hull point with its cargo lost.
+    /// with its course), and loads salvage. Losing the player's last owned
+    /// ship ends the campaign (`CampaignEnd::Lost`); its wreck stays on record
+    /// at 1 hull point with its cargo lost, so the final state remains readable.
     pub(super) fn apply_engagement(
         &mut self,
         fleet: &Fleet,
@@ -145,25 +156,32 @@ impl TravelState {
             .filter(|ship| ship.destroyed)
             .filter_map(|ship| ship.ship)
             .collect();
-        let spared = (destroyed.len() >= owned).then(|| destroyed[0]);
+        // The last ship's wreck stays on record (the save needs a ship).
+        let wreck = (destroyed.len() >= owned).then(|| destroyed[0]);
         for result in report.combatants.iter_mut() {
             let Some(id) = result.ship else { continue };
             let ship = self.ship_mut(id)?;
             if result.destroyed {
                 report.cargo_lost += ship.cargo.iter().sum::<u32>();
             }
-            if Some(id) == spared {
+            ship.hull_damage = result.final_damage;
+            if Some(id) == wreck {
                 ship.cargo = [0; 6];
-                result.destroyed = false;
-                result.final_damage = result.hull - 1;
+                ship.hull_damage = result.hull - 1;
                 report.crippled = Some(id);
             }
-            ship.hull_damage = result.final_damage;
         }
         let removed: Vec<ShipId> = destroyed
             .into_iter()
-            .filter(|id| Some(*id) != spared)
+            .filter(|id| Some(*id) != wreck)
             .collect();
+        if wreck.is_some() {
+            self.campaign
+                .ended
+                .get_or_insert(crate::campaign::CampaignEnd::Lost {
+                    run: self.navigation.run,
+                });
+        }
         self.ships.retain(|ship| !removed.contains(&ship.id));
         for record in &mut self.fleets {
             record.ships.retain(|id| !removed.contains(id));

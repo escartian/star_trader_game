@@ -1,3 +1,4 @@
+use game_core::generation::GalaxyConfig;
 use std::path::PathBuf;
 
 /// Extra flags listed in help only when the developer tooling is compiled in.
@@ -18,6 +19,9 @@ pub struct Options {
     #[cfg(feature = "dev-tools")]
     pub capture_size: (u32, u32),
     pub seed: u64,
+    pub seed_explicit: bool,
+    pub galaxy: GalaxyConfig,
+    pub galaxy_explicit: bool,
     pub save: PathBuf,
     pub save_explicit: bool,
     pub economy: Option<PathBuf>,
@@ -47,6 +51,9 @@ impl Options {
             #[cfg(feature = "dev-tools")]
             capture_size: crate::capture::DEFAULT_SIZE,
             seed: 0,
+            seed_explicit: false,
+            galaxy: GalaxyConfig::default(),
+            galaxy_explicit: false,
             save: PathBuf::from("data/slot-1.json"),
             save_explicit: false,
             economy: None,
@@ -87,11 +94,39 @@ impl Options {
                 }
                 "--seed" => {
                     options.new = true;
+                    options.seed_explicit = true;
                     options.seed = args
                         .next()
                         .ok_or("--seed needs a number")?
                         .parse()
                         .map_err(|_| "Invalid seed")?
+                }
+                "--systems" => {
+                    options.new = true;
+                    options.galaxy_explicit = true;
+                    options.galaxy.systems = args
+                        .next()
+                        .ok_or("--systems needs a number from 4 to 150")?
+                        .parse()
+                        .map_err(|_| "Invalid system count")?;
+                }
+                "--radius" => {
+                    options.new = true;
+                    options.galaxy_explicit = true;
+                    options.galaxy.radius_ly = args
+                        .next()
+                        .ok_or("--radius needs light-years from 20 to 95")?
+                        .parse()
+                        .map_err(|_| "Invalid galaxy radius")?;
+                }
+                "--objects" => {
+                    options.new = true;
+                    options.galaxy_explicit = true;
+                    options.galaxy.max_objects = args
+                        .next()
+                        .ok_or("--objects needs a number from 6 to 15")?
+                        .parse()
+                        .map_err(|_| "Invalid system object limit")?;
                 }
                 "--save" => {
                     options.save_explicit = true;
@@ -103,14 +138,15 @@ impl Options {
                 }
                 _ => {
                     return Err(format!(
-                        "Unknown option {argument}. Options: --headless, --continue, --new, --seed NUMBER, --save PATH, --economy PATH{DEV_OPTIONS}"
+                        "Unknown option {argument}. Options: --headless, --continue, --new, --seed NUMBER, --systems 4..150, --radius 20..95, --objects 6..15, --save PATH, --economy PATH{DEV_OPTIONS}"
                     ));
                 }
             }
         }
         if options.resume && options.new {
-            return Err("--continue cannot be combined with --new, --seed or --economy".into());
+            return Err("--continue cannot be combined with new-map options".into());
         }
+        options.galaxy.validate()?;
         Ok(options)
     }
 }

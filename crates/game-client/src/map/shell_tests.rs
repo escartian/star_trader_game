@@ -118,6 +118,45 @@ fn tabs_switch_the_sheet_and_panels_open_full_screen_on_a_phone() {
 }
 
 #[test]
+fn phone_market_shows_trade_actions_without_horizontal_clipping() {
+    let ctx = egui::Context::default();
+    let authority = game_server::Session::default();
+    let mut map = Map::new(authority.systems().to_vec(), authority);
+    map.session.open_market();
+    let size = Vec2::new(320.0, 640.0);
+    let mut output = frame(&ctx, &mut map, size, Vec::new());
+    for _ in 0..3 {
+        output = frame(&ctx, &mut map, size, Vec::new());
+    }
+    let labels = texts(&output);
+    for label in [
+        "Food",
+        "Stock 100 · Held 0",
+        "Buy 1",
+        "Sell 1",
+        "Max",
+        "All",
+    ] {
+        assert!(
+            labels.iter().any(|(text, _)| text == label),
+            "missing {label}"
+        );
+    }
+    for shape in &output.shapes {
+        if let egui::epaint::Shape::Text(text) = &shape.shape {
+            let bounds = Rect::from_min_size(text.pos, text.galley.size());
+            if bounds.intersects(Rect::from_min_size(Pos2::ZERO, size)) {
+                assert!(
+                    bounds.max.x <= size.x,
+                    "clipped text: {}",
+                    text.galley.job.text
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn the_alert_badge_walks_fleets_that_need_orders() {
     let ctx = egui::Context::default();
     let mut map = multi_fleet();

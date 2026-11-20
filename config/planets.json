@@ -7,9 +7,19 @@
      "price_percent":[140,55,125,130,110,115]},
     {"kind":"RockyPlanet","profile":{"economy":"industrial","specialization":"machinery","biome":"frozen","danger":"safe"},"market_template":2,"starting_credits":600000,"ship_stock":[1,2,2,1],
      "price_percent":[125,135,100,60,115,85]},
+    {"kind":"RockyPlanet","profile":{"economy":"agricultural","specialization":"food","biome":"ocean","danger":"safe"},"market_template":0,"starting_credits":550000,"ship_stock":[2,2,0,0],
+     "price_percent":[60,115,115,130,100,115]},
+    {"kind":"RockyPlanet","profile":{"economy":"agricultural","specialization":"food","biome":"jungle","danger":"very_dangerous"},"market_template":0,"starting_credits":450000,"ship_stock":[2,1,0,1],
+     "price_percent":[50,120,140,125,90,130]},
+    {"kind":"RockyPlanet","profile":{"economy":"extraction","specialization":"ore","biome":"volcanic","danger":"dangerous"},"market_template":1,"starting_credits":450000,"ship_stock":[1,2,1,2],
+     "price_percent":[145,45,130,125,115,120]},
+    {"kind":"RockyPlanet","profile":{"economy":"industrial","specialization":"machinery","biome":"barren","danger":"moderate"},"market_template":2,"starting_credits":500000,"ship_stock":[1,2,2,1],
+     "price_percent":[130,125,110,65,105,90]},
     {"kind":"GasGiant","profile":{"economy":"extraction","specialization":"ore","biome":"gas","danger":"moderate"},"market_template":1,"starting_credits":400000,"ship_stock":[2,1,0,1],
      "price_percent":[135,60,120,125,115,110]},
     {"kind":"GasGiant","profile":{"economy":"industrial","specialization":"electronics","biome":"gas","danger":"insidious"},"market_template":2,"starting_credits":600000,"ship_stock":[1,1,2,0],
-     "price_percent":[130,125,95,90,105,55]}
+     "price_percent":[130,125,95,90,105,55]},
+    {"kind":"GasGiant","profile":{"economy":"extraction","specialization":"medicine","biome":"gas","danger":"dangerous"},"market_template":1,"starting_credits":450000,"ship_stock":[1,1,1,0],
+     "price_percent":[145,105,65,125,115,95]}
   ]
 }

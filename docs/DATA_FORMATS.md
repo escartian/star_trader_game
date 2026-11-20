@@ -33,9 +33,13 @@ Each `data/slot-N.json` stores:
 - `player`: tick/revision, movement rules, navigation state (run, courses, Wait orders as `holds`,
   encounters with raider `hostiles`, RNG, rescues, `last_combat` report (outcome `victory`, `defeat`, `disengaged` or `surrendered`), the open `battle` (omitted when none), trade
   `routes` with their fleet and two market stops, omitted when empty), ships (IDs, owner, class, individual cargo/hold/fuel/range,
-  `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters.
+  `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters,
+  the Raider `haven` in navigation (`system`, `body`, `garrison`, `sunk`, `destroyed_run`; contacts against it carry `haven: true`)
+  and `campaign` (`run_limit`, `ended` as `won` with its `road`, `lost` or `time_up`, each with its `run`).
 - `economy`: shared player credits, current markets and exact session rules,
-  including ship/planet/combat catalogs. Each market records a composite system/body ID,
+  including ship/planet/combat catalogs and `campaign` goals (`net_worth_goal`,
+  `charter_price`, `charters_to_win`, `port_share_percent`), and port `charters`
+  (`market`, `owner`; omitted when none). Each market records a composite system/body ID,
   station flag, treasury, hull inventory and commodity balances. Cargo is keyed by commodity name inside each ship.
 
 The root schema is independent of the command protocol version. Money uses
@@ -58,9 +62,14 @@ atomically replaces the destination. The previous valid save is preserved in
 tries the primary, then a validated backup, reporting recovery explicitly. Parent
 directory metadata is synced on Unix. These are local desktop saves, not a database
 or a cross-platform crash-proof storage guarantee.
+Campaign validation also checks that recorded ends agree with the run and
+campaign length, that a Soldier win follows the Haven's destruction, and that
+the Haven's remaining garrison uses its original hulls.
 
 Continue restores prices, cargo, credits, ticks and journeys exactly; it never
-regenerates them. Offline elapsed time is not added on load. Autosave runs on close
+regenerates them or the map. A new game chooses a fresh map seed unless an explicit
+seed is given; the generated map is then saved as part of `systems`. Offline
+elapsed time is not added on load. Autosave runs on close
 and suspend; a failed close-save keeps the window open for recovery. Slots and a
 custom `--save PATH` are supported. `--headless` exports the same validated JSON
 without writing a save or advancing time.

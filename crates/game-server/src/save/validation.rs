@@ -1,6 +1,7 @@
 use super::SaveData;
 use game_core::travel::Location;
 use std::collections::HashSet;
+mod campaign;
 
 impl SaveData {
     pub(super) fn validate(&self) -> Result<(), String> {
@@ -50,6 +51,8 @@ impl SaveData {
         self.validate_fleets()?;
         self.player.validate_navigation(&self.systems)?;
         self.player.validate_battle(&self.economy.rules)?;
+        self.economy.validate_charters()?;
+        self.validate_campaign()?;
         for ship in &self.player.ships {
             let hull = self
                 .economy

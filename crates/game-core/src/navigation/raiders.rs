@@ -9,7 +9,9 @@
 //! - Within [`STRIKE_KM`] of its quarry it strikes: a raider contact with the
 //!   band's real ships (Fight, Auto-resolve or Evade).
 //! - Destroyed raiders leave the band; afterwards it backs off for
-//!   [`COOLDOWN_RUNS`]. A band wiped out returns after [`RESPAWN_RUNS`].
+//!   [`COOLDOWN_RUNS`]. A band wiped out returns after [`RESPAWN_RUNS`], but
+//!   only while the Raider Haven stands (`haven`).
+//! - Fleets on a chartered shipping lane (`economy::charters`) are never hunted.
 //!
 //! Bands draw from their own random stream, so they never change the outcome
 //! of other contact rolls. With `encounter_chance_percent` at 0 (a peaceful
@@ -57,8 +59,10 @@ fn is_zero(value: &u32) -> bool {
 }
 
 impl TravelState {
-    /// New-game setup: one band in every system but the home (first) system.
+    /// New-game setup: one band in every system but the home (first) system,
+    /// and the Raider Haven they come from.
     pub fn spawn_raider_bands(&mut self, systems: &[StarSystem]) {
+        self.place_haven(systems);
         self.navigation.band_rng = self.navigation.rng_state ^ 0x5bd1_e995;
         for system in systems.iter().skip(1) {
             self.spawn_band(system);
@@ -148,7 +152,17 @@ impl TravelState {
         player: PlayerId,
         run: u64,
         systems: &[StarSystem],
+        on_lane: &[FleetId],
     ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
+        // Bands come from the Raider Haven: once it falls, none return.
+        if self
+            .navigation
+            .haven
+            .as_ref()
+            .is_some_and(|haven| !haven.standing())
+        {
+            self.navigation.band_respawns.clear();
+        }
         let due: Vec<SystemId> = self
             .navigation
             .band_respawns
@@ -169,7 +183,7 @@ impl TravelState {
                 continue;
             };
             let quarry = if band.cooldown == 0 {
-                self.nearest_exposed(player, &band, world, systems)
+                self.nearest_exposed(player, &band, world, systems, on_lane)
             } else {
                 None
             };
@@ -205,12 +219,13 @@ impl TravelState {
         band: &RaiderBand,
         world: &StarSystem,
         systems: &[StarSystem],
+        on_lane: &[FleetId],
     ) -> Option<(FleetId, LocalPosition)> {
         let centre = SpacePosition::from_galaxy(world.position).ok()?;
         let half = self.movement_rules.system_half_extent_km;
         self.fleets
             .iter()
-            .filter(|fleet| fleet.owner == player)
+            .filter(|fleet| fleet.owner == player && !on_lane.contains(&fleet.id))
             .filter(|fleet| {
                 !self
                     .navigation
@@ -257,6 +272,7 @@ impl TravelState {
             run,
             hostiles: band.ships.clone(),
             band: Some(band.id),
+            haven: false,
         };
         self.navigation.next_encounter_id = next;
         self.navigation.encounters.push(encounter.clone());

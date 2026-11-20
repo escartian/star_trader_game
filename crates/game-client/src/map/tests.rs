@@ -141,6 +141,34 @@ fn phone_and_desktop_layouts_tessellate_all_scenes() {
 }
 
 #[test]
+fn a_150_system_galaxy_tessellates_at_phone_size() {
+    let authority = game_server::Session::with_galaxy(
+        42,
+        game_core::economy::EconomyRules::default(),
+        game_core::generation::GalaxyConfig {
+            systems: 150,
+            radius_ly: 95,
+            max_objects: 15,
+        },
+    )
+    .unwrap();
+    let mut map = Map::new(authority.systems().to_vec(), authority);
+    assert!(map.camera.zoom < 0.3);
+    let ctx = egui::Context::default();
+    let output = ctx.run(
+        egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(390.0, 844.0))),
+            ..Default::default()
+        },
+        |ctx| map.ui(ctx),
+    );
+    assert!(
+        !ctx.tessellate(output.shapes, output.pixels_per_point)
+            .is_empty()
+    );
+}
+
+#[test]
 fn double_click_enters_only_an_unambiguous_system() {
     let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
     map.select_targets(vec![SystemId(2)], false);

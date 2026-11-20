@@ -46,6 +46,14 @@ and phone sizes, hex/ship picking and aim clearing. Real touch input (tap, drag,
 pinch) on a device, desktop mouse play and the wide view's unused space above
 the board (perspective makes the near edge the binding fit) are not yet checked.
 
+Campaign (phone-first phase 5): offscreen captures of the Victory panel (390 ×
+844) and of a fleet orbiting the Raider Haven (1280 × 800, 1024 × 768, 390 ×
+844) were visually inspected: road progress and the score are readable, the
+Haven's fortress and garrison label sit beside its body, and the ASSAULT card
+leads the sheet. Not yet seen on screen: the end card (victory, defeat or
+campaign complete), the market's charter row and lane lines; their rules are
+covered by core and server tests, and manual play remains open.
+
 Original Blender 5.2.3 models and baked transparent sprites cover five star classes,
 a rocky planet, gas giant, moon, asteroid and trade port. Their images were visually
 inspected. One shared cache preloads sprites per egui context; system views reuse
@@ -58,6 +66,12 @@ textures on the host Apple M5 Pro and visually inspected. This verified native
 wgpu texture upload/render/readback, text, transparent sprites and those layouts.
 The sandbox exposes no GPU adapter; the permitted host captures succeeded. The
 local camera was adjusted after review to separate the port from the enlarged star.
+
+The narrow market now stacks each commodity's stock, prices, margin and trade
+actions in a card; its price comparison also stacks by commodity. A 320 px egui
+layout test checks that the first card's text and actions fit. The earlier market
+preview predates this layout; a fresh GPU capture was unavailable in the sandbox
+(no GPU adapter).
 
 Reproduce with `--new --capture PATH --capture-view system|market|saves|fleets|galaxy`.
 This does not verify a desktop window, mouse/touch interaction, DPI transitions,
@@ -75,7 +89,15 @@ Travel checks cover exact range/fuel boundaries, ownership, stale commands,
 rejection atomicity and host-driven arrival. Economics checks cover per-unit bulk
 pricing, anti-arbitrage across small/large market targets, bounded prices/stock,
 batched-versus-stepped tick equivalence and real-command trading through upgrade.
-Seeded-start tests check 256 reachable starts. Refreshes never create stock/money.
+Seeded-start tests check 1,024 reachable small worlds, orbital clearance and
+varied star/body lists. Large-world tests check 150-system connectivity, save/load
+and one navigation run; dense and sparse size extremes are also checked. A
+150-system galaxy tessellates at a 390 × 844 phone viewport. The 15-object
+system cap has orbital-clearance and largest-save checks. Two generated-world
+schematic previews are reproducible with `tools/preview_generated_maps.py`.
+The GPU capture attempt returned "No GPU adapter for capture"; procedural worlds
+have not had a fresh GPU or device visual check.
+Refreshes never create stock/money.
 
 Save checks cover world/player/journey/economy round trips, schema/invariant
 rejection, failed writes, previous-save backup recovery, and preserving a good backup

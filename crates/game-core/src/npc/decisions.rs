@@ -128,7 +128,12 @@ impl Economy {
         let result = self.trade(&mut trader.state.ships[0], good, quantity, side, 0);
         trader.credits = self.credits;
         self.credits = player_wallet;
-        result.map(|_| ())
+        // A chartered port pays the (single) player its share of NPC trades.
+        let quote = result?;
+        if self.charter_holder(quote.market).is_some() {
+            self.pay_port_share(quote.market, quote.total);
+        }
+        Ok(())
     }
 
     fn best_route(

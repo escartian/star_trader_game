@@ -20,6 +20,9 @@ impl LocalSession {
         market: &Market,
         systems: &[StarSystem],
     ) -> Option<ClientCommand> {
+        if ui.available_width() < 620.0 {
+            return self.trade_cards(ui, ship, market, systems);
+        }
         let mut order = None;
         egui::ScrollArea::horizontal()
             .id_salt("trade_table")
@@ -54,7 +57,9 @@ impl LocalSession {
                         self.margin_cell(ui, market, commodity, systems);
                         ui.horizontal(|ui| {
                             for side in [TradeSide::Buy, TradeSide::Sell] {
-                                if let Some(choice) = self.order_button(ui, ship, commodity, side) {
+                                if let Some(choice) =
+                                    self.order_button(ui, ship, commodity, side, false)
+                                {
                                     order = Some(choice);
                                 }
                             }
@@ -72,6 +77,53 @@ impl LocalSession {
         order
     }
 
+    /// A narrow market keeps each quote and its actions in one vertical card.
+    fn trade_cards(
+        &self,
+        ui: &mut egui::Ui,
+        ship: &Ship,
+        market: &Market,
+        systems: &[StarSystem],
+    ) -> Option<ClientCommand> {
+        let mut order = None;
+        for commodity in Commodity::ALL {
+            let good = &market.goods[commodity.index()];
+            ui.group(|ui| {
+                ui.set_width(ui.available_width());
+                ui.horizontal_wrapped(|ui| {
+                    icons::commodity(ui, commodity);
+                    ui.strong(commodity.label());
+                    ui.label(format!(
+                        "Stock {} · Held {}",
+                        good.stock,
+                        ship.cargo[commodity.index()]
+                    ));
+                });
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(format!("Buy {} cr", good.price(TradeSide::Buy, good.stock)));
+                    ui.label(format!(
+                        "Sell {} cr",
+                        good.price(TradeSide::Sell, good.stock)
+                    ));
+                });
+                self.margin_cell(ui, market, commodity, systems);
+                ui.horizontal_wrapped(|ui| {
+                    for side in [TradeSide::Buy, TradeSide::Sell] {
+                        if let Some(choice) = self.order_button(ui, ship, commodity, side, true) {
+                            order = Some(choice);
+                        }
+                    }
+                    for side in [TradeSide::Buy, TradeSide::Sell] {
+                        if let Some(choice) = self.max_button(ui, ship, commodity, side) {
+                            order = Some(choice);
+                        }
+                    }
+                });
+            });
+        }
+        order
+    }
+
     /// Buys or sells the chosen order quantity; the tooltip prices the whole order.
     fn order_button(
         &self,
@@ -79,6 +131,7 @@ impl LocalSession {
         ship: &Ship,
         commodity: Commodity,
         side: TradeSide,
+        labeled: bool,
     ) -> Option<ClientCommand> {
         let quantity = self.market.quantity;
         let (icon, verb) = side_label(side);
@@ -94,7 +147,13 @@ impl LocalSession {
             Err(_) => format!("{verb} {quantity} {}", commodity.label()),
         };
         let blocked = quote.as_ref().err().map(ToString::to_string);
-        icons::action(ui, icon, &tip, blocked)
+        let response = if labeled {
+            icons::labeled_action(ui, icon, &format!("{verb} {quantity}"), blocked)
+                .on_hover_text(&tip)
+        } else {
+            icons::action(ui, icon, &tip, blocked)
+        };
+        response
             .clicked()
             .then(|| self.trade_order(ship, commodity, quantity, side))
     }

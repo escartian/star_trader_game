@@ -137,6 +137,8 @@ fn read(path: &Path) -> Result<(SaveData, Option<&'static str>), String> {
         .map_err(|error| error.to_string())?;
     // Bodies stand where their orbits put them at the saved tick.
     game_core::orbits::place(&mut data.systems, data.player.tick);
+    // Saves from before the Raider Haven get the one a new game would place.
+    data.player.place_haven(&data.systems);
     let notice = match grid_battle {
         Some(battle) => {
             legacy_battle::resolve(&mut data, battle)?;

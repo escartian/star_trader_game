@@ -1,5 +1,6 @@
 //! Plot fleet courses, then advance all fleets through one shared navigation run.
 mod battle;
+mod haven;
 mod hostile;
 mod landing;
 mod next_leg;
@@ -8,6 +9,7 @@ pub use raiders::RaiderBand;
 mod orders;
 mod position;
 pub use battle::{ActiveBattle, BattleAction};
+pub use haven::{GARRISON, RaiderHaven, haven_site};
 pub use hostile::evade_chance_percent;
 pub use position::space_position;
 mod resolution;
@@ -72,6 +74,9 @@ pub struct Encounter {
     /// The roaming band that struck, if this contact is one (see `raiders`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub band: Option<u64>,
+    /// An assault on the Raider Haven's garrison (see `haven`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub haven: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -107,6 +112,9 @@ pub struct NavigationState {
     /// The bands' own random stream (other contact rolls never depend on it).
     #[serde(default)]
     pub band_rng: u64,
+    /// The Raider Haven; `None` only in a one-system galaxy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub haven: Option<RaiderHaven>,
 }
 
 fn first_band_id() -> u64 {
@@ -129,6 +137,7 @@ impl Default for NavigationState {
             band_respawns: Vec::new(),
             next_band_id: 1,
             band_rng: 0,
+            haven: None,
         }
     }
 }
@@ -223,6 +232,14 @@ pub enum NavigationError {
     NotLanded,
     /// Another raider battle must finish first.
     BattleUnderway,
+    /// There is no Raider Haven standing to assault.
+    NoHaven,
+    /// Assaults start from orbit around (or the surface of) the Haven's body.
+    NotAtHaven,
+    /// The campaign is lost or out of time; only saves and loads remain.
+    CampaignOver,
+    /// A run limit must lie beyond the current run.
+    InvalidRunLimit,
     Battle(crate::combat::tactical::BattleError),
 }
 impl std::fmt::Display for NavigationError {
@@ -270,6 +287,16 @@ impl std::fmt::Display for NavigationError {
             Self::CannotLand => f.write_str("Gas giants and stations have no surface to land on."),
             Self::NotLanded => f.write_str("This fleet is not on a surface."),
             Self::BattleUnderway => f.write_str("Finish the battle in progress first."),
+            Self::NoHaven => f.write_str("There is no Raider Haven left to assault."),
+            Self::CampaignOver => {
+                f.write_str("The campaign is over. Load a save or start a new game.")
+            }
+            Self::InvalidRunLimit => {
+                f.write_str("A campaign length must end after the current run.")
+            }
+            Self::NotAtHaven => {
+                f.write_str("Bring the fleet into orbit at the Raider Haven's body to assault it.")
+            }
             Self::Battle(error) => error.fmt(f),
         }
     }

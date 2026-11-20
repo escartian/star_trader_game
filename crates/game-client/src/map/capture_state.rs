@@ -28,6 +28,17 @@ impl Map {
             "combat" => self.session.capture_combat()?,
             "battle" => self.session.capture_battle()?,
             "battle-close" => self.session.capture_battle_close()?,
+            "victory" => self.session.capture_victory(),
+            "haven" => {
+                let id = self.session.capture_haven()?;
+                let system = self
+                    .systems
+                    .iter()
+                    .find(|known| known.id == id)
+                    .ok_or("No Haven system")?
+                    .clone();
+                self.local = Some(LocalView::new(system));
+            }
             "navigation" => self.session.request_movement(MoveTarget::Body {
                 system: SystemId(1),
                 body: BodyId(1),

@@ -113,7 +113,7 @@ fn raider_fights_are_reproducible_saved_and_resolve_once() {
 }
 
 #[test]
-fn the_last_owned_ship_survives_crippled_and_loses_its_cargo() {
+fn losing_the_last_ship_ends_the_campaign_and_freezes_the_game() {
     let mut session = Session::default();
     session.state.ships[0].cargo[Commodity::Food.index()] = 5;
     let raiders = vec![ShipKind::Patrol; 3];
@@ -121,15 +121,30 @@ fn the_last_owned_ship_survives_crippled_and_loses_its_cargo() {
     choose(&mut session, encounter, EncounterChoice::AutoResolve);
     let report = session.state.navigation.last_combat.clone().unwrap();
     assert_eq!(report.outcome, CombatOutcome::Defeat);
-    assert_eq!(report.crippled, Some(ShipId(1)));
+    assert_eq!(report.crippled, Some(ShipId(1)), "the last ship");
+    assert!(report.combatants[0].destroyed);
     assert_eq!(report.cargo_lost, 5);
-    let ship = &session.state.ships[0];
+    let run = session.state.navigation.run;
+    assert_eq!(
+        session.state.campaign.ended,
+        Some(game_core::campaign::CampaignEnd::Lost { run })
+    );
+    // The wreck stays on record so the final state still saves and loads.
     assert_eq!(session.state.ships.len(), 1);
-    assert_eq!(ship.hull_damage, 59, "freighter hull 60, one point left");
-    assert_eq!(ship.cargo_used(), 0);
-    // The crippled fleet's course continues on the next run.
-    assert!(session.state.navigation.order(FleetId(1)).is_some());
-    reload(&session);
+    assert_eq!(session.state.ships[0].cargo_used(), 0);
+    let reloaded = reload(&session);
+    // Only queries run now.
+    let mut frozen = reloaded;
+    assert!(matches!(
+        frozen.handle(ClientCommand::ExecuteNavigationRun {
+            expected_revision: frozen.state.revision,
+        }),
+        ServerMessage::CommandRejected(_)
+    ));
+    assert!(matches!(
+        frozen.handle(ClientCommand::GetSession),
+        ServerMessage::SessionSnapshot { .. }
+    ));
 }
 
 #[test]

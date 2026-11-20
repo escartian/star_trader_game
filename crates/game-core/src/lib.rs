@@ -1,6 +1,7 @@
 //! Simulation types and rules. No graphics, networking, or filesystem access.
 use serde::{Deserialize, Serialize};
 
+pub mod campaign;
 pub mod combat;
 pub mod economy;
 pub mod fleet;
@@ -82,6 +83,10 @@ pub enum StarKind {
     BlueGiant,
     RedGiant,
     WhiteDwarf,
+    OrangeDwarf,
+    BlueWhiteStar,
+    BrownDwarf,
+    NeutronStar,
 }
 
 impl StarKind {
@@ -92,6 +97,10 @@ impl StarKind {
             Self::BlueGiant => "Blue giant",
             Self::RedGiant => "Red giant",
             Self::WhiteDwarf => "White dwarf",
+            Self::OrangeDwarf => "Orange dwarf",
+            Self::BlueWhiteStar => "Blue-white star",
+            Self::BrownDwarf => "Brown dwarf",
+            Self::NeutronStar => "Neutron star",
         }
     }
 }

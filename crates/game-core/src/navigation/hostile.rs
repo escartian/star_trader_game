@@ -1,10 +1,8 @@
 //! Raider contacts: hostile group generation, evasion and applying engagements
-//! to owned ships. Combat arithmetic itself lives in `combat::engagement`.
-use super::{Encounter, EncounterChoice};
+//! to owned ships. Battles themselves are played in `navigation::battle`. Combat arithmetic itself lives in `combat::engagement`.
+use super::{Encounter, EncounterChoice, NavigationError, NavigationEvent};
 use crate::{
-    combat::{
-        CombatOutcome, CombatReport, CombatantSetup, Side, engagement::MAX_COMBATANTS, tactical,
-    },
+    combat::{CombatOutcome, CombatReport, CombatantSetup, Side, engagement::MAX_COMBATANTS},
     economy::{Commodity, EconomyRules},
     fleet::{Fleet, FleetError, FleetId, FleetMovementError, ShipKind},
     travel::{ShipId, TravelError, TravelState},
@@ -45,17 +43,22 @@ impl TravelState {
             .collect())
     }
 
-    /// Resolves Fight or Evade; returns the readable outcome line.
+    /// Resolves Fight, Evade or Auto-resolve. A successful escape clears the
+    /// encounter; otherwise a battle opens (and, for Auto-resolve, is fought out).
     pub(super) fn resolve_raiders(
         &mut self,
         encounter: &Encounter,
         fleet: &Fleet,
         choice: EncounterChoice,
         rules: &EconomyRules,
-    ) -> Result<String, FleetMovementError> {
-        let catalog = &rules.ship_catalog;
-        let engine = |kind| catalog.spec(kind).map_or(1, |spec| spec.combat.engine);
-        if choice == EncounterChoice::Evade {
+    ) -> Result<NavigationEvent, FleetMovementError> {
+        if self.navigation.battle.is_some() {
+            return Err(NavigationError::BattleUnderway.into());
+        }
+        let evading = choice == EncounterChoice::Evade;
+        if evading {
+            let catalog = &rules.ship_catalog;
+            let engine = |kind| catalog.spec(kind).map_or(1, |spec| spec.combat.engine);
             let slowest = fleet
                 .ships
                 .iter()
@@ -64,41 +67,20 @@ impl TravelState {
             let fastest = encounter.hostiles.iter().map(|kind| engine(*kind)).max();
             let chance = evade_chance_percent(slowest, fastest.unwrap_or(1));
             if (self.navigation.rolls() % 100) < u64::from(chance) {
-                return Ok(format!("Evaded the raiders ({chance}% chance)."));
+                self.navigation
+                    .encounters
+                    .retain(|record| record.id != encounter.id);
+                return Ok(NavigationEvent::EncounterResolved {
+                    fleet: fleet.id,
+                    outcome: format!("Evaded the raiders ({chance}% chance)."),
+                });
             }
         }
-        let setups = self.engagement_setups(encounter, fleet, rules)?;
-        let seed = self.navigation.rolls();
-        let result = tactical::auto_resolve(&setups, &rules.combat_catalog, seed)
-            .map_err(|_| FleetError::InvalidSelection)?;
-        let mut report = CombatReport {
-            encounter: encounter.id,
-            fleet: fleet.id,
-            run: encounter.run,
-            seed,
-            outcome: CombatOutcome::from_winner(result.winner),
-            combatants: result.combatants,
-            rounds: result.rounds,
-            salvage_ore: 0,
-            cargo_lost: 0,
-            crippled: None,
-        };
-        self.apply_engagement(fleet, &mut report)?;
-        let evaded = if choice == EncounterChoice::Evade {
-            "Evasion failed. "
-        } else {
-            ""
-        };
-        let summary = format!(
-            "{evaded}{} after {} rounds. Review the combat report.",
-            report.outcome.label(),
-            report.rounds.len()
-        );
-        self.navigation.last_combat = Some(Box::new(report));
-        Ok(summary)
+        let auto = choice == EncounterChoice::AutoResolve;
+        self.start_battle(encounter, fleet, evading, auto, rules)
     }
 
-    fn engagement_setups(
+    pub(super) fn engagement_setups(
         &self,
         encounter: &Encounter,
         fleet: &Fleet,
@@ -142,7 +124,7 @@ impl TravelState {
     /// Writes hull damage back, removes destroyed ships (and an emptied fleet
     /// with its course), and loads salvage. The player's last owned ship is
     /// never removed: it survives crippled at 1 hull point with its cargo lost.
-    fn apply_engagement(
+    pub(super) fn apply_engagement(
         &mut self,
         fleet: &Fleet,
         report: &mut CombatReport,

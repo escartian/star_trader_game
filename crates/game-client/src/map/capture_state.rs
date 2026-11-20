@@ -26,6 +26,7 @@ impl Map {
             "trade-route" => self.session.capture_trade_route()?,
             "encounter" => self.session.capture_encounter()?,
             "combat" => self.session.capture_combat()?,
+            "battle" => self.session.capture_battle()?,
             "navigation" => self.session.request_movement(MoveTarget::Body {
                 system: SystemId(1),
                 body: BodyId(1),
@@ -126,6 +127,9 @@ mod tests {
         let mut combat = map(1);
         combat.prepare_capture("combat").unwrap();
         assert!(combat.session.combat_report_open());
+        let mut battle = map(1);
+        battle.prepare_capture("battle").unwrap();
+        assert!(battle.session.battle_open());
         assert!(map(1).prepare_capture("nonsense").is_err());
     }
 }

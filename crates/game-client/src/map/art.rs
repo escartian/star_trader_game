@@ -198,6 +198,28 @@ impl Artwork {
         true
     }
 
+    /// Like `paint`, mirrored when `mirrored` (ship art faces right by default).
+    pub fn paint_facing(
+        &self,
+        kind: ArtKind,
+        painter: &Painter,
+        center: Pos2,
+        size: f32,
+        mirrored: bool,
+    ) -> bool {
+        let Some(texture) = self.textures.get(&kind) else {
+            return false;
+        };
+        let (left, right) = if mirrored { (1.0, 0.0) } else { (0.0, 1.0) };
+        painter.image(
+            texture.id(),
+            Rect::from_center_size(center, Vec2::splat(size)),
+            Rect::from_min_max(Pos2::new(left, 0.0), Pos2::new(right, 1.0)),
+            Color32::WHITE,
+        );
+        true
+    }
+
     pub fn preview(&self, kind: ArtKind, ui: &mut egui::Ui) {
         if let Some(texture) = self.textures.get(&kind) {
             ui.image((texture.id(), Vec2::splat(160.0)));

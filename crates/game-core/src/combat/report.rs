@@ -54,7 +54,7 @@ pub struct CombatReport {
 }
 
 /// Generous bound for one saved shot list (8 weapons × 20 shots × 16 ships).
-const MAX_SHOTS_PER_ROUND: usize = 8 * 20 * MAX_COMBATANTS;
+pub(crate) const MAX_SHOTS_PER_ROUND: usize = 8 * 20 * MAX_COMBATANTS;
 
 impl CombatReport {
     pub fn validate(&self) -> Result<(), String> {

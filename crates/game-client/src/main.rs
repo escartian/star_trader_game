@@ -1,4 +1,5 @@
 mod app_icon;
+mod battle;
 #[cfg(feature = "dev-tools")]
 mod capture;
 mod desktop;

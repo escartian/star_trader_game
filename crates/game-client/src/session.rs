@@ -1,5 +1,6 @@
 //! Native session adapter. Course planning is separate from shared navigation runs.
 mod advance;
+mod battle;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture;
 mod combat_report;
@@ -55,6 +56,7 @@ pub struct LocalSession {
     navigation: navigation::NavigationPanel,
     fleet_panel: fleets::FleetPanel,
     combat_report: combat_report::CombatReportPanel,
+    battle: battle::BattlePanel,
     saves: saves::SavePanel,
     log: VecDeque<String>,
     loaded_galaxy: Option<Vec<game_core::StarSystem>>,
@@ -86,6 +88,7 @@ impl LocalSession {
             navigation: navigation::NavigationPanel::default(),
             fleet_panel: fleets::FleetPanel::default(),
             combat_report,
+            battle: battle::BattlePanel::default(),
             saves: saves::SavePanel::default(),
             log: VecDeque::new(),
             loaded_galaxy: None,

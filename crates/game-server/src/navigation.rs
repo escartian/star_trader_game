@@ -35,6 +35,9 @@ impl Session {
             }
             | ClientCommand::CancelTradeRoute {
                 expected_revision, ..
+            }
+            | ClientCommand::BattleAction {
+                expected_revision, ..
             } => *expected_revision,
             _ => unreachable!("only navigation commands reach this handler"),
         };
@@ -94,6 +97,13 @@ impl Session {
                 destination,
                 &candidate.systems,
             )?],
+            ClientCommand::BattleAction { action, .. } => {
+                vec![
+                    candidate
+                        .state
+                        .battle_action(player, action, &self.economy.rules)?,
+                ]
+            }
             ClientCommand::CancelTradeRoute { fleet, .. } => {
                 vec![routes::cancel_route(&mut candidate.state, player, fleet)?]
             }

@@ -1,7 +1,9 @@
 //! Plot fleet courses, then advance all fleets through one shared navigation run.
+mod battle;
 mod hostile;
 mod orders;
 mod position;
+pub use battle::{ActiveBattle, BattleAction};
 pub use hostile::evade_chance_percent;
 pub use position::space_position;
 mod resolution;
@@ -45,10 +47,12 @@ pub enum EncounterChoice {
     Investigate,
     Assist,
     Bypass,
-    /// Raiders only: resolve a full engagement.
+    /// Raiders only: open a turn-based battle.
     Fight,
-    /// Raiders only: one engine-based escape roll; failure forces a fight.
+    /// Raiders only: one engine-based escape roll; failure opens a battle.
     Evade,
+    /// Raiders only: fight the whole battle at once with the AI on both sides.
+    AutoResolve,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -82,6 +86,9 @@ pub struct NavigationState {
     /// Standing trade routes, at most one per fleet. Omitted from saves when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub routes: Vec<crate::routes::TradeRoute>,
+    /// The raider battle being played, if any; its encounter stays pending.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub battle: Option<Box<ActiveBattle>>,
 }
 impl Default for NavigationState {
     fn default() -> Self {
@@ -95,6 +102,7 @@ impl Default for NavigationState {
             rescues: 0,
             last_combat: None,
             routes: Vec::new(),
+            battle: None,
         }
     }
 }
@@ -122,6 +130,10 @@ pub enum NavigationEvent {
     EncounterResolved {
         fleet: FleetId,
         outcome: String,
+    },
+    /// A battle is open and one of the fleet's ships is up.
+    BattleTurn {
+        fleet: FleetId,
     },
     /// A route fleet traded at a stop and set off for the other one.
     RouteServiced {
@@ -158,6 +170,10 @@ pub enum NavigationError {
     NoRoute,
     /// A route would leave with an empty hold: nothing aboard, nothing profitable.
     NothingProfitable,
+    NoBattle,
+    /// Another raider battle must finish first.
+    BattleUnderway,
+    Battle(crate::combat::tactical::BattleError),
 }
 impl std::fmt::Display for NavigationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -197,6 +213,9 @@ impl std::fmt::Display for NavigationError {
             Self::NothingProfitable => f.write_str(
                 "Nothing profitable to carry to that market right now; the hold would be empty.",
             ),
+            Self::NoBattle => f.write_str("There is no battle in progress."),
+            Self::BattleUnderway => f.write_str("Finish the battle in progress first."),
+            Self::Battle(error) => error.fmt(f),
         }
     }
 }

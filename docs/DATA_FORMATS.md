@@ -31,7 +31,7 @@ Each `data/slot-N.json` stores:
 
 - `systems`: stable IDs, star/body kinds, planet profiles and galaxy/local positions.
 - `player`: tick/revision, movement rules, navigation state (run, courses, Wait orders as `holds`,
-  encounters with raider `hostiles`, RNG, rescues, `last_combat` report, trade
+  encounters with raider `hostiles`, RNG, rescues, `last_combat` report, the open `battle` (omitted when none), trade
   `routes` with their fleet and two market stops, omitted when empty), ships (IDs, owner, class, individual cargo/hold/fuel/range,
   `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters.
 - `economy`: shared player credits, current markets and exact session rules,
@@ -143,7 +143,10 @@ Loading never executes a run. Course geometry/durations, paid fuel, fleet refere
 Holds, encounter IDs and counter bounds are checked before replacing a session.
 Schema 6 also accepts additive `hostiles` (required exactly on raider contacts, at
 most 3) and an optional `last_combat` report whose damage, indices and encounter
-reference must be consistent.
+reference must be consistent. An open `battle` must belong to a pending raider
+contact, field exactly that fleet's ships and the contact's raiders with their
+catalog profiles and saved damage, keep ships in distinct cells inside the grid,
+and wait on a player ship; anything else rejects the save.
 Movement settings add `ticks_per_navigation_run` (default 4, 1–100) and
 `encounter_chance_percent` (default 12, 0–100), with defaults for older definitions.
 

@@ -88,7 +88,8 @@ impl Session {
             | ClientCommand::CancelCourse { .. }
             | ClientCommand::ResolveEncounter { .. }
             | ClientCommand::SetTradeRoute { .. }
-            | ClientCommand::CancelTradeRoute { .. }) => self.navigation_command(player, command),
+            | ClientCommand::CancelTradeRoute { .. }
+            | ClientCommand::BattleAction { .. }) => self.navigation_command(player, command),
             command @ (ClientCommand::BuyShip { .. }
             | ClientCommand::SellShip { .. }
             | ClientCommand::RenameFleet { .. }
@@ -171,6 +172,8 @@ mod movement_tests;
 #[cfg(test)]
 mod planet_tests;
 
+#[cfg(test)]
+mod battle_tests;
 #[cfg(test)]
 mod combat_tests;
 #[cfg(test)]

@@ -175,7 +175,7 @@ impl LocalSession {
         use game_core::navigation::{EncounterChoice, EncounterKind};
         for encounter in self.state.navigation.encounters.clone() {
             let choice = match encounter.kind {
-                EncounterKind::Raiders => EncounterChoice::Fight,
+                EncounterKind::Raiders => EncounterChoice::AutoResolve,
                 _ => EncounterChoice::Bypass,
             };
             self.command(ClientCommand::ResolveEncounter {
@@ -188,7 +188,36 @@ impl LocalSession {
 
     /// Shuttle between two bodies until the first raider fight, then show its report.
     pub fn capture_combat(&mut self) -> Result<(), String> {
+        self.capture_raiders(false)
+    }
+
+    /// Shuttle until raiders appear, then fight them turn by turn.
+    pub fn capture_battle(&mut self) -> Result<(), String> {
+        self.capture_raiders(true)
+    }
+
+    fn capture_raiders(&mut self, open_battle: bool) -> Result<(), String> {
+        use game_core::navigation::{EncounterChoice, EncounterKind};
         for leg in 0..400_u64 {
+            if open_battle
+                && let Some(encounter) = self
+                    .state
+                    .navigation
+                    .encounters
+                    .iter()
+                    .find(|encounter| encounter.kind == EncounterKind::Raiders)
+                    .cloned()
+            {
+                self.command(ClientCommand::ResolveEncounter {
+                    encounter: encounter.id,
+                    choice: EncounterChoice::Fight,
+                    expected_revision: self.state.revision,
+                });
+                return match self.state.navigation.battle {
+                    Some(_) => Ok(()),
+                    None => Err(format!("The battle did not open: {}", self.notice)),
+                };
+            }
             if self.state.navigation.last_combat.is_some() {
                 self.combat_report.open = true;
                 return Ok(());

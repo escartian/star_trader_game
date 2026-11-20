@@ -161,9 +161,11 @@ Combat is the original README's first prioritized expansion.
   disengagement; last-ship rule; paid hull repairs at markets.
 - [x] Turn-based tactical rules on a 3D grid: HoMM-style engine initiative, move,
   ranged fire, withdrawal from your own edge, raider AI and Auto-resolve.
-- [ ] Play battles turn by turn: saved battles in progress, move/fire/withdraw
-  commands, and a 3D battle view with real ship models (Blender glTF export,
-  mesh renderer, grid picking).
+- [x] Play battles turn by turn: saved battles in progress, move/fire/withdraw/
+  auto-resolve commands, and a 3D battle view with orbit camera, layer selection
+  and grid picking. The freighter is drawn from a Blender glTF export.
+- [ ] 3D models for every hull (scout needs a lighter mesh), a GPU mesh renderer
+  with depth buffer, and animated raider turns and weapon effects.
 - [ ] Explicit hostility/engagement rules for NPC/faction fleets and credit bounties.
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,

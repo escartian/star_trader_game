@@ -1,6 +1,6 @@
 # Combat
 
-Status: **turn-based tactical rules; 3D battle view in progress.** Hulls and
+Status: **turn-based battles you command in a 3D grid view.** Hulls and
 weapons are data-driven. Raider contacts resolve deterministic grid battles, damage persists, destroyed ships leave
 their fleet, wrecks yield salvage and markets sell hull repairs. A readable combat
 report opens after each fight and survives saves.
@@ -14,7 +14,9 @@ report opens after each fight and survives saves.
   saves reject ships at or beyond that value.
 - Battles: `game-core/src/combat/tactical.rs` and `tactical/ai.rs`; shared damage
   rules: `combat/engagement.rs` (all pure); raider contacts and applying results:
-  `game-core/src/navigation/hostile.rs`.
+  `game-core/src/navigation/hostile.rs`; battles in progress:
+  `game-core/src/navigation/battle.rs`; the battle window:
+  `game-client/src/battle*` and `session/battle.rs`.
 
 Units are abstract points. Engine is a 1–10 rating for evasion and initiative.
 
@@ -75,10 +77,31 @@ saved `hull_damage`, at full shields.
 active enemy with the least hull + shields, move to the reachable cell nearest it
 when no weapon reaches, then fire on the weakest enemy in range.
 
-**Current slice.** Fight and failed Evade resolve the battle at once with the AI
-on both sides (Auto-resolve). Playing turns yourself in a 3D battle view with the
-real ship models is the next slice: saved battles in progress, move/fire/withdraw
-commands, a Blender-to-glTF model export and a mesh renderer.
+## Playing a battle
+
+**Fight** and a failed **Evade** open the battle window. The open battle is
+saved with the session (`navigation.battle`) and its contact stays pending, so
+navigation runs wait for it. The server plays raider turns right after each
+player action, so a saved battle is always waiting on one of your ships.
+
+- The view is a 3D grid: your edge is the cyan strip on the left, the raiders'
+  edge the red strip on the right. Ships stand on stalks over the floor so their
+  layer reads at a glance; bars show hull and shields. Drag to orbit, scroll or
+  pinch to zoom.
+- **Move:** green dots are the free cells your ship can reach on the shown layer.
+  **Lower** / **Higher** (or Q / E) change the layer; it follows your ship at the
+  start of each turn. Click a dot to move.
+- **Fire:** raiders your weapons reach have a red ring. Hover one to see each
+  weapon's hit chance at that distance; click it to fire.
+- **Withdraw** from your edge column, **End turn**, or **Auto-resolve** to let
+  the AI fight every remaining turn on both sides.
+- The turn-order bar lists every ship, outlines the one acting and marks lost or
+  departed ships. The last shots are listed below the grid.
+- Hide the window (×) to look at the map; **Return to battle** in the contact
+  panel brings it back. The combat report opens when the battle ends.
+
+The freighter is drawn as its real 3D model (see the asset notes); other hulls
+still use their sprites until their models are exported.
 
 ## Raider contacts
 
@@ -87,10 +110,11 @@ The group has one raider per two fleet ships (rounded up, at most 3), all scouts
 except that the leader is a patrol hull when the fleet itself fields a patrol ship.
 An unarmed trader is never met by a warship.
 
-- **Fight:** resolve the engagement.
+- **Fight:** open the battle and command your ships turn by turn.
+- **Auto-resolve:** fight the whole battle at once with the AI on both sides.
 - **Evade:** escape chance = `35% + 10 × (slowest fleet engine − fastest raider
-  engine)`, clamped to 10–90%. Success ends the contact untouched; failure forces
-  the fight. Bypass, Investigate and Assist are rejected for raiders.
+  engine)`, clamped to 10–90%. Success ends the contact untouched; failure opens
+  the battle. Bypass, Investigate and Assist are rejected for raiders.
 
 After the fight:
 
@@ -120,6 +144,7 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 
 ## Not yet implemented
 
-Playing battles turn by turn in the 3D view (rules exist; UI pending), NPC/faction hostility rules, credit
+Animated raider turns and weapon effects, 3D models for every hull with a GPU
+renderer, NPC/faction hostility rules, credit
 bounties, raider pursuit across runs, loadout changes and partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

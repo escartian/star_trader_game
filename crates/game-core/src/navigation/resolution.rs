@@ -174,11 +174,18 @@ impl TravelState {
             .revision
             .checked_add(1)
             .ok_or(TravelError::TimeOverflow)?;
-        let outcome = match (encounter.kind, choice) {
-            (EncounterKind::Raiders, EncounterChoice::Fight | EncounterChoice::Evade) => {
-                self.resolve_raiders(&encounter, &fleet, choice, rules)?
+        if encounter.kind == EncounterKind::Raiders {
+            if !matches!(
+                choice,
+                EncounterChoice::Fight | EncounterChoice::Evade | EncounterChoice::AutoResolve
+            ) {
+                return Err(NavigationError::InvalidChoice.into());
             }
-            (EncounterKind::Raiders, _) => return Err(NavigationError::InvalidChoice.into()),
+            let event = self.resolve_raiders(&encounter, &fleet, choice, rules)?;
+            self.revision = revision;
+            return Ok(event);
+        }
+        let outcome = match (encounter.kind, choice) {
             (_, EncounterChoice::Bypass) => "Contact bypassed; course can resume.".to_owned(),
             (EncounterKind::DebrisField, EncounterChoice::Investigate) => {
                 let id = fleet

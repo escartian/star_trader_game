@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 11;
+pub const PROTOCOL_VERSION: u32 = 12;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -118,6 +118,11 @@ pub enum ClientCommand {
     /// End the fleet's route; a leg already plotted or underway still completes.
     CancelTradeRoute {
         fleet: FleetId,
+        expected_revision: u64,
+    },
+    /// Act with the player ship that is up in the open raider battle.
+    BattleAction {
+        action: game_core::navigation::BattleAction,
         expected_revision: u64,
     },
 }

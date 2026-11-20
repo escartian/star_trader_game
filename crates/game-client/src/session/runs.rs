@@ -37,6 +37,9 @@ pub(super) fn event_label(event: NavigationEvent) -> String {
         NavigationEvent::EncounterResolved { fleet, outcome } => {
             format!("Fleet {}: {outcome}", fleet.0)
         }
+        NavigationEvent::BattleTurn { fleet } => {
+            format!("Fleet {}: your ship is up in the battle.", fleet.0)
+        }
         NavigationEvent::RouteServiced { fleet, summary } => {
             format!("Fleet {} route · {summary}", fleet.0)
         }
@@ -303,14 +306,37 @@ impl LocalSession {
         let fastest = encounter.hostiles.iter().map(|kind| engine(*kind)).max();
         let chance = evade_chance_percent(slowest, fastest.unwrap_or(1));
         let names: Vec<_> = encounter.hostiles.iter().map(|kind| kind.label()).collect();
+        if self
+            .state
+            .navigation
+            .battle
+            .as_ref()
+            .is_some_and(|open| open.encounter == encounter.id)
+        {
+            ui.label(format!("Battle in progress against {}.", names.join(", ")));
+            if !self.battle_open() && icons::button(ui, Icon::Weapon, "Return to battle").clicked()
+            {
+                self.resume_battle();
+            }
+            return;
+        }
         ui.label(format!(
-            "Hostile raiders close in: {}. Fight them, or try to outrun them; a failed escape forces the fight.",
+            "Hostile raiders close in: {}. Fight them turn by turn, let the fight play out automatically, or try to outrun them; a failed escape starts the battle.",
             names.join(", ")
         ));
         let mut choice = None;
         ui.horizontal(|ui| {
-            if icons::button(ui, Icon::Weapon, "Fight").clicked() {
+            if icons::button(ui, Icon::Weapon, "Fight")
+                .on_hover_text("Command your ships turn by turn on the battle grid.")
+                .clicked()
+            {
                 choice = Some(EncounterChoice::Fight);
+            }
+            if icons::button(ui, Icon::Execute, "Auto-resolve")
+                .on_hover_text("Fight the whole battle at once with the AI on both sides.")
+                .clicked()
+            {
+                choice = Some(EncounterChoice::AutoResolve);
             }
             if icons::button(ui, Icon::Engine, &format!("Evade {chance}%")).clicked() {
                 choice = Some(EncounterChoice::Evade);

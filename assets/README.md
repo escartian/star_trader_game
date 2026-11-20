@@ -109,4 +109,21 @@ courier: `source/ai-courier.blend` is a vertex-colored model generated locally
 from a concept image with ComfyUI/TRELLIS.2, then remeshed and decimated.
 `tools/art/clean_ai_courier.py` rebuilds it and renders `sprites/scout.png` with
 the same camera and lights; `tools/comfyui/README.md` covers the full pipeline.
-These are static ship illustrations; combat equipment is not implemented yet.
+
+### Battle models
+
+`models/*.glb` are runtime glTF exports of the low-poly hull sources for the
+battle view: currently only `models/freighter.glb` (about 1,300 triangles,
+four plain-colour materials, no textures). Other hulls still appear as sprites
+there; the 60,000-triangle AI courier needs a lighter version before it can join.
+Re-export with:
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
+  --python tools/art/export_battle_models.py
+```
+
+The export applies modifiers, keeps Blender's axes (+Z up, nose along +Y) and is
+byte-for-byte reproducible. The client embeds the file, recentres the model and
+draws it flat-shaded as egui triangles, sorted far to near (no depth buffer yet).
+A test checks that the embedded model loads with its coloured parts.

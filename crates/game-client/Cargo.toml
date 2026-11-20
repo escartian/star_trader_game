@@ -14,6 +14,8 @@ egui-wgpu = { version = "=0.31.1", default-features = false }
 winit = "=0.30.13"
 wgpu = "=24.0.1"
 glam = "=0.30.10"
+# Battle ship models; no file/URI import or image decoding needed for embedded .glb.
+gltf = { version = "=1.4.1", default-features = false, features = ["utils"] }
 pollster = "=0.4.0"
 resvg = { version = "=0.49.0", default-features = false }
 image = { version = "=0.25.10", default-features = false, features = ["png"] }

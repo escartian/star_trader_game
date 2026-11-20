@@ -8,7 +8,7 @@ use game_core::{
     economy::Commodity,
     fleet::{FleetId, ShipKind},
     movement::MoveTarget,
-    navigation::{EncounterChoice, EncounterKind},
+    navigation::{BattleAction, EncounterChoice, EncounterKind},
     travel::{Location, ShipId},
 };
 use game_protocol::{ClientCommand, ServerMessage};
@@ -20,7 +20,7 @@ fn body(id: u64) -> MoveTarget {
     }
 }
 
-fn reload(session: &Session) -> Session {
+pub(super) fn reload(session: &Session) -> Session {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("combat.json");
     session.save(&path).unwrap();
@@ -32,7 +32,7 @@ fn reload(session: &Session) -> Session {
 
 /// Runs one navigation run with a guaranteed contact for `ship`'s fleet, then
 /// turns that contact into raiders with the given hulls.
-fn raid(
+pub(super) fn raid(
     session: &mut Session,
     ship: ShipId,
     hold: Option<FleetId>,
@@ -58,7 +58,11 @@ fn raid(
     encounter.id
 }
 
-fn choose(session: &mut Session, encounter: u64, choice: EncounterChoice) -> ServerMessage {
+pub(super) fn choose(
+    session: &mut Session,
+    encounter: u64,
+    choice: EncounterChoice,
+) -> ServerMessage {
     session.handle(ClientCommand::ResolveEncounter {
         encounter,
         choice,
@@ -77,8 +81,8 @@ fn raider_fights_are_reproducible_saved_and_resolve_once() {
         assert!(matches!(rejected, ServerMessage::CommandRejected(_)));
         assert_eq!(session.snapshot(Vec::new()), before);
     }
-    choose(&mut session, encounter, EncounterChoice::Fight);
-    choose(&mut twin, encounter, EncounterChoice::Fight);
+    choose(&mut session, encounter, EncounterChoice::AutoResolve);
+    choose(&mut twin, encounter, EncounterChoice::AutoResolve);
     assert_eq!(session.state, twin.state, "same saved RNG, same fight");
     let report = session.state.navigation.last_combat.clone().unwrap();
     assert_eq!(report.encounter, encounter);
@@ -93,7 +97,7 @@ fn raider_fights_are_reproducible_saved_and_resolve_once() {
     }
     let resolved = session.snapshot(Vec::new());
     assert!(matches!(
-        choose(&mut session, encounter, EncounterChoice::Fight),
+        choose(&mut session, encounter, EncounterChoice::AutoResolve),
         ServerMessage::CommandRejected(_)
     ));
     assert_eq!(session.snapshot(Vec::new()), resolved);
@@ -106,7 +110,7 @@ fn the_last_owned_ship_survives_crippled_and_loses_its_cargo() {
     session.state.ships[0].cargo[Commodity::Food.index()] = 5;
     let raiders = vec![ShipKind::Patrol; 3];
     let encounter = raid(&mut session, ShipId(1), None, raiders);
-    choose(&mut session, encounter, EncounterChoice::Fight);
+    choose(&mut session, encounter, EncounterChoice::AutoResolve);
     let report = session.state.navigation.last_combat.clone().unwrap();
     assert_eq!(report.outcome, CombatOutcome::Defeat);
     assert_eq!(report.crippled, Some(ShipId(1)));
@@ -125,7 +129,7 @@ fn a_destroyed_fleet_is_removed_with_its_course_while_others_continue() {
     let mut session = two_fleets();
     let raiders = vec![ShipKind::Patrol; 3];
     let encounter = raid(&mut session, ShipId(2), Some(FleetId(1)), raiders);
-    choose(&mut session, encounter, EncounterChoice::Fight);
+    choose(&mut session, encounter, EncounterChoice::AutoResolve);
     let report = session.state.navigation.last_combat.clone().unwrap();
     assert_eq!(report.outcome, CombatOutcome::Defeat);
     assert_eq!(report.crippled, None, "another owned ship remains");
@@ -151,7 +155,7 @@ fn a_destroyed_fleet_is_removed_with_its_course_while_others_continue() {
 }
 
 #[test]
-fn evasion_either_escapes_untouched_or_forces_a_fight() {
+fn evasion_either_escapes_untouched_or_opens_a_battle() {
     let mut escaped = false;
     let mut forced = false;
     for seed in 0..40 {
@@ -160,6 +164,17 @@ fn evasion_either_escapes_untouched_or_forces_a_fight() {
         let encounter = raid(&mut session, ShipId(1), None, vec![ShipKind::Scout]);
         let before = session.state.navigation.last_combat.clone();
         choose(&mut session, encounter, EncounterChoice::Evade);
+        if let Some(open) = &session.state.navigation.battle {
+            assert!(open.evasion_failed, "a failed escape opens the battle");
+            let revision = session.state.revision;
+            succeed(
+                &mut session,
+                ClientCommand::BattleAction {
+                    action: BattleAction::AutoResolve,
+                    expected_revision: revision,
+                },
+            );
+        }
         assert!(session.state.navigation.encounters.is_empty());
         if session.state.navigation.last_combat == before {
             escaped = true;
@@ -239,7 +254,7 @@ fn forged_raider_contacts_and_reports_fail_save_validation() {
         forged.export_json().is_err(),
         "hostiles on a non-raider contact"
     );
-    choose(&mut session, encounter, EncounterChoice::Fight);
+    choose(&mut session, encounter, EncounterChoice::AutoResolve);
     assert!(session.export_json().is_ok());
     let mut forged = session.clone();
     let report = forged.state.navigation.last_combat.as_mut().unwrap();

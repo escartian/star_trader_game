@@ -1,196 +1,75 @@
-use super::engagement::{CombatantSetup, MAX_ROUNDS, Side, resolve};
-use super::{CombatCatalog, CombatProfile, HullSize};
-use crate::fleet::{ShipCatalog, ShipKind};
+use super::engagement::{MIN_HIT_PERCENT, apply_hit, hit_chance};
+use super::{CombatCatalog, CombatProfile, HullSize, WeaponSpec};
 
-fn setup(kind: ShipKind, side: Side, name: &str) -> CombatantSetup {
-    CombatantSetup {
-        name: name.into(),
-        side,
-        ship: None,
-        kind,
-        profile: ShipCatalog::default().spec(kind).unwrap().combat.clone(),
-        hull_damage: 0,
+fn weapon(damage: u32, efficiency: u32, pierce: u32) -> WeaponSpec {
+    WeaponSpec {
+        damage,
+        shield_efficiency_percent: efficiency,
+        armor_penetration: pierce,
+        ..CombatCatalog::default().weapons[0].clone()
     }
 }
 
-/// A perfectly accurate test weapon so damage arithmetic is roll-independent.
-fn catalog_with(id: &str, damage: u32, efficiency: u32, pierce: u32) -> CombatCatalog {
-    let mut catalog = CombatCatalog::default();
-    let mut weapon = catalog.weapons[0].clone();
-    weapon.id = id.into();
-    weapon.damage = damage;
-    weapon.shots = 1;
-    weapon.accuracy_percent = 100;
-    weapon.shield_efficiency_percent = efficiency;
-    weapon.armor_penetration = pierce;
-    catalog.weapons.push(weapon);
-    catalog
-}
-
-fn dummy(side: Side, hull: u32, shields: u32, armor: u32, loadout: &[&str]) -> CombatantSetup {
-    CombatantSetup {
-        name: format!("{side:?}"),
-        side,
-        ship: None,
-        kind: ShipKind::Freighter,
-        profile: CombatProfile {
-            size: HullSize::Medium,
-            hull,
-            shields,
-            armor,
-            engine: 1,
-            weapon_slots: 3,
-            loadout: loadout.iter().map(|id| (*id).to_string()).collect(),
-        },
-        hull_damage: 0,
+fn target(hull: u32, armor: u32) -> CombatProfile {
+    CombatProfile {
+        size: HullSize::Medium,
+        hull,
+        shields: 0,
+        armor,
+        engine: 1,
+        weapon_slots: 0,
+        loadout: Vec::new(),
     }
-}
-
-#[test]
-fn identical_seeds_reproduce_identical_engagements() {
-    let catalog = CombatCatalog::default();
-    let ships = [
-        setup(ShipKind::Patrol, Side::Player, "Patrol"),
-        setup(ShipKind::Freighter, Side::Player, "Freighter"),
-        setup(ShipKind::Scout, Side::Hostile, "Raider A"),
-        setup(ShipKind::Scout, Side::Hostile, "Raider B"),
-    ];
-    let first = resolve(&ships, &catalog, 42).unwrap();
-    assert_eq!(first, resolve(&ships, &catalog, 42).unwrap());
-    let differs = (0..20).any(|seed| resolve(&ships, &catalog, seed).unwrap() != first);
-    assert!(differs, "the seed must influence rolls");
 }
 
 #[test]
 fn shields_absorb_then_overflow_converts_back_and_armor_reduces() {
     // 20 damage at 200% vs 10 shields: 5 raw breaks shields, 15 raw passes,
     // armor 6 − pierce 2 = 4 → 11 hull.
-    let catalog = catalog_with("test_lance", 20, 200, 2);
-    let ships = [
-        dummy(Side::Player, 50, 0, 0, &["test_lance"]),
-        dummy(Side::Hostile, 100, 10, 6, &[]),
-    ];
-    let result = resolve(&ships, &catalog, 1).unwrap();
-    let first = &result.rounds[0][0];
-    assert!(first.hit);
-    assert_eq!((first.shield_damage, first.hull_damage), (10, 11));
-    // Shields stay down for the engagement: the next hit is 20 − 4 = 16.
-    assert_eq!(result.rounds[1][0].hull_damage, 16);
+    let (mut shields, mut damage) = (10, 0);
+    let lance = weapon(20, 200, 2);
+    let profile = target(100, 6);
+    assert_eq!(
+        apply_hit(&mut shields, &mut damage, &profile, &lance),
+        (10, 11)
+    );
+    // Shields stay down: the next hit is 20 − 4 = 16.
+    assert_eq!(
+        apply_hit(&mut shields, &mut damage, &profile, &lance),
+        (0, 16)
+    );
+    assert_eq!(damage, 27);
 }
 
 #[test]
 fn shields_that_hold_take_scaled_damage_and_armored_hits_deal_at_least_one() {
-    let catalog = catalog_with("test_pin", 3, 50, 0);
-    let ships = [
-        dummy(Side::Player, 50, 0, 0, &["test_pin"]),
-        dummy(Side::Hostile, 100, 4, 50, &[]),
-    ];
-    let result = resolve(&ships, &catalog, 1).unwrap();
+    let pin = weapon(3, 50, 0);
+    let profile = target(100, 50);
+    let (mut shields, mut damage) = (4, 0);
     // 3 × 50% = 1 shield point; nothing reaches the hull while shields hold.
-    assert_eq!(
-        (
-            result.rounds[0][0].shield_damage,
-            result.rounds[0][0].hull_damage
-        ),
-        (1, 0)
-    );
+    assert_eq!(apply_hit(&mut shields, &mut damage, &profile, &pin), (1, 0));
+    shields = 0;
     // Once shields are gone, armor 50 still lets one point through.
-    let later = result
-        .rounds
-        .iter()
-        .flatten()
-        .find(|shot| shot.hull_damage > 0);
-    assert_eq!(later.map(|shot| shot.hull_damage), Some(1));
+    assert_eq!(apply_hit(&mut shields, &mut damage, &profile, &pin), (0, 1));
 }
 
 #[test]
-fn fire_focuses_on_the_weakest_enemy_and_destroyed_ships_stop_acting() {
-    let catalog = catalog_with("test_cannon", 40, 100, 0);
-    let mut ships = [
-        dummy(Side::Player, 200, 0, 0, &["test_cannon"]),
-        dummy(Side::Hostile, 80, 0, 0, &["test_cannon"]),
-        dummy(Side::Hostile, 30, 0, 0, &["test_cannon"]),
-    ];
-    ships[0].profile.engine = 2; // act first regardless of initiative
-    let result = resolve(&ships, &catalog, 7).unwrap();
-    let opening = &result.rounds[0][0];
-    assert_eq!((opening.attacker, opening.target), (0, 2));
-    assert!(opening.destroyed);
-    // The destroyed raider (index 2) never fires.
-    assert!(
-        result
-            .rounds
-            .iter()
-            .flatten()
-            .all(|shot| shot.attacker != 2)
-    );
-    assert_eq!(result.winner, Some(Side::Player));
-    let wreck = &result.combatants[2];
-    assert!(wreck.destroyed);
+fn hull_damage_never_exceeds_the_remaining_hull() {
+    let (mut shields, mut damage) = (0, 25);
+    let cannon = weapon(40, 100, 0);
     assert_eq!(
-        wreck.final_damage, wreck.hull,
-        "damage is capped at the hull"
+        apply_hit(&mut shields, &mut damage, &target(30, 0), &cannon),
+        (0, 5)
     );
+    assert_eq!(damage, 30);
 }
 
 #[test]
-fn evenly_matched_unarmed_fleets_disengage_at_the_round_limit() {
-    let catalog = CombatCatalog::default();
-    let ships = [
-        dummy(Side::Player, 10, 0, 0, &[]),
-        dummy(Side::Hostile, 10, 0, 0, &[]),
-    ];
-    let result = resolve(&ships, &catalog, 3).unwrap();
-    assert_eq!(result.rounds.len(), MAX_ROUNDS as usize);
-    assert_eq!(result.winner, None);
-}
-
-#[test]
-fn invalid_engagements_are_rejected() {
-    let catalog = CombatCatalog::default();
-    assert!(resolve(&[], &catalog, 0).is_err());
-    let mut wrecked = setup(ShipKind::Scout, Side::Player, "Wreck");
-    wrecked.hull_damage = wrecked.profile.hull;
-    assert!(resolve(&[wrecked], &catalog, 0).is_err());
-}
-
-#[test]
-fn engine_order_lets_faster_ships_fire_first() {
-    let catalog = CombatCatalog::default();
-    let ships = [
-        setup(ShipKind::Freighter, Side::Player, "Freighter"),
-        setup(ShipKind::Scout, Side::Hostile, "Raider"),
-    ];
-    let result = resolve(&ships, &catalog, 11).unwrap();
-    assert_eq!(result.rounds[0][0].attacker, 1, "scout engine 8 beats 3");
-}
-
-fn player_wins(player: &[ShipKind], hostile: &[ShipKind]) -> (u32, u32) {
-    let catalog = CombatCatalog::default();
-    let mut ships: Vec<_> = player
-        .iter()
-        .map(|k| setup(*k, Side::Player, "P"))
-        .collect();
-    ships.extend(hostile.iter().map(|k| setup(*k, Side::Hostile, "H")));
-    (0..400).fold((0, 0), |(wins, losses), seed| {
-        match resolve(&ships, &catalog, seed).unwrap().winner {
-            Some(Side::Player) => (wins + 1, losses),
-            Some(Side::Hostile) => (wins, losses + 1),
-            None => (wins, losses),
-        }
-    })
-}
-
-#[test]
-fn mirror_matches_are_fair_and_a_lone_trader_survives_a_scout_raider() {
-    for kind in [ShipKind::Scout, ShipKind::Patrol] {
-        let (wins, losses) = player_wins(&[kind], &[kind]);
-        let share = wins * 100 / (wins + losses);
-        assert!((40..=60).contains(&share), "{kind:?} mirror: {share}%");
-    }
-    let (_, losses) = player_wins(&[ShipKind::Freighter], &[ShipKind::Scout]);
-    assert_eq!(
-        losses, 0,
-        "the starting freighter must not lose to one scout"
-    );
+fn evasion_and_distance_lower_hit_chance_down_to_a_floor() {
+    let beam = weapon(10, 100, 0);
+    let accuracy = beam.accuracy_percent;
+    assert_eq!(hit_chance(&beam, 0, 1), accuracy, "adjacent, no evasion");
+    assert_eq!(hit_chance(&beam, 2, 1), accuracy - 6, "3% per engine point");
+    assert_eq!(hit_chance(&beam, 0, 4), accuracy - 12, "4% per extra cell");
+    assert_eq!(hit_chance(&beam, 10, 30), MIN_HIT_PERCENT);
 }

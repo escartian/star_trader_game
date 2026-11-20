@@ -7,6 +7,11 @@ impl CombatRng {
         Self(seed)
     }
 
+    /// The stream position, so a battle in progress can be saved and resumed.
+    pub fn state(&self) -> u64 {
+        self.0
+    }
+
     pub fn next_u64(&mut self) -> u64 {
         self.0 = self.0.wrapping_add(0x9e3779b97f4a7c15);
         let mut value = self.0;

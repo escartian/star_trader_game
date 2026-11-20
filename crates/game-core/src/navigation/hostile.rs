@@ -3,8 +3,7 @@
 use super::{Encounter, EncounterChoice};
 use crate::{
     combat::{
-        CombatOutcome, CombatReport, CombatantSetup, Side,
-        engagement::{self, MAX_COMBATANTS},
+        CombatOutcome, CombatReport, CombatantSetup, Side, engagement::MAX_COMBATANTS, tactical,
     },
     economy::{Commodity, EconomyRules},
     fleet::{Fleet, FleetError, FleetId, FleetMovementError, ShipKind},
@@ -70,7 +69,7 @@ impl TravelState {
         }
         let setups = self.engagement_setups(encounter, fleet, rules)?;
         let seed = self.navigation.rolls();
-        let result = engagement::resolve(&setups, &rules.combat_catalog, seed)
+        let result = tactical::auto_resolve(&setups, &rules.combat_catalog, seed)
             .map_err(|_| FleetError::InvalidSelection)?;
         let mut report = CombatReport {
             encounter: encounter.id,

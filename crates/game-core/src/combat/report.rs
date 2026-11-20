@@ -1,5 +1,6 @@
 //! Saved, readable outcome of the most recent engagement.
-use super::engagement::{CombatantResult, MAX_COMBATANTS, MAX_ROUNDS, ShotRecord, Side};
+use super::engagement::{CombatantResult, MAX_COMBATANTS, ShotRecord, Side};
+use super::tactical::MAX_ROUNDS;
 use crate::fleet::FleetId;
 use crate::travel::ShipId;
 use serde::{Deserialize, Serialize};
@@ -11,7 +12,7 @@ pub enum CombatOutcome {
     Victory,
     /// Every player ship in the fleet was destroyed (one may survive crippled).
     Defeat,
-    /// Both sides still had ships after the round limit.
+    /// Both sides still had ships: the round limit passed or a side withdrew.
     Disengaged,
 }
 

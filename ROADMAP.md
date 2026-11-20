@@ -159,8 +159,12 @@ Combat is the original README's first prioritized expansion.
   damage/destruction, salvage, saved results and a readable native combat report.
 - [x] Deterministic seeded resolution (seed saved in the report), round limit and
   disengagement; last-ship rule; paid hull repairs at markets.
-- [ ] Explicit hostility/engagement rules for NPC/faction fleets, mid-fight retreat,
-  player target selection and credit bounties.
+- [x] Turn-based tactical rules on a 3D grid: HoMM-style engine initiative, move,
+  ranged fire, withdrawal from your own edge, raider AI and Auto-resolve.
+- [ ] Play battles turn by turn: saved battles in progress, move/fire/withdraw
+  commands, and a 3D battle view with real ship models (Blender glTF export,
+  mesh renderer, grid picking).
+- [ ] Explicit hostility/engagement rules for NPC/faction fleets and credit bounties.
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
 cargo and rewards remain consistent. Raider fights meet this with behavior and

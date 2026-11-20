@@ -64,6 +64,43 @@ continuous voyage). The glide is display-only; camera-follow, saves and rules us
 the authoritative positions, and captures (animations off) show final positions.
 Existing paid voyages from older saves progress on navigation runs too.
 
+## Trade routes
+
+Select a destination with a market while a fleet is at a different market and
+choose **TRADE ROUTE**. The fleet then loops between the two markets on its own:
+
+1. At once (no time passes) it keeps any cargo aboard, fills the remaining space
+   with the most profitable cargo for the far end and plots that leg.
+2. Each time it arrives at either end it sells everything it carries, refuels as
+   far as credits allow, buys the most profitable cargo for the other end and
+   sets off on the next run. Advance does not stop for these stops; each one is
+   logged ("Fleet 1 route · At Sol Trade port: sold …; bought …; bound for …").
+
+"Most profitable" is chosen greedily one cargo unit at a time: each unit goes to
+the good with the largest margin between the far end's sell price at its rising
+stock and the local buy price at its falling stock, the same per-unit curves trade
+quotes use. Margins only shrink as units are added, so this maximizes estimated
+profit for the space. Buying stops when the hold, credits, the far market's
+storage or buyer funds run out, or nothing pays. Prices at arrival may differ.
+Route trades use the player's credits.
+
+If a stop would send the fleet off with an empty hold (nothing aboard and nothing
+profitable to buy), the route **pauses** instead: the fleet stays at that stop,
+its card shows ROUTE PAUSED with **Resume** and **End route**, and it needs
+orders, so Advance stops and says why. Resume re-checks prices and sets off if
+any cargo pays (otherwise it is rejected and the route stays paused); any other
+order ends the route. Starting a route with an empty hold and nothing profitable
+is rejected the same way.
+
+Route legs are ordinary courses: they roll contacts like any fleet, and a contact
+pauses the route fleet and stops Advance until you decide. Any new order for the
+fleet (Plot course, Wait, Cancel) ends its route. **End route** on the fleet's card
+lets the current leg finish; the fleet then needs orders. A stop that cannot
+continue (for example, no money for fuel to reach the far end) ends the route
+after selling and refuelling, and the fleet needs orders, which stops Advance.
+Destroyed, sold or merged-away fleets lose their routes. Routes are saved in the
+navigation state (`routes`, omitted when empty) and validated on load.
+
 ## Encounters
 
 Each travelling fleet gets its own encounter roll per run. Waiting fleets do not

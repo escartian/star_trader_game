@@ -23,6 +23,7 @@ impl Map {
                 self.local = Some(LocalView::new(system));
             }
             "run-review" => self.session.capture_run_review(),
+            "trade-route" => self.session.capture_trade_route()?,
             "encounter" => self.session.capture_encounter()?,
             "combat" => self.session.capture_combat()?,
             "navigation" => self.session.request_movement(MoveTarget::Body {
@@ -104,6 +105,7 @@ mod tests {
             "system",
             "advance",
             "run-review",
+            "trade-route",
             "navigation",
             "deep-space",
             "entry",

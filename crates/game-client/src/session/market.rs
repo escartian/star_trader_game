@@ -3,16 +3,16 @@ use crate::theme::icons::{self, Icon, stat};
 use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{
     StarSystem,
-    economy::{Commodity, Market, TradeSide},
+    economy::{Commodity, MarketId, TradeSide},
 };
 use game_protocol::ClientCommand;
 
 /// Display name of a market: the body (planet or station) it trades at.
-pub(super) fn market_name<'a>(systems: &'a [StarSystem], market: &Market) -> &'a str {
+pub(super) fn market_name(systems: &[StarSystem], market: MarketId) -> &str {
     systems
         .iter()
-        .find(|system| system.id == market.id.system)
-        .and_then(|system| system.bodies.iter().find(|body| body.id == market.id.body))
+        .find(|system| system.id == market.system)
+        .and_then(|system| system.bodies.iter().find(|body| body.id == market.body))
         .map_or("Unknown", |body| body.name.as_str())
 }
 
@@ -187,7 +187,7 @@ impl LocalSession {
                     egui::Grid::new("comparison").striped(true).show(ui, |ui| {
                         ui.label("");
                         for market in &self.economy.markets {
-                            ui.strong(market_name(systems, market));
+                            ui.strong(market_name(systems, market.id));
                         }
                         ui.end_row();
                         for commodity in Commodity::ALL {

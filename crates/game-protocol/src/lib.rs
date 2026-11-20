@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 10;
+pub const PROTOCOL_VERSION: u32 = 11;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -106,6 +106,18 @@ pub enum ClientCommand {
     ResolveEncounter {
         encounter: u64,
         choice: game_core::navigation::EncounterChoice,
+        expected_revision: u64,
+    },
+    /// Loop the fleet between the market it is at and `destination`, trading the most
+    /// profitable cargo at each end.
+    SetTradeRoute {
+        fleet: FleetId,
+        destination: game_core::economy::MarketId,
+        expected_revision: u64,
+    },
+    /// End the fleet's route; a leg already plotted or underway still completes.
+    CancelTradeRoute {
+        fleet: FleetId,
         expected_revision: u64,
     },
 }

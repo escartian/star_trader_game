@@ -79,6 +79,9 @@ pub struct NavigationState {
     /// The most recent engagement, kept readable across saves.
     #[serde(default)]
     pub last_combat: Option<Box<crate::combat::CombatReport>>,
+    /// Standing trade routes, at most one per fleet. Omitted from saves when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub routes: Vec<crate::routes::TradeRoute>,
 }
 impl Default for NavigationState {
     fn default() -> Self {
@@ -91,6 +94,7 @@ impl Default for NavigationState {
             next_encounter_id: 1,
             rescues: 0,
             last_combat: None,
+            routes: Vec::new(),
         }
     }
 }
@@ -115,7 +119,25 @@ pub enum NavigationEvent {
     Arrived(MovementPlan),
     RunExecuted(u64),
     EncounterFound(Encounter),
-    EncounterResolved { fleet: FleetId, outcome: String },
+    EncounterResolved {
+        fleet: FleetId,
+        outcome: String,
+    },
+    /// A route fleet traded at a stop and set off for the other one.
+    RouteServiced {
+        fleet: FleetId,
+        summary: String,
+    },
+    /// A route fleet found nothing profitable to carry and waits at its stop.
+    RoutePaused {
+        fleet: FleetId,
+        reason: String,
+    },
+    /// A route ended, by the player's orders or because it could not continue.
+    RouteEnded {
+        fleet: FleetId,
+        reason: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -129,6 +151,13 @@ pub enum NavigationError {
     InvalidChoice,
     MissingMedicine,
     CargoFull,
+    /// Trade routes start from the market where the fleet is.
+    NotAtMarket,
+    /// The other end of a route must be a different market.
+    InvalidRouteStop,
+    NoRoute,
+    /// A route would leave with an empty hold: nothing aboard, nothing profitable.
+    NothingProfitable,
 }
 impl std::fmt::Display for NavigationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -160,6 +189,14 @@ impl std::fmt::Display for NavigationError {
             Self::CargoFull => {
                 f.write_str("The fleet needs one free cargo space to recover salvage.")
             }
+            Self::NotAtMarket => f.write_str("Start a trade route while the fleet is at a market."),
+            Self::InvalidRouteStop => {
+                f.write_str("Pick a different market as the other end of the route.")
+            }
+            Self::NoRoute => f.write_str("This fleet has no trade route."),
+            Self::NothingProfitable => f.write_str(
+                "Nothing profitable to carry to that market right now; the hold would be empty.",
+            ),
         }
     }
 }

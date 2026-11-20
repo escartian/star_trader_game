@@ -9,6 +9,7 @@ pub mod movement;
 pub mod navigation;
 pub mod npc;
 pub mod planet;
+pub mod routes;
 pub mod travel;
 
 /// Stable identity; never use a display name or array index as an entity ID.

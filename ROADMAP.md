@@ -114,6 +114,9 @@ landing volumes remain open, independently of the following gameplay work.
 - [x] Persistent standby: an explicit Wait lasts across runs until a new course.
 - [x] Advance to next event: paced repeated runs that stop on contacts, arrivals
   needing orders, idle fleets or Stop; a clock button keeps single-run stepping.
+- [x] Repeating trade routes between two markets: greedy most-profitable cargo,
+  sell/refuel/buy at each stop, contacts as usual; an empty hold pauses the route
+  until Resume, and failures end it.
 - [ ] Manually authored itineraries and movement/encounter balance.
 - [ ] Richer authored contacts, risk factors, inspections, combat and faction outcomes.
 

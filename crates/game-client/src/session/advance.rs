@@ -164,10 +164,16 @@ impl LocalSession {
             }
             Stop::NeedsOrders(fleet) => {
                 self.focus_fleet(fleet);
-                format!(
-                    "Advanced {advanced} · {} needs orders.",
-                    self.fleet_name(fleet)
-                )
+                let paused = self
+                    .state
+                    .trade_route(fleet)
+                    .is_some_and(|route| route.paused);
+                let why = if paused {
+                    ": route paused, nothing profitable to carry. Resume it or give new orders"
+                } else {
+                    " needs orders"
+                };
+                format!("Advanced {advanced} · {}{why}.", self.fleet_name(fleet))
             }
             Stop::NothingUnderway => format!("Advanced {advanced} · no fleet is underway."),
             Stop::Rejected => format!("Advance stopped: {}", self.notice),

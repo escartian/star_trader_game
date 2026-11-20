@@ -12,6 +12,7 @@ mod market_table;
 mod motion;
 mod navigation;
 mod panel;
+mod routes;
 mod runs;
 mod saves;
 mod settings;

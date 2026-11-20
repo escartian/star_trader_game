@@ -66,6 +66,22 @@ impl LocalSession {
         Ok(())
     }
 
+    /// Starts the selected fleet on a trade route to system 2's trade port.
+    pub fn capture_trade_route(&mut self) -> Result<(), String> {
+        let port = self
+            .economy
+            .markets
+            .iter()
+            .find(|market| market.id.system == game_core::SystemId(2) && market.is_station)
+            .ok_or("Trade route capture needs a trade port in system 2")?
+            .id;
+        self.request_trade_route(port);
+        if self.state.navigation.routes.is_empty() {
+            return Err(format!("Trade route capture failed: {}", self.notice));
+        }
+        Ok(())
+    }
+
     pub fn capture_encounter(&mut self) -> Result<(), String> {
         self.command(ClientCommand::Move {
             ship: self.active_ship,

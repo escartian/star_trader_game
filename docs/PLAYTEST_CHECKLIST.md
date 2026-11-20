@@ -65,6 +65,11 @@ No participants have been contacted and no playtest results are claimed here.
   between runs, and a ship arriving at a body flies in before taking its berth.
 - [ ] Press Stop mid-advance; confirm no further runs execute. Advance into a contact
   and confirm its decision card is shown under the run controls.
+- [ ] Start a trade route Sol port to Meridian port and Advance: the fleet trades at
+  both ends without asking for orders, the log explains each stop, and credits
+  trend upward over several loops. End route and confirm it stops after the leg.
+  When a stop finds nothing profitable, confirm Advance stops with the reason and
+  Resume continues once prices recover.
 - [ ] Follow a multi-run voyage and verify fuel is charged once at departure.
 - [ ] Resolve a salvage/distress contact, save/continue, and check that the decision
   and cargo/rescue effects occur once. Verify other fleets progressed independently.

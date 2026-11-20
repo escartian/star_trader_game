@@ -202,6 +202,7 @@ Economy owns separate NPC trader wallets and hulls. NPCs use isolated TravelStat
 instances and the same destination/navigation rules; their IDs occupy the reserved
 upper half of the ship/fleet ID space. Player commands cannot authorize NPC hulls.
 The run coordinator advances production once, then resolves NPC decisions/routes
-in stable ID order. Existing commerce rules transfer payments to/from the same
+in stable ID order, then services player trade routes (`game-core::routes`) in
+fleet ID order inside the same candidate session. Existing commerce rules transfer payments to/from the same
 market treasuries; the temporary trader-account adapter restores the player wallet
 on both success and rejection before publishing the candidate session.

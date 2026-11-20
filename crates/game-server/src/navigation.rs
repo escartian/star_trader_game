@@ -2,6 +2,7 @@
 use super::Session;
 use game_core::{
     navigation::NavigationEvent,
+    routes,
     travel::{PlayerId, TravelError},
 };
 use game_protocol::{ClientCommand, CommandError, ServerMessage, SessionEvent};
@@ -28,6 +29,12 @@ impl Session {
             }
             | ClientCommand::ResolveEncounter {
                 expected_revision, ..
+            }
+            | ClientCommand::SetTradeRoute {
+                expected_revision, ..
+            }
+            | ClientCommand::CancelTradeRoute {
+                expected_revision, ..
             } => *expected_revision,
             _ => unreachable!("only navigation commands reach this handler"),
         };
@@ -35,7 +42,9 @@ impl Session {
             return Err(TravelError::StaleQuote.into());
         }
         let mut candidate = self.clone();
-        let events = match command {
+        // A fleet given explicit orders leaves its trade route.
+        let mut ordered = None;
+        let mut events = match command {
             ClientCommand::PlotDestination {
                 ship, system, body, ..
             } => {
@@ -46,6 +55,7 @@ impl Session {
                     body,
                     &candidate.systems,
                 )?;
+                ordered = Some(fleet);
                 vec![NavigationEvent::CoursePlotted(fleet)]
             }
             ClientCommand::Move { ship, target, .. } => {
@@ -53,14 +63,17 @@ impl Session {
                     candidate
                         .state
                         .plot_course(player, ship, target, &candidate.systems)?;
+                ordered = Some(fleet);
                 vec![NavigationEvent::CoursePlotted(fleet)]
             }
             ClientCommand::HoldFleet { fleet, .. } => {
                 candidate.state.hold_fleet(player, fleet)?;
+                ordered = Some(fleet);
                 vec![NavigationEvent::Holding(fleet)]
             }
             ClientCommand::CancelCourse { fleet, .. } => {
                 candidate.state.cancel_course(player, fleet)?;
+                ordered = Some(fleet);
                 vec![NavigationEvent::CourseCancelled(fleet)]
             }
             ClientCommand::ResolveEncounter {
@@ -71,18 +84,46 @@ impl Session {
                 choice,
                 &self.economy.rules,
             )?],
+            ClientCommand::SetTradeRoute {
+                fleet, destination, ..
+            } => vec![routes::start_route(
+                &mut candidate.state,
+                &mut candidate.economy,
+                player,
+                fleet,
+                destination,
+                &candidate.systems,
+            )?],
+            ClientCommand::CancelTradeRoute { fleet, .. } => {
+                vec![routes::cancel_route(&mut candidate.state, player, fleet)?]
+            }
             ClientCommand::ExecuteNavigationRun { .. } => {
-                let events = candidate
+                let mut events = candidate
                     .state
                     .execute_navigation_run(player, &candidate.systems)?;
                 candidate
                     .economy
                     .advance(candidate.state.movement_rules.ticks_per_navigation_run);
                 candidate.economy.advance_traders(&candidate.systems)?;
+                // Route fleets that reached a stop trade there and set off again.
+                events.extend(routes::service_routes(
+                    &mut candidate.state,
+                    &mut candidate.economy,
+                    player,
+                    &candidate.systems,
+                )?);
                 events
             }
             _ => unreachable!(),
         };
+        if let Some(fleet) = ordered
+            && candidate.state.end_trade_route(fleet)
+        {
+            events.push(NavigationEvent::RouteEnded {
+                fleet,
+                reason: "Route ended by new orders.".into(),
+            });
+        }
         *self = candidate;
         Ok(self.snapshot(events.into_iter().map(SessionEvent::Navigation).collect()))
     }

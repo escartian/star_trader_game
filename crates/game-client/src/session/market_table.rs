@@ -158,7 +158,7 @@ impl LocalSession {
             .max_by_key(|(_, sell)| *sell);
         match best {
             Some((market, sell)) if sell > buy => {
-                let name = super::market::market_name(systems, market);
+                let name = super::market::market_name(systems, market.id);
                 // Another system is named by its system; a market nearby by its body.
                 let place = if market.id.system == here.id.system {
                     name

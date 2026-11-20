@@ -98,6 +98,22 @@ impl TravelState {
                 return Err("Invalid Wait order".into());
             }
         }
+        let known_stop = |stop: &crate::economy::MarketId| {
+            systems.iter().any(|system| {
+                system.id == stop.system && system.bodies.iter().any(|body| body.id == stop.body)
+            })
+        };
+        let mut routed = HashSet::new();
+        for route in &self.navigation.routes {
+            if !routed.insert(route.fleet)
+                || held.contains(&route.fleet)
+                || route.stops[0] == route.stops[1]
+                || !route.stops.iter().all(known_stop)
+                || !self.fleets.iter().any(|fleet| fleet.id == route.fleet)
+            {
+                return Err("Invalid trade route".into());
+            }
+        }
         let mut encounters = HashSet::new();
         let mut encounter_fleets: HashSet<FleetId> = HashSet::new();
         for encounter in &self.navigation.encounters {

@@ -132,13 +132,13 @@ impl TravelState {
         Ok(())
     }
 
-    /// Drops Wait orders whose fleet no longer exists (sold, merged away). Wait
-    /// orders on surviving fleets are untouched: only the player replaces them.
-    pub fn prune_holds(&mut self) {
+    /// Drops Wait orders and trade routes whose fleet no longer exists (sold, merged
+    /// away, destroyed). Surviving fleets keep theirs: only the player replaces them.
+    pub fn prune_standing_orders(&mut self) {
         let fleets = &self.fleets;
-        self.navigation
-            .holds
-            .retain(|id| fleets.iter().any(|fleet| fleet.id == *id));
+        let exists = |id: FleetId| fleets.iter().any(|fleet| fleet.id == id);
+        self.navigation.holds.retain(|id| exists(*id));
+        self.navigation.routes.retain(|route| exists(route.fleet));
     }
 
     pub fn cancel_course(

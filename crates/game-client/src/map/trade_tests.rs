@@ -126,6 +126,36 @@ fn max_fills_the_hold_all_sells_it_back_and_full_refuels() {
 }
 
 #[test]
+fn a_trade_route_starts_from_the_destination_card_and_ends_from_the_roster() {
+    use game_core::{BodyKind, SystemId, fleet::FleetId};
+    let ctx = egui::Context::default();
+    let mut authority = game_server::Session::default();
+    authority.set_encounter_chance(0);
+    let systems = match authority.handle(game_protocol::ClientCommand::GetGalaxy) {
+        game_protocol::ServerMessage::GalaxySnapshot { systems, .. } => systems,
+        _ => unreachable!(),
+    };
+    let port = systems
+        .iter()
+        .find(|system| system.id == SystemId(2))
+        .and_then(|system| {
+            system
+                .bodies
+                .iter()
+                .find(|body| body.kind == BodyKind::Station)
+        })
+        .unwrap()
+        .id;
+    let mut map = Map::new(systems, authority);
+    map.session.select_destination(SystemId(2), Some(port));
+    click(&ctx, &mut map, "TRADE ROUTE");
+    let route = map.session.trade_route(FleetId(1)).expect("route started");
+    assert_eq!(route.stops[1].system, SystemId(2));
+    click(&ctx, &mut map, "End route");
+    assert!(map.session.trade_route(FleetId(1)).is_none());
+}
+
+#[test]
 fn a_contact_can_be_resolved_from_the_run_card_without_opening_navigation() {
     let ctx = egui::Context::default();
     let mut authority = game_server::Session::with_seed(2);

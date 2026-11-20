@@ -116,7 +116,7 @@ impl Session {
         };
         if structural {
             // Fleets created by a split start without orders; surviving fleets keep theirs.
-            candidate.state.prune_holds();
+            candidate.state.prune_standing_orders();
         }
         candidate.state.revision = revision;
         *self = candidate;

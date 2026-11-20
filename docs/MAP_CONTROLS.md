@@ -9,6 +9,9 @@ Click a planet, station, moon or asteroid to select a destination. The left-hand
 course card shows the approach, total fuel per ship and minimum navigation runs.
 Choose **PLOT COURSE**, then **ADVANCE** once all fleets have
 courses or explicit Wait orders (fleet cards that need orders offer **Wait**).
+For a destination with a market, **TRADE ROUTE** instead loops the fleet between
+its current market and that one; its card then shows ON ROUTE, both stops and
+**End route** (ROUTE PAUSED with **Resume** when nothing was profitable to carry). See [trade routes](NAVIGATION_RUNS.md#trade-routes).
 Target picking, painting and fleet hit boxes share the same screen positions;
 overlapping body targets still have an explicit chooser.
 

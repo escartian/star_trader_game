@@ -187,6 +187,8 @@ impl TravelState {
                 .orders
                 .retain(|order| order.plan.fleet != fleet.id);
         }
+        // A destroyed fleet's trade route goes with it.
+        self.prune_standing_orders();
         if report.outcome == CombatOutcome::Victory {
             let wrecks = report
                 .side(Side::Hostile)

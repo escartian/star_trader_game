@@ -37,6 +37,13 @@ pub(super) fn event_label(event: NavigationEvent) -> String {
         NavigationEvent::EncounterResolved { fleet, outcome } => {
             format!("Fleet {}: {outcome}", fleet.0)
         }
+        NavigationEvent::RouteServiced { fleet, summary } => {
+            format!("Fleet {} route · {summary}", fleet.0)
+        }
+        NavigationEvent::RoutePaused { fleet, reason } => {
+            format!("Fleet {} route · {reason}", fleet.0)
+        }
+        NavigationEvent::RouteEnded { fleet, reason } => format!("Fleet {}: {reason}", fleet.0),
     }
 }
 

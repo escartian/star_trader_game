@@ -76,6 +76,12 @@ impl LocalSession {
                 .any(|contact| contact.fleet == fleet.id)
             {
                 (Icon::Contact, "CONTACT")
+            } else if let Some(route) = self.state.trade_route(fleet.id) {
+                if route.paused {
+                    (Icon::Warning, "ROUTE PAUSED")
+                } else {
+                    (Icon::Transfer, "ON ROUTE")
+                }
             } else if let Some(order) = self.state.navigation.order(fleet.id) {
                 if order.started {
                     (Icon::Underway, "UNDERWAY")
@@ -178,6 +184,7 @@ impl LocalSession {
                 if let Ok(ship) = self.state.ship(ship) {
                     location_stat(ui, &ship.location, systems);
                 }
+                self.route_line(ui, fleet.id, systems);
             });
         }
         ui.separator();
@@ -296,6 +303,9 @@ impl LocalSession {
             };
             self.command(command);
             self.map_target = None;
+        }
+        if let MapTarget::Destination(system, body) = target {
+            self.route_button(ui, system, body, systems);
         }
     }
 }

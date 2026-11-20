@@ -86,7 +86,9 @@ impl Session {
             | ClientCommand::ExecuteNavigationRun { .. }
             | ClientCommand::HoldFleet { .. }
             | ClientCommand::CancelCourse { .. }
-            | ClientCommand::ResolveEncounter { .. }) => self.navigation_command(player, command),
+            | ClientCommand::ResolveEncounter { .. }
+            | ClientCommand::SetTradeRoute { .. }
+            | ClientCommand::CancelTradeRoute { .. }) => self.navigation_command(player, command),
             command @ (ClientCommand::BuyShip { .. }
             | ClientCommand::SellShip { .. }
             | ClientCommand::RenameFleet { .. }
@@ -181,3 +183,6 @@ mod npc_tests;
 
 #[cfg(test)]
 mod route_tests;
+
+#[cfg(test)]
+mod trade_route_tests;

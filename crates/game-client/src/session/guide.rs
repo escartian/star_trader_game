@@ -18,13 +18,22 @@ impl LocalSession {
             return;
         }
         let ship = self.selected_ship();
+        let fleet = self
+            .state
+            .fleet_for_ship(ship.id)
+            .ok()
+            .map(|fleet| fleet.id);
         let hint = if self.state.ships.iter().any(|ship| ship.upgraded) {
             "Goal completed: you purchased the larger cargo hold. Continue exploring trade routes."
+        } else if fleet.is_some_and(|fleet| self.state.trade_route(fleet).is_some()) {
+            "This fleet runs its trade route on its own: press Advance. It stops only for contacts, or if the route cannot continue."
         } else if matches!(
             ship.location,
             Location::Travelling(_) | Location::InTransit(_)
         ) {
             "This fleet is underway. Press Advance to keep going until it arrives or meets a contact; a contact pauses only this fleet."
+        } else if fleet.is_some_and(|fleet| self.state.navigation.order(fleet).is_some()) {
+            "Course plotted. Press Advance to set off; a contact along the way needs your decision."
         } else if self.economy.current_market(ship).is_err() {
             "Pick a planet or trade port on the map and plot a course there. Plotting is free; Advance moves fleets and markets together."
         } else if self.economy.credits >= self.economy.rules.hold_upgrade_price {

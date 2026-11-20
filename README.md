@@ -19,6 +19,8 @@ through a readable native map. No game engine, browser, webview or JavaScript.
   known-market comparisons and a purchasable cargo-hold upgrade.
 - Fleet course planning, readiness highlighting, persistent Wait orders, parallel navigation
   runs and individual salvage, distress and raider encounters.
+- Repeating trade routes: a fleet loops between two markets, buying the most
+  profitable cargo at each end, and still stops for contacts.
 - Deterministic fleet combat against raiders, with a saved combat report,
   destroyed ships, salvage and paid hull repairs.
 - Seeded starts, a first-delivery guide, session logs and
@@ -104,7 +106,9 @@ fleet arrives, meets a contact or needs orders. The clock button runs exactly on
 run. Missing orders select/highlight the fleet first. Each travelling fleet can
 encounter salvage, a distress signal or raiders; resolve contacts in Navigation.
 Fights open a combat report; repair damaged hulls in the Market window.
-Random state and choices persist. See [navigation runs](docs/NAVIGATION_RUNS.md).
+Random state and choices persist. To automate a loop, select a destination market
+while the fleet is at another market and choose **TRADE ROUTE**; **End route** on
+the fleet's card stops it. See [navigation runs](docs/NAVIGATION_RUNS.md).
 
 The game is turn based internally, with navigation runs as the campaign language.
 Single-player no longer advances the whole world when one fleet moves. Multiplayer
@@ -194,8 +198,9 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [local approach](docs/previews/approach.png), [ship near planet](docs/previews/orbit.png),
 [planet market](docs/previews/planet-market.png), [planet shipyard](docs/previews/planet-shipyard.png),
 [run review](docs/previews/run-review.png), [advancing](docs/previews/advance.png),
+[trade route](docs/previews/trade-route.png),
 [map command](docs/previews/destination.png),
-[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`. Captures do not test window
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`. Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

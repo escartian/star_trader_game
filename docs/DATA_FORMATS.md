@@ -31,7 +31,8 @@ Each `data/slot-N.json` stores:
 
 - `systems`: stable IDs, star/body kinds, planet profiles and galaxy/local positions.
 - `player`: tick/revision, movement rules, navigation state (run, courses, Wait orders as `holds`,
-  encounters with raider `hostiles`, RNG, rescues, `last_combat` report), ships (IDs, owner, class, individual cargo/hold/fuel/range,
+  encounters with raider `hostiles`, RNG, rescues, `last_combat` report, trade
+  `routes` with their fleet and two market stops, omitted when empty), ships (IDs, owner, class, individual cargo/hold/fuel/range,
   `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters.
 - `economy`: shared player credits, current markets and exact session rules,
   including ship/planet/combat catalogs. Each market records a composite system/body ID,

@@ -128,10 +128,16 @@ impl TravelState {
                 z_km: 0,
             };
         };
-        // Hold station well outside the body's volume.
+        // Hold station well outside the body's volume, on the plane, on the
+        // side away from the star.
         let offset = self.movement_rules.body_radii.of(body.kind) * 4;
+        let outward = if body.position.x_km < 0 {
+            -offset
+        } else {
+            offset
+        };
         LocalPosition {
-            y_km: body.position.y_km + offset,
+            x_km: body.position.x_km + outward,
             ..body.position
         }
     }
@@ -298,28 +304,35 @@ fn near(a: LocalPosition, b: LocalPosition) -> bool {
 }
 
 /// Up to one run's distance toward `goal`, along a route that avoids the star
-/// and every body (a band that cannot find one holds still).
+/// and every body (a band that cannot find one holds still). On the plane,
+/// orbiting bodies often cross the straight line, so the band follows the
+/// detour's waypoints for as far as one run takes it.
 fn step_toward(
     rules: &crate::movement::MovementRules,
     world: &StarSystem,
     from: LocalPosition,
     goal: LocalPosition,
 ) -> LocalPosition {
-    let next = match safe_route(rules, world, from, goal) {
-        Ok(path) => path.first().copied().unwrap_or(goal),
-        Err(_) => return from,
+    let Ok(path) = safe_route(rules, world, from, goal) else {
+        return from;
     };
-    let gap = distance(from, next);
-    if gap <= BAND_KM_PER_RUN {
-        return next;
+    let mut at = from;
+    let mut budget = BAND_KM_PER_RUN;
+    for next in path.into_iter().chain(std::iter::once(goal)) {
+        let gap = distance(at, next);
+        if gap <= budget {
+            budget -= gap;
+            at = next;
+            continue;
+        }
+        let scale = |a: i64, b: i64| {
+            a + i64::try_from(i128::from(b - a) * i128::from(budget) / i128::from(gap)).unwrap_or(0)
+        };
+        return LocalPosition {
+            x_km: scale(at.x_km, next.x_km),
+            y_km: scale(at.y_km, next.y_km),
+            z_km: scale(at.z_km, next.z_km),
+        };
     }
-    let scale = |a: i64, b: i64| {
-        a + i64::try_from(i128::from(b - a) * i128::from(BAND_KM_PER_RUN) / i128::from(gap))
-            .unwrap_or(0)
-    };
-    LocalPosition {
-        x_km: scale(from.x_km, next.x_km),
-        y_km: scale(from.y_km, next.y_km),
-        z_km: scale(from.z_km, next.z_km),
-    }
+    at
 }

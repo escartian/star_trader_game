@@ -53,8 +53,8 @@ fn local_body_movement_and_first_face_exit_use_real_kilometers() {
         MoveTarget::Local {
             system: SystemId(1),
             position: LocalPosition {
-                x_km: 900_000_000,
-                y_km: 8_000_000,
+                x_km: -900_000_000,
+                y_km: 0,
                 z_km: -20_000_000,
             },
         },
@@ -63,8 +63,8 @@ fn local_body_movement_and_first_face_exit_use_real_kilometers() {
     assert_eq!(
         movement.destination,
         Location::DeepSpace(SpacePosition {
-            x_km: 200_000_001,
-            y_km: 8_000_000,
+            x_km: -200_000_001,
+            y_km: 0,
             z_km: -20_000_000
         })
     );
@@ -110,7 +110,7 @@ fn cube_corner_exit_and_near_face_entry_do_not_mix_spaces() {
 fn crossing_a_system_never_intercepts_but_exact_target_explicitly_enters() {
     let mut state = TravelState::default();
     state.ships[0].location = Location::DeepSpace(SpacePosition {
-        y_km: 10_000_000,
+        z_km: 10_000_000,
         ..SpacePosition::from_galaxy(GalaxyPosition { x: -2, y: 0, z: 0 }).unwrap()
     });
     let movement = plan(
@@ -162,7 +162,7 @@ fn invalid_coordinates_collisions_and_zero_distance_are_rejected_without_mutatio
             system: SystemId(1),
             position: LocalPosition {
                 x_km: -30_000_000,
-                y_km: -10_000_000,
+                y_km: 0,
                 z_km: -35_000_000,
             },
         },
@@ -193,13 +193,32 @@ fn invalid_coordinates_collisions_and_zero_distance_are_rejected_without_mutatio
         .is_err()
     );
     assert!(geometry::distance([i64::MIN; 3], [i64::MAX; 3]).is_err());
+    // Space is flat: nothing may be targeted off the map plane.
+    for target in [
+        MoveTarget::Local {
+            system: SystemId(1),
+            position: LocalPosition {
+                x_km: 90_000_000,
+                y_km: 1,
+                z_km: 0,
+            },
+        },
+        MoveTarget::DeepSpace(GalaxyPosition { x: 3, y: 1, z: 0 }),
+    ] {
+        assert_eq!(
+            state
+                .plan_movement(PlayerId(1), ShipId(1), &target, &fixed_galaxy())
+                .unwrap_err(),
+            MovementError::OffPlane.into()
+        );
+    }
     let extreme = plan(
         &state,
         MoveTarget::Local {
             system: SystemId(1),
             position: LocalPosition {
                 x_km: i64::MAX,
-                y_km: 10_000_000,
+                y_km: 0,
                 z_km: 35_000_000,
             },
         },
@@ -210,11 +229,11 @@ fn invalid_coordinates_collisions_and_zero_distance_are_rejected_without_mutatio
 #[test]
 fn range_boundary_uses_exact_squared_kilometers_and_checks_every_member() {
     let mut state = TravelState::default();
-    let origin = SpacePosition::from_galaxy(GalaxyPosition { x: -1, y: 5, z: 0 }).unwrap();
+    let origin = SpacePosition::from_galaxy(GalaxyPosition { x: -1, y: 0, z: 5 }).unwrap();
     state.ships[0].location = Location::DeepSpace(origin);
     state.ships[0].range_ly = 1;
     state.ships[0].fuel = 1;
-    let target = MoveTarget::DeepSpace(GalaxyPosition { x: 0, y: 5, z: 0 });
+    let target = MoveTarget::DeepSpace(GalaxyPosition { x: 0, y: 0, z: 5 });
     let movement = plan(&state, target.clone());
     assert_eq!(movement.fuel_per_ship, 1);
     assert_eq!(movement.duration_ticks, 1);

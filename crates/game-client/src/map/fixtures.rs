@@ -37,7 +37,7 @@ pub fn systems(scene: Scene) -> Vec<game_core::StarSystem> {
             name: format!(
                 "{} {:02}",
                 if scene == Scene::Overlap {
-                    "Depth"
+                    "Overlap"
                 } else {
                     "Cluster"
                 },
@@ -45,15 +45,11 @@ pub fn systems(scene: Scene) -> Vec<game_core::StarSystem> {
             ),
             star_kind: kinds[i as usize % kinds.len()],
             position: if scene == Scene::Overlap {
-                GalaxyPosition {
-                    x: 0,
-                    y: 0,
-                    z: i as i64 * 4 - 8,
-                }
+                GalaxyPosition { x: 0, y: 0, z: 0 }
             } else {
                 GalaxyPosition {
                     x: ((i * 17) % 29) as i64 - 14,
-                    y: ((i * 11) % 23) as i64 - 11,
+                    y: 0,
                     z: ((i * 7) % 31) as i64 - 15,
                 }
             },

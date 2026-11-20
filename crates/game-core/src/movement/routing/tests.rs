@@ -79,7 +79,7 @@ fn opposite_side_local_destinations_get_safe_waypoints_around_the_star() {
         system: SystemId(1),
         position: LocalPosition {
             x_km: -45_000_000,
-            y_km: -8_000_000,
+            y_km: 0,
             z_km: 20_000_000,
         },
     };

@@ -33,7 +33,7 @@ fn local(position: LocalPosition) -> MoveTarget {
 }
 
 /// On the line from here to the Moon, the Inner world sits in between.
-const BEHIND_INNER_WORLD: (i64, i64, i64) = (40_000_000, 5_500_000, -20_000_000);
+const BEHIND_INNER_WORLD: (i64, i64, i64) = (40_000_000, 0, -20_000_000);
 
 #[test]
 fn every_body_has_a_volume_and_the_demo_worlds_fit_without_overlaps() {
@@ -74,12 +74,12 @@ fn raw_waypoints_may_not_enter_or_cross_a_body() {
     let state = ship_at(at(x, y, z));
     let systems = crate::demo_galaxy();
     let plan = |target: &MoveTarget| state.plan_movement(PlayerId(1), ShipId(1), target, &systems);
-    let inside = at(45_200_000, 8_000_000, -20_000_000);
+    let inside = at(45_200_000, 0, -20_000_000);
     assert_eq!(
         plan(&local(inside)).unwrap_err(),
         MovementError::InsideBody.into()
     );
-    let beyond = at(50_000_000, 10_500_000, -20_000_000);
+    let beyond = at(50_000_000, 0, -20_000_000);
     assert_eq!(
         plan(&local(beyond)).unwrap_err(),
         MovementError::BodyCollision.into()
@@ -138,7 +138,7 @@ fn saved_positions_inside_a_body_are_rejected() {
     let rules = MovementRules::default();
     let inside = Location::InSystem {
         system: SystemId(1),
-        position: at(45_100_000, 8_000_000, -20_000_000),
+        position: at(45_100_000, 0, -20_000_000),
     };
     assert_eq!(
         rules.validate_location(&inside, &systems),

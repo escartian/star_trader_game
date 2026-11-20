@@ -48,7 +48,8 @@ chip selects the next fleet in it, cycling through the stack. The roster lists
 every fleet.
 
 **Labels and traffic.** Body names show when zoomed in, or for the body selected
-or pointed at. NPC traders are small amber dots without labels in the galaxy
+or pointed at. NPC traders are small GLB ship models with amber
+outlines and no labels in the galaxy
 view. A raider band's heading line is drawn only while it hunts one of your
 fleets. The orbit ring appears only around the selected fleet's body.
 **System overview** refits the scene; **Focus selected fleet** provides a close
@@ -78,7 +79,7 @@ takes the screen, framed by three panels.
 | Status strip | top | Back (system view), place name, credits, run number, alert badge |
 | Action bar | bottom | latest event; **Fleets**, **ADVANCE** / **STOP** with the single-run clock, **Menu** |
 | Context sheet | above the action bar, or docked on the right when the window is wider than tall | the guide and any contact decision first, then one page |
-| Map buttons | map's top-right corner | overview or reset, focus fleet, pan tool |
+| Map buttons | map's top-right corner | overview or reset, focus selection and fleet |
 
 The sheet's pages:
 

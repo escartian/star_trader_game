@@ -9,6 +9,7 @@ mod interaction;
 mod local;
 mod orbit_view;
 mod panels;
+mod recovery;
 mod render;
 mod shell;
 mod toolbar;
@@ -32,13 +33,13 @@ pub struct Map {
     candidates: Vec<SystemId>,
     scene: Scene,
     session_selection: Option<SystemId>,
-    pan_tool: bool,
     local: Option<local::LocalView>,
     session: crate::session::LocalSession,
     /// Which page the context sheet shows.
     sheet: crate::session::SheetTab,
     /// The galaxy map's area last frame (the sheet draws before the map).
     last_map_rect: Rect,
+    save_recovery: Option<recovery::SaveRecovery>,
 }
 
 fn position(system: &StarSystem) -> DVec3 {
@@ -47,6 +48,20 @@ fn position(system: &StarSystem) -> DVec3 {
         system.position.y as f64,
         system.position.z as f64,
     )
+}
+
+/// Distance in points from `pointer` to the nearest pickable system centre.
+fn nearest_system(
+    systems: &[StarSystem],
+    camera: &Camera,
+    rect: Rect,
+    pointer: Pos2,
+) -> Option<f32> {
+    pick(systems, camera, rect, pointer)
+        .iter()
+        .filter_map(|id| systems.iter().find(|system| system.id == *id))
+        .map(|system| pointer.distance(camera.project(position(system), rect)))
+        .min_by(f32::total_cmp)
 }
 
 fn pick(systems: &[StarSystem], camera: &Camera, rect: Rect, pointer: Pos2) -> Vec<SystemId> {
@@ -80,11 +95,11 @@ impl Map {
             candidates: Vec::new(),
             scene: Scene::Session,
             session_selection: selected,
-            pan_tool: false,
             local: None,
             session,
             sheet: crate::session::SheetTab::default(),
             last_map_rect: Rect::NOTHING,
+            save_recovery: None,
         }
     }
 
@@ -105,11 +120,6 @@ impl Map {
             self.systems.first().map(|s| s.id)
         };
         self.camera = Camera::default();
-        // An exact front view makes the deliberately overlapping fixture reproducible.
-        if scene == Scene::Overlap {
-            self.camera.yaw = 0.0;
-            self.camera.pitch = 0.0;
-        }
         self.candidates.clear();
     }
 
@@ -149,6 +159,10 @@ impl Map {
     }
 
     pub fn autosave(&mut self) -> Result<(), String> {
+        if self.save_recovery.is_some() {
+            // The temporary fresh session must not replace an incompatible save.
+            return Ok(());
+        }
         self.session.autosave()
     }
 
@@ -182,6 +196,10 @@ impl Map {
 
     pub fn ui(&mut self, ctx: &egui::Context) {
         crate::theme::apply(ctx);
+        if self.save_recovery.is_some() {
+            self.show_save_recovery(ctx);
+            return;
+        }
         if let Some(systems) = self.session.take_loaded_galaxy() {
             self.session_systems = systems.clone();
             self.systems = systems;

@@ -64,6 +64,7 @@ impl MovementRules {
     pub fn validate_world(&self, systems: &[StarSystem]) -> Result<(), MovementError> {
         self.validate()?;
         for system in systems {
+            flat(system)?;
             let center = SpacePosition::from_galaxy(system.position)?;
             let extent = self.system_half_extent_km + 1;
             for coordinate in center.coordinates() {
@@ -106,6 +107,9 @@ impl MovementRules {
     ) -> Result<(), MovementError> {
         match location {
             Location::DeepSpace(position) => {
+                if position.coordinates()[1] != 0 {
+                    return Err(MovementError::OffPlane);
+                }
                 for system in systems {
                     let center = SpacePosition::from_galaxy(system.position)?;
                     if position
@@ -131,6 +135,9 @@ impl MovementRules {
             Location::InSystem { system, position } => {
                 if !systems.iter().any(|known| known.id == *system) {
                     return Err(MovementError::WrongSpace);
+                }
+                if position.y_km != 0 {
+                    return Err(MovementError::OffPlane);
                 }
                 let coordinates = [position.x_km, position.y_km, position.z_km];
                 if coordinates
@@ -191,5 +198,21 @@ impl MovementRules {
             Location::Travelling(_) | Location::InTransit(_) => {} // Legacy journeys are checked separately on load.
         }
         Ok(())
+    }
+}
+
+/// Space is flat: the system, every body and every orbit lie on the plane `y = 0`.
+fn flat(system: &StarSystem) -> Result<(), MovementError> {
+    let bodies_flat = system.bodies.iter().all(|body| {
+        body.position.y_km == 0
+            && body
+                .orbit
+                .as_ref()
+                .is_none_or(|orbit| orbit.epoch.y_km == 0)
+    });
+    if system.position.y == 0 && bodies_flat {
+        Ok(())
+    } else {
+        Err(MovementError::OffPlane)
     }
 }

@@ -25,16 +25,8 @@ impl LocalView {
             self.frame_overview = false;
         }
         visuals::background(&painter, rect, "SYSTEM / AU");
-        if response.dragged_by(egui::PointerButton::Middle)
-            || (self.pan_tool && response.dragged_by(egui::PointerButton::Primary))
-        {
+        if response.dragged() {
             self.camera.pan += ui.input(|i| i.pointer.delta());
-        } else if response.dragged_by(egui::PointerButton::Primary)
-            || response.dragged_by(egui::PointerButton::Secondary)
-        {
-            let delta = ui.input(|i| i.pointer.delta());
-            self.camera.yaw += f64::from(delta.x) * 0.008;
-            self.camera.pitch = (self.camera.pitch + f64::from(delta.y) * 0.008).clamp(-1.57, 1.57);
         }
         if response.hovered() {
             self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom);
@@ -158,7 +150,10 @@ impl LocalView {
         if response.clicked()
             && let Some(pointer) = response.interact_pointer_pos()
         {
-            if let Some(hit) = crate::map::fleets::pick(&self.fleet_hits, pointer) {
+            let body = super::nearest_body(&self.system, &self.camera, rect, pointer);
+            if let Some(hit) =
+                crate::map::fleets::pick_over_targets(&self.fleet_hits, pointer, body)
+            {
                 self.selection_request = Some(hit.ship);
                 self.active_ship = hit.ship;
             } else {
@@ -174,7 +169,6 @@ impl LocalView {
                 }
             }
         }
-        visuals::axes(&painter, rect, self.camera.rotation());
         rect
     }
 }

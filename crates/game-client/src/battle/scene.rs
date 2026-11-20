@@ -204,13 +204,16 @@ fn ships(canvas: &Canvas, frame: &Frame, input: &SceneInput, active: Option<usiz
         }
         let facing_left = unit.side == Side::Hostile;
         if let Some(model) = model::for_kind(unit.kind) {
-            model.paint(
-                canvas.painter,
-                canvas.projector,
-                point,
-                MODEL_SIZE,
-                facing_left,
-            );
+            let side_heading = if facing_left {
+                -glam::Vec2::X
+            } else {
+                glam::Vec2::X
+            };
+            let heading = frame
+                .effects
+                .heading(index, unit.cell, frame.now)
+                .unwrap_or(side_heading);
+            model.paint(canvas.painter, canvas.projector, point, MODEL_SIZE, heading);
         } else if !input.artwork.paint_facing(
             ArtKind::from(unit.kind),
             canvas.painter,

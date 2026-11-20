@@ -111,6 +111,8 @@ pub enum MovementError {
     InsideBody,
     AlreadyThere,
     InvalidRules,
+    /// Space is flat: a target, system or body off the plane `y = 0`.
+    OffPlane,
 }
 
 impl std::fmt::Display for MovementError {
@@ -125,6 +127,7 @@ impl std::fmt::Display for MovementError {
             Self::InsideBody => "That point lies inside a planet, moon or station. Pick a point outside it, or the body itself.",
             Self::AlreadyThere => "The fleet is already at that destination.",
             Self::InvalidRules => "Invalid movement configuration or world bounds.",
+            Self::OffPlane => "Space is flat: positions must lie on the map plane (vertical coordinate 0).",
         })
     }
 }

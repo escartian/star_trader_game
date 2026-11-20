@@ -1,6 +1,6 @@
 # Phone-first rework
 
-Status: **agreed direction, not implemented.** This plan reworks the interface,
+Status: **phone shell and flat play implemented; hex battles and victory work remain.** This plan reworks the interface,
 the map and battles around a phone-sized screen, and gives the game a goal.
 Where it conflicts with [map design](MAP_DESIGN.md) (3D map on a 2D screen) or
 [combat](COMBAT.md) (3D battle grid), this document wins once each phase lands.
@@ -77,7 +77,8 @@ hover, no right-drag) depth is the first thing to hurt.
   under way show a short direction tick.
 - **Labels:** body names appear when zoomed in or selected. System names show in
   the galaxy view; body names do not.
-- **NPC traffic:** small amber dots without labels; tap one for its card.
+- **NPC traffic:** small ship models with amber outlines and no labels;
+  inspection cards remain planned.
 - **Raider bands:** a single red threat icon. A heading line appears only while it
   hunts one of your fleets.
 - **Orbit rings:** drawn faintly for bodies near the selection; hidden otherwise.
@@ -219,7 +220,8 @@ Each phase ships on its own, keeps `./tools/check.sh` green and adds captures at
    windows), an alert badge that walks fleets needing attention, Advance stops
    that switch to the right page, full-screen panels below 700 points, and
    `--capture-size` for phone captures. The floating cards are gone.
-3. **Flat play:** flat generation and saves, top-down map camera, controls removed.
+3. **Flat play** (done): flat generation and saves, fixed-tilt map camera, orbit
+   controls removed. Saves before schema 7 require a new session.
 4. **Hex battles:** core rules first (hex coordinates, bands, high ground, AI and
    balance tests carried over), then the board view and touch controls.
 5. **Victory framework:** Victory panel, score, campaign length, Raider Haven

@@ -5,7 +5,7 @@ use super::{camera::ScenePoint, canvas::Canvas, scene::side_color};
 use crate::theme::{AMBER, CYAN};
 use egui::{Color32, Stroke};
 use game_core::combat::tactical::{Battle, Cell};
-use glam::Vec3;
+use glam::{Vec2, Vec3};
 
 /// Seconds a ship takes to glide to its new cell.
 pub const GLIDE_SECONDS: f64 = 0.35;
@@ -113,6 +113,18 @@ impl Effects {
         let t = ((now - glide.start) / GLIDE_SECONDS).clamp(0.0, 1.0) as f32;
         let eased = t * t * (3.0 - 2.0 * t);
         ScenePoint(ScenePoint::of_cell(glide.from).0.lerp(to.0, eased))
+    }
+
+    /// Horizontal heading while a ship glides; a vertical move keeps its
+    /// existing side-facing pose. This is presentation state, not a battle rule.
+    pub fn heading(&self, unit: usize, cell: Cell, now: f64) -> Option<Vec2> {
+        let glide = self.glides.iter().rev().find(|glide| {
+            glide.unit == unit && (glide.start..glide.start + GLIDE_SECONDS).contains(&now)
+        })?;
+        let from = ScenePoint::of_cell(glide.from).0;
+        let to = ScenePoint::of_cell(cell).0;
+        let heading = (to - from).truncate().normalize_or_zero();
+        (heading != Vec2::ZERO).then_some(heading)
     }
 
     pub fn paint(&self, canvas: &Canvas, now: f64) {
@@ -233,6 +245,11 @@ mod tests {
         effects.observe(&battle, 1.0, true);
         assert!(effects.busy(1.0));
         assert_eq!(effects.position(me, to, 1.0), ScenePoint::of_cell(from));
+        let horizontal = glam::Vec2::new(f32::from(to.x - from.x), f32::from(to.y - from.y));
+        assert_eq!(
+            effects.heading(me, to, 1.0),
+            (horizontal != glam::Vec2::ZERO).then_some(horizontal.normalize_or_zero())
+        );
         assert_eq!(
             effects.position(me, to, 1.0 + GLIDE_SECONDS),
             ScenePoint::of_cell(to)

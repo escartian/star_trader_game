@@ -177,8 +177,9 @@ pub(crate) fn safe_route(
 
 /// Waypoints for a local course that avoids every collision volume: empty when
 /// the straight line is clear. A small visibility graph over points around each
-/// obstacle (the corners of a cube twice its radius, clamped to the system cube)
-/// finds the shortest clear chain by Dijkstra.
+/// obstacle (the corners of a square twice its radius on the map plane, clamped
+/// to the system bounds) finds the shortest clear chain by Dijkstra. Space is
+/// flat, so detours never leave the plane.
 fn safe_local_path(
     start: LocalPosition,
     end: LocalPosition,
@@ -192,15 +193,12 @@ fn safe_local_path(
     for volume in volumes {
         let clearance = (volume.radius * 2).min(half);
         let centre = geometry::local(volume.centre);
-        for corner in 0..8 {
-            let node = geometry::position(std::array::from_fn(|axis| {
-                let offset = if corner & (1 << axis) == 0 {
-                    -clearance
-                } else {
-                    clearance
-                };
-                (centre[axis] + offset).clamp(-half, half)
-            }));
+        for (dx, dz) in [(-1, -1), (-1, 1), (1, -1), (1, 1)] {
+            let node = geometry::position([
+                (centre[0] + dx * clearance).clamp(-half, half),
+                centre[1],
+                (centre[2] + dz * clearance).clamp(-half, half),
+            ]);
             if obstacles::containing(node, volumes).is_none() {
                 nodes.push(node);
             }

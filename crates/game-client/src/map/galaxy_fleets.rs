@@ -1,8 +1,11 @@
 //! What the galaxy map draws besides systems: own fleets as stacked chips (all
-//! fleets in one system share a chip), NPC traders as quiet amber dots, and a
+//! fleets in one system share a chip), NPC traders as small 3D ship models, and a
 //! red marker beside each system that holds a raider band.
-use super::fleets::{Berth, StackEntry};
 use super::{Map, position};
+use super::{
+    art::{ArtKind, Artwork},
+    fleets::{Berth, StackEntry},
+};
 use egui::{Painter, Rect, Stroke, Vec2};
 
 /// Points between a system's marker and the chips resting there.
@@ -75,13 +78,26 @@ impl Map {
             super::fleets::paint_stacks(painter, &art, rect, &entries, selected, labels);
     }
 
-    /// NPC traders as small amber dots (no labels), and a red diamond beside each
-    /// system that holds a raider band.
-    pub(super) fn draw_galaxy_threats(&self, painter: &Painter, rect: Rect) {
+    /// NPC traders use the same GLB hull models as battle, with
+    /// a small amber outline to distinguish them from owned ships.
+    pub(super) fn draw_galaxy_threats(&self, ui: &egui::Ui, painter: &Painter, rect: Rect) {
+        let art = Artwork::preload(ui.ctx());
         for trader in self.session.traffic() {
             if let Some(world) = self.session.trader_display_position(trader, &self.systems) {
                 let at = self.camera.project(world, rect);
-                painter.circle_filled(at, 3.0, crate::theme::AMBER.gamma_multiply(0.8));
+                if !rect.expand(12.0).contains(at) {
+                    continue;
+                }
+                let amber = crate::theme::AMBER;
+                painter.circle_filled(at, 12.0, egui::Color32::from_black_alpha(190));
+                painter.circle_stroke(at, 12.0, Stroke::new(1.0_f32, amber));
+                if let Some(ship) = trader.state.ships.first() {
+                    if let Some(model) = crate::battle::model::for_kind(ship.kind) {
+                        model.paint_marker(painter, at, 22.0);
+                    } else if !art.paint(ArtKind::from(ship.kind), painter, at, 20.0) {
+                        painter.circle_filled(at, 3.0, amber);
+                    }
+                }
             }
         }
         let red = crate::battle::scene::HOSTILE;

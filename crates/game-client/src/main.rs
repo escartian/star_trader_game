@@ -42,49 +42,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let scenario = options.scenario.clone();
     #[cfg(not(feature = "dev-tools"))]
     let scenario: Option<String> = None;
+    let mut startup_error = None;
     let mut session = if let Some(name) = &scenario {
         dev_scenario(name, &options)?
     } else if should_resume {
-        let (session, recovery) = game_server::Session::load(&options.save)?;
-        if let Some(message) = recovery {
-            eprintln!("{message}");
-            startup_notice = Some(message);
+        match game_server::Session::load(&options.save) {
+            Ok((session, recovery)) => {
+                if let Some(message) = recovery {
+                    eprintln!("{message}");
+                    startup_notice = Some(message);
+                }
+                session
+            }
+            Err(error) if !options.resume && !options.headless && !options.capturing() => {
+                startup_error = Some(error);
+                fresh_session(&options)?
+            }
+            Err(error) => return Err(error.into()),
         }
-        session
     } else {
-        let economy_path = options.economy.clone().or_else(|| {
-            std::path::Path::new("config/economy.json")
-                .is_file()
-                .then(|| "config/economy.json".into())
-        });
-        let mut rules = if let Some(path) = economy_path {
-            game_core::economy::EconomyRules::from_json(&std::fs::read_to_string(path)?)?
-        } else {
-            game_core::economy::EconomyRules::default()
-        };
-        if std::path::Path::new("config/ships.json").is_file() {
-            rules.ship_catalog = game_core::fleet::ShipCatalog::from_json(
-                &std::fs::read_to_string("config/ships.json")?,
-            )?;
-        }
-        if std::path::Path::new("config/combat.json").is_file() {
-            rules.combat_catalog = game_core::combat::CombatCatalog::from_json(
-                &std::fs::read_to_string("config/combat.json")?,
-            )?;
-            rules.validate()?;
-        }
-        if std::path::Path::new("config/planets.json").is_file() {
-            rules.planet_catalog = game_core::planet::PlanetCatalog::from_json(
-                &std::fs::read_to_string("config/planets.json")?,
-            )?;
-        }
-        let mut authority = game_server::Session::with_economy(options.seed, rules)?;
-        if std::path::Path::new("config/movement.json").is_file() {
-            authority.set_movement_rules(game_core::movement::MovementRules::from_json(
-                &std::fs::read_to_string("config/movement.json")?,
-            )?)?;
-        }
-        authority
+        fresh_session(&options)?
     };
     if options.headless {
         println!("{}", session.export_json()?);
@@ -102,6 +79,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
     map.apply_preferences(settings, persist_settings)?;
+    if !options.new && !options.resume && !options.headless && !options.capturing() {
+        map.open_save_chooser(options.save, startup_error);
+    }
     if let Some(message) = startup_notice {
         map.notify(message);
     }
@@ -111,6 +91,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return pollster::block_on(capture::save(&mut map, &path, options.capture_size));
     }
     desktop::run(map)
+}
+
+fn fresh_session(
+    options: &options::Options,
+) -> Result<game_server::Session, Box<dyn std::error::Error>> {
+    let economy_path = options.economy.clone().or_else(|| {
+        std::path::Path::new("config/economy.json")
+            .is_file()
+            .then(|| "config/economy.json".into())
+    });
+    let mut rules = if let Some(path) = economy_path {
+        game_core::economy::EconomyRules::from_json(&std::fs::read_to_string(path)?)?
+    } else {
+        game_core::economy::EconomyRules::default()
+    };
+    if std::path::Path::new("config/ships.json").is_file() {
+        rules.ship_catalog = game_core::fleet::ShipCatalog::from_json(&std::fs::read_to_string(
+            "config/ships.json",
+        )?)?;
+    }
+    if std::path::Path::new("config/combat.json").is_file() {
+        rules.combat_catalog = game_core::combat::CombatCatalog::from_json(
+            &std::fs::read_to_string("config/combat.json")?,
+        )?;
+        rules.validate()?;
+    }
+    if std::path::Path::new("config/planets.json").is_file() {
+        rules.planet_catalog = game_core::planet::PlanetCatalog::from_json(
+            &std::fs::read_to_string("config/planets.json")?,
+        )?;
+    }
+    let mut authority = game_server::Session::with_economy(options.seed, rules)?;
+    if std::path::Path::new("config/movement.json").is_file() {
+        authority.set_movement_rules(game_core::movement::MovementRules::from_json(
+            &std::fs::read_to_string("config/movement.json")?,
+        )?)?;
+    }
+    Ok(authority)
 }
 
 /// Build a named test scenario and save it immediately, so `--continue` can reload it.

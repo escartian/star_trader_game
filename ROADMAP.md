@@ -40,7 +40,7 @@ for decisions and phases; it takes precedence over conflicting older map/battle 
 
 - [x] Separate core, protocol, server library and native client crates.
 - [x] In-process offline session with validated commands, revisions and events.
-- [x] Seeded 3D galaxy with reachable starting markets; distinct ly/km types.
+- [x] Seeded flat galaxy with reachable starting markets; distinct ly/km types.
 - [x] Orbit/pan/zoom, focus, presets, overlap chooser and double-click inspection.
 - [x] Starfield/nebula background, star-type colors/glows/sizes, local system view.
 - [x] Blender-authored celestial/station sprites and schematic moon separation.
@@ -61,7 +61,7 @@ acceptance is separate; see [platform status](docs/PLATFORM_STATUS.md).
 - [x] Split a fleet into nonempty groups; combine co-located owned fleets.
 - [x] Transfer cargo between co-located owned ships without creating goods.
 - [x] Travel the selected fleet atomically; check every member's fuel/range.
-- [x] Save fleet membership and migrate prior single-ship saves without reset.
+- [x] Save fleet membership in the current schema and validate it on load.
 - [x] Original Blender ship sources/sprites and docked ship markers in system view.
 - [x] Per-planet finite shipyard inventory, hull buying/selling and fleet renaming.
 - [x] Body, local waypoint and deep-space locations, with ship markers tethered
@@ -91,11 +91,12 @@ hulls fight raiders (milestone 4); customization and used-hull loadouts remain l
   Passing a system along a path never enters it.
 - [x] Shared authoritative previews/commits, whole-fleet fuel/range checks,
   saved course durations/events, plotted orders and location-aware ship markers.
-- [x] Save schema 3 and migration from schemas 1/2; resume older active journeys.
+- [x] Current-format save validation and atomic recovery; schema 7 rejects older
+  saves after the flat-map change.
 - [x] Planet economy type, production specialization, biome and danger rating
   (VerySafe through Insidious); resource market, ship market and local credits.
 - [x] Add independent planet markets alongside stations, including buyer funds
-  and a migration that preserves balances rather than silently generating wealth.
+  and conservation checks.
 
 **Movement acceptance:** leave a body, exit its system, move through deep space,
 enter another system and dock at its station. Behavior tests cover these stages
@@ -104,13 +105,11 @@ Inspection never moves the fleet. GPU previews are visually checked separately
 from OS window/manual interaction. See [movement rules](docs/MOVEMENT.md).
 
 Planet resource/ship markets, finite credit balances and metadata are implemented.
-Schema 4 preserves old player assets/station stock, with explicit zero funding and
-inventory for newly tracked accounts. Planetary commerce and hull transactions
+Current-format saves preserve player assets and market stock. Planetary commerce and hull transactions
 have conservation/rejection/save tests. See [planet economies](docs/PLANET_ECONOMY.md).
 Biome/danger are descriptive until encounters use them. Bodies have map-scale
 collision volumes and landing. New galaxies give bodies deterministic circular
-orbits (moons around planets); bodies in older saves without orbit definitions
-remain fixed. Navigation plans use their positions at the current world tick.
+orbits (moons around planets). Navigation plans use their positions at the current world tick.
 
 ## 3a. Navigation runs and encounters — implemented foundation
 
@@ -162,7 +161,7 @@ Combat is the original README's first prioritized expansion.
   profitability, real cargo/wallets, finite-market trades and navigation-run AI.
 - [ ] Expanded NPC personalities, interactions, encounters and faction affiliations.
 - [x] Ship type/size/engine, HP, shields, armor and weapon/loadout definitions
-  (`config/ships.json` schema 2, save schema 6 with migration; see [combat](docs/COMBAT.md)).
+  (`config/ships.json` schema 2, current save schema 7; see [combat](docs/COMBAT.md)).
 - [x] Carry forward Photon Singularity Beam, Quantum Entanglement Torpedo, Neutron
   Beam, Graviton Pulse and Magnetic Resonance Disruptor as balanceable JSON content
   (`config/combat.json`).
@@ -247,5 +246,5 @@ protocol boundary anticipates this; multiplayer itself is not implemented.
 Potential later scope from the original: enhanced faction AI/economy/generation,
 alien reputation, colonization, planetary development/events/diplomacy. Binary
 stars, multiple galaxies, galactic motion and orbital mechanics remain unlikely.
-Original web-save import is separate from migrations of this Rust rewrite's JSON;
+Original web-save import is separate from this Rust rewrite's JSON;
 no compatibility claim is made without inspecting and testing actual old saves.

@@ -1,6 +1,6 @@
 # Star Trader — native Rust
 
-A trading and fleet-management game in a three-dimensional universe, presented
+A trading and fleet-management game on a flat space map, presented
 through a readable native map. No game engine, browser, webview or JavaScript.
 
 ## Current prototype
@@ -9,11 +9,12 @@ through a readable native map. No game engine, browser, webview or JavaScript.
   the route from a destination card. Numeric controls are optional advanced tools.
 - A phone-first layout: status strip, action bar (Fleets, Advance, Menu) and one
   context sheet; panels go full screen on narrow windows. Route feedback and live
-  NPC traffic on the map.
-- Galaxy navigation: orbit/pan/zoom, presets, focus, overlap chooser,
+  NPC traffic shown with ship models on the map.
+- Galaxy navigation: drag to pan, pinch/wheel zoom, focus, overlap chooser,
   double-click system inspection, and separate local views with planets/stations.
-- Blender-authored star, planet, moon, asteroid station and ship models, baked to
-  transparent sprites. Shared textures preload once; halos/selection stay procedural.
+- Blender-authored celestial and ship art. Map bodies and owned fleets use
+  transparent sprites; moving NPCs and battles draw embedded ship GLBs. Shared
+  textures preload once; halos and selection stay procedural.
 - Authoritative local/body movement, cubic system exits, deep-space travel and
   explicit system entry, with whole-fleet fuel/range checks and shared navigation runs.
 - Per-planet and station markets with finite funds/hull stock, planet economy/biome/
@@ -68,11 +69,14 @@ cargo run -p game-client -- --new --headless > /tmp/star-trader-save.json
 ./tools/check.sh
 ```
 
-The initial path is `data/slot-1.json`. Later launches remember the selected save
-via `data/settings.json`; `--save PATH` explicitly selects another file. Launch
-resumes that file if it exists, including backup recovery; otherwise it starts a
-new session. To resume another UI slot, select it and choose Continue. **Session / saves** provides New,
-Save, Continue and slot selection. Autosave runs on
+The initial path is `data/slot-1.json`. Normal desktop launches open a game
+chooser with three slots and any separately named last-used save. It shows which
+games can load, which slots are empty, and which saves need attention. An
+incompatible save remains untouched until you confirm deletion of it and its
+backup; the chooser never autosaves over it. `data/settings.json` remembers the
+selected save, and `--save PATH` selects another file. `--continue` loads the
+selected file directly, while `--new` starts a session directly. **Session / saves**
+provides New, Save, Load and slot selection after entering a game. Autosave runs on
 close/suspend and writes to the selected slot. The previous valid file becomes
 its `.bak`; a failed close-save keeps the window open with an error message.
 Save slots live under ignored `data/`, keeping personal progress out of Git.

@@ -58,16 +58,28 @@ pub fn background(painter: &Painter, rect: Rect, caption: &str) {
         );
     }
     // Fixed decorative points: no simulation RNG, flicker, picking, or redraw timer.
-    for i in 0..220_u32 {
-        let hash = i.wrapping_mul(747_796_405).wrapping_add(2_891_336_453);
-        let x = (hash & 0xffff) as f32 / 65535.0;
-        let y = (hash.rotate_left(13) & 0xffff) as f32 / 65535.0;
-        let brightness = 45 + (hash % 65) as u8;
-        painter.circle_filled(
-            rect.min + rect.size() * Vec2::new(x, y),
-            if i % 11 == 0 { 1.0 } else { 0.55 },
-            Color32::from_rgb(brightness, brightness, brightness.saturating_add(25)),
-        );
+    // Each coordinate is an independent, well-mixed hash, so no rows or lattices.
+    for i in 0..300_u32 {
+        let x = unit(i, 1);
+        let y = unit(i, 2);
+        let glint = unit(i, 3);
+        let brightness = 55 + (95.0 * glint * glint) as u8;
+        let tint = unit(i, 4);
+        let color = if tint < 0.15 {
+            Color32::from_rgb(
+                brightness.saturating_add(25),
+                brightness,
+                brightness / 2 + 20,
+            )
+        } else {
+            Color32::from_rgb(brightness, brightness, brightness.saturating_add(25))
+        };
+        let radius = if glint > 0.93 {
+            1.1
+        } else {
+            0.4 + 0.3 * unit(i, 5)
+        };
+        painter.circle_filled(rect.min + rect.size() * Vec2::new(x, y), radius, color);
     }
     painter.text(
         rect.right_bottom() - Vec2::splat(10.0),
@@ -76,6 +88,18 @@ pub fn background(painter: &Painter, rect: Rect, caption: &str) {
         egui::FontId::monospace(10.0),
         Color32::from_rgb(100, 125, 150),
     );
+}
+
+/// A stable pseudo-random value in [0, 1) for star `index` and channel `salt`.
+/// Integer avalanche hash (lowbias32): neighbouring inputs give unrelated outputs.
+fn unit(index: u32, salt: u32) -> f32 {
+    let mut value = index.wrapping_mul(0x9e37_79b9) ^ salt.wrapping_mul(0x85eb_ca6b);
+    value ^= value >> 16;
+    value = value.wrapping_mul(0x7feb_352d);
+    value ^= value >> 15;
+    value = value.wrapping_mul(0x846c_a68b);
+    value ^= value >> 16;
+    (value >> 8) as f32 / (1 << 24) as f32
 }
 
 pub fn star(painter: &Painter, center: Pos2, kind: StarKind, selected: bool, hovered: bool) {
@@ -135,28 +159,6 @@ fn draw_star(
                     Color32::from_white_alpha(130)
                 },
             ),
-        );
-    }
-}
-
-/// Orientation stays visible even when the focused object has been panned away.
-pub fn axes(painter: &Painter, rect: Rect, rotation: glam::DQuat) {
-    // Bottom-right, clear of the floating run card at the bottom-left.
-    let origin = rect.right_bottom() + Vec2::new(-40.0, -55.0);
-    for (axis, label, color) in [
-        (glam::DVec3::X, "X", Color32::LIGHT_RED),
-        (glam::DVec3::Y, "Y", Color32::LIGHT_GREEN),
-        (glam::DVec3::Z, "Z", Color32::LIGHT_BLUE),
-    ] {
-        let axis = rotation * axis * 23.0;
-        let end = origin + Vec2::new(axis.x as f32, -axis.y as f32);
-        painter.line_segment([origin, end], Stroke::new(1.0_f32, color));
-        painter.text(
-            end,
-            egui::Align2::CENTER_CENTER,
-            label,
-            egui::FontId::proportional(12.0),
-            color,
         );
     }
 }

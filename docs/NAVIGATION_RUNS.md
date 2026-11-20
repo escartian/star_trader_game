@@ -7,8 +7,10 @@ Plotting one fleet's course never advances other fleets or markets.
 
 ## Plan, review, execute
 
-1. Select a fleet and preview a local/body, exit, deep-space or entry course.
-2. Choose **Plot course**. The fleet stays put; no fuel, ticks or random rolls are
+1. Select a fleet and tap a destination (a system, or a body or tile in a
+   system). The tap plots the course at once and its card shows fuel and runs;
+   deep-space waypoints use the Navigation window's **Plot course**.
+2. Plotting leaves the fleet in place; no fuel, ticks or random rolls are
    consumed. You can replace or cancel a course before it departs.
 3. Give every other fleet a course or an explicit **Wait** order. Navigation shows
    each fleet's status and destination; Navigation and the map's fleet cards both
@@ -129,11 +131,10 @@ assistance consumes medicine; raider wrecks yield ore. No contact grants credits
 
 ## Saves and multiplayer
 
-Save schema 5 stores run number, queued/active courses, Wait orders, encounters, rescue
-count and random-generator state. Schemas 1–4 migrate without moving ships or
-resetting balances. Schema-4 market money/inventory is preserved; older planetary
-migrations retain their documented empty new accounts. Loading never executes a
-run. Course geometry, membership, counters and encounter references are validated.
+Save schema 7 stores run number, queued/active courses, Wait orders, encounters,
+rescue count and random-generator state. Older schemas are rejected. Loading never
+executes a run. Course geometry, membership, counters and encounter references
+are validated.
 
 The authoritative session owns the entire resolution transaction. A stale run
 request rejects without advancing twice. Solo play can execute after its fleets
@@ -143,9 +144,8 @@ Multiplayer still needs authenticated accounts, readiness collection,
 order visibility and reconnect rules before shared execution can be exposed to
 remote clients; this change does not implement network multiplayer.
 
-Backward save compatibility is not a prototype requirement. Existing migration
-coverage describes this batch only; future breaking changes may require a new
-session rather than additional migration work.
+Backward save compatibility is not a prototype requirement. Future breaking
+changes may require a new session.
 
 The map-first interface now selects fleets and destinations directly. Automatic
 multi-leg itineraries continue over runs without re-entering coordinates. Initial

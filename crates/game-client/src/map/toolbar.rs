@@ -1,6 +1,5 @@
-//! Icon toolbar shared by galaxy and system views. View presets and zoom apply
-//! directly to the camera; focus requests are returned for the view to resolve.
-use crate::theme::icons::{Icon, icon_button, toggle};
+//! Focus controls shared by galaxy and system views.
+use crate::theme::icons::{Icon, icon_button};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CameraAction {
@@ -21,14 +20,11 @@ impl CameraAction {
     }
 }
 
-/// A small column of icon buttons floating at the map's top-right corner (the
-/// phone-first replacement for the camera toolbar): the given camera actions,
-/// then the pan tool for touch screens, which cannot middle-drag.
+/// A small column of focus buttons at the map's top-right corner.
 pub fn map_buttons(
     ctx: &egui::Context,
     map: egui::Rect,
     id: &str,
-    pan_tool: &mut bool,
     actions: &[CameraAction],
 ) -> Option<CameraAction> {
     let mut chosen = None;
@@ -43,16 +39,6 @@ pub fn map_buttons(
                     if icon_button(ui, icon, label).clicked() {
                         chosen = Some(action);
                     }
-                }
-                if toggle(
-                    ui,
-                    Icon::Pan,
-                    "Pan tool: drag to move instead of orbit",
-                    *pan_tool,
-                )
-                .clicked()
-                {
-                    *pan_tool = !*pan_tool;
                 }
             });
         });

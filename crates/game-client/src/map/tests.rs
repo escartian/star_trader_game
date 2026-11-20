@@ -5,16 +5,11 @@ use egui::Vec2;
 fn overlapping_targets_are_all_pickable_and_distance_is_view_independent() {
     let systems = fixtures::systems(Scene::Overlap);
     let rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(320.0, 240.0));
-    let mut camera = Camera {
-        yaw: 0.0,
-        pitch: 0.0,
-        ..Camera::default()
-    };
+    let camera = Camera::default();
     assert_eq!(pick(&systems, &camera, rect, rect.center()).len(), 5);
     let distance = position(&systems[0]).distance(position(&systems[4]));
-    assert_eq!(distance, 16.0);
-    camera.yaw = 1.0;
-    assert_ne!(
+    assert_eq!(distance, 0.0);
+    assert_eq!(
         camera.project(position(&systems[0]), rect),
         camera.project(position(&systems[4]), rect)
     );
@@ -69,6 +64,45 @@ fn returning_from_local_view_preserves_galaxy_context() {
     assert_eq!(map.selected, Some(SystemId(2)));
     assert_eq!(map.camera, expected_camera);
     assert_eq!(map.candidates, vec![SystemId(1), SystemId(2)]);
+}
+
+#[test]
+fn dragging_the_flat_galaxy_pans_without_rotating() {
+    let ctx = egui::Context::default();
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
+    let screen = Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1000.0, 720.0)));
+    let _ = ctx.run(
+        egui::RawInput {
+            screen_rect: screen,
+            ..Default::default()
+        },
+        |ctx| map.ui(ctx),
+    );
+    let start = map.last_map_rect.center();
+    let initial_orientation = (map.camera.yaw, map.camera.pitch);
+    for events in [
+        vec![
+            egui::Event::PointerMoved(start),
+            egui::Event::PointerButton {
+                pos: start,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ],
+        vec![egui::Event::PointerMoved(start + Vec2::new(55.0, 35.0))],
+    ] {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: screen,
+                events,
+                ..Default::default()
+            },
+            |ctx| map.ui(ctx),
+        );
+    }
+    assert!(map.camera.pan.length() > 0.0);
+    assert_eq!((map.camera.yaw, map.camera.pitch), initial_orientation);
 }
 
 #[test]

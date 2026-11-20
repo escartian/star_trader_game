@@ -15,9 +15,10 @@ pub fn generate_galaxy(seed: u64) -> Vec<StarSystem> {
             value = (value ^ (value >> 27)).wrapping_mul(0x94d049bb133111eb);
             ((value ^ (value >> 31)) % 5) as i64 - 2
         };
+        // Jitter stays on the plane: the vertical coordinate is always 0.
         system.position = GalaxyPosition {
             x: system.position.x + next(),
-            y: system.position.y + next(),
+            y: 0,
             z: system.position.z + next(),
         };
     }

@@ -107,3 +107,19 @@ fn two_stacks_at_nearby_bodies_do_not_cover_each_other() {
         |hit: &FleetHit| Rect::from_center_size(hit.bounds.center(), Vec2::splat(CHIP * 2.0));
     assert!(!chip(&hits[0]).intersects(chip(&hits[1])));
 }
+
+#[test]
+fn taps_nearer_a_system_than_a_resting_chip_go_to_the_system() {
+    let chip = Pos2::new(100.0, 100.0);
+    let hits = [FleetHit {
+        fleet: FleetId(1),
+        ship: ShipId(1),
+        bounds: Rect::from_center_size(chip, Vec2::splat(HIT)),
+    }];
+    // Inside the chip's hit box, but closer to the system centre beside it.
+    let edge = chip + Vec2::new(15.0, -15.0);
+    assert!(pick_over_targets(&hits, edge, Some(5.0)).is_none());
+    // On the chip itself the fleet wins; with no target nearby, the box decides.
+    assert!(pick_over_targets(&hits, chip, Some(29.0)).is_some());
+    assert!(pick_over_targets(&hits, edge, None).is_some());
+}

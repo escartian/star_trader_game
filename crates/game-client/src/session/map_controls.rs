@@ -63,11 +63,26 @@ impl LocalSession {
         self.select_ship(ship);
         self.map_target = None;
     }
+    /// Picking a destination plots the selected fleet's course at once (it
+    /// replaces any earlier course; nothing moves until Advance). The target
+    /// stays selected so its card can show cost, a trade route, or why the
+    /// course was refused.
     pub fn select_destination(&mut self, system: SystemId, body: Option<BodyId>) {
         self.map_target = Some(MapTarget::Destination(system, body));
+        self.command(ClientCommand::PlotDestination {
+            ship: self.active_ship,
+            system,
+            body,
+            expected_revision: self.state.revision,
+        });
     }
     pub fn select_departure(&mut self, system: SystemId) {
         self.map_target = Some(MapTarget::Departure(system));
+        self.command(ClientCommand::Move {
+            ship: self.active_ship,
+            target: MoveTarget::LeaveSystem(system),
+            expected_revision: self.state.revision,
+        });
     }
 
     pub fn map_roster(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
@@ -80,7 +95,7 @@ impl LocalSession {
                 ui,
                 Icon::Help,
                 CYAN,
-                "1. Select a fleet\n2. Click a destination on the map\n3. Plot course, then Advance",
+                "1. Select a fleet\n2. Tap a destination on the map to plot its course\n3. Advance",
             );
         });
         ui.separator();
@@ -271,7 +286,7 @@ impl LocalSession {
                 target: MoveTarget::LeaveSystem(system),
             },
         };
-        let (fuel, runs, revision) = match self.authority.handle(command) {
+        let (fuel, runs) = match self.authority.handle(command) {
             ServerMessage::DestinationPreview(course) => {
                 if let Some(last) = course.legs.last() {
                     location_stat(ui, &last.destination, systems);
@@ -297,7 +312,6 @@ impl LocalSession {
                                 .div_ceil(self.state.movement_rules.ticks_per_navigation_run)
                         })
                         .sum::<u64>(),
-                    self.state.revision,
                 )
             }
             ServerMessage::MovementPreview(plan) => {
@@ -312,7 +326,6 @@ impl LocalSession {
                     u64::from(plan.fuel_per_ship),
                     plan.duration_ticks
                         .div_ceil(self.state.movement_rules.ticks_per_navigation_run),
-                    plan.revision,
                 )
             }
             ServerMessage::CommandRejected(error) => {
@@ -331,23 +344,6 @@ impl LocalSession {
                 "Navigation runs, at least",
             );
         });
-        if icons::button(ui, Icon::Plot, "PLOT COURSE").clicked() {
-            let command = match target {
-                MapTarget::Destination(system, body) => ClientCommand::PlotDestination {
-                    ship: self.active_ship,
-                    system,
-                    body,
-                    expected_revision: revision,
-                },
-                MapTarget::Departure(system) => ClientCommand::Move {
-                    ship: self.active_ship,
-                    target: MoveTarget::LeaveSystem(system),
-                    expected_revision: revision,
-                },
-            };
-            self.command(command);
-            self.map_target = None;
-        }
         if let MapTarget::Destination(system, body) = target {
             self.route_button(ui, system, body, systems);
         }

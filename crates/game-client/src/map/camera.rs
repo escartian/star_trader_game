@@ -13,8 +13,9 @@ pub struct Camera {
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            yaw: -0.5,
-            pitch: 0.5,
+            // Both maps use one north-up plane, seen at a fixed shallow tilt.
+            yaw: 0.0,
+            pitch: 1.05,
             zoom: 1.0,
             pan: Vec2::ZERO,
             focus: DVec3::ZERO,

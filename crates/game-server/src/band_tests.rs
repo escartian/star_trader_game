@@ -21,8 +21,8 @@ fn near_band(gap: i64) -> Session {
         system: SystemId(2),
         position: LocalPosition {
             x_km: band.position.x_km,
-            y_km: band.position.y_km + gap,
-            z_km: band.position.z_km,
+            y_km: 0,
+            z_km: band.position.z_km + gap,
         },
     };
     let revision = session.state.revision;

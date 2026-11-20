@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 impl SaveData {
     pub(super) fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 6 {
+        if u64::from(self.schema_version) != super::schema::SCHEMA {
             return Err("Unsupported save schema version".into());
         }
         if self.systems.is_empty() || self.systems.len() > 1024 {

@@ -41,7 +41,7 @@ impl Map {
                     system,
                     position: LocalPosition {
                         x_km: self.session.system_half_extent_km() + 1,
-                        y_km: 10_000_000,
+                        y_km: 0,
                         z_km: 35_000_000,
                     },
                 })?;

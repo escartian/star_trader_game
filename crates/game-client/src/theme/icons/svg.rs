@@ -50,7 +50,6 @@ pub fn name(icon: Icon) -> &'static str {
         Icon::Transfer => "transfer",
         Icon::Log => "log",
         Icon::Reset => "reset",
-        Icon::Pan => "pan",
         Icon::Star => "star",
         Icon::Warning => "warning",
         Icon::Info => "info",

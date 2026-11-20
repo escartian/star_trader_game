@@ -242,5 +242,19 @@ pub(super) fn pick(hits: &[FleetHit], pointer: Pos2) -> Option<&FleetHit> {
     hits.iter().find(|hit| hit.bounds.contains(pointer))
 }
 
+/// The chip a tap selects, unless the tap lands nearer a map target (a system
+/// or body centre, `target_distance` points away) than the chip's centre.
+/// Resting chips sit right beside their system or body, and their touch-sized
+/// hit box must not swallow taps on it.
+pub(super) fn pick_over_targets(
+    hits: &[FleetHit],
+    pointer: Pos2,
+    target_distance: Option<f32>,
+) -> Option<&FleetHit> {
+    pick(hits, pointer).filter(|hit| {
+        target_distance.is_none_or(|target| pointer.distance(hit.bounds.center()) < target)
+    })
+}
+
 #[cfg(test)]
 mod tests;

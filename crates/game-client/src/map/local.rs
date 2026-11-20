@@ -28,6 +28,15 @@ fn view_position(body: &LocalBody) -> DVec3 {
     kilometers(body.position) / KM_PER_VIEW_UNIT
 }
 
+/// Distance in points from `pointer` to the nearest pickable body centre.
+fn nearest_body(system: &StarSystem, camera: &Camera, rect: Rect, pointer: Pos2) -> Option<f32> {
+    pick(system, camera, rect, pointer)
+        .iter()
+        .filter_map(|id| system.bodies.iter().find(|body| body.id == *id))
+        .map(|body| pointer.distance(camera.project(display_position(system, body), rect)))
+        .min_by(f32::total_cmp)
+}
+
 fn pick(system: &StarSystem, camera: &Camera, rect: Rect, pointer: Pos2) -> Vec<BodyId> {
     system
         .bodies
@@ -47,7 +56,6 @@ pub struct LocalView {
     camera: Camera,
     selected: Option<BodyId>,
     candidates: Vec<BodyId>,
-    pan_tool: bool,
     art: Option<Artwork>,
     frame_overview: bool,
     active_ship: game_core::travel::ShipId,
@@ -78,7 +86,6 @@ impl LocalView {
             camera: Self::initial_camera(),
             selected,
             candidates: Vec::new(),
-            pan_tool: false,
             art: None,
             preview_route: Vec::new(),
             fleet_hits: Vec::new(),

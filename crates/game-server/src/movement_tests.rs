@@ -45,15 +45,15 @@ fn a_complete_trip_preserves_cargo_and_saves_at_every_movement_stage() {
             MoveTarget::Local {
                 system: SystemId(1),
                 position: LocalPosition {
-                    x_km: 900_000_000,
-                    y_km: 8_000_000,
+                    x_km: -900_000_000,
+                    y_km: 0,
                     z_km: -20_000_000,
                 },
             },
             MovementMode::Exit,
         ),
         (
-            MoveTarget::DeepSpace(GalaxyPosition { x: 3, y: 2, z: 4 }),
+            MoveTarget::DeepSpace(GalaxyPosition { x: -3, y: 0, z: 4 }),
             MovementMode::DeepSpace,
         ),
         (MoveTarget::EnterSystem(SystemId(2)), MovementMode::Entry),

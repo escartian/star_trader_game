@@ -164,7 +164,6 @@ pub const SOURCES: &[(&str, &str)] = &[
         "overview",
         include_str!("../../../../../assets/icons/overview.svg"),
     ),
-    ("pan", include_str!("../../../../../assets/icons/pan.svg")),
     ("pin", include_str!("../../../../../assets/icons/pin.svg")),
     ("plot", include_str!("../../../../../assets/icons/plot.svg")),
     (

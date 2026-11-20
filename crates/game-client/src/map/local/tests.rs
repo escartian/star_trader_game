@@ -158,8 +158,8 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
     }
     assert_eq!(local.take_fleet_selection(), Some(ShipId(2)));
     assert!(local.take_movement_request().is_none());
-    // Body buttons (in the Selection sheet) use the same destination intent as
-    // canvas picks; neither moves authority.
+    // Body tiles (in the Selection sheet) use the same destination intent as
+    // canvas picks; neither moves authority by itself.
     let frame = |ctx: &egui::Context, local: &mut LocalView| {
         egui::SidePanel::right("sheet").show(ctx, |ui| local.selection_sheet(ui));
         local.ui(ctx, &state.ships, &state.fleets);
@@ -171,45 +171,6 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
         },
         |ctx| frame(ctx, &mut local),
     );
-    let point = output
-        .shapes
-        .iter()
-        .find_map(|shape| {
-            if let egui::epaint::Shape::Text(text) = &shape.shape
-                && text.galley.job.text == "Set destination"
-            {
-                Some(text.pos + text.galley.size() / 2.0)
-            } else {
-                None
-            }
-        })
-        .unwrap();
-    for pressed in [true, false] {
-        let _ = ctx.run(
-            egui::RawInput {
-                screen_rect: screen,
-                events: vec![
-                    egui::Event::PointerMoved(point),
-                    egui::Event::PointerButton {
-                        pos: point,
-                        button: egui::PointerButton::Primary,
-                        pressed,
-                        modifiers: egui::Modifiers::NONE,
-                    },
-                ],
-                ..Default::default()
-            },
-            |ctx| frame(ctx, &mut local),
-        );
-    }
-    assert_eq!(
-        local.take_movement_request(),
-        Some(game_core::movement::MoveTarget::Body {
-            system: SystemId(1),
-            body: BodyId(1)
-        })
-    );
-    // Image tiles are destinations too, without an extra confirmation below the map.
     // The sheet draws before the map, so its tile is the first "Outer giant".
     let tile = output
         .shapes

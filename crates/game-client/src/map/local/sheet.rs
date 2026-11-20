@@ -1,6 +1,7 @@
 //! The system map's parts of the phone-first shell: its Selection sheet
-//! (Depart, trade shortcuts, destinations and the selected body) and the small
-//! floating camera buttons. The sheet is drawn before the map each frame, so
+//! (trade shortcuts, destinations and the selected body) and the small
+//! floating camera buttons. Tapping a body tile or the body on the map plots
+//! the course; leaving the system is planned by picking a destination elsewhere. The sheet is drawn before the map each frame, so
 //! it works from the map's area of the previous frame.
 use super::{LocalView, display_position, kilometers, moon_parent, short_name, view_position};
 use crate::map::art::ArtKind;
@@ -12,20 +13,11 @@ use game_core::BodyKind;
 impl LocalView {
     /// The Selection sheet while this system is shown.
     pub fn selection_sheet(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal_wrapped(|ui| {
-            ui.label(
-                egui::RichText::new(self.system.name.to_uppercase())
-                    .font(crate::theme::fonts::display(ui.ctx(), 14.0))
-                    .color(crate::theme::GREEN),
-            );
-            if icons::button(ui, Icon::DeepSpace, "Depart")
-                .on_hover_text("Plot a departure from this system to the outer galaxy")
-                .clicked()
-            {
-                self.move_request =
-                    Some(game_core::movement::MoveTarget::LeaveSystem(self.system.id));
-            }
-        });
+        ui.label(
+            egui::RichText::new(self.system.name.to_uppercase())
+                .font(crate::theme::fonts::display(ui.ctx(), 14.0))
+                .color(crate::theme::GREEN),
+        );
         self.trade_buttons(ui);
         self.details(ui, self.last_rect);
     }
@@ -42,7 +34,6 @@ impl LocalView {
             ctx,
             rect,
             "local-map-buttons",
-            &mut self.pan_tool,
             &[
                 CameraAction::Overview,
                 CameraAction::FocusFleet,
@@ -158,7 +149,6 @@ impl LocalView {
             .iter()
             .find(|b| Some(b.id) == self.selected)
         {
-            let mut select = false;
             ui.horizontal_wrapped(|ui| {
                 ui.strong(short_name(&self.system, body))
                     .on_hover_text(body.kind.label());
@@ -209,14 +199,7 @@ impl LocalView {
                         "Destination is outside the map. Use Focus selection to reveal it.",
                     );
                 }
-                select = icons::button(ui, Icon::Plot, "Set destination").clicked();
             });
-            if select {
-                self.move_request = Some(game_core::movement::MoveTarget::Body {
-                    system: self.system.id,
-                    body: body.id,
-                });
-            }
         }
         if let Some(art) = &self.art {
             if let Some(body) = self

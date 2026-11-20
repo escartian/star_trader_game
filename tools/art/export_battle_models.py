@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # (tools/art/build_<name>.py); only scanned hulls are exported here. Battle
 # models may use up to 7,000 triangles each.
 SHIPS = {
-    "scout": ("ai-courier.blend", 1600),
+    "scout": ("ai-courier.blend", 6000),
 }
 
 
@@ -42,9 +42,41 @@ def decimate(budget):
         modifier.use_collapse_triangulate = True
 
 
+def paint_scout():
+    """Give the scanned scout readable hull, canopy, wing and engine paint.
+
+    The source scan's vertex colours are nearly uniform brown. Repaint only the
+    export copy; the editable .blend remains the original scan. Blender stores
+    these FLOAT_COLOR values in linear space, which glTF exports as COLOR_0.
+    """
+    for obj in bpy.context.scene.objects:
+        if obj.type != "MESH":
+            continue
+        paint = obj.data.color_attributes.active_color
+        if paint is None or paint.domain != "POINT":
+            raise RuntimeError("Scout source needs per-vertex paint")
+        for vertex in obj.data.vertices:
+            x, y, z = vertex.co
+            if y > 0.35 and abs(x) < 0.48 and z > 0.18:
+                base = (0.04, 0.22, 0.27)  # canopy
+            elif (y > 1.1 and abs(x) < 0.28 and z > -0.05) or (
+                abs(x) > 0.65 and y > -0.6
+            ):
+                base = (0.08, 0.42, 0.38)  # nose and wing markings
+            elif y < -1.0 and abs(x) > 0.45:
+                base = (0.34, 0.53, 0.58)  # engine housings
+            else:
+                base = (0.69, 0.75, 0.70)  # pale hull
+            old = paint.data[vertex.index].color
+            variation = max(0.78, min(1.1, 0.85 + 0.5 * sum(old[:3]) / 3))
+            paint.data[vertex.index].color = (*[channel * variation for channel in base], 1.0)
+
+
 def export(name):
     source, budget = SHIPS[name]
     bpy.ops.wm.open_mainfile(filepath=str(ROOT / "assets/source" / source))
+    if name == "scout":
+        paint_scout()
     if budget:
         decimate(budget)
     for obj in bpy.context.scene.objects:

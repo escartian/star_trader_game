@@ -1,9 +1,7 @@
 //! Versioned authoritative JSON. Loading never regenerates worlds or prices.
-mod combat_migration;
 mod fleets;
 mod markets;
-mod migration;
-mod planet_migration;
+mod schema;
 mod validation;
 use crate::Session;
 use game_core::{StarSystem, economy::Economy, travel::TravelState};
@@ -24,21 +22,15 @@ struct SaveData {
     systems: Vec<StarSystem>,
     player: TravelState,
     economy: Economy,
-    #[serde(skip)]
-    migrated: bool,
-    #[serde(skip)]
-    migration_from: Option<u64>,
 }
 
 impl Session {
     fn save_data(&self) -> SaveData {
         SaveData {
-            schema_version: 6,
+            schema_version: schema::SCHEMA as u32,
             systems: self.systems.clone(),
             player: self.state.clone(),
             economy: self.economy.clone(),
-            migrated: false,
-            migration_from: None,
         }
     }
 
@@ -108,19 +100,6 @@ impl Session {
                 }
             },
         };
-        let recovery = if data.migrated {
-            let message = if data.migration_from.is_some_and(|version| version < 4) {
-                "Upgraded to navigation runs and planetary markets; player assets and station stock preserved. New market treasuries and shipyards start empty."
-            } else {
-                "Upgraded to explicit navigation runs; player assets, market balances and positions preserved. Existing voyages continue when you execute a run."
-            };
-            Some(format!(
-                "{}{message}",
-                recovery.map_or(String::new(), |message| format!("{message} "))
-            ))
-        } else {
-            recovery
-        };
         Ok((
             Self {
                 systems: data.systems,
@@ -140,13 +119,8 @@ fn read(path: &Path) -> Result<SaveData, String> {
     let json = fs::read(path).map_err(|error| error.to_string())?;
     let value: serde_json::Value =
         serde_json::from_slice(&json).map_err(|error| error.to_string())?;
-    let source_version = value
-        .get("schema_version")
-        .and_then(serde_json::Value::as_u64);
-    let (value, migrated) = migration::upgrade(value)?;
+    schema::check(&value)?;
     let mut data: SaveData = serde_json::from_value(value).map_err(|error| error.to_string())?;
-    data.migrated = migrated;
-    data.migration_from = source_version.filter(|_| migrated);
     // Reject malformed orbit definitions before `place` divides by a period
     // or adds a moon offset to its parent.
     data.player
@@ -169,7 +143,7 @@ fn backup_path(path: &Path) -> PathBuf {
 mod tests;
 
 #[cfg(test)]
-mod migration_tests;
+mod validation_tests;
 
 #[cfg(test)]
 mod market_tests;

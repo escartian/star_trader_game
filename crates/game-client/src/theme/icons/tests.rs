@@ -42,7 +42,6 @@ fn all_icons() -> Vec<Icon> {
         Icon::Transfer,
         Icon::Log,
         Icon::Reset,
-        Icon::Pan,
         Icon::Star,
         Icon::Warning,
         Icon::Info,

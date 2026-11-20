@@ -115,10 +115,7 @@ blue-glow engines between radiator wings (about 4,450 triangles).
 The patrol is an armoured gunship: a lofted fuselage with cheek armour, intakes
 and lit windows, swept wings with layered armour plates, under-wing missile racks
 and banded wingtip cannon pods, a dorsal twin-gun turret with a sensor mast, chin
-guns, canted lit tail fins and banded twin engines (about 3,450 triangles).
-Each script can also be run through the `blender` MCP server
-(`execute_blender_code_for_cli`): exec the file with `__file__` set and call
-`build()`. The scout uses the AI
+guns, canted lit tail fins and banded twin engines (about 3,450 triangles). The scout uses the AI
 courier: `source/ai-courier.blend` is a vertex-colored model generated locally
 from a concept image with ComfyUI/TRELLIS.2, then remeshed and decimated.
 `tools/art/clean_ai_courier.py` rebuilds it and renders `sprites/scout.png` with
@@ -127,10 +124,13 @@ the same camera and lights; `tools/comfyui/README.md` covers the full pipeline.
 ### Battle models
 
 `models/*.glb` are runtime glTF exports of the low-poly hull sources for the
-battle view. The script-built hulls (freighter, patrol, prospector) export
-themselves; `models/scout.glb` is the AI courier collapse-decimated on export from 60,000 to 1,600 triangles with
-its per-vertex paint kept (the loader gives each face the mean of its corners).
-The `.blend` sources are not modified.
+battle view and moving NPC markers. The script-built hulls (freighter, patrol,
+prospector) export themselves; `models/scout.glb` is the AI courier
+collapse-decimated on export from 60,000 to 6,000 triangles.
+Its nearly uniform scan paint is restyled on the export copy with an ivory hull,
+teal wings and nose markings, a dark canopy and blue engine housings. The loader
+gives each face the mean of its exported vertex colours. The `.blend` source is
+not modified.
 Re-export the scout with:
 
 ```sh
@@ -141,22 +141,34 @@ Re-export the scout with:
 The export applies modifiers, keeps Blender's axes (+Z up, nose along +Y) and is
 byte-for-byte reproducible. The client embeds the file, recentres the model and
 draws it flat-shaded as egui triangles, sorted far to near (no depth buffer yet).
-A test checks that each embedded model loads with its coloured parts.
+A test checks that each embedded model loads with its coloured parts. In battle,
+models sit at their current grid cells and turn toward horizontal movement during
+glides; the underlying battle rules are unchanged.
 
 ### Prospector
 
 `source/prospector.blend` is an editable original heavy mining rig: a stepped,
-twisted 12-sided auger on a hazard-striped bow housing, two articulated digger
-arms, six ore hoppers heaped with rock and glowing crystals, a conveyor spine, a
-gantry crane, radiator wings and a quad-nozzle amber engine block. Its crew
-bridge and lit portholes are deliberately tiny so the hull reads as huge.
+twisted 12-sided auger on a hazard-striped bow housing, two articulated digger arms, six
+ore hoppers heaped with rock and glowing crystals, a conveyor spine, a gantry
+crane, radiator wings and a quad-nozzle amber engine block. Its crew bridge and
+lit portholes are deliberately tiny so the hull reads as huge.
 `models/prospector.glb` is its colored 2,700-triangle export (engines,
 floodlights and crystals are emissive), `sprites/prospector.png` its 256px map
-sprite, and `source/prospector-preview.png` a render for visual review. It is the
-fourth purchasable hull (`ShipKind::Prospector`), stocked by extraction worlds.
+sprite, and `source/prospector-preview.png` a render for visual review.
+Battle models may use up to 7,000 triangles each (checked by the model test). The model follows the battle-model conventions (+Z up,
+bow along +Y, closed chunky parts for the depth-sorted flat renderer) and the
+export is byte-for-byte reproducible. The prospector is the fourth purchasable hull
+(`ShipKind::Prospector`); the client embeds both the model and the sprite.
 Rebuild all four files with:
 
 ```sh
 /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
   --python tools/art/build_prospector.py
 ```
+
+The same script can be run through Blender Lab's MCP server (registered as the
+`blender` MCP server): `execute_blender_code_for_cli` in background Blender, or
+`execute_blender_code` in an open session once the add-on's socket is running
+(it needs Blender's Preferences → System → Network → Allow Online Access). Exec
+the file with `__file__` set and call `build()`. The MCP bridge is an authoring
+convenience; the runtime GLB has no Blender dependency.

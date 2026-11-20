@@ -15,6 +15,28 @@ Waiting and UI refreshes do not advance ticks. Travel resolves as an action.
 
 ## Rendering evidence
 
+The flat-map change has automated projection, picking and phone/desktop egui
+tessellation checks. A fresh offscreen GPU capture was attempted but this sandbox
+reported `No GPU adapter for capture`; its fixed-tilt layout and drag/pinch
+behavior still need visual and interactive desktop checks. Mobile checks remain
+deferred.
+
+The startup chooser was tessellated at 390 × 844 points with an incompatible
+schema-6 save and a valid second slot. A normal `cargo run -p game-client` with
+the remembered schema-6 save reached the desktop runtime instead of exiting with
+a load error. The sandbox's macOS desktop-service warnings prevented a reliable
+window interaction check. Tests confirm the chooser does not autosave over the
+incompatible primary or backup.
+
+NPC galaxy markers now use the existing GLB ship models instead
+of moving dots. The repainted scout GLB was re-exported from the checked-in
+Blender source and visually inspected in a Blender render: its ivory hull and
+teal wings are visible. Automated checks cover embedded model paint and battle
+glide heading. Offscreen captures of the galaxy traffic and battle view succeeded
+on the Apple M5 Pro and were visually inspected: trader markers have hull shapes,
+and the scout battle model shows teal paint at its grid position. Interactive
+window and device checks remain open.
+
 Original Blender 5.2.3 models and baked transparent sprites cover five star classes,
 a rocky planet, gas giant, moon, asteroid and trade port. Their images were visually
 inspected. One shared cache preloads sprites per egui context; system views reuse

@@ -1,7 +1,7 @@
 # Fleet movement
 
-Movement now uses [navigation runs](NAVIGATION_RUNS.md). **Plot course** queues a
-fleet's intent without changing its location, fuel or world time. **Execute
+Movement now uses [navigation runs](NAVIGATION_RUNS.md). Plotting a course (tapping a
+destination) queues a fleet's intent without changing its location, fuel or world time. **Execute
 navigation run** advances every assigned fleet together. Long courses span runs;
 per-fleet encounters can pause progress. There is no wall-clock simulation.
 
@@ -129,11 +129,9 @@ and stops once its holds fill.
 
 ## Persistence and authority
 
-World save schema 5 stores movement rules and local/body/deep-space locations.
-Schema 1–4 saves migrate without changing balances, fleet membership or
-positions. Older active journeys retain their paid fuel and finish through
-navigation runs; their fuel is not charged again. New movement uses explicit
-exit/entry/docking courses.
+World save schema 7 stores movement rules and local/body/deep-space locations.
+Older schemas do not load. New movement uses explicit exit/entry/docking courses;
+all new world positions and courses stay on the `y = 0` plane.
 
 Live JSON edits do not change a session. New games read the project movement
 configuration if present; embedded defaults support packaged builds. Continuing

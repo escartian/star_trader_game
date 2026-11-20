@@ -1,9 +1,10 @@
-# Viewing a 3D universe on a 2D screen
+# Flat space map
 
 ## Starting presentation
 
-Use an orthographic camera tilted to reveal all three axes. Stars are screen-size
-markers projected from true 3D coordinates, with labels drawn in screen space.
+Use an orthographic camera with a fixed tilt over the `y = 0` plane. Stars are
+screen-size markers projected from authoritative X/Z coordinates, with labels
+drawn in screen space.
 The map is an interactive instrument for choosing journeys, not a piloting view.
 No meshes, realistic lighting or planetary surfaces are required.
 
@@ -15,30 +16,26 @@ system and proposed route; reduce unrelated labels before reducing readability.
 | Action | Desktop starting binding | Touch starting binding |
 | --- | --- | --- |
 | Select | Primary click | Tap |
-| Inspect overlap | Candidate popover | Candidate popover |
-| Orbit around focus | Secondary drag | One-finger drag after movement threshold |
-| Pan | Middle drag, with visible pan tool alternative | Two-finger drag |
+| Inspect overlap | Candidate list | Candidate list |
+| Pan | Drag | One-finger drag |
 | Zoom | Wheel/trackpad | Pinch |
 | Focus selection | Button / F | Button |
-| Reset/top/front/side | Visible controls | Visible controls |
+| Reset/overview | Visible controls | Visible controls |
 
 Treat these as prototype bindings: test gesture conflicts, especially pinch versus
-two-finger pan and tap versus orbit. Never require hover, a keyboard or a middle
+drag and tap versus pan. Never require hover, a keyboard or a middle
 mouse button to complete an essential action. UI panels consume input before the map.
 
-## Depth, routes and selection
+## Routes and selection
 
-- Actual 3D distance, fuel, estimated time and reachability are shown on selection.
+- Actual plane distance, fuel, estimated time and reachability are shown on selection.
   Screen proximity never substitutes for travel distance.
-- A small axis indicator rotates with the camera. Named view presets allow exact
-  alignment and a reset recovers from a confusing camera position.
 - Pick within a screen-space radius suited to mouse or touch. If several stars
   overlap, list candidates with name and distance instead of choosing arbitrarily.
 - Highlight reachable neighbors and draw the selected journey; use text/symbols as
   well as color to distinguish states.
-- Use orbit/presets, focus and the overlap candidate list for dense regions.
-  Depth slicing is deliberately omitted by user direction.
-- Keep rotation around the selected/focused point and pan separate from world state.
+- Use focus, zoom and the overlap candidate list for dense regions.
+- Keep pan and zoom separate from world state.
 
 ## Levels of detail
 
@@ -49,8 +46,8 @@ visual spacing used to make a local system readable.
 
 ## Prototype acceptance scenarios
 
-1. Two systems have the same projected position but different depths: both can be selected.
-2. Rotating the camera changes projection but never travel distance or route cost.
+1. Two systems with the same projected position remain selectable from a list.
+2. Panning and zooming never change travel distance or route cost.
 3. A player can select and travel to a destination using touch without hover.
 4. Dense labels do not obscure the selected destination or route.
 5. Reset recovers the map; entering and leaving a system preserves context.
@@ -62,9 +59,9 @@ The galaxy's **Open system** button enters a separately scaled local
 map using fixed snapshot destinations. Local rocky planets, gas giants and trade
 stations are selectable by marker or list; overlapping candidates are listed
 explicitly. **← Galaxy** / Escape returns to the previous galaxy camera, selection
-and overlap candidates. Each view exposes pan, focus, zoom and orientation tools.
+and overlap candidates. Each view exposes pan, focus and zoom.
 Local distances use kilometer positions; interstellar distances use galaxy
-light-years. Physical travel and docking rules are not yet implemented.
+light-years. Travel and docking use authoritative session commands.
 
 ## Celestial artwork and gameplay panels
 
@@ -72,8 +69,8 @@ Local stars and destinations now use shared preloaded Blender-baked surfaces:
 five star classes, rocky/gas planets, a moon, asteroid and trade port. Procedural
 halos and selection remain overlaid; galaxy markers retain their small geometric
 symbols. These are static billboards with symbolic sizes, not live 3D models or
-physical-scale radii. A steeper default system camera separates the small port
-from the star. Moon/planet overlaps can be resolved with the candidate list.
+physical-scale radii. The fixed system tilt separates the small port from the
+star. Moon/planet overlaps can be resolved with the candidate list.
 
 The ship panel always reports actual ship location, cargo, credits and fuel.
 Inspecting or double-clicking a system does not move the ship. Market controls
@@ -88,7 +85,7 @@ separation in the system diagram. The nearest planet is used as the presentation
 anchor; saved positions and kilometer distances are not changed or migrated.
 Drawing, picking, routes and Focus share the displayed positions. Label placement
 reserves all body markers, preventing a moon from being hidden by a planet's name.
-Projection overlap is still possible from some camera angles; the chooser remains.
+Projection overlap is still possible when targets share a map position; the chooser remains.
 
 Slow planet rotation could add life, but it is deferred: the current sprites have
 lighting baked into a single view. A future surface shader or properly baked

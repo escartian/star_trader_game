@@ -68,9 +68,16 @@ impl TravelState {
                 return Err("Saved course differs from authoritative geometry".into());
             }
             for target in std::iter::once(&order.target).chain(order.remaining_waypoints.iter()) {
-                let plan = preview
-                    .plan_movement(fleet.owner, ship, target, systems)
-                    .map_err(|error| error.to_string())?;
+                use crate::{fleet::FleetMovementError, movement::MovementError};
+                let plan = match preview.plan_movement(fleet.owner, ship, target, systems) {
+                    Ok(plan) => plan,
+                    // Bodies keep orbiting on the plane: a later leg that is
+                    // blocked now is re-routed when it starts (see `next_leg`).
+                    Err(FleetMovementError::Movement(
+                        MovementError::BodyCollision | MovementError::StarCollision,
+                    )) => break,
+                    Err(error) => return Err(error.to_string()),
+                };
                 for id in &fleet.ships {
                     let member = preview.ship_mut(*id).map_err(|_| "Unknown course ship")?;
                     member.fuel -= plan.fuel_per_ship;
@@ -171,9 +178,10 @@ impl TravelState {
         let navigation = &self.navigation;
         let half = self.movement_rules.system_half_extent_km;
         let inside = |position: crate::LocalPosition| {
-            [position.x_km, position.y_km, position.z_km]
-                .iter()
-                .all(|value| value.abs() <= half)
+            position.y_km == 0
+                && [position.x_km, position.z_km]
+                    .iter()
+                    .all(|value| value.unsigned_abs() <= half as u64)
         };
         let known_system = |id| systems.iter().any(|system| system.id == id);
         let mut ids = HashSet::new();

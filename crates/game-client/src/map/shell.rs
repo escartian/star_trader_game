@@ -102,7 +102,6 @@ impl Map {
             ctx,
             rect,
             "galaxy-map-buttons",
-            &mut self.pan_tool,
             &[
                 CameraAction::Reset,
                 CameraAction::FocusSelection,

@@ -64,20 +64,13 @@ catalog display order. New sessions receive the explicit budgets and stocks in
 their saved economy/planet definitions. Continuing uses saved definitions and
 balances. A new session created in the GUI retains the active definitions.
 
-## Older saves
+## Saves
 
-Save schema 5 stores navigation runs and migrates rewrite schemas 1–4. Player credits, ships, cargo, fuel,
-positions, journeys and fleet membership remain unchanged. Original system-market
-stock and prices remain at their original primary stations and are not copied
-into every planet.
-
-Older saves never tracked market money or hull inventory. Their migrated treasuries
-and shipyards therefore start at **zero**, and newly introduced planetary commodity
-stocks start empty. The migration message states this explicitly. Executing navigation runs starts
-planetary production; player purchases/services fund local treasuries, and ship
-sales replenish inventory. Existing runs receive no free money or hulls. To try
-the configured starting budgets and stocked yards, start a new game in another
-save slot. Loading again does not rerun the migration or refill depleted markets.
+Schema 7 saves preserve market stock, prices, treasuries, hull inventory and
+player assets exactly. Older schemas are not loaded; start a new game in another
+slot to use the current world rules. Executing navigation runs advances planetary
+production; player purchases and services fund local treasuries, and ship sales
+replenish inventory.
 
 Fleet renaming is available under **Fleets / shipyard**. Names are trimmed, contain
 1–64 readable characters and at most 128 UTF-8 bytes. Names do not change IDs.

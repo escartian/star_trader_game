@@ -11,16 +11,8 @@ impl Map {
         // Every background, glow and label shares the map's clip rectangle.
         let painter = painter.with_clip_rect(rect.intersect(ui.clip_rect()));
         visuals::background(&painter, rect, "GALAXY / light-years");
-        if response.dragged_by(egui::PointerButton::Middle)
-            || (self.pan_tool && response.dragged_by(egui::PointerButton::Primary))
-        {
+        if response.dragged() {
             self.camera.pan += ui.input(|i| i.pointer.delta());
-        } else if response.dragged_by(egui::PointerButton::Primary)
-            || response.dragged_by(egui::PointerButton::Secondary)
-        {
-            let delta = ui.input(|i| i.pointer.delta());
-            self.camera.yaw += f64::from(delta.x) * 0.008;
-            self.camera.pitch = (self.camera.pitch + f64::from(delta.y) * 0.008).clamp(-1.57, 1.57);
         }
         if response.hovered() {
             self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom);
@@ -105,12 +97,15 @@ impl Map {
         self.galaxy_fleet_hits.clear();
         if self.scene == super::fixtures::Scene::Session {
             self.draw_galaxy_fleets(ui, &painter, rect, &labels);
-            self.draw_galaxy_threats(&painter, rect);
+            self.draw_galaxy_threats(ui, &painter, rect);
         }
         if (response.clicked() || response.double_clicked())
             && let Some(pointer) = response.interact_pointer_pos()
         {
-            if let Some(hit) = super::fleets::pick(&self.galaxy_fleet_hits, pointer) {
+            let system = super::nearest_system(&self.systems, &self.camera, rect, pointer);
+            if let Some(hit) =
+                super::fleets::pick_over_targets(&self.galaxy_fleet_hits, pointer, system)
+            {
                 self.session.select_map_fleet(hit.ship);
             } else {
                 let candidates = pick(&self.systems, &self.camera, rect, pointer);
@@ -125,14 +120,16 @@ impl Map {
             ui.ctx().request_repaint();
         }
         if let Some(pointer) = response.hover_pos()
-            && let Some(hit) = super::fleets::pick(&self.galaxy_fleet_hits, pointer)
+            && let Some(hit) = super::fleets::pick_over_targets(
+                &self.galaxy_fleet_hits,
+                pointer,
+                super::nearest_system(&self.systems, &self.camera, rect, pointer),
+            )
         {
             response
                 .clone()
                 .on_hover_text(format!("Select Fleet {}", hit.fleet.0));
         }
-        visuals::axes(&painter, rect, self.camera.rotation());
-
         rect
     }
 }

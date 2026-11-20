@@ -147,6 +147,9 @@ impl TravelState {
                 )
             }
             MoveTarget::Local { system, position } => {
+                if position.y_km != 0 {
+                    return Err(MovementError::OffPlane);
+                }
                 let start = local_position(origin, *system, systems)?;
                 let world = system_by_id(systems, *system)?;
                 if geometry::local(*position)
@@ -191,6 +194,9 @@ impl TravelState {
                 }
             }
             MoveTarget::DeepSpace(position) => {
+                if position.y != 0 {
+                    return Err(MovementError::OffPlane);
+                }
                 let Location::DeepSpace(start) = origin else {
                     return Err(MovementError::WrongSpace);
                 };

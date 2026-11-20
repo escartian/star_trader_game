@@ -13,8 +13,8 @@ use game_protocol::{ClientCommand, ServerMessage};
 pub(super) struct NavigationPanel {
     pub open: bool,
     pub(super) target: Option<MoveTarget>,
-    local: [f64; 3],
-    galaxy: [i64; 3],
+    local: [f64; 2],
+    galaxy: [i64; 2],
 }
 
 pub fn location_label(location: &Location, systems: &[StarSystem]) -> String {
@@ -38,16 +38,14 @@ pub fn location_label(location: &Location, systems: &[StarSystem]) -> String {
             format!("Landed on {}", body_name(systems, *system, *body))
         }
         Location::InSystem { system, position } => format!(
-            "{}: ({:.4}, {:.4}, {:.4}) AU",
+            "{}: ({:.4}, {:.4}) AU (X, Z)",
             name(*system),
             crate::units::kilometers_to_au(position.x_km as f64),
-            crate::units::kilometers_to_au(position.y_km as f64),
             crate::units::kilometers_to_au(position.z_km as f64)
         ),
         Location::DeepSpace(position) => format!(
-            "Deep space: ({:.5}, {:.5}, {:.5}) ly",
+            "Deep space: ({:.5}, {:.5}) ly (X, Z)",
             position.x_km as f64 / KM_PER_LIGHT_YEAR as f64,
-            position.y_km as f64 / KM_PER_LIGHT_YEAR as f64,
             position.z_km as f64 / KM_PER_LIGHT_YEAR as f64
         ),
         Location::InTransit(fleet) => format!("Fleet {} is underway", fleet.0),
@@ -136,7 +134,7 @@ impl LocalSession {
                 ui,
                 Icon::Help,
                 CYAN,
-                "Select a fleet and destination on the map, then Plot course.\nRoutes handle local travel, departure and entry.\nPress Advance once every fleet has a course or a Wait order.",
+                "Select a fleet, then tap a destination on the map to plot its course.\nRoutes handle local travel, departure and entry.\nPress Advance once every fleet has a course or a Wait order.",
             );
         });
         let rules = self.state.movement_rules.clone();
@@ -147,21 +145,21 @@ impl LocalSession {
             .filter(|_| ship.location.stationary())
         {
             ui.label(format!(
-                "Local cube: ±{:.4} AU on each axis",
+                "Local map: ±{:.4} AU on X and Z",
                 crate::units::kilometers_to_au(rules.system_half_extent_km as f64)
             ));
             ui.label("Local waypoint (AU); an outside target exits at the first boundary:");
             ui.horizontal_wrapped(|ui| {
-                for (axis, value) in ["X", "Y", "Z"].into_iter().zip(&mut self.navigation.local) {
+                for (axis, value) in ["X", "Z"].into_iter().zip(&mut self.navigation.local) {
                     ui.label(axis);
                     ui.add(egui::DragValue::new(value).speed(0.01).max_decimals(6));
                 }
                 if ui.button("Preview waypoint").clicked() {
-                    let [x, y, z] = self.navigation.local.map(crate::units::au_to_kilometers);
-                    if let (Some(x_km), Some(y_km), Some(z_km)) = (x, y, z) {
+                    let [x, z] = self.navigation.local.map(crate::units::au_to_kilometers);
+                    if let (Some(x_km), Some(z_km)) = (x, z) {
                         self.navigation.target = Some(MoveTarget::Local {
                             system,
-                            position: LocalPosition { x_km, y_km, z_km },
+                            position: LocalPosition { x_km, y_km: 0, z_km },
                         });
                     } else {
                         self.navigation.target = None;
@@ -174,7 +172,7 @@ impl LocalSession {
             {
                 ui.horizontal_wrapped(|ui| {
                     ui.label("Exit toward:");
-                    for (axis, label) in ["X", "Y", "Z"].into_iter().enumerate() {
+                    for (axis, label) in [(0, "X"), (2, "Z")] {
                         for sign in [-1, 1] {
                             if ui
                                 .button(format!("{}{label}", if sign < 0 { "−" } else { "+" }))
@@ -200,11 +198,11 @@ impl LocalSession {
             );
         } else if matches!(ship.location, Location::DeepSpace(_)) {
             ui.label(format!(
-                "Galaxy cube: ±{} ly • waypoint coordinates (ly)",
+                "Galaxy map: ±{} ly • waypoint coordinates (ly)",
                 rules.galaxy_half_extent_ly
             ));
             ui.horizontal_wrapped(|ui| {
-                for (axis, value) in ["X", "Y", "Z"].into_iter().zip(&mut self.navigation.galaxy) {
+                for (axis, value) in ["X", "Z"].into_iter().zip(&mut self.navigation.galaxy) {
                     ui.label(axis);
                     ui.add(
                         egui::DragValue::new(value)
@@ -214,8 +212,8 @@ impl LocalSession {
                 if ui.button("Preview deep-space move").clicked() {
                     self.navigation.target = Some(MoveTarget::DeepSpace(GalaxyPosition {
                         x: self.navigation.galaxy[0],
-                        y: self.navigation.galaxy[1],
-                        z: self.navigation.galaxy[2],
+                        y: 0,
+                        z: self.navigation.galaxy[1],
                     }));
                 }
             });

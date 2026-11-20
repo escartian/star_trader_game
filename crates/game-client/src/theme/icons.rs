@@ -50,7 +50,6 @@ pub enum Icon {
     Transfer,
     Log,
     Reset,
-    Pan,
     Star,
     Warning,
     Info,

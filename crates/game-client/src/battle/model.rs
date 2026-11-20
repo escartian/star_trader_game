@@ -5,9 +5,9 @@
 //! Model space is Blender's: +Z up, nose along +Y, in Blender units. Loading
 //! recentres each model on its bounding box.
 use super::camera::{Projector, ScenePoint};
-use egui::{Color32, Mesh, Painter, Rgba, Shape};
+use egui::{Color32, Mesh, Painter, Pos2, Rgba, Shape, Vec2 as ScreenVec2};
 use game_core::fleet::ShipKind;
-use glam::{Mat3, Mat4, Vec3};
+use glam::{Mat3, Mat4, Vec2, Vec3};
 use std::sync::OnceLock;
 
 /// Light direction in scene space (toward the light): above, behind the player's edge.
@@ -91,21 +91,17 @@ impl ShipModel {
         })
     }
 
-    /// Draws the model centred on `at`, `size` world units long, nose turned to
-    /// face +x (or −x when `facing_left`).
+    /// Draws the model centred on `at`, `size` world units long, with its nose
+    /// turned from Blender's +Y toward the horizontal `heading`.
     pub fn paint(
         &self,
         painter: &Painter,
         projector: &Projector,
         at: ScenePoint,
         size: f32,
-        facing_left: bool,
+        heading: Vec2,
     ) {
-        let turn = if facing_left {
-            std::f32::consts::FRAC_PI_2
-        } else {
-            -std::f32::consts::FRAC_PI_2
-        };
+        let turn = -heading.x.atan2(heading.y);
         let rotation = Mat3::from_rotation_z(turn);
         let scale = size / self.length;
         let light = LIGHT.normalize();
@@ -134,6 +130,48 @@ impl ShipModel {
                 triangle.color.b() * shade,
             ));
             faces.push((a.depth + b.depth + c.depth, [a.pos, b.pos, c.pos], color));
+        }
+        faces.sort_by(|a, b| b.0.total_cmp(&a.0));
+        let mut mesh = Mesh::default();
+        for (_, points, color) in faces {
+            let base = mesh.vertices.len() as u32;
+            for point in points {
+                mesh.colored_vertex(point, color);
+            }
+            mesh.add_triangle(base, base + 1, base + 2);
+        }
+        painter.add(Shape::mesh(mesh));
+    }
+
+    /// A tiny orthographic view of the same GLB for moving map traffic. The
+    /// marker follows the trader's projected position; mesh depth is sorted
+    /// locally, while the map remains responsible for world positioning.
+    pub fn paint_marker(&self, painter: &Painter, at: Pos2, size: f32) {
+        let eye = Vec3::new(0.8, -1.2, 2.5).normalize();
+        let right = Vec3::Z.cross(eye).normalize();
+        let up = eye.cross(right);
+        let scale = size / self.length;
+        let light = LIGHT.normalize();
+        let mut faces = Vec::with_capacity(self.triangles.len());
+        for triangle in &self.triangles {
+            if triangle.normal.dot(eye) <= 0.0 {
+                continue;
+            }
+            let centroid = triangle.corners.into_iter().sum::<Vec3>() / 3.0;
+            let points = triangle
+                .corners
+                .map(|corner| at + ScreenVec2::new(corner.dot(right), -corner.dot(up)) * scale);
+            let shade = if triangle.emissive {
+                1.0
+            } else {
+                AMBIENT + (1.0 - AMBIENT) * triangle.normal.dot(light).max(0.0)
+            };
+            let color = Color32::from(Rgba::from_rgb(
+                triangle.color.r() * shade,
+                triangle.color.g() * shade,
+                triangle.color.b() * shade,
+            ));
+            faces.push((-centroid.dot(eye), points, color));
         }
         faces.sort_by(|a, b| b.0.total_cmp(&a.0));
         let mut mesh = Mesh::default();
@@ -219,6 +257,13 @@ mod tests {
             check(for_kind(kind).unwrap_or_else(|| panic!("{kind:?} model loads")));
         }
         assert!(ShipModel::load(b"not a model").is_err());
+        let scout = for_kind(ShipKind::Scout).unwrap();
+        assert!(
+            scout.triangles.iter().any(|face| {
+                face.color.g() > face.color.r() * 1.3 && face.color.b() > face.color.r() * 1.2
+            }),
+            "the scout has teal paint, not only a grey scan"
+        );
     }
 
     fn check(model: &ShipModel) {
@@ -240,5 +285,47 @@ mod tests {
         assert!(((low + high) / 2.0).length() < 1e-3);
         // Nose along +Y: the model is longer than it is wide.
         assert_eq!((high - low).max_element(), high.y - low.y);
+    }
+
+    #[test]
+    fn scout_mesh_follows_its_battle_cell() {
+        use super::super::camera::OrbitCamera;
+        use game_core::combat::tactical::GridSize;
+
+        let model = for_kind(ShipKind::Scout).unwrap();
+        let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(900.0, 560.0));
+        let camera = OrbitCamera::default();
+        let projector = camera.projector(rect, GridSize::default());
+        let painted_centre = |point: Vec3| {
+            let ctx = egui::Context::default();
+            let output = ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(rect),
+                    ..Default::default()
+                },
+                |ctx| {
+                    let painter = ctx.layer_painter(egui::LayerId::new(
+                        egui::Order::Foreground,
+                        egui::Id::new("scout-position-test"),
+                    ));
+                    model.paint(&painter, &projector, ScenePoint(point), 1.6, Vec2::X);
+                },
+            );
+            let positions: Vec<_> = output
+                .shapes
+                .into_iter()
+                .filter_map(|shape| match shape.shape {
+                    Shape::Mesh(mesh) => Some(mesh.vertices.clone()),
+                    _ => None,
+                })
+                .flatten()
+                .map(|vertex| vertex.pos)
+                .collect();
+            assert!(!positions.is_empty());
+            positions.iter().map(|pos| pos.x).sum::<f32>() / positions.len() as f32
+        };
+        let left = painted_centre(Vec3::new(2.0, 4.0, 2.0));
+        let right = painted_centre(Vec3::new(6.0, 4.0, 2.0));
+        assert!(right > left + 20.0, "the scout follows its new cell");
     }
 }

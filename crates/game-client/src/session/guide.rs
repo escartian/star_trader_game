@@ -46,7 +46,7 @@ impl LocalSession {
             if ship.location == Location::Docked(SystemId(2)) {
                 "At Meridian, tap TRADE and sell your food. Compare known prices for your return cargo."
             } else {
-                "Select Meridian on the galaxy map, pick its trade port and Plot course; departure and entry are planned for you. Then press Advance. Double-click only inspects a system."
+                "Select Meridian on the galaxy map, tap its trade port to plot the course; departure and entry are planned for you. Then press Advance. Double-click only inspects a system."
             }
         } else if ship.location == Location::Docked(SystemId(1)) {
             "First delivery: tap TRADE and press Max on food, travel to Meridian, and sell it there with All. Work toward the hold upgrade."

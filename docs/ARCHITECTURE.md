@@ -42,7 +42,8 @@ The client owns the camera, projections, picking, label placement, panels and
 transient animation. GPU calculations use coordinates relative to the camera or
 focused system; simulation coordinates remain independent of GPU precision.
 Draw star markers and route lines, with regular UI panels for markets/fleets.
-No ECS, physics world, model importer or general scene framework is required.
+No ECS, physics world or general scene framework is required. The client reads
+only the embedded ship GLBs used by battle and NPC traffic.
 
 Library selection is provisional until the desktop/mobile spike passes. Keep
 versions mutually compatible, pin resolved dependencies in Cargo.lock, and avoid
@@ -111,7 +112,7 @@ Players plot courses and execute navigation runs; plotting alone consumes no tic
 The client's Advance control only repeats the single-run command until an event
 needs the player; it adds no authoritative rules.
 
-`game-server/src/save.rs` owns schema-5 authoritative JSON, validation, atomic
+`game-server/src/save.rs` owns schema-7 authoritative JSON, validation, atomic
 replacement and a previous-good backup. Saves contain the world/player/economy
 and their active definitions; continuing does not regenerate markets or apply
 changed startup definitions. The client replaces its session only after load
@@ -121,8 +122,10 @@ lifecycle points. A failed close-save keeps the window open. See DATA_FORMATS.md
 Blender is a build-time authoring tool. Static transparent sprites are embedded
 and preloaded once per egui context, with shared texture handles reused across
 system views. A new graphics context receives new handles. Stars retain procedural
-halos; tiny galaxy markers remain geometry. No runtime model importer, animation
-asset pipeline or additional engine framework is introduced. Offscreen wgpu captures
+halos; tiny galaxy star markers remain geometry. Embedded ship GLBs are decoded
+once and drawn as client-side triangles for battles and moving NPC traffic. No
+general scene importer, animation asset pipeline or additional engine framework
+is introduced. Offscreen wgpu captures
 exercise the same UI code for visual review, separately from window/device checks.
 
 Mobile build work is deferred by explicit user direction. Desktop implementation
@@ -140,7 +143,7 @@ body anchors or at deep-space positions. The current primary trade station retai
 its system ID in Docked; planetary Orbiting locations resolve a market by body.
 Ship catalog definitions come from config/ships.json and weapons from
 config/combat.json, both embedded as fallbacks. `game-core::combat` validates them.
-Schema-1 migration moves the old global cargo/upgrade into its existing ship.
+Older save schemas are rejected during prototyping; only schema 7 is supported.
 
 ## Movement spaces and host resolution
 
@@ -183,10 +186,8 @@ market. Hull purchases consume stock, sales restock it and remove empty fleets;
 all publish through candidate-session transactions. Fleet/ship IDs remain monotonic.
 Core rules resolve ship location; the client cannot nominate a remote marketplace.
 
-Schema-4 migration keeps existing station goods/prices and player state. Newly
-introduced planet stock and previously untracked market cash/hulls start empty;
-loading never seeds free funds or duplicates legacy stock. New sessions alone
-allocate configured budgets/inventory. See PLANET_ECONOMY.md for this distinction.
+Saving and loading keep exact market treasuries, stock and player state. New
+sessions allocate configured budgets and inventory.
 
 Local-view distances and coordinate inputs now use AU through the client's units
 adapter (149,597,870.7 km/AU). Core movement and saves retain integer kilometers;

@@ -287,7 +287,7 @@ fn longer_courses_progress_over_runs_and_cannot_trade_or_recharge_fuel_in_transi
             system: SystemId(1),
             position: game_core::LocalPosition {
                 x_km: 200_000_001,
-                y_km: 10_000_000,
+                y_km: 0,
                 z_km: 35_000_000,
             },
         },

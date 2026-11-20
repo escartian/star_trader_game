@@ -3,6 +3,7 @@ use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use crate::theme::{CYAN, GREEN};
 use game_protocol::{ClientCommand, ServerMessage};
+use std::path::Path;
 use std::path::PathBuf;
 
 pub(super) struct SavePanel {
@@ -43,13 +44,39 @@ impl LocalSession {
     }
 
     pub(super) fn load_slot(&mut self) {
-        match game_server::Session::load(&self.saves.path) {
-            Ok((authority, recovery)) => {
-                self.replace_authority(authority);
-                self.record(recovery.unwrap_or_else(|| "Saved session restored.".into()));
+        let path = self.saves.path.clone();
+        match self.load_path(&path) {
+            Ok(recovery) => {
+                self.record(recovery.unwrap_or_else(|| "Saved session restored.".into()))
             }
             Err(error) => self.record(error),
         }
+    }
+
+    /// Select and load another game only after its save has been validated.
+    pub fn load_path(&mut self, path: &Path) -> Result<Option<String>, String> {
+        let (authority, recovery) = game_server::Session::load(path)?;
+        self.replace_authority(authority);
+        self.set_save_path(path.to_path_buf());
+        if let Err(error) = self.persist_preferences() {
+            self.record(format!(
+                "Game loaded, but settings could not be saved: {error}"
+            ));
+        }
+        Ok(recovery)
+    }
+
+    pub fn start_new_at(&mut self, path: PathBuf, seed: u64) -> Result<(), String> {
+        let mut authority = game_server::Session::with_economy(seed, self.economy.rules.clone())?;
+        authority.set_movement_rules(self.state.movement_rules.clone())?;
+        self.replace_authority(authority);
+        self.set_save_path(path);
+        if let Err(error) = self.persist_preferences() {
+            self.record(format!(
+                "New game started, but settings could not be saved: {error}"
+            ));
+        }
+        Ok(())
     }
 
     fn replace_authority(&mut self, authority: game_server::Session) {
@@ -106,15 +133,8 @@ impl LocalSession {
                 .on_hover_text("Start a new galaxy. Autosave uses the selected slot.")
                 .clicked()
             {
-                match game_server::Session::with_economy(
-                    self.saves.seed,
-                    self.economy.rules.clone(),
-                ).and_then(|mut authority| {
-                    authority.set_movement_rules(self.state.movement_rules.clone())?;
-                    Ok(authority)
-                }) {
-                    Ok(authority) => {
-                        self.replace_authority(authority);
+                match self.start_new_at(self.saves.path.clone(), self.saves.seed) {
+                    Ok(()) => {
                         self.record(
                             "New session started. Autosave uses the selected slot; choose another slot to preserve an older run.".into(),
                         );

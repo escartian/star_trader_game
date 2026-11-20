@@ -141,8 +141,8 @@ mod tests {
     fn a_stale_detour_through_a_body_is_re_routed_to_the_same_destination() {
         let systems = crate::demo_galaxy();
         // A detour waypoint whose leg now cuts straight through the Inner world.
-        let state = ship_at(at(40_000_000, 5_500_000, -20_000_000));
-        let stale = local(at(50_000_000, 10_500_000, -20_000_000));
+        let state = ship_at(at(40_000_000, 0, -20_000_000));
+        let stale = local(at(50_000_000, 0, -20_000_000));
         let moon = MoveTarget::Body {
             system: SystemId(1),
             body: BodyId(4),
@@ -165,8 +165,8 @@ mod tests {
     #[test]
     fn a_course_with_nowhere_clear_to_go_ends() {
         let systems = crate::demo_galaxy();
-        let state = ship_at(at(40_000_000, 5_500_000, -20_000_000));
-        let inside = local(at(45_100_000, 8_000_000, -20_000_000));
+        let state = ship_at(at(40_000_000, 0, -20_000_000));
+        let inside = local(at(45_100_000, 0, -20_000_000));
         let next = state
             .next_leg(PlayerId(1), ShipId(1), inside, Vec::new(), &systems)
             .unwrap();

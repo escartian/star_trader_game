@@ -25,7 +25,7 @@ unbounded prices/rates, and invalid stocks/capacities. New games load the projec
 file when available or an explicitly supplied `--economy PATH`; packaged builds
 can use the embedded validated defaults. No per-trade filesystem reads occur.
 
-## Session save (schema 6)
+## Session save (schema 7)
 
 Each `data/slot-N.json` stores:
 
@@ -42,15 +42,14 @@ The root schema is independent of the command protocol version. Money uses
 unsigned integer hundredths of a credit; credits and cargo cannot be negative.
 Loading checks size, schema, IDs, references, coordinates, ownership, balances,
 capacity, stock/rates, route validity and journey timing before returning a session.
-A failed load leaves the live session unchanged. Schema 1 migrates its existing
-single ship and global cargo/hold into Fleet 1 without resetting time, money or
-journeys. Schema 2 migrates to schema 3 by adding validated default movement
-rules; existing fleets/balances/positions remain intact. Unsupported versions
-produce a clear error. Schemas 1–3 migrate to schema 4 planetary markets: old
-station goods/prices remain, new commodity stocks start empty, and newly tracked
-market treasuries/hull stock start at zero. The migration never grants player
-assets or copies goods. See [migration policy](PLANET_ECONOMY.md). Do not hand-edit a live session's file
-and expect its in-memory state to change.
+A failed load leaves the live session unchanged. Schema 7 requires every galaxy
+system, local body, orbit and fleet position to lie on the map plane (`y = 0`).
+Earlier schemas are rejected with a clear message; start a new session. Do not
+hand-edit a live session's file and expect its in-memory state to change.
+Normal desktop launch shows a game chooser for three slots and the last-used
+custom path. An incompatible save stays on disk until the player explicitly
+confirms deletion of both the primary and backup files. No autosave runs while
+the chooser is open. Other valid games can be loaded from the same screen.
 
 Saving validates the state, writes a sibling temporary file, flushes/syncs it, and
 atomically replaces the destination. The previous valid save is preserved in
@@ -128,8 +127,8 @@ the band's ships.
 Bodies may carry an `orbit`: `period_ticks`, `epoch` (km offset at tick 0 from
 what they circle) and an optional `parent` body for moons (one level only).
 Saved `position` is recomputed from the orbit for the saved tick on load. Bodies
-without an orbit stay fixed. Movement plans record the `tick` they were computed
-at (older plans load as tick 0). Configuration must contain every system/body within its bounds
+without an orbit stay fixed. Movement plans record their planning `tick`.
+Configuration must contain every system/body within its bounds
 and keep arithmetic in supported ranges. New sessions use these definitions;
 continuing restores saved rules. See [movement rules](MOVEMENT.md) for units,
 rounding, location variants and supported transitions. The primary station is
@@ -149,31 +148,24 @@ tick, capped at 1000. Danger/biome remain descriptive pending encounter simulati
 
 Economy schema 1 has additive defaults for `market_starting_credits`,
 `shipyard_starting_stock` and `ship_resale_percent` (1–90), plus embedded catalogs.
-The defaults support existing definition files; migration explicitly starts newly
-tracked live balances at zero. Runtime profile definitions, treasuries and hull
+The defaults support existing definition files. Runtime profile definitions, treasuries and hull
 stocks are preserved in saves, rather than rebuilt when opening a panel.
 
-Schema 6 adds combat data. A v5 save keeps its saved prices, holds, fuel and
-range, gains each class's embedded combat profile, catalog schema 2 and the
-default weapon catalog, and its ships start intact. Schema 5 adds explicit
-navigation planning. Schema 4 migrates with existing market
-balances/inventory and positions intact, with empty navigation orders and a saved
-initial random state. Older versions chain through their previous migrations.
-Loading never executes a run. Course geometry/durations, paid fuel, fleet references,
+Schema 7 stores the current combat and navigation state. Loading never executes
+a run. Course geometry/durations, paid fuel, fleet references,
 Holds, encounter IDs and counter bounds are checked before replacing a session.
-Schema 6 also accepts additive `hostiles` (required exactly on raider contacts, at
+Raider contacts store `hostiles` (required exactly on raider contacts, at
 most 3) and an optional `last_combat` report whose damage, indices and encounter
-reference must be consistent. An open `battle` records its grid `size` (width, depth, height; battles saved
-before grids scaled load as 9 × 9 × 5) and ceasefire state (`acted`,
-`quiet_rounds`). It must use the size its ship count gives (or that legacy size),
+reference must be consistent. An open `battle` records its grid `size` (width, depth, height)
+and ceasefire state (`acted`, `quiet_rounds`). It must use the size its ship count gives,
 belong to a pending raider contact, field exactly that fleet's ships and the contact's raiders with their
 catalog profiles and saved damage, keep ships in distinct cells inside the grid,
 and wait on a player ship; anything else rejects the save.
 Movement settings add `ticks_per_navigation_run` (default 4, 1–100) and
 `encounter_chance_percent` (default 12, 0–100), with defaults for older definitions.
 
-Backward compatibility is not required during prototyping. The migration paths
-above describe current code, not a promise to support old schemas in future work.
+Backward compatibility is not required during prototyping. Only the current
+session schema loads.
 Local UI distances/inputs use AU while JSON local coordinates remain integer km;
 AU input conversion is checked and rounds to the nearest kilometer.
 

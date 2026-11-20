@@ -263,3 +263,19 @@ fn trade_options_list_only_fleets_at_a_market_in_the_viewed_system() {
     assert!(options[0].selected && !options[1].selected);
     assert!(session.trade_options(game_core::SystemId(2)).is_empty());
 }
+
+#[test]
+fn tapping_a_destination_plots_the_course_without_moving() {
+    let mut host = LocalSession::new(game_server::Session::default());
+    let before = host.state.ships[0].clone();
+    host.select_destination(game_core::SystemId(2), None);
+    assert_eq!(host.state.navigation.orders.len(), 1, "{}", host.notice);
+    assert_eq!(
+        host.state.ships[0], before,
+        "plotting does not move or refuel"
+    );
+    assert_eq!(host.state.tick, 0);
+    // A new pick replaces the course rather than adding one.
+    host.select_destination(game_core::SystemId(3), None);
+    assert_eq!(host.state.navigation.orders.len(), 1);
+}

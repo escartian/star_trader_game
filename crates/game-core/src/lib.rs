@@ -107,6 +107,7 @@ pub struct StarSystem {
 }
 
 /// A fixed fixture for the first map prototype, not procedural generation.
+/// Space is flat: every system and body lies on the plane `y = 0`.
 pub fn demo_galaxy() -> Vec<StarSystem> {
     let mut systems = vec![
         StarSystem {
@@ -121,7 +122,7 @@ pub fn demo_galaxy() -> Vec<StarSystem> {
             name: "Meridian".into(),
             star_kind: StarKind::BlueGiant,
             bodies: demo_bodies("Meridian"),
-            position: GalaxyPosition { x: 8, y: 4, z: 12 },
+            position: GalaxyPosition { x: 9, y: 0, z: 12 },
         },
         StarSystem {
             id: SystemId(3),
@@ -129,9 +130,9 @@ pub fn demo_galaxy() -> Vec<StarSystem> {
             star_kind: StarKind::RedDwarf,
             bodies: demo_bodies("Far Reach"),
             position: GalaxyPosition {
-                x: -6,
-                y: 10,
-                z: -9,
+                x: -7,
+                y: 0,
+                z: -13,
             },
         },
     ];
@@ -149,7 +150,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
             "Inner world",
             BodyKind::RockyPlanet,
             45_000_000,
-            8_000_000,
+            0,
             -20_000_000,
         ),
         (
@@ -157,7 +158,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
             "Outer giant",
             BodyKind::GasGiant,
             -100_000_000,
-            -15_000_000,
+            0,
             80_000_000,
         ),
         (
@@ -165,7 +166,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
             "Trade port",
             BodyKind::Station,
             30_000_000,
-            10_000_000,
+            0,
             35_000_000,
         ),
         (
@@ -173,7 +174,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
             "Moon",
             BodyKind::Moon,
             46_000_000,
-            8_500_000,
+            0,
             -20_000_000,
         ),
         (
@@ -181,7 +182,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
             "Prospector asteroid",
             BodyKind::Asteroid,
             -60_000_000,
-            12_000_000,
+            0,
             -25_000_000,
         ),
     ]

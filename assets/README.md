@@ -96,15 +96,29 @@ under `~/Library/Application Support/StarTrader`.
 
 ## Ship hulls
 
-`source/freighter.blend` and `source/patrol.blend` are original editable models.
-`sprites/` contains their transparent 256px exports. Rebuild using Blender in
-background mode:
+`source/freighter.blend` and `source/patrol.blend` are original editable models,
+each built by its own script on the shared part kit `tools/art/hull_kit.py`
+(conventions, 7,000-triangle budget, staging and export). One run writes the
+`.blend`, the battle model `models/<name>.glb`, the 256px map sprite
+`sprites/<name>.png` and a review render `source/<name>-preview.png`:
 
 ```sh
-/Applications/Blender.app/Contents/MacOS/Blender --background --python tools/art/build_ships.py
+/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
+  --python tools/art/build_freighter.py   # or build_patrol.py
 ```
 
-Freighters have cargo pods and patrol ships hardpoints. The scout uses the AI
+The freighter is a bulk container hauler: a yard of about 85 small ribbed
+containers (eight rows, four columns, up to three high, mostly orange with ivory,
+teal, rust and slate) under hazard-yellow loading gantries, a lofted prow with a
+deliberately tiny bridge and lit windows so the hull reads as huge, and four
+blue-glow engines between radiator wings (about 4,450 triangles).
+The patrol is an armoured gunship: a lofted fuselage with cheek armour, intakes
+and lit windows, swept wings with layered armour plates, under-wing missile racks
+and banded wingtip cannon pods, a dorsal twin-gun turret with a sensor mast, chin
+guns, canted lit tail fins and banded twin engines (about 3,450 triangles).
+Each script can also be run through the `blender` MCP server
+(`execute_blender_code_for_cli`): exec the file with `__file__` set and call
+`build()`. The scout uses the AI
 courier: `source/ai-courier.blend` is a vertex-colored model generated locally
 from a concept image with ComfyUI/TRELLIS.2, then remeshed and decimated.
 `tools/art/clean_ai_courier.py` rebuilds it and renders `sprites/scout.png` with
@@ -113,12 +127,11 @@ the same camera and lights; `tools/comfyui/README.md` covers the full pipeline.
 ### Battle models
 
 `models/*.glb` are runtime glTF exports of the low-poly hull sources for the
-battle view: `models/freighter.glb` and `models/patrol.glb` (about 1,100–1,300
-triangles each, four plain-colour materials, no textures) and `models/scout.glb`,
-the AI courier collapse-decimated on export from 60,000 to 1,600 triangles with
+battle view. The script-built hulls (freighter, patrol, prospector) export
+themselves; `models/scout.glb` is the AI courier collapse-decimated on export from 60,000 to 1,600 triangles with
 its per-vertex paint kept (the loader gives each face the mean of its corners).
 The `.blend` sources are not modified.
-Re-export with:
+Re-export the scout with:
 
 ```sh
 /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
@@ -129,3 +142,21 @@ The export applies modifiers, keeps Blender's axes (+Z up, nose along +Y) and is
 byte-for-byte reproducible. The client embeds the file, recentres the model and
 draws it flat-shaded as egui triangles, sorted far to near (no depth buffer yet).
 A test checks that each embedded model loads with its coloured parts.
+
+### Prospector
+
+`source/prospector.blend` is an editable original heavy mining rig: a stepped,
+twisted 12-sided auger on a hazard-striped bow housing, two articulated digger
+arms, six ore hoppers heaped with rock and glowing crystals, a conveyor spine, a
+gantry crane, radiator wings and a quad-nozzle amber engine block. Its crew
+bridge and lit portholes are deliberately tiny so the hull reads as huge.
+`models/prospector.glb` is its colored 2,700-triangle export (engines,
+floodlights and crystals are emissive), `sprites/prospector.png` its 256px map
+sprite, and `source/prospector-preview.png` a render for visual review. It is the
+fourth purchasable hull (`ShipKind::Prospector`), stocked by extraction worlds.
+Rebuild all four files with:
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
+  --python tools/art/build_prospector.py
+```

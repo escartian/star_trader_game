@@ -181,7 +181,7 @@ fn assert_legacy_assets(restored: &Session, original: &Session) {
     assert_eq!(restored.economy.rules, original.economy.rules);
     for market in &restored.economy.markets {
         assert_eq!(market.credits.0, 0);
-        assert_eq!(market.ship_stock, [0; 3]);
+        assert_eq!(market.ship_stock, [0; game_core::fleet::SHIP_KIND_COUNT]);
         if market.is_station {
             assert_eq!(
                 market.goods,

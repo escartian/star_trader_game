@@ -104,6 +104,7 @@
   "shipyard_starting_stock": [
     2,
     2,
+    1,
     1
   ],
   "ship_resale_percent": 60,
@@ -111,7 +112,8 @@
   "raider_bounties": {
     "freighter": 10000,
     "scout": 15000,
-    "patrol": 40000
+    "patrol": 40000,
+    "prospector": 25000
   },
   "npc_raid_chance_percent": 4
 }

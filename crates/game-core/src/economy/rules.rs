@@ -30,7 +30,8 @@ pub struct EconomyRules {
     #[serde(default = "default_market_credits")]
     pub market_starting_credits: Credits,
     #[serde(default = "default_ship_stock")]
-    pub shipyard_starting_stock: [u32; 3],
+    #[serde(deserialize_with = "crate::fleet::per_class_stock")]
+    pub shipyard_starting_stock: [u32; crate::fleet::SHIP_KIND_COUNT],
     #[serde(default = "default_resale_percent")]
     pub ship_resale_percent: u32,
     #[serde(default)]
@@ -64,8 +65,8 @@ fn default_resale_percent() -> u32 {
 fn default_market_credits() -> Credits {
     Credits(1_000_000)
 }
-fn default_ship_stock() -> [u32; 3] {
-    [2, 2, 1]
+fn default_ship_stock() -> [u32; crate::fleet::SHIP_KIND_COUNT] {
+    [2, 2, 1, 1]
 }
 
 impl Default for EconomyRules {

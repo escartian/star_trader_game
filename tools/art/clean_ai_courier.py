@@ -5,7 +5,7 @@ Step 2 (Blender is authoring-only):
   Blender -b -P tools/art/clean_ai_courier.py -- <courier.npz>
 
 The .npz holds glTF Y-up vertices in the [-0.5, 0.5] cube, faces and per-vertex
-colors. Output follows the build_ships.py conventions: Z up, nose toward +Y,
+colors. Output follows the hull_kit.py conventions: Z up, nose toward +Y,
 SHIP_LENGTH units long, centred on the origin. Writes assets/source/ai-courier.blend
 and renders assets/sprites/scout.png with the same camera and lights as the other
 ship sprites.
@@ -90,7 +90,7 @@ def shade(ship):
 
 
 def setup_sprite_scene():
-    """Same render settings, lights and camera as build_ships.py."""
+    """Same render settings, lights and camera as the original hand-built ship sprites."""
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"

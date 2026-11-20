@@ -139,7 +139,7 @@ resolved from the saved system's first Station body; Docked retains its system I
 
 `config/planets.json` schema 1 defines rocky/gas profiles: `economy`, `biome`,
 `danger`, `specialization`, market-template index, `starting_credits` (hundredths)
-and `ship_stock` in freighter/scout/patrol order. An optional `price_percent`
+and `ship_stock` in freighter/scout/patrol/prospector order. An optional `price_percent`
 (six values in commodity order, 20–300; default 100) scales the template's base
 prices when the market is created. Values below 100 mark a local surplus (the
 specialty is cheap); values above 100 mark local demand (imports pay more).

@@ -1,4 +1,6 @@
 //! Owned fleet membership and data-driven ship specifications.
+#[cfg(test)]
+mod catalog_tests;
 mod operations;
 use crate::{
     economy::Credits,
@@ -15,14 +17,45 @@ pub enum ShipKind {
     Freighter,
     Scout,
     Patrol,
+    /// Heavy mining rig: slow, tough and a deep hold for bulk ore.
+    Prospector,
+}
+
+/// Number of hull classes; sizes per-class arrays such as shipyard stock.
+pub const SHIP_KIND_COUNT: usize = 4;
+/// Hull classes before the prospector; older saves and configs list this many.
+const LEGACY_SHIP_KIND_COUNT: usize = 3;
+
+/// Reads a per-class stock array in `ShipKind::ALL` order. Arrays written
+/// before the prospector existed have three entries; the missing classes
+/// start with zero stock, so those saves keep loading.
+pub fn per_class_stock<'de, D>(deserializer: D) -> Result<[u32; SHIP_KIND_COUNT], D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let stock = Vec::<u32>::deserialize(deserializer)?;
+    if !(LEGACY_SHIP_KIND_COUNT..=SHIP_KIND_COUNT).contains(&stock.len()) {
+        return Err(serde::de::Error::invalid_length(
+            stock.len(),
+            &"one stock count per ship class",
+        ));
+    }
+    let mut padded = [0; SHIP_KIND_COUNT];
+    padded[..stock.len()].copy_from_slice(&stock);
+    Ok(padded)
 }
 
 impl ShipKind {
+    pub const ALL: [Self; SHIP_KIND_COUNT] =
+        [Self::Freighter, Self::Scout, Self::Patrol, Self::Prospector];
+
+    /// Position in per-class arrays (`ship_stock`); matches `ALL`.
     pub fn index(self) -> usize {
         match self {
             Self::Freighter => 0,
             Self::Scout => 1,
             Self::Patrol => 2,
+            Self::Prospector => 3,
         }
     }
 
@@ -31,6 +64,7 @@ impl ShipKind {
             Self::Freighter => "Freighter",
             Self::Scout => "Scout",
             Self::Patrol => "Patrol ship",
+            Self::Prospector => "Prospector",
         }
     }
 }
@@ -86,7 +120,7 @@ impl ShipCatalog {
     /// Structural checks; weapon references are checked against the combat
     /// catalog by `EconomyRules::validate`.
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != SHIP_CATALOG_SCHEMA || self.ships.len() != 3 {
+        if self.schema_version != SHIP_CATALOG_SCHEMA || self.ships.len() != SHIP_KIND_COUNT {
             return Err("Unsupported ship catalog".into());
         }
         for (index, ship) in self.ships.iter().enumerate() {

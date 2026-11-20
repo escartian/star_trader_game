@@ -90,7 +90,8 @@ pub struct Market {
     pub id: MarketId,
     pub is_station: bool,
     pub credits: Credits,
-    pub ship_stock: [u32; 3],
+    #[serde(deserialize_with = "crate::fleet::per_class_stock")]
+    pub ship_stock: [u32; crate::fleet::SHIP_KIND_COUNT],
     pub goods: [MarketGood; 6],
 }
 

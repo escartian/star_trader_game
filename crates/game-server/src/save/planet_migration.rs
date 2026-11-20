@@ -54,7 +54,7 @@ pub(super) fn upgrade(data: &mut Value) -> Result<(), String> {
     let mut expanded = Economy::with_rules(&systems, rules)?;
     for market in &mut expanded.markets {
         market.credits.0 = 0;
-        market.ship_stock = [0; 3];
+        market.ship_stock = [0; game_core::fleet::SHIP_KIND_COUNT];
         for good in &mut market.goods {
             good.stock = 0;
         }

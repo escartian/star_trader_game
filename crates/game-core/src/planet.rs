@@ -80,7 +80,8 @@ pub struct PlanetTemplate {
     pub profile: PlanetProfile,
     pub market_template: usize,
     pub starting_credits: Credits,
-    pub ship_stock: [u32; 3],
+    #[serde(deserialize_with = "crate::fleet::per_class_stock")]
+    pub ship_stock: [u32; crate::fleet::SHIP_KIND_COUNT],
     /// Per-commodity multiplier (percent, commodity order) on the market
     /// template's base prices. Below 100 = local surplus (cheap), above 100 =
     /// local demand (expensive). Gives each planet its own trade identity.

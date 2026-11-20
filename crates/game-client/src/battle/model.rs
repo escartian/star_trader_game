@@ -35,6 +35,7 @@ pub fn for_kind(kind: ShipKind) -> Option<&'static ShipModel> {
     static FREIGHTER: OnceLock<Option<ShipModel>> = OnceLock::new();
     static PATROL: OnceLock<Option<ShipModel>> = OnceLock::new();
     static SCOUT: OnceLock<Option<ShipModel>> = OnceLock::new();
+    static PROSPECTOR: OnceLock<Option<ShipModel>> = OnceLock::new();
     let (cell, bytes): (_, &[u8]) = match kind {
         ShipKind::Freighter => (
             &FREIGHTER,
@@ -47,6 +48,10 @@ pub fn for_kind(kind: ShipKind) -> Option<&'static ShipModel> {
         ShipKind::Scout => (
             &SCOUT,
             include_bytes!("../../../../assets/models/scout.glb"),
+        ),
+        ShipKind::Prospector => (
+            &PROSPECTOR,
+            include_bytes!("../../../../assets/models/prospector.glb"),
         ),
     };
     cell.get_or_init(|| ShipModel::load(bytes).ok()).as_ref()
@@ -210,14 +215,15 @@ mod tests {
 
     #[test]
     fn embedded_models_load_centred_with_coloured_parts() {
-        for kind in [ShipKind::Freighter, ShipKind::Patrol, ShipKind::Scout] {
+        for kind in ShipKind::ALL {
             check(for_kind(kind).unwrap_or_else(|| panic!("{kind:?} model loads")));
         }
         assert!(ShipModel::load(b"not a model").is_err());
     }
 
     fn check(model: &ShipModel) {
-        assert!((500..5_000).contains(&model.triangles.len()));
+        // Every face is sorted on the CPU each frame; 7,000 is the per-hull budget.
+        assert!((500..7_000).contains(&model.triangles.len()));
         let colors: std::collections::HashSet<_> = model
             .triangles
             .iter()

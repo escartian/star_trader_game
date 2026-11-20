@@ -12,6 +12,7 @@ pub struct RaiderBounties {
     pub freighter: Credits,
     pub scout: Credits,
     pub patrol: Credits,
+    pub prospector: Credits,
 }
 
 impl Default for RaiderBounties {
@@ -20,6 +21,7 @@ impl Default for RaiderBounties {
             freighter: Credits(10_000),
             scout: Credits(15_000),
             patrol: Credits(40_000),
+            prospector: Credits(25_000),
         }
     }
 }
@@ -30,11 +32,12 @@ impl RaiderBounties {
             ShipKind::Freighter => self.freighter,
             ShipKind::Scout => self.scout,
             ShipKind::Patrol => self.patrol,
+            ShipKind::Prospector => self.prospector,
         }
     }
 
     pub(super) fn valid(&self) -> bool {
-        [self.freighter, self.scout, self.patrol]
+        [self.freighter, self.scout, self.patrol, self.prospector]
             .iter()
             .all(|bounty| bounty.0 <= 1_000_000_000)
     }

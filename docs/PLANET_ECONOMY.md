@@ -59,7 +59,7 @@ production changes goods, not money. Fuel service currently has unlimited supply
 - Credits transfer between accounts rather than being created or discarded.
   All checks publish one candidate transaction or leave the entire session unchanged.
 
-Stock arrays use the stable order **freighter, scout, patrol**, independent of
+Stock arrays use the stable order **freighter, scout, patrol, prospector**, independent of
 catalog display order. New sessions receive the explicit budgets and stocks in
 their saved economy/planet definitions. Continuing uses saved definitions and
 balances. A new session created in the GUI retains the active definitions.

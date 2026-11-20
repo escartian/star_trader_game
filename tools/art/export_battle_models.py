@@ -17,9 +17,10 @@ import bpy
 
 ROOT = Path(__file__).resolve().parents[2]
 # Export name -> (source .blend, triangle budget or None to keep every face).
+# The freighter, patrol and prospector are script-built and export themselves
+# (tools/art/build_<name>.py); only scanned hulls are exported here. Battle
+# models may use up to 7,000 triangles each.
 SHIPS = {
-    "freighter": ("freighter.blend", None),
-    "patrol": ("patrol.blend", None),
     "scout": ("ai-courier.blend", 1600),
 }
 

@@ -6,6 +6,8 @@
     {"kind":"scout","price":45000,"cargo_capacity":10,"fuel_capacity":50,"range_ly":24,
      "combat":{"size":"small","hull":30,"shields":15,"armor":1,"engine":8,"weapon_slots":1,"loadout":["graviton_pulse"]}},
     {"kind":"patrol","price":180000,"cargo_capacity":8,"fuel_capacity":36,"range_ly":18,
-     "combat":{"size":"medium","hull":90,"shields":30,"armor":6,"engine":5,"weapon_slots":3,"loadout":["photon_singularity_beam","quantum_entanglement_torpedo","magnetic_resonance_disruptor"]}}
+     "combat":{"size":"medium","hull":90,"shields":30,"armor":6,"engine":5,"weapon_slots":3,"loadout":["photon_singularity_beam","quantum_entanglement_torpedo","magnetic_resonance_disruptor"]}},
+    {"kind":"prospector","price":150000,"cargo_capacity":40,"fuel_capacity":60,"range_ly":14,
+     "combat":{"size":"large","hull":120,"shields":10,"armor":10,"engine":2,"weapon_slots":1,"loadout":["neutron_beam"]}}
   ]
 }

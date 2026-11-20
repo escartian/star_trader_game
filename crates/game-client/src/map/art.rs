@@ -20,6 +20,7 @@ pub enum ArtKind {
     Freighter,
     Scout,
     Patrol,
+    Prospector,
 }
 
 impl From<StarKind> for ArtKind {
@@ -63,6 +64,7 @@ impl From<game_core::fleet::ShipKind> for ArtKind {
             game_core::fleet::ShipKind::Freighter => Self::Freighter,
             game_core::fleet::ShipKind::Scout => Self::Scout,
             game_core::fleet::ShipKind::Patrol => Self::Patrol,
+            game_core::fleet::ShipKind::Prospector => Self::Prospector,
         }
     }
 }
@@ -82,6 +84,11 @@ const SOURCES: &[(ArtKind, &str, &[u8])] = &[
         ArtKind::Patrol,
         "patrol",
         include_bytes!("../../../../assets/sprites/patrol.png"),
+    ),
+    (
+        ArtKind::Prospector,
+        "prospector",
+        include_bytes!("../../../../assets/sprites/prospector.png"),
     ),
     (
         ArtKind::YellowDwarf,

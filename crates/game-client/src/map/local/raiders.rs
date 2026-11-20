@@ -84,6 +84,7 @@ pub(super) fn crew(ships: &[ShipKind]) -> String {
         (ShipKind::Patrol, "patrol", "patrols"),
         (ShipKind::Scout, "scout", "scouts"),
         (ShipKind::Freighter, "freighter", "freighters"),
+        (ShipKind::Prospector, "prospector", "prospectors"),
     ]
     .into_iter()
     .filter_map(|(kind, one, many)| match count(kind) {

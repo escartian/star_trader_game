@@ -83,7 +83,7 @@ impl Market {
         is_station: bool,
         template: &super::MarketTemplate,
         credits: Credits,
-        ship_stock: [u32; 3],
+        ship_stock: [u32; crate::fleet::SHIP_KIND_COUNT],
     ) -> Self {
         Self {
             id,

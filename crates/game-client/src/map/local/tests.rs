@@ -90,6 +90,40 @@ fn schematic_moon_is_separate_pickable_and_keeps_saved_coordinates() {
 }
 
 #[test]
+fn every_generated_moon_is_drawn_beside_its_planet_never_across_the_star() {
+    let mut systems = game_core::generation::generate_galaxy_with(
+        3,
+        game_core::generation::GalaxyConfig::default(),
+    )
+    .unwrap();
+    game_core::orbits::place(&mut systems, 0);
+    let mut moons = 0;
+    for system in &systems {
+        for moon in system
+            .bodies
+            .iter()
+            .filter(|body| body.kind == BodyKind::Moon)
+        {
+            let parent = moon_parent(system, moon).unwrap();
+            let (shown, planet) = (
+                display_position(system, moon),
+                display_position(system, parent),
+            );
+            let from_planet = shown.distance(planet);
+            assert!(from_planet > 0.5, "{}: drawn on its planet", moon.name);
+            assert!(
+                from_planet < shown.length(),
+                "{} in {}: nearer the star than its planet",
+                moon.name,
+                system.name
+            );
+            moons += 1;
+        }
+    }
+    assert!(moons > 20, "{moons} moons checked");
+}
+
+#[test]
 fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents() {
     use game_core::{
         SystemId,

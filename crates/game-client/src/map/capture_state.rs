@@ -4,6 +4,17 @@ use game_core::{BodyId, LocalPosition, SystemId, movement::MoveTarget};
 
 impl Map {
     pub fn prepare_capture(&mut self, view: &str) -> Result<(), String> {
+        // "system:N": the system view of the galaxy's Nth system (1-based).
+        if let Some(index) = view.strip_prefix("system:") {
+            let index: usize = index.parse().map_err(|_| "system:N needs a number")?;
+            let system = self
+                .systems
+                .get(index.saturating_sub(1))
+                .ok_or("No such system")?
+                .clone();
+            self.local = Some(LocalView::new(system));
+            return Ok(());
+        }
         match view {
             "galaxy" => {}
             "traffic" => self.session.capture_wait_runs(4),

@@ -206,3 +206,11 @@ icon render was inspected directly. Unlock conditions, delivery counting, the
 captain start and menu gating are covered by tests. Not yet checked: a full
 playthrough of the unlock order, and the packaged macOS app's Dock icon after
 this re-render (`tools/package_macos.sh` was not run).
+
+Celestial art in generated systems: a contact sheet of every celestial sprite,
+and offscreen system-view captures of eight systems of a default 60-system
+galaxy (`--seed 3 --systems 60 --capture-view system:N`), were inspected: all
+nine star kinds and every planet, giant, moon and asteroid variant render with
+their own art. The captures showed generated moons drawn across the star (the
+schematic moon spacing pushed them 40 million km from inner planets); fixed so
+inward pushes stay short, checked in the captures and by a galaxy-wide test.

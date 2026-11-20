@@ -3,7 +3,13 @@ use super::view_position;
 use game_core::{BodyKind, LocalBody, StarSystem};
 use glam::DVec3;
 
+/// How far apart a moon is drawn from its planet at most, in view units
+/// (10 million km each), so their markers never overlap.
 const MIN_MOON_SEPARATION: f64 = 4.0;
+/// A push toward the star never exceeds this share of the planet's own
+/// distance from the star, so a moon is never thrown across the star (an inner
+/// planet 35 million km out would otherwise get a moon 40 million km away).
+const MAX_SEPARATION_SHARE: f64 = 0.4;
 
 pub(super) fn moon_parent<'a>(system: &'a StarSystem, moon: &LocalBody) -> Option<&'a LocalBody> {
     system
@@ -28,13 +34,19 @@ pub(super) fn display_position(system: &StarSystem, body: &LocalBody) -> DVec3 {
     };
     let parent = view_position(parent);
     let offset = actual - parent;
-    if offset.length() >= MIN_MOON_SEPARATION {
-        return actual;
-    }
     let direction = offset
         .try_normalize()
         .unwrap_or(DVec3::new(1.0, 0.5, -0.8).normalize());
-    parent + direction * MIN_MOON_SEPARATION
+    // Outward pushes cannot cross the star; inward ones are kept short.
+    let separation = if direction.dot(parent) < 0.0 {
+        MIN_MOON_SEPARATION.min(parent.length() * MAX_SEPARATION_SHARE)
+    } else {
+        MIN_MOON_SEPARATION
+    };
+    if offset.length() >= separation {
+        return actual;
+    }
+    parent + direction * separation
 }
 
 /// Body names are generated as "<system> <name>"; inside that system's own view

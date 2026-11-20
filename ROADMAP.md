@@ -4,6 +4,10 @@ This is escartian's rewrite of their own [Star Trader game](https://github.com/e
 The rewrite now exceeds the original's feature set. Fleet management, planetary
 commerce, combat, factions and missions define the destination.
 
+**Planned rework:** a phone-first interface, flat play, hex battles with altitude
+bands and several roads to victory. See [the rework plan](docs/PHONE_FIRST_REWORK.md)
+for decisions and phases; it takes precedence over conflicting older map/battle notes.
+
 ## Decisions carried forward
 
 - Pure Rust native client and authoritative Rust session/server; no web frontend.

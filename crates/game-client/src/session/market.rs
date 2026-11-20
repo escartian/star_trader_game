@@ -84,9 +84,15 @@ impl LocalSession {
         let mut action = self.trade_table(ui, &ship, &market, systems);
         ui.separator();
         ui.horizontal_wrapped(|ui| {
+            // Orders never exceed the space left in the tanks.
+            let missing = ship.fuel_capacity.saturating_sub(ship.fuel);
+            let units = self.market.fuel_units.clamp(1, missing.max(1));
             icons::glyph(ui, Icon::Fuel, CYAN, "Fuel units to buy");
-            ui.add(egui::DragValue::new(&mut self.market.fuel_units).range(1..=ship.fuel_capacity));
-            let cost = u64::from(self.market.fuel_units) * self.economy.rules.fuel_unit_price.0;
+            ui.add_enabled(
+                missing > 0,
+                egui::DragValue::new(&mut self.market.fuel_units).range(1..=missing.max(1)),
+            );
+            let cost = u64::from(units) * self.economy.rules.fuel_unit_price.0;
             stat(
                 ui,
                 Icon::Credits,
@@ -94,20 +100,26 @@ impl LocalSession {
                 &game_core::economy::Credits(cost).to_string(),
                 &format!("{} cr per fuel unit", self.economy.rules.fuel_unit_price),
             );
-            if icons::button(ui, Icon::Refuel, "Refuel").clicked() {
+            let blocked = (missing == 0).then(|| "The tanks are full.".to_owned());
+            if icons::labeled_action(ui, Icon::Refuel, "Refuel", blocked)
+                .on_hover_text(format!("Buy {units} fuel ({missing} fits)"))
+                .clicked()
+            {
                 action = Some(ClientCommand::Refuel {
                     ship: ship.id,
-                    units: self.market.fuel_units,
+                    units,
                     expected_revision: self.state.revision,
                 });
             }
             let full = self.economy.max_refuel_units(&ship);
-            let response = icons::labeled_action(
-                ui,
-                Icon::Refuel,
-                "Full",
-                full.as_ref().err().map(ToString::to_string),
-            );
+            let reason = match &full {
+                Ok(_) => None,
+                Err(game_core::economy::EconomyError::FuelFull) => {
+                    Some("The tanks are full.".to_owned())
+                }
+                Err(error) => Some(error.to_string()),
+            };
+            let response = icons::labeled_action(ui, Icon::Refuel, "Full", reason);
             if let Ok(units) = full {
                 let cost = u64::from(units).saturating_mul(self.economy.rules.fuel_unit_price.0);
                 if response

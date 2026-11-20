@@ -201,6 +201,12 @@ impl LocalSession {
         self.market.open = true;
     }
 
+    /// The latest message shown to the player.
+    #[cfg(test)]
+    pub fn notice(&self) -> &str {
+        &self.notice
+    }
+
     pub fn notify(&mut self, message: String) {
         self.record(message);
     }

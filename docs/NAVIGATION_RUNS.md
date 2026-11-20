@@ -5,24 +5,45 @@ play, inspired by fleet management in Star Trader, Civ-style readiness and
 FTL-style voyage contacts. A navigation run is the deliberate world-advance step.
 Plotting one fleet's course never advances other fleets or markets.
 
+## One flagship, standing orders for the rest
+
+You command one fleet directly: the **flagship** (by default your first fleet).
+Only it takes direct orders (courses, landing, lift-off, cancelling). Every
+other fleet follows a **standing order**:
+
+- **Wait** (the default for a new or split-off fleet): stay put.
+- **Trade route** between two markets (see below).
+- **Patrol** a chosen system: tour its bodies one course at a time, topping up
+  fuel at its markets when credits allow, so raider bands hunting the system
+  meet it. A patrol that cannot set off (no fuel, say) reports it and retries.
+
+Secondary fleets settle their own contacts: raider fights auto-resolve (each
+bounty paid once), salvage is taken when a hold has room, distress calls are
+answered when medicine is aboard, customs are complied with, convoys get the
+best cargo, escorts are flown; a choice the fleet cannot make falls back to
+passing the contact by. Their combat reports go to the log rather than opening.
+Advance never stops for them. On the Fleets sheet, **Take command** makes a
+fleet the flagship; the previous flagship finishes any course under way and
+then waits. Saved as `flagship` and `patrols` in navigation state.
+
 ## Plan, review, execute
 
-1. Select a fleet and tap a destination (a system, or a body or tile in a
+1. Select the flagship and tap a destination (a system, or a body or tile in a
    system). The tap plots the course at once and its card shows fuel and runs;
    deep-space waypoints use the Navigation window's **Plot course**.
 2. Plotting leaves the fleet in place; no fuel, ticks or random rolls are
    consumed. You can replace or cancel a course before it departs.
-3. Give every other fleet a course or an explicit **Wait** order. Navigation shows
-   each fleet's status and destination; Navigation and the map's fleet cards both
-   offer Wait for fleets that need orders. Pressing **Advance** (or the single-run
-   clock button) with an unassigned fleet selects/highlights it and focuses its
-   map location first; nothing advances.
-4. Once all fleets are ready, **Advance** executes navigation runs one after
+3. The flagship needs a course or an explicit **Wait**. Pressing **Advance** (or
+   the single-run clock button) while it has neither selects/highlights it and
+   focuses its map location first; nothing advances. With a secondary fleet
+   selected, a tap only selects the target (whose card can offer that fleet a
+   trade route).
+4. Once the flagship is ready, **Advance** executes navigation runs one after
    another (see below). Each run advances all assigned fleets in parallel and
    updates markets once. The clock button beside it executes exactly one run.
 
-A Wait is always issued by the player, never assumed: a fleet that has just
-arrived, was split off or had its course cancelled needs orders again. Once given,
+For the flagship, a Wait is always issued by the player, never assumed: once it
+arrives or its course is cancelled it needs orders again. Once given,
 a Wait lasts across runs until you plot a new course for that fleet, so waiting
 fleets do not need re-confirming every run. Splits, merges and hull sales keep
 the Wait of every fleet that still exists. The save field remains `holds`.

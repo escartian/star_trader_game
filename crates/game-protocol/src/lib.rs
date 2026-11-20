@@ -102,6 +102,17 @@ pub enum ClientCommand {
         fleet: FleetId,
         expected_revision: u64,
     },
+    /// Take direct command of `fleet`; every other fleet runs standing orders.
+    SetFlagship {
+        fleet: FleetId,
+        expected_revision: u64,
+    },
+    /// Order a secondary fleet to guard `system`.
+    SetPatrol {
+        fleet: FleetId,
+        system: game_core::SystemId,
+        expected_revision: u64,
+    },
     /// End the campaign on score at this run (`None`: open-ended).
     SetRunLimit {
         runs: Option<u64>,

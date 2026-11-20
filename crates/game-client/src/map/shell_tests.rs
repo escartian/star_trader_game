@@ -157,26 +157,28 @@ fn phone_market_shows_trade_actions_without_horizontal_clipping() {
 }
 
 #[test]
-fn the_alert_badge_walks_fleets_that_need_orders() {
+fn the_alert_badge_brings_you_back_to_the_flagship_when_it_needs_orders() {
     let ctx = egui::Context::default();
     let mut map = multi_fleet();
+    // The scenario leaves every fleet waiting; a plotted then cancelled course
+    // leaves the flagship (Home Guard) without orders.
+    let flagship = map.session.fleets()[0].clone();
+    map.session.select_ship(flagship.ships[0]);
+    map.session
+        .select_destination(game_core::SystemId(1), Some(game_core::BodyId(1)));
+    map.session
+        .test_command(game_protocol::ClientCommand::CancelCourse {
+            fleet: flagship.id,
+            expected_revision: map.session.revision(),
+        });
+    // Only the flagship can need orders; the others stand by.
     let alerts = map.session.attention_fleets();
-    assert!(
-        alerts.len() >= 2,
-        "the scenario leaves fleets without orders"
-    );
-    let badge = format!("! {}", alerts.len());
-    tap(&ctx, &mut map, PHONE, &badge);
-    let first = map.session.selected_ship().id;
-    assert!(
-        map.session
-            .fleets()
-            .iter()
-            .any(|fleet| fleet.ships.contains(&first) && alerts.contains(&fleet.id))
-    );
+    assert_eq!(alerts, vec![flagship.id]);
+    // Viewing another fleet, the badge brings the flagship back up.
+    map.session.select_ship(map.session.fleets()[1].ships[0]);
+    tap(&ctx, &mut map, PHONE, "! 1");
+    assert!(flagship.ships.contains(&map.session.selected_ship().id));
     assert_eq!(map.sheet, crate::session::SheetTab::Fleets);
-    tap(&ctx, &mut map, PHONE, &badge);
-    assert_ne!(map.session.selected_ship().id, first, "the next one");
 }
 
 #[test]

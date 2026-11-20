@@ -48,6 +48,8 @@ impl Session {
         session.plot(scout, home, Some(planet))?;
         session.plot(survey, home, Some(moon))?;
         session.plot(patrol, SystemId(2), None)?;
+        // Command returns to the home fleet; the others finish their courses.
+        session.command_fleet_of(ShipId(1))?;
         // Run until the local fleets arrive; the interstellar convoy stays underway.
         let chance = session.state.movement_rules.encounter_chance_percent;
         session.state.movement_rules.encounter_chance_percent = 0;
@@ -191,11 +193,22 @@ impl Session {
         })
     }
 
+    /// Takes command of `ship`'s fleet (only the flagship takes direct
+    /// orders) and plots its course.
     fn plot(&mut self, ship: ShipId, system: SystemId, body: Option<BodyId>) -> Result<(), String> {
+        self.command_fleet_of(ship)?;
         self.run(ClientCommand::PlotDestination {
             ship,
             system,
             body,
+            expected_revision: self.state.revision,
+        })
+    }
+
+    fn command_fleet_of(&mut self, ship: ShipId) -> Result<(), String> {
+        let fleet = self.fleet_of(ship)?;
+        self.run(ClientCommand::SetFlagship {
+            fleet,
             expected_revision: self.state.revision,
         })
     }

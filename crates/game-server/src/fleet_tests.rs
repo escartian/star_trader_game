@@ -56,6 +56,8 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
     );
     assert_eq!(session.state.tick, 0);
     assert_eq!(session.state.fleets.len(), 2);
+    crate::test_support::take_command(&mut session, ShipId(2));
+    let revision = session.state.revision;
     apply(
         &mut session,
         ClientCommand::Move {
@@ -64,7 +66,7 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
                 system: SystemId(1),
                 body: BodyId(1),
             },
-            expected_revision: 3,
+            expected_revision: revision,
         },
     );
     crate::test_support::execute_quiet_run(&mut session);
@@ -90,6 +92,7 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
         ServerMessage::CommandRejected(_)
     ));
     assert_eq!(session.export_json().unwrap(), before);
+    crate::test_support::take_command(&mut session, ShipId(1));
     let revision = session.state.revision;
     apply(
         &mut session,

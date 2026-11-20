@@ -3,7 +3,20 @@ use super::{LOCAL_PLAYER, Session};
 use game_core::{BodyId, LocalPosition, SystemId, movement::MoveTarget, travel::ShipId};
 use game_protocol::{ClientCommand, ServerMessage};
 
+/// Makes `ship`'s fleet the flagship (only the flagship takes direct orders).
+pub(super) fn take_command(session: &mut Session, ship: ShipId) {
+    let fleet = session.state.fleet_for_ship(ship).unwrap().id;
+    if session.state.flagship(LOCAL_PLAYER) != Some(fleet) {
+        let response = session.handle_offline(ClientCommand::SetFlagship {
+            fleet,
+            expected_revision: session.state.revision,
+        });
+        assert!(matches!(response, ServerMessage::SessionSnapshot { .. }));
+    }
+}
+
 pub(super) fn move_fleet(session: &mut Session, ship: ShipId, target: MoveTarget) {
+    take_command(session, ship);
     let response = session.handle_offline(ClientCommand::Move {
         ship,
         target,

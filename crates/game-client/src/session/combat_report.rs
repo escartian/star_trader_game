@@ -41,7 +41,10 @@ impl LocalSession {
         };
         if self.combat_report.seen != Some(report.encounter) {
             self.combat_report.seen = Some(report.encounter);
-            self.combat_report.open = true;
+            // Secondary fleets' fights resolve on their own: their reports go
+            // to the log (and stay one tap away) instead of interrupting.
+            self.combat_report.open =
+                self.state.flagship(game_server::LOCAL_PLAYER) == Some(report.fleet);
         }
         let mut open = self.combat_report.open;
         crate::theme::metal::window(ctx, "Combat report", &mut open, 560.0, |ui| {

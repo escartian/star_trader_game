@@ -29,6 +29,7 @@ impl Map {
             "battle" => self.session.capture_battle()?,
             "battle-close" => self.session.capture_battle_close()?,
             "victory" => self.session.capture_victory(),
+            "roster" => self.sheet = crate::session::SheetTab::Fleets,
             "haven" => {
                 let id = self.session.capture_haven()?;
                 let system = self

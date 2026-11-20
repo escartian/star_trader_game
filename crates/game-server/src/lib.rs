@@ -1,4 +1,5 @@
 //! Authoritative rules shared by offline hosting and future remote transports.
+mod automation;
 mod campaign;
 mod commerce;
 mod fleets;
@@ -139,7 +140,9 @@ impl Session {
             | ClientCommand::CancelTradeRoute { .. }
             | ClientCommand::BattleAction { .. }
             | ClientCommand::Land { .. }
-            | ClientCommand::LiftOff { .. }) => self.navigation_command(player, command),
+            | ClientCommand::LiftOff { .. }
+            | ClientCommand::SetFlagship { .. }
+            | ClientCommand::SetPatrol { .. }) => self.navigation_command(player, command),
             command @ (ClientCommand::BuyShip { .. }
             | ClientCommand::SellShip { .. }
             | ClientCommand::RenameFleet { .. }
@@ -236,6 +239,8 @@ mod campaign_tests;
 mod combat_tests;
 #[cfg(test)]
 mod encounter_tests;
+#[cfg(test)]
+mod flagship_tests;
 #[cfg(test)]
 mod landing_tests;
 #[cfg(test)]

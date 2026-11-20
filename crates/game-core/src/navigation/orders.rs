@@ -1,4 +1,4 @@
-use super::{NavigationError, NavigationOrder};
+use super::{NavigationError, NavigationEvent, NavigationOrder};
 use crate::{
     StarSystem,
     fleet::{FleetError, FleetId, FleetMovementError},
@@ -7,7 +7,55 @@ use crate::{
 };
 
 impl TravelState {
+    /// The fleet `player` commands directly: the chosen flagship while it
+    /// exists, otherwise the first fleet they own.
+    pub fn flagship(&self, player: PlayerId) -> Option<FleetId> {
+        let owned = |id: FleetId| {
+            self.fleets
+                .iter()
+                .any(|fleet| fleet.id == id && fleet.owner == player)
+        };
+        self.navigation
+            .flagship
+            .filter(|id| owned(*id))
+            .or_else(|| {
+                self.fleets
+                    .iter()
+                    .find(|fleet| fleet.owner == player)
+                    .map(|fleet| fleet.id)
+            })
+    }
+
+    /// Takes direct command of `fleet`. Its patrol ends (the flagship takes
+    /// direct orders); the previous flagship finishes any course under way and
+    /// then waits.
+    pub fn set_flagship(
+        &mut self,
+        player: PlayerId,
+        fleet: FleetId,
+    ) -> Result<NavigationEvent, FleetMovementError> {
+        let record = self
+            .fleets
+            .iter()
+            .find(|record| record.id == fleet)
+            .ok_or(FleetError::UnknownFleet)?;
+        if record.owner != player {
+            return Err(FleetError::NotOwner.into());
+        }
+        self.end_patrol(fleet);
+        self.navigation.flagship = Some(fleet);
+        self.revision = self
+            .revision
+            .checked_add(1)
+            .ok_or(crate::travel::TravelError::TimeOverflow)?;
+        Ok(NavigationEvent::FlagshipChanged(fleet))
+    }
+
+    /// The flagship needing the player, if any: a pending contact, or no course
+    /// and no Wait. Secondary fleets never need the player: their contacts are
+    /// settled automatically and an idle one simply waits.
     pub fn navigation_attention(&self, player: PlayerId) -> Option<FleetId> {
+        let flagship = self.flagship(player)?;
         if let Some(encounter) = self.navigation.encounters.iter().find(|encounter| {
             self.fleets
                 .iter()
@@ -17,7 +65,7 @@ impl TravelState {
         }
         self.fleets
             .iter()
-            .filter(|fleet| fleet.owner == player)
+            .filter(|fleet| fleet.id == flagship)
             .find(|fleet| {
                 self.navigation.order(fleet.id).is_none()
                     && !self.navigation.holds.contains(&fleet.id)
@@ -139,6 +187,12 @@ impl TravelState {
         let exists = |id: FleetId| fleets.iter().any(|fleet| fleet.id == id);
         self.navigation.holds.retain(|id| exists(*id));
         self.navigation.routes.retain(|route| exists(route.fleet));
+        self.navigation
+            .patrols
+            .retain(|patrol| exists(patrol.fleet));
+        if self.navigation.flagship.is_some_and(|id| !exists(id)) {
+            self.navigation.flagship = None;
+        }
         for band in &mut self.navigation.bands {
             if band.hunting.is_some_and(|fleet| !exists(fleet)) {
                 band.hunting = None;

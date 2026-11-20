@@ -212,7 +212,7 @@ fn selling_the_selected_ship_keeps_selection_and_preferences_valid() {
 }
 
 #[test]
-fn executing_a_run_selects_and_highlights_a_fleet_without_orders_first() {
+fn executing_a_run_selects_the_flagship_when_it_has_no_orders() {
     use game_core::fleet::{FleetId, ShipKind};
     let mut host = LocalSession::new(game_server::Session::default());
     host.command(ClientCommand::BuyShip {
@@ -225,30 +225,23 @@ fn executing_a_run_selects_and_highlights_a_fleet_without_orders_first() {
         ships: vec![ShipId(2)],
         expected_revision: 1,
     });
-    host.select_ship(ShipId(1));
-    host.command(ClientCommand::Move {
-        ship: ShipId(1),
-        target: MoveTarget::Body {
-            system: SystemId(1),
-            body: BodyId(1),
-        },
-        expected_revision: 2,
-    });
+    // Viewing the secondary fleet; the flagship (Fleet 1) has no orders.
+    host.select_ship(ShipId(2));
     let before = host.state.clone();
     host.request_execute_run();
     assert_eq!(host.state, before);
-    assert_eq!(host.selected_ship().id, ShipId(2));
+    assert_eq!(host.selected_ship().id, ShipId(1));
     assert!(host.take_focus_request());
     assert!(host.navigation.open);
     assert!(host.notice.contains("Wait order"));
+    // Once the flagship waits, the run goes ahead; Fleet 2 never had to.
     host.command(ClientCommand::HoldFleet {
-        fleet: FleetId(2),
+        fleet: FleetId(1),
         expected_revision: host.state.revision,
     });
     host.request_execute_run();
     assert_eq!(host.state.navigation.run, 1);
     assert_eq!(host.state.tick, 4);
-    assert_eq!(host.selected_ship().location, Location::Docked(SystemId(1)));
 }
 
 #[test]

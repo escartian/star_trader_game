@@ -10,6 +10,7 @@ pub mod movement;
 pub mod navigation;
 pub mod npc;
 pub mod orbits;
+pub mod patrols;
 pub mod planet;
 pub mod routes;
 pub mod travel;

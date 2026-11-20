@@ -59,6 +59,11 @@ pub(super) fn event_label(event: NavigationEvent) -> String {
             format!("Fleet {} route · {reason}", fleet.0)
         }
         NavigationEvent::RouteEnded { fleet, reason } => format!("Fleet {}: {reason}", fleet.0),
+        NavigationEvent::PatrolNote { fleet, note } => format!("Fleet {} patrol · {note}", fleet.0),
+        NavigationEvent::FlagshipChanged(fleet) => format!(
+            "Fleet {} is now your flagship. Your other fleets follow their standing orders.",
+            fleet.0
+        ),
     }
 }
 

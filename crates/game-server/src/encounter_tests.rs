@@ -38,7 +38,10 @@ fn encounter_rolls_and_choices_survive_reload_without_duplicate_rewards() {
     run(&mut session);
     run(&mut restored);
     assert_eq!(restored.state, session.state);
-    assert_eq!(session.state.navigation.encounters.len(), 2);
+    // Fleet 1 is now secondary: its contact was settled automatically, and
+    // only the flagship's waits for the player.
+    assert_eq!(session.state.navigation.encounters.len(), 1);
+    assert_eq!(session.state.navigation.encounters[0].fleet, FleetId(2));
     assert!(
         session
             .state

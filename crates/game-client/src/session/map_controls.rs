@@ -63,12 +63,19 @@ impl LocalSession {
         self.select_ship(ship);
         self.map_target = None;
     }
-    /// Picking a destination plots the selected fleet's course at once (it
-    /// replaces any earlier course; nothing moves until Advance). The target
-    /// stays selected so its card can show cost, a trade route, or why the
-    /// course was refused.
+    /// Picking a destination plots the flagship's course at once (it replaces
+    /// any earlier course; nothing moves until Advance). With a secondary fleet
+    /// selected it only selects the target, whose card can then offer that
+    /// fleet a trade route; secondary fleets take no direct courses.
     pub fn select_destination(&mut self, system: SystemId, body: Option<BodyId>) {
         self.map_target = Some(MapTarget::Destination(system, body));
+        let commanding = self
+            .state
+            .fleet_for_ship(self.active_ship)
+            .is_ok_and(|fleet| self.is_flagship(fleet.id));
+        if !commanding {
+            return;
+        }
         self.command(ClientCommand::PlotDestination {
             ship: self.active_ship,
             system,
@@ -78,6 +85,13 @@ impl LocalSession {
     }
     pub fn select_departure(&mut self, system: SystemId) {
         self.map_target = Some(MapTarget::Departure(system));
+        let commanding = self
+            .state
+            .fleet_for_ship(self.active_ship)
+            .is_ok_and(|fleet| self.is_flagship(fleet.id));
+        if !commanding {
+            return;
+        }
         self.command(ClientCommand::Move {
             ship: self.active_ship,
             target: MoveTarget::LeaveSystem(system),
@@ -95,7 +109,7 @@ impl LocalSession {
                 ui,
                 Icon::Help,
                 CYAN,
-                "1. Select a fleet\n2. Tap a destination on the map to plot its course\n3. Advance",
+                "Your flagship takes direct orders: tap a destination on the map to plot its course, then Advance. Other fleets follow standing orders (Wait, trade route or patrol); use Take command to switch.",
             );
         });
         ui.separator();
@@ -113,6 +127,10 @@ impl LocalSession {
                 .any(|contact| contact.fleet == fleet.id)
             {
                 (Icon::Contact, "CONTACT")
+            } else if self.state.patrol(fleet.id).is_some()
+                && self.state.navigation.order(fleet.id).is_none()
+            {
+                (Icon::Overview, "PATROL")
             } else if let Some(route) = self.state.trade_route(fleet.id) {
                 if route.paused {
                     (Icon::Warning, "ROUTE PAUSED")
@@ -131,6 +149,11 @@ impl LocalSession {
                 } else {
                     (Icon::Hold, "WAITING")
                 }
+            } else if self.state.patrol(fleet.id).is_some() {
+                (Icon::Overview, "PATROL")
+            } else if !self.is_flagship(fleet.id) {
+                // Secondary fleets never need orders: idle means waiting.
+                (Icon::Hold, "WAITING")
             } else {
                 (Icon::Warning, "NEEDS ORDERS")
             };
@@ -237,7 +260,10 @@ impl LocalSession {
                 if let Ok(ship) = self.state.ship(ship) {
                     location_stat(ui, &ship.location, systems);
                 }
-                self.landing_controls(ui, fleet.id, systems);
+                self.standing_orders(ui, &fleet, systems);
+                if self.is_flagship(fleet.id) {
+                    self.landing_controls(ui, fleet.id, systems);
+                }
                 self.route_line(ui, fleet.id, systems);
             });
         }

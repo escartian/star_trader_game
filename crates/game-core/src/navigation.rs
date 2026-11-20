@@ -115,6 +115,13 @@ pub struct NavigationState {
     /// The Raider Haven; `None` only in a one-system galaxy.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub haven: Option<RaiderHaven>,
+    /// The fleet the player commands directly; `None` means the first owned
+    /// fleet (see `TravelState::flagship`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flagship: Option<FleetId>,
+    /// Secondary fleets guarding a system (see `patrols`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub patrols: Vec<crate::patrols::Patrol>,
 }
 
 fn first_band_id() -> u64 {
@@ -138,6 +145,8 @@ impl Default for NavigationState {
             next_band_id: 1,
             band_rng: 0,
             haven: None,
+            flagship: None,
+            patrols: Vec::new(),
         }
     }
 }
@@ -204,6 +213,13 @@ pub enum NavigationEvent {
         fleet: FleetId,
         reason: String,
     },
+    /// A patrol was ordered, or could not set off this run.
+    PatrolNote {
+        fleet: FleetId,
+        note: String,
+    },
+    /// The player took direct command of a fleet.
+    FlagshipChanged(FleetId),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -238,6 +254,10 @@ pub enum NavigationError {
     NotAtHaven,
     /// The campaign is lost or out of time; only saves and loads remain.
     CampaignOver,
+    /// Direct orders go to the flagship; other fleets run standing orders.
+    NotFlagship,
+    /// The flagship takes direct orders and cannot run a patrol.
+    FlagshipCommanded,
     /// A run limit must lie beyond the current run.
     InvalidRunLimit,
     Battle(crate::combat::tactical::BattleError),
@@ -288,6 +308,13 @@ impl std::fmt::Display for NavigationError {
             Self::NotLanded => f.write_str("This fleet is not on a surface."),
             Self::BattleUnderway => f.write_str("Finish the battle in progress first."),
             Self::NoHaven => f.write_str("There is no Raider Haven left to assault."),
+            Self::NotFlagship => f.write_str(
+                "Only your flagship takes direct orders. Give this fleet a patrol, a trade \
+                 route or Wait, or make it the flagship.",
+            ),
+            Self::FlagshipCommanded => f.write_str(
+                "The flagship takes your direct orders. Make another fleet the flagship first.",
+            ),
             Self::CampaignOver => {
                 f.write_str("The campaign is over. Load a save or start a new game.")
             }

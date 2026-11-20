@@ -145,6 +145,7 @@ impl TravelState {
         }
         self.validate_bands(systems)?;
         self.validate_haven(systems)?;
+        self.validate_patrols(systems)?;
         if let Some(report) = &self.navigation.last_combat {
             report.validate()?;
             if report.encounter >= self.navigation.next_encounter_id

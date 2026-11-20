@@ -24,6 +24,7 @@ pub(crate) use setup::{setup_controls, setup_summary};
 mod settings;
 mod setup;
 mod shell;
+mod standing_orders;
 pub use shell::SheetTab;
 mod shipyard;
 use game_core::economy::Economy;
@@ -229,6 +230,18 @@ impl LocalSession {
         if self.log.len() > 50 {
             self.log.pop_front();
         }
+    }
+
+    /// Sends a command as the UI would (tests outside this module).
+    #[cfg(test)]
+    pub fn test_command(&mut self, command: ClientCommand) {
+        self.command(command);
+    }
+
+    /// The authoritative state revision (tests outside this module).
+    #[cfg(test)]
+    pub fn revision(&self) -> u64 {
+        self.state.revision
     }
 
     fn command(&mut self, command: ClientCommand) {

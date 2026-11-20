@@ -56,11 +56,13 @@ impl LocalSession {
         ui.label(RichText::new(format!("{} cr", self.economy.credits)).color(AMBER));
     }
 
-    /// Fleets needing the player, contacts first.
+    /// Fleets needing the player, contacts first. Only the flagship can need
+    /// orders: secondary fleets follow standing orders.
     pub fn attention_fleets(&self) -> Vec<FleetId> {
         let mut fleets = self.contact_fleets();
+        let flagship = self.state.flagship(LOCAL_PLAYER);
         for fleet in &self.state.fleets {
-            let idle = fleet.owner == LOCAL_PLAYER
+            let idle = Some(fleet.id) == flagship
                 && self.state.navigation.order(fleet.id).is_none()
                 && !self.state.navigation.holds.contains(&fleet.id)
                 && self.state.trade_route(fleet.id).is_none();

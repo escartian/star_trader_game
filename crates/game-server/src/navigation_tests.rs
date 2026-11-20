@@ -15,7 +15,10 @@ pub(super) fn succeed(session: &mut Session, command: ClientCommand) {
         "{response:?}"
     );
 }
+/// Plots a course for `ship`'s fleet, first making it the flagship (only the
+/// flagship takes direct orders).
 pub(super) fn plot(session: &mut Session, ship: ShipId, target: MoveTarget) {
+    command_fleet_of(session, ship);
     succeed(
         session,
         ClientCommand::Move {
@@ -25,6 +28,20 @@ pub(super) fn plot(session: &mut Session, ship: ShipId, target: MoveTarget) {
         },
     );
 }
+/// Makes `ship`'s fleet the flagship, if it is not already.
+pub(super) fn command_fleet_of(session: &mut Session, ship: ShipId) {
+    let fleet = session.state.fleet_for_ship(ship).unwrap().id;
+    if session.state.flagship(crate::LOCAL_PLAYER) != Some(fleet) {
+        succeed(
+            session,
+            ClientCommand::SetFlagship {
+                fleet,
+                expected_revision: session.state.revision,
+            },
+        );
+    }
+}
+
 pub(super) fn run(session: &mut Session) {
     succeed(
         session,
@@ -124,42 +141,57 @@ fn wait(session: &mut Session, fleet: FleetId) {
 }
 
 #[test]
-fn unassigned_fleets_need_an_explicit_wait_that_lasts_until_a_new_course() {
+fn only_the_flagship_needs_orders_and_secondary_fleets_take_none_directly() {
     let mut session = two_fleets();
-    plot(&mut session, ShipId(1), body(1));
+    assert_eq!(session.state.flagship(LOCAL_PLAYER), Some(FleetId(1)));
+    // A secondary fleet takes no direct orders, and nothing changes.
     let before = session.snapshot(Vec::new());
-    assert_eq!(
-        session.handle(ClientCommand::ExecuteNavigationRun {
-            expected_revision: session.state.revision
-        }),
-        ServerMessage::CommandRejected(NavigationError::NeedsOrders(FleetId(2)).into())
-    );
-    assert_eq!(session.snapshot(Vec::new()), before);
-    wait(&mut session, FleetId(2));
-    run(&mut session);
-    assert_eq!(
-        session.state.ships[1].location,
-        Location::Docked(SystemId(1))
-    );
-    assert_eq!(session.state.ships[1].fuel, 50);
-    // Fleet 1 arrived and has no orders, so it needs attention; Fleet 2's Wait stands.
-    assert_eq!(session.state.navigation.holds, [FleetId(2)]);
+    for command in [
+        ClientCommand::Move {
+            ship: ShipId(2),
+            target: body(1),
+            expected_revision: session.state.revision,
+        },
+        ClientCommand::Land {
+            fleet: FleetId(2),
+            expected_revision: session.state.revision,
+        },
+    ] {
+        assert_eq!(
+            session.handle(command),
+            ServerMessage::CommandRejected(NavigationError::NotFlagship.into())
+        );
+        assert_eq!(session.snapshot(Vec::new()), before);
+    }
+    // The flagship needs a course or Wait; idle Fleet 2 just waits.
     assert_eq!(
         session.state.navigation_attention(LOCAL_PLAYER),
         Some(FleetId(1))
     );
-    wait(&mut session, FleetId(1));
+    plot(&mut session, ShipId(1), body(1));
+    assert_eq!(session.state.navigation_attention(LOCAL_PLAYER), None);
     run(&mut session);
-    run(&mut session);
-    assert_eq!(session.state.navigation.run, 3);
-    plot(&mut session, ShipId(2), body(4));
-    assert_eq!(session.state.navigation.holds, [FleetId(1)]);
-    run(&mut session);
-    // After arriving, Fleet 2 needs a deliberate new order rather than waiting by default.
+    assert_eq!(
+        session.state.ships[1].location,
+        Location::Docked(SystemId(1)),
+        "the secondary fleet stayed put"
+    );
+    // Taking command of Fleet 2: it now needs orders; Fleet 1 never asks again.
+    let revision = session.state.revision;
+    succeed(
+        &mut session,
+        ClientCommand::SetFlagship {
+            fleet: FleetId(2),
+            expected_revision: revision,
+        },
+    );
     assert_eq!(
         session.state.navigation_attention(LOCAL_PLAYER),
         Some(FleetId(2))
     );
+    wait(&mut session, FleetId(2));
+    run(&mut session);
+    assert_eq!(session.state.navigation.run, 2);
 }
 
 #[test]
@@ -185,12 +217,10 @@ fn fleet_changes_keep_waits_only_for_fleets_that_still_exist() {
             expected_revision: revision,
         },
     );
-    // The split-off fleet starts without orders; the others keep their Waits.
+    // The split-off fleet is secondary: it waits without asking; the others
+    // keep their Waits.
     assert_eq!(session.state.navigation.holds, [FleetId(1), FleetId(2)]);
-    assert_eq!(
-        session.state.navigation_attention(LOCAL_PLAYER),
-        Some(FleetId(3))
-    );
+    assert_eq!(session.state.navigation_attention(LOCAL_PLAYER), None);
     wait(&mut session, FleetId(3));
     let revision = session.state.revision;
     succeed(

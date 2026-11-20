@@ -44,6 +44,12 @@ impl Session {
             }
             | ClientCommand::LiftOff {
                 expected_revision, ..
+            }
+            | ClientCommand::SetFlagship {
+                expected_revision, ..
+            }
+            | ClientCommand::SetPatrol {
+                expected_revision, ..
             } => *expected_revision,
             _ => unreachable!("only navigation commands reach this handler"),
         };
@@ -51,7 +57,7 @@ impl Session {
             return Err(TravelError::StaleQuote.into());
         }
         let mut candidate = self.clone();
-        let reported = candidate
+        let mut paid = candidate
             .state
             .navigation
             .last_combat
@@ -63,6 +69,7 @@ impl Session {
             ClientCommand::PlotDestination {
                 ship, system, body, ..
             } => {
+                candidate.require_flagship(player, candidate.fleet_holding(ship)?)?;
                 let fleet = candidate.state.plot_destination(
                     player,
                     ship,
@@ -74,6 +81,7 @@ impl Session {
                 vec![NavigationEvent::CoursePlotted(fleet)]
             }
             ClientCommand::Move { ship, target, .. } => {
+                candidate.require_flagship(player, candidate.fleet_holding(ship)?)?;
                 let fleet =
                     candidate
                         .state
@@ -87,6 +95,7 @@ impl Session {
                 vec![NavigationEvent::Holding(fleet)]
             }
             ClientCommand::CancelCourse { fleet, .. } => {
+                candidate.require_flagship(player, fleet)?;
                 candidate.state.cancel_course(player, fleet)?;
                 ordered = Some(fleet);
                 vec![NavigationEvent::CourseCancelled(fleet)]
@@ -117,15 +126,27 @@ impl Session {
                 ]
             }
             ClientCommand::Land { fleet, .. } => {
+                candidate.require_flagship(player, fleet)?;
                 ordered = Some(fleet);
                 vec![candidate.state.land(player, fleet, &candidate.systems)?]
             }
             ClientCommand::LiftOff { fleet, .. } => {
+                candidate.require_flagship(player, fleet)?;
                 ordered = Some(fleet);
                 vec![
                     candidate
                         .state
                         .lift_off(player, fleet, &candidate.systems)?,
+                ]
+            }
+            ClientCommand::SetFlagship { fleet, .. } => {
+                vec![candidate.state.set_flagship(player, fleet)?]
+            }
+            ClientCommand::SetPatrol { fleet, system, .. } => {
+                vec![
+                    candidate
+                        .state
+                        .start_patrol(player, fleet, system, &candidate.systems)?,
                 ]
             }
             ClientCommand::CancelTradeRoute { fleet, .. } => {
@@ -151,37 +172,37 @@ impl Session {
                     player,
                     &candidate.systems,
                 )?);
+                // Patrol fleets set off for their next body.
+                events.extend(game_core::patrols::service_patrols(
+                    &mut candidate.state,
+                    &mut candidate.economy,
+                    player,
+                    &candidate.systems,
+                )?);
+                // Secondary fleets settle their own contacts.
+                candidate.pay_new_bounty(&mut paid)?;
+                events.extend(candidate.settle_secondary_contacts(player, &mut paid)?);
                 events
             }
             _ => unreachable!(),
         };
-        if let Some(fleet) = ordered
-            && candidate.state.end_trade_route(fleet)
-        {
-            events.push(NavigationEvent::RouteEnded {
-                fleet,
-                reason: "Route ended by new orders.".into(),
-            });
+        if let Some(fleet) = ordered {
+            if candidate.state.end_trade_route(fleet) {
+                events.push(NavigationEvent::RouteEnded {
+                    fleet,
+                    reason: "Route ended by new orders.".into(),
+                });
+            }
+            if candidate.state.end_patrol(fleet) {
+                events.push(NavigationEvent::PatrolNote {
+                    fleet,
+                    note: "Patrol ended by new orders.".into(),
+                });
+            }
         }
         // A battle that ended with this command pays its raider bounty, once,
         // at today's price level (the report records what was paid).
-        let level = candidate.economy.price_level_ppm;
-        if let Some(report) = candidate.state.navigation.last_combat.as_mut()
-            && Some(report.encounter) != reported
-        {
-            report.bounty = game_core::economy::Credits(
-                (u128::from(report.bounty.0) * u128::from(level)
-                    / u128::from(game_core::economy::PRICE_LEVEL_UNIT))
-                .min(u128::from(u64::MAX)) as u64,
-            );
-            candidate.economy.credits = candidate
-                .economy
-                .credits
-                .0
-                .checked_add(report.bounty.0)
-                .map(game_core::economy::Credits)
-                .ok_or(TravelError::TimeOverflow)?;
-        }
+        candidate.pay_new_bounty(&mut paid)?;
         *self = candidate;
         Ok(self.snapshot(events.into_iter().map(SessionEvent::Navigation).collect()))
     }

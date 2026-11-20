@@ -157,6 +157,7 @@ impl LocalSession {
         let message = match stop {
             Stop::Contact(fleet) => {
                 self.focus_fleet(fleet);
+                self.request_sheet_for(fleet);
                 let kind = self
                     .state
                     .navigation
@@ -171,6 +172,7 @@ impl LocalSession {
             }
             Stop::NeedsOrders(fleet) => {
                 self.focus_fleet(fleet);
+                self.request_sheet_for(fleet);
                 let paused = self
                     .state
                     .trade_route(fleet)
@@ -185,6 +187,7 @@ impl LocalSession {
             Stop::NothingUnderway => format!("Advanced {advanced} · no fleet is underway."),
             Stop::HoldsFull(fleet) => {
                 self.focus_fleet(fleet);
+                self.request_sheet_for(fleet);
                 format!(
                     "Advanced {advanced} · {}: holds full of ore. Lift off to sell it.",
                     self.fleet_name(fleet)

@@ -2,11 +2,16 @@
 use crate::map::Map;
 use std::{error::Error, path::Path};
 
-const WIDTH: u32 = 1024;
-const HEIGHT: u32 = 768;
+/// Default capture size in pixels (one pixel per point).
+pub const DEFAULT_SIZE: (u32, u32) = (1024, 768);
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
-pub async fn save(map: &mut Map, path: &Path) -> Result<(), Box<dyn Error>> {
+/// Renders the UI at `size` (pixels) and saves it as a PNG.
+pub async fn save(map: &mut Map, path: &Path, size: (u32, u32)) -> Result<(), Box<dyn Error>> {
+    let (width, height) = size;
+    // Texture rows copy in multiples of 256 bytes; pad, then drop the padding.
+    let row = width * 4;
+    let padded_row = row.div_ceil(256) * 256;
     let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions::default())
@@ -25,7 +30,7 @@ pub async fn save(map: &mut Map, path: &Path) -> Result<(), Box<dyn Error>> {
             egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(
                     egui::Pos2::ZERO,
-                    egui::vec2(WIDTH as f32, HEIGHT as f32),
+                    egui::vec2(width as f32, height as f32),
                 )),
                 time: Some(f64::from(frame) / 60.0),
                 ..Default::default()
@@ -35,7 +40,7 @@ pub async fn save(map: &mut Map, path: &Path) -> Result<(), Box<dyn Error>> {
     }
     let jobs = context.tessellate(output.shapes, output.pixels_per_point);
     let screen = egui_wgpu::ScreenDescriptor {
-        size_in_pixels: [WIDTH, HEIGHT],
+        size_in_pixels: [width, height],
         pixels_per_point: output.pixels_per_point,
     };
     let mut renderer = egui_wgpu::Renderer::new(&device, FORMAT, None, 1, false);
@@ -45,8 +50,8 @@ pub async fn save(map: &mut Map, path: &Path) -> Result<(), Box<dyn Error>> {
     let texture = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("UI capture"),
         size: wgpu::Extent3d {
-            width: WIDTH,
-            height: HEIGHT,
+            width,
+            height,
             depth_or_array_layers: 1,
         },
         mip_level_count: 1,
@@ -58,7 +63,7 @@ pub async fn save(map: &mut Map, path: &Path) -> Result<(), Box<dyn Error>> {
     });
     let readback = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Capture readback"),
-        size: u64::from(WIDTH * HEIGHT * 4),
+        size: u64::from(padded_row * height),
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
@@ -80,7 +85,6 @@ pub async fn save(map: &mut Map, path: &Path) -> Result<(), Box<dyn Error>> {
         });
         renderer.render(&mut pass.forget_lifetime(), &jobs, &screen);
     }
-    // WIDTH * 4 is a multiple of wgpu's 256-byte row alignment.
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
             texture: &texture,
@@ -92,13 +96,13 @@ pub async fn save(map: &mut Map, path: &Path) -> Result<(), Box<dyn Error>> {
             buffer: &readback,
             layout: wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(WIDTH * 4),
-                rows_per_image: Some(HEIGHT),
+                bytes_per_row: Some(padded_row),
+                rows_per_image: Some(height),
             },
         },
         wgpu::Extent3d {
-            width: WIDTH,
-            height: HEIGHT,
+            width,
+            height,
             depth_or_array_layers: 1,
         },
     );
@@ -111,8 +115,13 @@ pub async fn save(map: &mut Map, path: &Path) -> Result<(), Box<dyn Error>> {
     let _ = device.poll(wgpu::Maintain::Wait);
     receive.recv()??;
     {
-        let pixels = slice.get_mapped_range();
-        image::save_buffer(path, &pixels, WIDTH, HEIGHT, image::ColorType::Rgba8)?;
+        let mapped = slice.get_mapped_range();
+        let pixels: Vec<u8> = mapped
+            .chunks(padded_row as usize)
+            .flat_map(|line| &line[..row as usize])
+            .copied()
+            .collect();
+        image::save_buffer(path, &pixels, width, height, image::ColorType::Rgba8)?;
     }
     readback.unmap();
     println!(

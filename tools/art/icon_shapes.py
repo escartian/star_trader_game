@@ -72,20 +72,6 @@ DROP = [(0, -8), (4, -1.5), (5, 2), (4, 5), (1, 7), (-1, 7), (-4, 5), (-5, 2), (
 TRAY = [(-7, 2), (-7, 7), (7, 7), (7, 2)]
 
 
-def cube(pen, face):
-    front = [(-7, -2), (2, -2), (2, 7), (-7, 7)]
-    top = [(-7, -2), (-2, -7), (7, -7), (2, -2)]
-    side = [(2, -2), (7, -7), (7, 2), (2, 7)]
-    faces = [top, front, side]
-    pen.fill(faces[face], 0.43)
-    for shape in faces:
-        pen.closed(shape)
-
-
-
-
-
-
 def i_fleets(p):
     for x in (-4.5, 4.5):
         p.sub((x, 0), 0.7).closed(HULL)
@@ -346,11 +332,6 @@ def i_help(p):
     p.dot((0, 4.8), 1.1)
 
 
-def i_zoom(p):
-    p.circle((-2, -2), 5.5)
-    p.line((2, 2), (7.5, 7.5))
-
-
 def i_danger(p):
     p.closed([(0, -8), (7, -5), (6, 2), (0, 8), (-6, 2), (-7, -5)])
 
@@ -399,11 +380,10 @@ ICONS = {
     "confirm": lambda p: p.path([(-7, 0), (-2, 5), (7, -6)]),
     "plot": i_plot, "split": i_split, "merge": i_merge, "rename": i_rename,
     "transfer": i_transfer, "log": i_log, "reset": i_reset, "pan": i_pan,
-    "star": i_star, "view-top": lambda p: cube(p, 0),
-    "view-front": lambda p: cube(p, 1), "view-side": lambda p: cube(p, 2),
+    "star": i_star,
     "warning": i_warning, "info": i_info, "distance": i_distance, "legs": i_legs,
     "bypass": i_bypass, "contact": i_contact, "enter": i_enter, "seed": i_seed,
-    "help": i_help, "zoom": i_zoom, "danger": i_danger,
+    "help": i_help, "danger": i_danger,
     **WORLD_ICONS,
 }
 

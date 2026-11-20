@@ -209,20 +209,7 @@ pub const SOURCES: &[(&str, &str)] = &[
         include_str!("../../../../../assets/icons/upgrade.svg"),
     ),
     (
-        "view-front",
-        include_str!("../../../../../assets/icons/view-front.svg"),
-    ),
-    (
-        "view-side",
-        include_str!("../../../../../assets/icons/view-side.svg"),
-    ),
-    (
-        "view-top",
-        include_str!("../../../../../assets/icons/view-top.svg"),
-    ),
-    (
         "warning",
         include_str!("../../../../../assets/icons/warning.svg"),
     ),
-    ("zoom", include_str!("../../../../../assets/icons/zoom.svg")),
 ];

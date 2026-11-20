@@ -19,6 +19,8 @@ mod routes;
 mod runs;
 mod saves;
 mod settings;
+mod shell;
+pub use shell::SheetTab;
 mod shipyard;
 use game_core::economy::Economy;
 use game_core::{
@@ -42,6 +44,8 @@ pub(crate) fn light_years(position: SpacePosition) -> glam::DVec3 {
 pub struct LocalSession {
     map_target: Option<map_controls::MapTarget>,
     focus_requested: bool,
+    /// Sheet page the map should switch to (e.g. after Advance stops).
+    sheet_request: Option<SheetTab>,
     /// Present while "Advance to next event" is repeating navigation runs.
     advance: Option<advance::Advance>,
     /// The latest run's display glide, until it has played out.
@@ -78,6 +82,7 @@ impl LocalSession {
         Self {
             map_target: None,
             focus_requested: false,
+            sheet_request: None,
             advance: None,
             motion: None,
             clock: 0.0,

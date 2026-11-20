@@ -127,30 +127,12 @@ pub fn frame<R>(ui: &mut Ui, alpha: u8, add: impl FnOnce(&mut Ui) -> R) -> R {
     inner.inner
 }
 
-/// A floating plate anchored to a screen edge or corner, above the map.
-pub fn card<R>(
-    ctx: &egui::Context,
-    id: &str,
-    anchor: egui::Align2,
-    offset: Vec2,
-    add: impl FnOnce(&mut Ui) -> R,
-) -> R {
-    egui::Area::new(egui::Id::new(id))
-        .anchor(anchor, offset)
-        .constrain(true)
-        .show(ctx, |ui| {
-            // An Area's region is last frame's size, which would stop scroll areas
-            // from ever growing; offer the screen and let content shrink to fit.
-            let region = egui::Rect::from_min_size(ui.max_rect().min, ctx.screen_rect().size());
-            ui.scope_builder(egui::UiBuilder::new().max_rect(region), |ui| {
-                frame(ui, 236, add)
-            })
-            .inner
-        })
-        .inner
-}
+/// Below this screen width (points), panels open full screen like phone sheets.
+pub const FULL_SCREEN_BELOW: f32 = 700.0;
 
-/// Movable window on a metal plate with a display-font title and close glyph.
+/// A panel on a metal plate with a display-font title. On a wide screen it is a
+/// centred window with a close glyph; on a narrow (phone) screen it fills the
+/// whole screen with a Back button, like a full-screen sheet.
 pub fn window(
     ctx: &egui::Context,
     title: &str,
@@ -161,36 +143,61 @@ pub fn window(
     if !*open {
         return;
     }
+    let screen = ctx.screen_rect();
+    let full = screen.width() < FULL_SCREEN_BELOW;
+    // The plate adds 12 points of margin on each side.
+    let width = if full { screen.width() - 24.0 } else { width };
     let mut close = false;
-    egui::Window::new(title)
+    let window = egui::Window::new(title)
         .title_bar(false)
         .frame(egui::Frame::NONE)
-        .default_width(width)
-        .pivot(egui::Align2::CENTER_CENTER)
-        .default_pos(ctx.screen_rect().center())
-        .resizable(false)
-        .show(ctx, |ui| {
-            frame(ui, 255, |ui| {
-                ui.set_width(width);
-                ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new(title.to_uppercase())
-                            .font(super::fonts::display(ui.ctx(), 15.0))
-                            .color(super::GREEN),
-                    );
+        .resizable(false);
+    let window = if full {
+        window.fixed_pos(screen.min).fixed_size(screen.size())
+    } else {
+        window
+            .default_width(width)
+            .pivot(egui::Align2::CENTER_CENTER)
+            .default_pos(screen.center())
+    };
+    window.show(ctx, |ui| {
+        frame(ui, 255, |ui| {
+            ui.set_width(width);
+            ui.horizontal(|ui| {
+                if full {
+                    close = super::icons::button(ui, super::icons::Icon::Back, "Back").clicked();
+                }
+                ui.label(
+                    egui::RichText::new(title.to_uppercase())
+                        .font(super::fonts::display(ui.ctx(), 15.0))
+                        .color(super::GREEN),
+                );
+                if !full {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         close = super::icons::icon_button(ui, super::icons::Icon::Cancel, "Close")
                             .clicked();
                     });
-                });
-                ui.separator();
-                let height = ctx.screen_rect().height() * 0.7;
+                }
+            });
+            ui.separator();
+            if full {
+                // Fill the screen (nothing behind shows through); wide content
+                // such as the trade table scrolls sideways.
+                let height = screen.height() - 70.0;
+                ui.set_min_height(screen.height() - 20.0);
+                egui::ScrollArea::both()
+                    .max_height(height)
+                    .min_scrolled_height(height)
+                    .show(ui, add);
+            } else {
+                let height = screen.height() * 0.7;
                 egui::ScrollArea::vertical()
                     .max_height(height)
                     .min_scrolled_height(height)
                     .show(ui, add);
-            });
+            }
         });
+    });
     if close {
         *open = false;
     }

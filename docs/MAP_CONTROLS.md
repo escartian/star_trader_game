@@ -1,6 +1,6 @@
 # Map-first fleet command
 
-Select a fleet by clicking its map symbol or its card in **Fleet Command**. A
+Select a fleet by clicking its map chip or its card on the **Fleets** page. A
 symbol represents a fleet, with a ship illustration and member count. Selection
 alone never moves ships or advances time. The bottom ship selector still chooses
 which member's hold is used for trading/services.
@@ -70,21 +70,35 @@ that courses also route around; landed fleets show an amber pad on the body
 
 ## Command-console style and NPC traffic
 
-The map fills the window. Every control floats above it on a polished gunmetal
-card (a tone ramp with a soft diagonal sheen, chamfered corners and bevelled
-edges; static, no brushed lines):
+The layout is phone-first (see the [rework plan](PHONE_FIRST_REWORK.md)): the map
+takes the screen, framed by three panels.
 
-| Card | Position | Contents |
+| Part | Position | Contents |
 | --- | --- | --- |
-| Roster | top-left | fleets, status, destination, NPC traffic |
-| View toolbar | top-center | breadcrumb/Depart (system view), camera tools, zoom, guide (× hides it; Guide in the Save window restores it) |
-| Status | top-right | Fleets / Navigation / Market / Session buttons, ship, stats |
-| Run | bottom-left | Advance / Stop, single-run clock button, latest event, contact decision |
-| Selection | bottom-center | selected system or body, destination tiles, traits |
+| Status strip | top | Back (system view), place name, credits, run number, alert badge |
+| Action bar | bottom | latest event; **Fleets**, **ADVANCE** / **STOP** with the single-run clock, **Menu** |
+| Context sheet | above the action bar, or docked on the right when the window is wider than tall | the guide and any contact decision first, then one page |
+| Map buttons | map's top-right corner | overview or reset, focus fleet, pan tool |
 
-Market, Fleets, Navigation and Session open as centered, movable metal windows.
-The system overview framing reserves the card insets, so bodies are framed into
-the clear middle of the screen.
+The sheet's pages:
+
+- **Selection** (default): what was tapped: in a system, Depart, trade
+  shortcuts, destination tiles and the selected body; in the galaxy, the
+  selected system; then the destination card with **PLOT COURSE** or **TRADE
+  ROUTE**.
+- **Fleets:** the ship used for trading with its cargo and fuel, then every fleet
+  (status, Wait, Land / Lift off, route controls) and NPC traffic.
+- **Menu:** **Trade**, **Fleets & shipyard**, **Navigation** and **Session &
+  saves**.
+
+Tapping a body or system shows Selection; tapping a fleet chip shows Fleets.
+The amber alert badge counts fleets needing a decision or orders: tap it to
+select the next one, which also switches to the page that fleet needs. When
+Advance stops, the sheet does the same. Market, Fleets & shipyard, Navigation,
+Session and the combat report open as centred windows on a wide screen, and
+full screen with a **Back** button on a narrow one (below 700 points), scrolling
+sideways where a table is wider than the screen. The system overview frames
+the bodies into the whole map, clear of the corner buttons.
 
 **Resting states.** A fleet at a body is **docked** at the system's trade port,
 **in orbit** around a body, or **landed** on its surface.
@@ -97,9 +111,9 @@ the clear middle of the screen.
 | Flying | chip on its course with a heading tick | course / position |
 | Paused by a contact | amber ring | `Underway`; the decision appears under **Advance** |
 
-A **TRADE HERE** button in the selection card appears only when the authoritative
-economy allows that ship to trade where it is. Moons and asteroids have no market. The status card's panel
-buttons are labelled **Fleets**, **Nav**, **Trade** and **Save**.
+A **TRADE** shortcut on the Selection page appears only when the authoritative
+economy allows that ship to trade where it is. Moons and asteroids have no
+market.
 
 **Zoom:** the mouse wheel, two-finger trackpad scroll and trackpad pinch zoom
 the hovered map. The map is never inside a scrolling page, so a scroll gesture

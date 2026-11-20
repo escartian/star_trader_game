@@ -44,7 +44,7 @@ Blender is needed only for authoring/export, never to run the game.
 
 ## Interface icons
 
-`icons/*.svg` holds 66 original command, status, commodity and planet-trait
+`icons/*.svg` holds 67 original command, status, commodity and planet-trait
 icons. They are authored in Blender as 2D curves (`source/icons.blend`: one
 `icon:<name>` Empty per icon, parenting stroke/fill curves). The geometry comes
 from `tools/art/icon_shapes.py`. Rebuild the scene and export every SVG:

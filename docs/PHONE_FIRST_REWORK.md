@@ -214,8 +214,11 @@ Each phase ships on its own, keeps `./tools/check.sh` green and adds captures at
    tap, no tethers, heading ticks, labels by zoom or selection, quiet traffic
    dots, band lines only while hunting, the orbit ring only when selected. The
    list sheet for a stack arrives with phase 2.
-2. **Phone shell:** status strip, action bar, bottom sheet, attention queue,
-   full-screen sheets, responsive layout. Removes the floating cards.
+2. **Phone shell** (done): status strip, action bar, a context sheet with
+   Selection / Fleets / Menu pages (bottom on phones, docked right on wide
+   windows), an alert badge that walks fleets needing attention, Advance stops
+   that switch to the right page, full-screen panels below 700 points, and
+   `--capture-size` for phone captures. The floating cards are gone.
 3. **Flat play:** flat generation and saves, top-down map camera, controls removed.
 4. **Hex battles:** core rules first (hex coordinates, bands, high ground, AI and
    balance tests carried over), then the board view and touch controls.

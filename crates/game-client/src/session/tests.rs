@@ -144,7 +144,7 @@ fn dismissing_the_guide_hides_it_and_remembers_the_choice() {
     assert!(!host.saves.guide);
     assert!(!Preferences::load(&settings_path).unwrap().guide);
     assert!(
-        host.notice.contains("Guide in the Save window"),
+        host.notice.contains("Guide in Menu, Session & saves"),
         "{}",
         host.notice
     );

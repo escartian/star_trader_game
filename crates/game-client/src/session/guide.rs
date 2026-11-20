@@ -3,11 +3,13 @@ use crate::theme::icons::{self, Icon};
 use game_core::{SystemId, economy::Commodity, travel::Location};
 
 impl LocalSession {
-    /// Hides the guide card and remembers that choice; Save window's Guide restores it.
+    /// Hides the guide card and remembers that choice; Guide in Session & saves restores it.
     pub fn dismiss_guide(&mut self) {
         self.saves.guide = false;
         let message = match self.persist_preferences() {
-            Ok(()) => "Guide hidden. Turn it back on with Guide in the Save window.".to_string(),
+            Ok(()) => {
+                "Guide hidden. Turn it back on with Guide in Menu, Session & saves.".to_string()
+            }
             Err(error) => format!("Guide hidden, but the setting could not be saved: {error}"),
         };
         self.record(message);
@@ -37,17 +39,17 @@ impl LocalSession {
         } else if self.economy.current_market(ship).is_err() {
             "Pick a planet or trade port on the map and plot a course there. Plotting is free; Advance moves fleets and markets together."
         } else if self.economy.credits >= self.economy.rules.hold_upgrade_price {
-            "You can afford the hold upgrade. Open Trade and buy it to complete the first earnings goal."
+            "You can afford the hold upgrade. Open Trade (Menu) and buy it to complete the first earnings goal."
         } else if ship.fuel < 20 {
             "Refuel at the current market before planning your next journey."
         } else if ship.cargo[Commodity::Food.index()] > 0 {
             if ship.location == Location::Docked(SystemId(2)) {
-                "At Meridian, open Trade and sell your food. Compare known prices for your return cargo."
+                "At Meridian, tap TRADE and sell your food. Compare known prices for your return cargo."
             } else {
                 "Select Meridian on the galaxy map, pick its trade port and Plot course; departure and entry are planned for you. Then press Advance. Double-click only inspects a system."
             }
         } else if ship.location == Location::Docked(SystemId(1)) {
-            "First delivery: open Trade and press Max on food, travel to Meridian, and sell it there with All. Work toward the hold upgrade."
+            "First delivery: tap TRADE and press Max on food, travel to Meridian, and sell it there with All. Work toward the hold upgrade."
         } else {
             "Compare known markets before buying return cargo. Sell where demand is higher, budget for fuel, and work toward the hold upgrade."
         };
@@ -59,7 +61,7 @@ impl LocalSession {
                     dismiss = icons::icon_button(
                         ui,
                         Icon::Cancel,
-                        "Hide the guide (turn it back on with Guide in the Save window)",
+                        "Hide the guide (turn it back on in Menu, Session & saves)",
                     )
                     .clicked();
                 });

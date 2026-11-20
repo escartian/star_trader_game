@@ -30,8 +30,8 @@ the Wait of every fleet that still exists. The save field remains `holds`.
 **Advance** repeats ordinary navigation runs about three times per second
 (0.35 s apart, so each step shows on the map) and stops after the run in which:
 
-- a contact needs a decision: the fleet is selected and its decision card opens
-  under the run controls;
+- a contact needs a decision: the fleet is selected and its decision appears at
+  the top of the context sheet;
 - a fleet completes its route and needs orders: the fleet is selected and the
   map focuses it (intermediate itinerary legs do not stop an advance);
 - no fleet is underway, e.g. every fleet is Waiting, so Advance acts as one run;

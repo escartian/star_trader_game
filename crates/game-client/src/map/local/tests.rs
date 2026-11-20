@@ -1,5 +1,6 @@
 use super::*;
 use egui::Vec2;
+use game_core::BodyKind;
 
 #[test]
 fn local_distances_are_kilometers_and_do_not_depend_on_view_scale() {
@@ -157,15 +158,18 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
     }
     assert_eq!(local.take_fleet_selection(), Some(ShipId(2)));
     assert!(local.take_movement_request().is_none());
-    // Body buttons use the same destination intent as canvas picks; neither moves authority.
+    // Body buttons (in the Selection sheet) use the same destination intent as
+    // canvas picks; neither moves authority.
+    let frame = |ctx: &egui::Context, local: &mut LocalView| {
+        egui::SidePanel::right("sheet").show(ctx, |ui| local.selection_sheet(ui));
+        local.ui(ctx, &state.ships, &state.fleets);
+    };
     let output = ctx.run(
         egui::RawInput {
             screen_rect: screen,
             ..Default::default()
         },
-        |ctx| {
-            local.ui(ctx, &state.ships, &state.fleets);
-        },
+        |ctx| frame(ctx, &mut local),
     );
     let point = output
         .shapes
@@ -195,9 +199,7 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
                 ],
                 ..Default::default()
             },
-            |ctx| {
-                local.ui(ctx, &state.ships, &state.fleets);
-            },
+            |ctx| frame(ctx, &mut local),
         );
     }
     assert_eq!(
@@ -208,10 +210,10 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
         })
     );
     // Image tiles are destinations too, without an extra confirmation below the map.
+    // The sheet draws before the map, so its tile is the first "Outer giant".
     let tile = output
         .shapes
         .iter()
-        .rev()
         .find_map(|shape| {
             if let egui::epaint::Shape::Text(text) = &shape.shape
                 && text.galley.job.text == "Outer giant"
@@ -237,9 +239,7 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
                 ],
                 ..Default::default()
             },
-            |ctx| {
-                local.ui(ctx, &state.ships, &state.fleets);
-            },
+            |ctx| frame(ctx, &mut local),
         );
     }
     assert_eq!(

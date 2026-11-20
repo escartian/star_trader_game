@@ -1,0 +1,126 @@
+//! Phone-first shell layout: a thin status strip at the top, the action bar at
+//! the bottom and one context sheet above it. On a window wider than tall the
+//! sheet docks on the right instead, giving the map the full height. The map
+//! fills whatever is left, with two small camera buttons at its corner.
+use super::{Map, camera::Camera, toolbar::CameraAction};
+use crate::session::SheetTab;
+use crate::theme::icons::{self, Icon};
+use egui::{Color32, RichText};
+
+/// From this width-to-height ratio, the sheet docks on the right.
+const WIDE: f32 = 1.15;
+const SIDE_WIDTH: f32 = 360.0;
+/// Share of the screen height the bottom sheet takes.
+const SHEET_SHARE: f32 = 0.38;
+
+fn frame() -> egui::Frame {
+    egui::Frame::NONE
+        .fill(Color32::from_rgb(14, 20, 24))
+        .inner_margin(egui::Margin::symmetric(10, 6))
+        .stroke(egui::Stroke::new(1.0_f32, Color32::from_rgb(40, 56, 60)))
+}
+
+impl Map {
+    /// Lays out the strip, action bar and sheet; must run before the map's
+    /// central panel so the map gets the remaining space.
+    pub(super) fn shell(&mut self, ctx: &egui::Context) {
+        egui::TopBottomPanel::top("status-strip")
+            .frame(frame())
+            .show(ctx, |ui| self.status_strip(ui));
+        egui::TopBottomPanel::bottom("action-bar")
+            .frame(frame())
+            .show(ctx, |ui| self.session.action_bar(ui, &mut self.sheet));
+        let screen = ctx.screen_rect();
+        let sheet = |ui: &mut egui::Ui, map: &mut Map| {
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, true])
+                .show(ui, |ui| map.sheet_ui(ui));
+        };
+        if screen.width() >= screen.height() * WIDE {
+            egui::SidePanel::right("context-sheet")
+                .resizable(false)
+                .exact_width(SIDE_WIDTH)
+                .frame(frame())
+                .show(ctx, |ui| sheet(ui, self));
+        } else {
+            egui::TopBottomPanel::bottom("context-sheet")
+                .resizable(false)
+                .exact_height(screen.height() * SHEET_SHARE)
+                .frame(frame())
+                .show(ctx, |ui| sheet(ui, self));
+        }
+    }
+
+    fn status_strip(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            if self.local.is_some()
+                && icons::icon_button(ui, Icon::Back, "Back to the galaxy (Esc)").clicked()
+            {
+                self.local = None;
+            }
+            let title = self.local.as_ref().map_or_else(
+                || "GALAXY".to_owned(),
+                |local| local.system().name.to_uppercase(),
+            );
+            ui.label(
+                RichText::new(title)
+                    .font(crate::theme::fonts::display(ui.ctx(), 14.0))
+                    .color(crate::theme::GREEN),
+            );
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                self.session.status_numbers(ui);
+            });
+        });
+    }
+
+    fn sheet_ui(&mut self, ui: &mut egui::Ui) {
+        self.session.sheet_header(ui);
+        match self.sheet {
+            SheetTab::Selection => {
+                if let Some(local) = &mut self.local {
+                    local.selection_sheet(ui);
+                } else {
+                    let rect = self.last_map_rect;
+                    self.details(ui, rect);
+                    self.session.enter_button(ui, self.selected);
+                }
+                ui.separator();
+                self.session.destination_card(ui, &self.session_systems);
+            }
+            SheetTab::Fleets => self.session.fleets_sheet(ui, &self.session_systems),
+            SheetTab::Menu => {
+                self.session.menu_sheet(ui);
+                #[cfg(any(test, feature = "dev-tools"))]
+                self.test_scenes(ui);
+            }
+        }
+    }
+
+    /// Reset, focus selection and focus fleet at the galaxy map's corner.
+    pub(super) fn galaxy_buttons(&mut self, ctx: &egui::Context, rect: egui::Rect) {
+        let action = super::toolbar::map_buttons(
+            ctx,
+            rect,
+            "galaxy-map-buttons",
+            &mut self.pan_tool,
+            &[
+                CameraAction::Reset,
+                CameraAction::FocusSelection,
+                CameraAction::FocusFleet,
+            ],
+        );
+        match action {
+            Some(CameraAction::Reset) => {
+                self.camera = Camera::default();
+                self.candidates.clear();
+            }
+            Some(CameraAction::FocusSelection) => self.focus_selection(),
+            Some(CameraAction::FocusFleet) => {
+                if let Some(position) = self.route_position() {
+                    self.camera.focus_on(position);
+                }
+            }
+            _ => {}
+        }
+    }
+}

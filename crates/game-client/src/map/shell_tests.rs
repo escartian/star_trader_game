@@ -1,0 +1,158 @@
+//! The phone-first shell: strip, action bar, sheet pages and full-screen panels.
+use super::*;
+use egui::Vec2;
+
+const PHONE: Vec2 = Vec2::new(390.0, 844.0);
+const DESKTOP: Vec2 = Vec2::new(1280.0, 800.0);
+
+fn frame(
+    ctx: &egui::Context,
+    map: &mut Map,
+    size: Vec2,
+    events: Vec<egui::Event>,
+) -> egui::FullOutput {
+    ctx.run(
+        egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
+            events,
+            ..Default::default()
+        },
+        |ctx| map.ui(ctx),
+    )
+}
+
+fn texts(output: &egui::FullOutput) -> Vec<(String, Pos2)> {
+    output
+        .shapes
+        .iter()
+        .filter_map(|shape| match &shape.shape {
+            egui::epaint::Shape::Text(text) => Some((
+                text.galley.job.text.clone(),
+                text.pos + text.galley.size() / 2.0,
+            )),
+            _ => None,
+        })
+        .collect()
+}
+
+fn settle(ctx: &egui::Context, map: &mut Map, size: Vec2) -> Vec<(String, Pos2)> {
+    let mut output = frame(ctx, map, size, Vec::new());
+    for _ in 0..3 {
+        output = frame(ctx, map, size, Vec::new());
+    }
+    texts(&output)
+}
+
+fn shows(ctx: &egui::Context, map: &mut Map, size: Vec2, label: &str) -> Option<Pos2> {
+    settle(ctx, map, size)
+        .into_iter()
+        .find(|(text, _)| text == label)
+        .map(|(_, at)| at)
+}
+
+fn tap(ctx: &egui::Context, map: &mut Map, size: Vec2, label: &str) {
+    let point = shows(ctx, map, size, label).unwrap_or_else(|| {
+        panic!("no {label:?} in {:?}", settle(ctx, map, size));
+    });
+    for pressed in [true, false] {
+        frame(
+            ctx,
+            map,
+            size,
+            vec![
+                egui::Event::PointerMoved(point),
+                egui::Event::PointerButton {
+                    pos: point,
+                    button: egui::PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+    }
+}
+
+fn multi_fleet() -> Map {
+    let authority = game_server::Session::multi_fleet_scenario(1).unwrap();
+    let systems = authority.systems().to_vec();
+    Map::new(systems, authority)
+}
+
+#[test]
+fn a_phone_shows_the_strip_and_action_bar_instead_of_floating_cards() {
+    let ctx = egui::Context::default();
+    let mut map = multi_fleet();
+    let labels = settle(&ctx, &mut map, PHONE);
+    for label in ["GALAXY", "Fleets", "ADVANCE", "Menu"] {
+        assert!(labels.iter().any(|(text, _)| text == label), "{label}");
+    }
+    for old in ["Nav", "Trade", "Save", "OUTER GALAXY"] {
+        assert!(
+            !labels.iter().any(|(text, _)| text == old),
+            "old card {old}"
+        );
+    }
+    // The action bar sits at the bottom of the screen, the strip at the top.
+    let advance = shows(&ctx, &mut map, PHONE, "ADVANCE").unwrap();
+    assert!(advance.y > PHONE.y - 60.0);
+    assert!(shows(&ctx, &mut map, PHONE, "GALAXY").unwrap().y < 40.0);
+}
+
+#[test]
+fn tabs_switch_the_sheet_and_panels_open_full_screen_on_a_phone() {
+    let ctx = egui::Context::default();
+    let mut map = multi_fleet();
+    assert!(shows(&ctx, &mut map, PHONE, "FLEETS").is_none());
+    tap(&ctx, &mut map, PHONE, "Fleets");
+    assert!(
+        shows(&ctx, &mut map, PHONE, "FLEETS").is_some(),
+        "fleet list"
+    );
+    tap(&ctx, &mut map, PHONE, "Menu");
+    tap(&ctx, &mut map, PHONE, "Trade");
+    // The market fills the screen, with Back instead of a close glyph.
+    let back = shows(&ctx, &mut map, PHONE, "Back").expect("full-screen Back");
+    assert!(back.x < PHONE.x / 2.0 && back.y < 60.0);
+    tap(&ctx, &mut map, PHONE, "Back");
+    assert!(shows(&ctx, &mut map, PHONE, "MARKET").is_none(), "closed");
+}
+
+#[test]
+fn the_alert_badge_walks_fleets_that_need_orders() {
+    let ctx = egui::Context::default();
+    let mut map = multi_fleet();
+    let alerts = map.session.attention_fleets();
+    assert!(
+        alerts.len() >= 2,
+        "the scenario leaves fleets without orders"
+    );
+    let badge = format!("! {}", alerts.len());
+    tap(&ctx, &mut map, PHONE, &badge);
+    let first = map.session.selected_ship().id;
+    assert!(
+        map.session
+            .fleets()
+            .iter()
+            .any(|fleet| fleet.ships.contains(&first) && alerts.contains(&fleet.id))
+    );
+    assert_eq!(map.sheet, crate::session::SheetTab::Fleets);
+    tap(&ctx, &mut map, PHONE, &badge);
+    assert_ne!(map.session.selected_ship().id, first, "the next one");
+}
+
+#[test]
+fn the_sheet_docks_right_on_a_wide_window_and_at_the_bottom_on_a_phone() {
+    let ctx = egui::Context::default();
+    let mut map = multi_fleet();
+    let wide = shows(
+        &ctx,
+        &mut map,
+        DESKTOP,
+        "Trader introduction / earnings goal",
+    )
+    .unwrap();
+    assert!(wide.x > DESKTOP.x * 0.6, "docked right: {wide:?}");
+    let ctx = egui::Context::default();
+    let narrow = shows(&ctx, &mut map, PHONE, "Trader introduction / earnings goal").unwrap();
+    assert!(narrow.y > PHONE.y * 0.5, "bottom sheet: {narrow:?}");
+}

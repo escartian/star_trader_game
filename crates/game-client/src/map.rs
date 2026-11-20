@@ -10,6 +10,7 @@ mod local;
 mod orbit_view;
 mod panels;
 mod render;
+mod shell;
 mod toolbar;
 mod visuals;
 
@@ -18,7 +19,6 @@ use egui::{Pos2, Rect};
 use fixtures::Scene;
 use game_core::{StarSystem, SystemId};
 use glam::DVec3;
-use toolbar::CameraAction;
 
 pub struct Map {
     observed_run: u64,
@@ -35,6 +35,10 @@ pub struct Map {
     pan_tool: bool,
     local: Option<local::LocalView>,
     session: crate::session::LocalSession,
+    /// Which page the context sheet shows.
+    sheet: crate::session::SheetTab,
+    /// The galaxy map's area last frame (the sheet draws before the map).
+    last_map_rect: Rect,
 }
 
 fn position(system: &StarSystem) -> DVec3 {
@@ -79,6 +83,8 @@ impl Map {
             pan_tool: false,
             local: None,
             session,
+            sheet: crate::session::SheetTab::default(),
+            last_map_rect: Rect::NOTHING,
         }
     }
 
@@ -196,27 +202,30 @@ impl Map {
         if let Some(delay) = self.session.frame(ctx.input(|input| input.time), animate) {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64(delay));
         }
+        if let Some(tab) = self.session.take_sheet_request() {
+            self.sheet = tab;
+        }
         self.follow_orbits();
         self.follow_navigation_transitions();
         self.handle_focus_request();
         crate::battle::claim_keyboard(ctx, self.session.battle_open());
-        // The map fills the window; every HUD element floats above it as a card.
+        // Strip, action bar and sheet first; the map takes the space left.
+        self.shell(ctx);
         if self.local.is_some() {
             self.local_ui(ctx);
         } else {
             self.galaxy_ui(ctx);
         }
-        let target = (self.scene == Scene::Session && self.local.is_none())
-            .then_some(self.selected)
-            .flatten();
-        self.session.roster_card(ctx, &self.session_systems);
-        self.session.hud(ctx, target, &self.session_systems);
         self.session.show_market(ctx, &self.session_systems);
         self.session.show_fleets(ctx, &self.session_systems);
         self.session.show_session_controls(ctx);
         self.session.show_navigation(ctx, &self.session_systems);
         self.session.show_battle(ctx);
         self.session.show_combat_report(ctx);
+        // Taps on the strip or sheet may ask for another page: show it at once.
+        if let Some(tab) = self.session.take_sheet_request() {
+            self.sheet = tab;
+        }
     }
 
     /// Session bodies drawn where their orbits are now (gliding after a run).
@@ -284,8 +293,10 @@ impl Map {
         }
         if let Some(ship) = local.take_fleet_selection() {
             self.session.select_map_fleet(ship);
+            self.sheet = crate::session::SheetTab::Fleets;
         }
         if let Some(target) = local.take_movement_request() {
+            self.sheet = crate::session::SheetTab::Selection;
             match target {
                 game_core::movement::MoveTarget::Body { system, body } => {
                     self.session.select_destination(system, Some(body))
@@ -312,63 +323,13 @@ impl Map {
         {
             self.focus_selection();
         }
-        crate::theme::metal::card(
-            ctx,
-            "view-toolbar",
-            egui::Align2::CENTER_TOP,
-            egui::vec2(0.0, 10.0),
-            |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new("OUTER GALAXY")
-                            .font(crate::theme::fonts::display(ui.ctx(), 14.0))
-                            .color(crate::theme::GREEN),
-                    );
-                });
-                let action = toolbar::camera_toolbar(
-                    ui,
-                    &mut self.camera,
-                    &mut self.pan_tool,
-                    &[
-                        CameraAction::Reset,
-                        CameraAction::FocusSelection,
-                        CameraAction::FocusFleet,
-                    ],
-                    "Outer galaxy (light-years)\nClick: select system and set course\nDouble-click: inspect system\nDrag: orbit • Pan tool: move\nWheel or pinch: zoom",
-                );
-                match action {
-                    Some(CameraAction::Reset) => {
-                        self.camera = Camera::default();
-                        self.candidates.clear();
-                    }
-                    Some(CameraAction::FocusSelection) => self.focus_selection(),
-                    Some(CameraAction::FocusFleet) => {
-                        if let Some(position) = self.route_position() {
-                            self.camera.focus_on(position);
-                        }
-                    }
-                    _ => {}
-                }
-                ui.set_max_width(440.0);
-                self.session.guide(ui);
-            },
-        );
-        let width = (ctx.screen_rect().width() - 600.0).clamp(300.0, 640.0);
-        crate::theme::metal::card(
-            ctx,
-            "view-selection",
-            egui::Align2::CENTER_BOTTOM,
-            egui::vec2(0.0, -10.0),
-            |ui| {
-                ui.set_max_width(width);
-                self.details(ui, rect);
-                #[cfg(any(test, feature = "dev-tools"))]
-                self.test_scenes(ui);
-            },
-        );
+        self.last_map_rect = rect;
+        self.galaxy_buttons(ctx, rect);
     }
 }
 
+#[cfg(test)]
+mod shell_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

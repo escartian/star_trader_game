@@ -35,9 +35,9 @@ impl LocalView {
         let center = (low + high) * 0.5;
         self.camera
             .focus_on(rotation.inverse() * DVec3::new(center.x, center.y, 0.0));
-        // Frame into the area left clear by the floating HUD cards, in points:
-        // roster (left), status (right), toolbar (top) and selection (bottom).
-        let (left, right, top, bottom) = (250.0, 200.0, 110.0, 200.0);
+        // The shell's panels sit outside the map; only the camera buttons float
+        // over its right edge. Margins in points: left, right, top, bottom.
+        let (left, right, top, bottom) = (20.0, 60.0, 20.0, 30.0);
         self.camera.pan = Vec2::new((left - right) * 0.5, (top - bottom) * 0.5);
         let span = high - low;
         let usable = (rect.size() - Vec2::new(left + right + 40.0, top + bottom + 40.0))
@@ -70,7 +70,8 @@ mod tests {
         for size in [Vec2::new(760.0, 330.0), Vec2::new(1200.0, 620.0)] {
             let rect = Rect::from_min_size(egui::Pos2::ZERO, size);
             view.fit_overview(rect, std::slice::from_ref(&ship));
-            let safe = rect.shrink(65.0);
+            // Everything framed stays clear of the map edge and its buttons.
+            let safe = rect.shrink(25.0);
             assert!(safe.contains(view.camera.project(DVec3::ZERO, rect)));
             assert!(
                 safe.contains(

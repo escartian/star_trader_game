@@ -157,6 +157,7 @@ fn a_trade_route_starts_from_the_destination_card_and_ends_from_the_roster() {
     click(&ctx, &mut map, "TRADE ROUTE");
     let route = map.session.trade_route(FleetId(1)).expect("route started");
     assert_eq!(route.stops[1].system, SystemId(2));
+    click(&ctx, &mut map, "Fleets");
     click(&ctx, &mut map, "End route");
     assert!(map.session.trade_route(FleetId(1)).is_none());
 }

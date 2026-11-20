@@ -84,8 +84,6 @@ impl LocalSession {
             );
         });
         ui.separator();
-        self.destination_card(ui, systems);
-        ui.separator();
         let artwork = crate::map::art::Artwork::preload(ui.ctx());
         for fleet in self.state.fleets.clone() {
             let Some(ship) = fleet.ships.first().copied() else {
@@ -248,7 +246,7 @@ impl LocalSession {
         }
     }
 
-    fn destination_card(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
+    pub fn destination_card(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
         let fleet = self.state.fleet_for_ship(self.active_ship).ok().cloned();
         ui.strong(
             fleet

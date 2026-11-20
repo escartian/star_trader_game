@@ -7,7 +7,9 @@ through a readable native map. No game engine, browser, webview or JavaScript.
 
 - Click fleets on either map, select a planet/station/point of interest and plot
   the route from a destination card. Numeric controls are optional advanced tools.
-- Sci-fi command-console panels, fleet cards, route feedback and live NPC traffic.
+- A phone-first layout: status strip, action bar (Fleets, Advance, Menu) and one
+  context sheet; panels go full screen on narrow windows. Route feedback and live
+  NPC traffic on the map.
 - Galaxy navigation: orbit/pan/zoom, presets, focus, overlap chooser,
   double-click system inspection, and separate local views with planets/stations.
 - Blender-authored star, planet, moon, asteroid station and ship models, baked to
@@ -97,9 +99,9 @@ meet raiders too, fight them off-screen and can lose cargo or be put out of serv
 
 ## First delivery
 
-At Sol, open **Trade** and press **Max** on food. Select your fleet on the map or in the
-**Fleets** roster. Double-click Meridian, select its trade port, then choose
-**PLOT COURSE** in the left-hand destination card. Departure, entry and docking
+At Sol, tap **TRADE** (or **Menu**, then **Trade**) and press **Max** on food. Select your fleet on the map or
+on the **Fleets** page. Double-click Meridian, select its trade port, then choose
+**PLOT COURSE** in the destination card on the Selection page. Departure, entry and docking
 are planned automatically. Press **Advance** to run until the fleet arrives;
 resolve any contacts along the way, then sell (**All**) and refuel (**Full**).
 
@@ -211,7 +213,7 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [run review](docs/previews/run-review.png), [advancing](docs/previews/advance.png),
 [trade route](docs/previews/trade-route.png),
 [map command](docs/previews/destination.png),
-[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [landed and mining](docs/previews/landed.png), [raider band strikes](docs/previews/raiders.png), [fleet stacks](docs/previews/fleet-stacks.png) (`--scenario multi-fleet --capture-view galaxy`), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`, `battle`, `battle-close`, `landed`, `raiders`. Captures do not test window
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [landed and mining](docs/previews/landed.png), [raider band strikes](docs/previews/raiders.png), [fleet stacks](docs/previews/fleet-stacks.png) (`--scenario multi-fleet --capture-view galaxy`), [phone system view](docs/previews/phone-system.png) and [phone market](docs/previews/phone-market.png) (`--capture-size 390x844`), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`, `battle`, `battle-close`, `landed`, `raiders`. Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

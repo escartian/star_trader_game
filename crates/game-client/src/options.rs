@@ -2,8 +2,7 @@ use std::path::PathBuf;
 
 /// Extra flags listed in help only when the developer tooling is compiled in.
 #[cfg(feature = "dev-tools")]
-const DEV_OPTIONS: &str =
-    ", --capture PATH, --capture-view VIEW, --scenario multi-fleet|fleet-battle";
+const DEV_OPTIONS: &str = ", --capture PATH, --capture-view VIEW, --capture-size WxH, --scenario multi-fleet|fleet-battle";
 #[cfg(not(feature = "dev-tools"))]
 const DEV_OPTIONS: &str = " (capture and scenario flags need a dev-tools build)";
 
@@ -15,6 +14,9 @@ pub struct Options {
     pub capture: Option<PathBuf>,
     #[cfg(feature = "dev-tools")]
     pub capture_view: String,
+    /// Capture size in pixels, e.g. a phone's 390 × 844.
+    #[cfg(feature = "dev-tools")]
+    pub capture_size: (u32, u32),
     pub seed: u64,
     pub save: PathBuf,
     pub save_explicit: bool,
@@ -42,6 +44,8 @@ impl Options {
             capture: None,
             #[cfg(feature = "dev-tools")]
             capture_view: "galaxy".into(),
+            #[cfg(feature = "dev-tools")]
+            capture_size: crate::capture::DEFAULT_SIZE,
             seed: 0,
             save: PathBuf::from("data/slot-1.json"),
             save_explicit: false,
@@ -64,6 +68,16 @@ impl Options {
                 #[cfg(feature = "dev-tools")]
                 "--capture" => {
                     options.capture = Some(args.next().ok_or("--capture needs a PNG path")?.into())
+                }
+                #[cfg(feature = "dev-tools")]
+                "--capture-size" => {
+                    let size = args.next().ok_or("--capture-size needs WIDTHxHEIGHT, e.g. 390x844")?;
+                    let (width, height) = size
+                        .split_once('x')
+                        .and_then(|(w, h)| Some((w.parse().ok()?, h.parse().ok()?)))
+                        .filter(|(w, h): &(u32, u32)| (200..=4096).contains(w) && (200..=4096).contains(h))
+                        .ok_or("--capture-size needs WIDTHxHEIGHT between 200 and 4096")?;
+                    options.capture_size = (width, height);
                 }
                 #[cfg(feature = "dev-tools")]
                 "--capture-view" => {

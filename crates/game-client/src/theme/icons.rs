@@ -52,9 +52,6 @@ pub enum Icon {
     Reset,
     Pan,
     Star,
-    ViewTop,
-    ViewFront,
-    ViewSide,
     Warning,
     Info,
     Distance,
@@ -64,7 +61,6 @@ pub enum Icon {
     Enter,
     Seed,
     Help,
-    Zoom,
     Settings,
     Danger,
     Hull,
@@ -122,6 +118,11 @@ fn frame(ui: &Ui, rect: egui::Rect, response: &Response, selected: bool) {
 
 /// Icon plus a short label, for primary actions where words aid discovery.
 pub fn button(ui: &mut Ui, icon: Icon, label: &str) -> Response {
+    labeled_toggle(ui, icon, label, false)
+}
+
+/// [`button`] drawn as selected when `on` is true (tabs, modes).
+pub fn labeled_toggle(ui: &mut Ui, icon: Icon, label: &str, on: bool) -> Response {
     let text = ui.painter().layout_no_wrap(
         label.into(),
         super::fonts::text(15.0),
@@ -130,9 +131,9 @@ pub fn button(ui: &mut Ui, icon: Icon, label: &str) -> Response {
     let size = Vec2::new(text.size().x + 42.0, 30.0);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
     response.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), label)
+        egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), on, label)
     });
-    frame(ui, rect, &response, false);
+    frame(ui, rect, &response, on);
     paint(
         ui.painter(),
         icon,

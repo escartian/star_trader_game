@@ -72,10 +72,7 @@ fn switching_fleet_trade_opens_the_planet_market_it_orbits() {
     }
     let shown: Vec<_> = texts(&output).into_iter().map(|(text, _)| text).collect();
     assert!(shown.iter().any(|text| text == "MARKET"), "{shown:?}");
-    assert!(
-        shown.iter().any(|text| text == "Sol Inner world"),
-        "{shown:?}"
-    );
+    assert!(shown.iter().any(|text| text == "Terra"), "{shown:?}");
     assert_eq!(
         map.session.selected_ship().kind,
         game_core::fleet::ShipKind::Scout

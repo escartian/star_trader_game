@@ -1,5 +1,6 @@
 //! Seeded map layouts with every system reachable from the starting port.
 mod bodies;
+mod names;
 mod positions;
 use crate::{GalaxyPosition, StarKind, StarSystem, SystemId};
 
@@ -55,18 +56,6 @@ const STAR_KINDS: [StarKind; 9] = [
     StarKind::BrownDwarf,
     StarKind::NeutronStar,
 ];
-const NAMES: [&str; 10] = [
-    "Meridian",
-    "Far Reach",
-    "Vesper",
-    "Cinder",
-    "Aurora",
-    "Peregrine",
-    "Bastion",
-    "Halcyon",
-    "Kepler",
-    "Ember",
-];
 
 pub fn generate_galaxy(seed: u64) -> Vec<StarSystem> {
     if seed == 0 {
@@ -91,11 +80,20 @@ pub fn generate_galaxy_with(seed: u64, config: GalaxyConfig) -> Result<Vec<StarS
     config.validate()?;
     let mut systems = crate::demo_galaxy();
     let mut state = seed;
+    // The authored systems' and bodies' names are never handed out again.
+    let taken: Vec<String> = systems
+        .iter()
+        .flat_map(|system| {
+            std::iter::once(system.name.clone())
+                .chain(system.bodies.iter().map(|body| body.name.clone()))
+        })
+        .collect();
+    let mut namer = names::Namer::new(taken.iter().map(String::as_str));
     let count = u64::from(config.systems);
     for id in 4..=count {
         systems.push(StarSystem {
             id: SystemId(id),
-            name: format!("{} {id}", NAMES[next(&mut state) as usize % NAMES.len()]),
+            name: namer.place(&mut state),
             star_kind: StarKind::YellowDwarf,
             position: GalaxyPosition { x: 0, y: 0, z: 0 },
             bodies: Vec::new(),
@@ -106,7 +104,7 @@ pub fn generate_galaxy_with(seed: u64, config: GalaxyConfig) -> Result<Vec<StarS
         system.position = positions::place(&positions, config, &mut state)?;
         positions.push(system.position);
         system.star_kind = STAR_KINDS[next(&mut state) as usize % STAR_KINDS.len()];
-        system.bodies = bodies::generate(&system.name, config.max_objects - 1, &mut state);
+        system.bodies = bodies::generate(&mut namer, config.max_objects - 1, &mut state);
     }
     // The authored home market and its guide remain a stable starting point.
     crate::planet::PlanetCatalog::default().populate(&mut systems);

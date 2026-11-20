@@ -171,13 +171,13 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
         },
         |ctx| frame(ctx, &mut local),
     );
-    // The sheet draws before the map, so its tile is the first "Outer giant".
+    // The sheet draws before the map, so its tile is the first "Jove".
     let tile = output
         .shapes
         .iter()
         .find_map(|shape| {
             if let egui::epaint::Shape::Text(text) = &shape.shape
-                && text.galley.job.text == "Outer giant"
+                && text.galley.job.text == "Jove"
             {
                 Some(text.pos + text.galley.size() / 2.0)
             } else {

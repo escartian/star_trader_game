@@ -123,21 +123,21 @@ pub fn demo_galaxy() -> Vec<StarSystem> {
             id: SystemId(1),
             name: "Sol".into(),
             star_kind: StarKind::YellowDwarf,
-            bodies: demo_bodies("Sol"),
+            bodies: demo_bodies(["Terra", "Jove", "Gateway Station", "Luna", "Ceres"]),
             position: GalaxyPosition { x: 0, y: 0, z: 0 },
         },
         StarSystem {
             id: SystemId(2),
             name: "Meridian".into(),
             star_kind: StarKind::BlueGiant,
-            bodies: demo_bodies("Meridian"),
+            bodies: demo_bodies(["Calyx", "Thalassa", "Halden Exchange", "Pell", "Vosk"]),
             position: GalaxyPosition { x: 9, y: 0, z: 12 },
         },
         StarSystem {
             id: SystemId(3),
             name: "Far Reach".into(),
             star_kind: StarKind::RedDwarf,
-            bodies: demo_bodies("Far Reach"),
+            bodies: demo_bodies(["Brisa", "Tolmar", "Port Avar", "Kesh", "Saska"]),
             position: GalaxyPosition {
                 x: -7,
                 y: 0,
@@ -149,14 +149,15 @@ pub fn demo_galaxy() -> Vec<StarSystem> {
     systems
 }
 
-/// Fixed tick-0 destinations on circular orbits (see `orbits`): the Moon
-/// circles the Inner world, everything else the star.
-fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
+/// Fixed tick-0 destinations on circular orbits (see `orbits`), named in body
+/// order: rocky planet, gas giant, station, moon (circling the rocky planet)
+/// and asteroid; everything but the moon circles the star.
+fn demo_bodies(names: [&str; 5]) -> Vec<LocalBody> {
     // IDs remain fixed even if display ordering changes or destinations are added.
     let mut bodies: Vec<LocalBody> = [
         (
             BodyId(1),
-            "Inner world",
+            names[0],
             BodyKind::RockyPlanet,
             45_000_000,
             0,
@@ -164,7 +165,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
         ),
         (
             BodyId(2),
-            "Outer giant",
+            names[1],
             BodyKind::GasGiant,
             -100_000_000,
             0,
@@ -172,7 +173,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
         ),
         (
             BodyId(3),
-            "Trade port",
+            names[2],
             BodyKind::Station,
             30_000_000,
             0,
@@ -180,7 +181,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
         ),
         (
             BodyId(4),
-            "Moon",
+            names[3],
             BodyKind::Moon,
             46_000_000,
             0,
@@ -188,7 +189,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
         ),
         (
             BodyId(5),
-            "Prospector asteroid",
+            names[4],
             BodyKind::Asteroid,
             -60_000_000,
             0,
@@ -200,7 +201,7 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
         planet: None,
         orbit: None,
         id,
-        name: format!("{system_name} {name}"),
+        name: name.into(),
         kind,
         position: LocalPosition { x_km, y_km, z_km },
     })

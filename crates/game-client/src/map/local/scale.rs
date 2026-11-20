@@ -19,6 +19,10 @@ impl SymbolScale {
             StarKind::YellowDwarf => 32.0,
             StarKind::RedDwarf => 28.0,
             StarKind::WhiteDwarf => 26.0,
+            StarKind::OrangeDwarf => 31.0,
+            StarKind::BlueWhiteStar => 36.0,
+            StarKind::BrownDwarf => 25.0,
+            StarKind::NeutronStar => 24.0,
         };
         radius * self.factor
     }

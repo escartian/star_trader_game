@@ -2,8 +2,9 @@
 //! the game ends. Pure functions over the player and economy state; the
 //! server records the end once (see `Campaign::ended`).
 //!
-//! - **Trader:** net worth of [`CampaignRules::net_worth_goal`], or
-//!   [`CampaignRules::charters_to_win`] port charters.
+//! - **Trader:** net worth of [`CampaignRules::wealth_share_percent`] of all
+//!   galaxy wealth ([`galaxy_wealth`]), or [`CampaignRules::charters_to_win`]
+//!   port charters.
 //! - **Soldier:** destroy the Raider Haven (`navigation::haven`).
 //! - **Diplomat / Spy** and **Pirate:** need factions and missions; shown as
 //!   locked until those exist.
@@ -18,7 +19,7 @@
 //! [`HAVEN_POINTS`] for destroying the Haven. Faction standing will add points
 //! once factions exist.
 //!
-//! [`CampaignRules::net_worth_goal`]: crate::economy::CampaignRules
+//! [`CampaignRules::wealth_share_percent`]: crate::economy::CampaignRules
 //! [`CampaignRules::charters_to_win`]: crate::economy::CampaignRules
 use crate::economy::{Commodity, Credits, Economy, TradeSide};
 use crate::travel::{PlayerId, TravelState};
@@ -127,14 +128,7 @@ impl Score {
 
 /// Credits, hulls at resale and cargo at the best current bid.
 pub fn net_worth(state: &TravelState, economy: &Economy, player: PlayerId) -> Credits {
-    let resale = u64::from(economy.rules.ship_resale_percent);
-    let hull = |kind| {
-        economy
-            .rules
-            .ship_catalog
-            .spec(kind)
-            .map_or(0, |spec| spec.price.0.saturating_mul(resale) / 100)
-    };
+    let hull = |kind| economy.ship_resale(kind).map_or(0, |price| price.0);
     let best_bid = |good: Commodity| {
         economy
             .markets
@@ -161,6 +155,32 @@ pub fn net_worth(state: &TravelState, economy: &Economy, player: PlayerId) -> Cr
     Credits(economy.credits.0.saturating_add(assets))
 }
 
+/// All the money in the galaxy as the Trader road counts it: your net worth,
+/// every market treasury and every NPC trader's credits.
+pub fn galaxy_wealth(state: &TravelState, economy: &Economy, player: PlayerId) -> Credits {
+    let markets = economy
+        .markets
+        .iter()
+        .fold(0_u64, |sum, market| sum.saturating_add(market.credits.0));
+    let traders = economy
+        .traders
+        .iter()
+        .fold(0_u64, |sum, trader| sum.saturating_add(trader.credits.0));
+    Credits(
+        net_worth(state, economy, player)
+            .0
+            .saturating_add(markets)
+            .saturating_add(traders),
+    )
+}
+
+/// Your net worth's share of [`galaxy_wealth`], in hundredths of a percent.
+pub fn wealth_share_basis_points(state: &TravelState, economy: &Economy, player: PlayerId) -> u64 {
+    let worth = u128::from(net_worth(state, economy, player).0);
+    let total = u128::from(galaxy_wealth(state, economy, player).0).max(1);
+    (worth * 10_000 / total) as u64
+}
+
 pub fn score(state: &TravelState, economy: &Economy, player: PlayerId) -> Score {
     let charters = economy.chartered_by(player).len() as u64;
     let haven = state.navigation.haven.as_ref().map_or(0, |haven| {
@@ -176,11 +196,13 @@ pub fn score(state: &TravelState, economy: &Economy, player: PlayerId) -> Score 
 /// Progress on every road, in [`Road::ALL`] order.
 pub fn progress(state: &TravelState, economy: &Economy, player: PlayerId) -> Vec<RoadProgress> {
     let goals = &economy.rules.campaign;
-    let worth = net_worth(state, economy, player);
+    let held = wealth_share_basis_points(state, economy, player);
+    let needed = u64::from(goals.wealth_share_percent) * 100;
+    let total = galaxy_wealth(state, economy, player);
     let charters = economy.chartered_by(player).len() as u64;
     let to_win = u64::from(goals.charters_to_win);
     let share = |have: u64, need: u64| (have.saturating_mul(100) / need.max(1)).min(100) as u32;
-    let trader_complete = worth >= goals.net_worth_goal || charters >= to_win;
+    let trader_complete = held >= needed || charters >= to_win;
     let haven = state.navigation.haven.as_ref();
     let haven_complete = haven.is_some_and(|haven| !haven.standing());
     let garrison = haven.map_or((0, 0), |haven| {
@@ -198,11 +220,14 @@ pub fn progress(state: &TravelState, economy: &Economy, player: PlayerId) -> Vec
         RoadProgress {
             road: Road::Trader,
             open: true,
-            percent: share(worth.0, goals.net_worth_goal.0).max(share(charters, to_win)),
+            percent: share(held, needed).max(share(charters, to_win)),
             complete: trader_complete,
             detail: format!(
-                "Net worth {worth} of {} cr, or {charters} of {to_win} port charters.",
-                goals.net_worth_goal
+                "Net worth {}.{:02}% of the galaxy's {total} cr ({}% wins), or {charters} of \
+                 {to_win} port charters.",
+                held / 100,
+                held % 100,
+                goals.wealth_share_percent
             ),
         },
         RoadProgress {

@@ -10,12 +10,24 @@ pub enum ArtKind {
     BlueGiant,
     RedGiant,
     WhiteDwarf,
+    OrangeDwarf,
+    BlueWhiteStar,
+    BrownDwarf,
+    NeutronStar,
     RockyPlanet,
     AridPlanet,
     FrozenPlanet,
+    OceanPlanet,
+    JunglePlanet,
+    VolcanicPlanet,
+    BarrenPlanet,
     GasGiant,
+    StormGiant,
+    MethaneGiant,
     Moon,
+    IceMoon,
     Asteroid,
+    MetallicAsteroid,
     Station,
     Freighter,
     Scout,
@@ -31,6 +43,10 @@ impl From<StarKind> for ArtKind {
             StarKind::BlueGiant => Self::BlueGiant,
             StarKind::RedGiant => Self::RedGiant,
             StarKind::WhiteDwarf => Self::WhiteDwarf,
+            StarKind::OrangeDwarf => Self::OrangeDwarf,
+            StarKind::BlueWhiteStar => Self::BlueWhiteStar,
+            StarKind::BrownDwarf => Self::BrownDwarf,
+            StarKind::NeutronStar => Self::NeutronStar,
         }
     }
 }
@@ -48,11 +64,35 @@ impl From<BodyKind> for ArtKind {
 }
 
 impl ArtKind {
-    /// Rocky planets show their biome; other bodies use their kind's artwork.
+    /// Planet art follows biome or hazard; small bodies use stable visual variants.
     pub fn for_body(body: &game_core::LocalBody) -> Self {
         match (body.kind, body.planet.as_ref().map(|profile| profile.biome)) {
             (BodyKind::RockyPlanet, Some(game_core::planet::Biome::Arid)) => Self::AridPlanet,
             (BodyKind::RockyPlanet, Some(game_core::planet::Biome::Frozen)) => Self::FrozenPlanet,
+            (BodyKind::RockyPlanet, Some(game_core::planet::Biome::Ocean)) => Self::OceanPlanet,
+            (BodyKind::RockyPlanet, Some(game_core::planet::Biome::Jungle)) => Self::JunglePlanet,
+            (BodyKind::RockyPlanet, Some(game_core::planet::Biome::Volcanic)) => {
+                Self::VolcanicPlanet
+            }
+            (BodyKind::RockyPlanet, Some(game_core::planet::Biome::Barren)) => Self::BarrenPlanet,
+            (BodyKind::GasGiant, _)
+                if body.planet.as_ref().is_some_and(|profile| {
+                    profile.danger == game_core::planet::Danger::Insidious
+                }) =>
+            {
+                Self::StormGiant
+            }
+            (BodyKind::GasGiant, _)
+                if body.planet.as_ref().is_some_and(|profile| {
+                    profile.danger == game_core::planet::Danger::Dangerous
+                }) =>
+            {
+                Self::MethaneGiant
+            }
+            (BodyKind::Moon, _) if body.name.bytes().fold(0_u8, u8::wrapping_add) % 2 == 1 => {
+                Self::IceMoon
+            }
+            (BodyKind::Asteroid, _) if body.id.0.is_multiple_of(3) => Self::MetallicAsteroid,
             (kind, _) => Self::from(kind),
         }
     }
@@ -116,6 +156,26 @@ const SOURCES: &[(ArtKind, &str, &[u8])] = &[
         include_bytes!("../../../../assets/sprites/white-dwarf.png"),
     ),
     (
+        ArtKind::OrangeDwarf,
+        "orange-dwarf",
+        include_bytes!("../../../../assets/sprites/orange-dwarf.png"),
+    ),
+    (
+        ArtKind::BlueWhiteStar,
+        "blue-white-star",
+        include_bytes!("../../../../assets/sprites/blue-white-star.png"),
+    ),
+    (
+        ArtKind::BrownDwarf,
+        "brown-dwarf",
+        include_bytes!("../../../../assets/sprites/brown-dwarf.png"),
+    ),
+    (
+        ArtKind::NeutronStar,
+        "neutron-star",
+        include_bytes!("../../../../assets/sprites/neutron-star.png"),
+    ),
+    (
         ArtKind::RockyPlanet,
         "rocky-planet",
         include_bytes!("../../../../assets/sprites/rocky-planet.png"),
@@ -131,9 +191,39 @@ const SOURCES: &[(ArtKind, &str, &[u8])] = &[
         include_bytes!("../../../../assets/sprites/frozen-planet.png"),
     ),
     (
+        ArtKind::OceanPlanet,
+        "ocean-planet",
+        include_bytes!("../../../../assets/sprites/ocean-planet.png"),
+    ),
+    (
+        ArtKind::JunglePlanet,
+        "jungle-planet",
+        include_bytes!("../../../../assets/sprites/jungle-planet.png"),
+    ),
+    (
+        ArtKind::VolcanicPlanet,
+        "volcanic-planet",
+        include_bytes!("../../../../assets/sprites/volcanic-planet.png"),
+    ),
+    (
+        ArtKind::BarrenPlanet,
+        "barren-planet",
+        include_bytes!("../../../../assets/sprites/barren-planet.png"),
+    ),
+    (
         ArtKind::GasGiant,
         "gas-giant",
         include_bytes!("../../../../assets/sprites/gas-giant.png"),
+    ),
+    (
+        ArtKind::StormGiant,
+        "storm-giant",
+        include_bytes!("../../../../assets/sprites/storm-giant.png"),
+    ),
+    (
+        ArtKind::MethaneGiant,
+        "methane-giant",
+        include_bytes!("../../../../assets/sprites/methane-giant.png"),
     ),
     (
         ArtKind::Moon,
@@ -141,9 +231,19 @@ const SOURCES: &[(ArtKind, &str, &[u8])] = &[
         include_bytes!("../../../../assets/sprites/moon.png"),
     ),
     (
+        ArtKind::IceMoon,
+        "ice-moon",
+        include_bytes!("../../../../assets/sprites/ice-moon.png"),
+    ),
+    (
         ArtKind::Asteroid,
         "asteroid",
         include_bytes!("../../../../assets/sprites/asteroid.png"),
+    ),
+    (
+        ArtKind::MetallicAsteroid,
+        "metallic-asteroid",
+        include_bytes!("../../../../assets/sprites/metallic-asteroid.png"),
     ),
     (
         ArtKind::Station,

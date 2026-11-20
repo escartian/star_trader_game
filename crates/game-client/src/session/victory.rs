@@ -133,7 +133,8 @@ impl LocalSession {
                     "Buy a port's charter in its market for {} cr. It pays you {}% of \
                      every trade there; routes between two of your ports are never \
                      struck by raiders.",
-                    rules.charter_price, rules.port_share_percent
+                    self.economy.charter_price(),
+                    rules.port_share_percent
                 ));
         });
         ui.separator();
@@ -325,7 +326,7 @@ impl LocalSession {
                         .quote_charter(ship)
                         .err()
                         .map(|e| e.to_string());
-                    let label = format!("Buy charter · {} cr", rules.charter_price);
+                    let label = format!("Buy charter · {} cr", self.economy.charter_price());
                     buy = icons::labeled_action(ui, Icon::Buy, &label, blocked)
                         .on_hover_text(format!(
                             "The port pays you {}% of every trade here, NPC traders' \

@@ -148,7 +148,7 @@ sessions and for multiplayer.
 
 | Road | Win condition | Builds on | Needs |
 | --- | --- | --- | --- |
-| Trader | Net worth of 25,000 cr (first proposed as 1,000,000; see [campaign](CAMPAIGN.md)), **or** the trade charters of three ports | Markets, routes, fleets | Charters (new) |
+| Trader | Net worth of 10% of all galaxy wealth (first proposed as 1,000,000 cr; see [campaign](CAMPAIGN.md)), **or** the trade charters of three ports | Markets, routes, fleets | Charters (new) |
 | Soldier | Destroy the Raider Haven (a large defended battle) | Battles, bands, bounties | Haven (new) |
 | Diplomat / Spy | Highest standing with a great power, then broker the frontier treaty | Factions, reputation, missions | Milestones 5 and 6 |
 | Pirate | Take over the Raider Haven and become its master | Piracy, wanted status | Milestones 5 and 6 |

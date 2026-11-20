@@ -38,7 +38,7 @@ impl LocalSession {
             "Course plotted. Press Advance to set off; a contact along the way needs your decision."
         } else if self.economy.current_market(ship).is_err() {
             "Pick a planet or trade port on the map and plot a course there. Plotting is free; Advance moves fleets and markets together."
-        } else if self.economy.credits >= self.economy.rules.hold_upgrade_price {
+        } else if self.economy.credits >= self.economy.hold_upgrade_price() {
             "You can afford the hold upgrade. Open Trade (Menu) and buy it to complete the first earnings goal."
         } else if ship.fuel < 20 {
             "Refuel at the current market before planning your next journey."

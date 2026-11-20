@@ -65,9 +65,13 @@ light-years. Travel and docking use authoritative session commands.
 
 ## Celestial artwork and gameplay panels
 
-Local stars and destinations now use shared preloaded Blender-baked surfaces:
-five star classes, rocky/gas planets, a moon, asteroid and trade port. Procedural
-halos and selection remain overlaid; galaxy markers retain their small geometric
+Local stars and destinations use shared preloaded Blender-baked surfaces:
+nine star classes, seven rocky biomes, three gas giant looks, two moon looks,
+two asteroid looks and the trade port. Generated worlds vary the star class and
+planet biome, including different rocky biomes within one generated system;
+stable moon and asteroid variants add visual variety. Blue stars
+have no cross-shaped marker. Procedural halos and selection remain overlaid;
+galaxy markers retain their small geometric
 symbols. These are static billboards with symbolic sizes, not live 3D models or
 physical-scale radii. The fixed system tilt separates the small port from the
 star. Moon/planet overlaps can be resolved with the candidate list.

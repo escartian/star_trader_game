@@ -15,7 +15,7 @@ impl Economy {
             return Err(EconomyError::FuelFull);
         }
         let cost = u64::from(units)
-            .checked_mul(self.rules.fuel_unit_price.0)
+            .checked_mul(self.fuel_price().0)
             .ok_or(EconomyError::ArithmeticOverflow)?;
         let credits = self
             .credits
@@ -43,7 +43,7 @@ impl Economy {
         if missing == 0 {
             return Err(EconomyError::FuelFull);
         }
-        let price = self.rules.fuel_unit_price.0;
+        let price = self.fuel_price().0;
         let affordable = self.credits.0.checked_div(price).unwrap_or(u64::MAX);
         match u32::try_from(affordable).map_or(missing, |units| units.min(missing)) {
             0 => Err(EconomyError::InsufficientCredits),
@@ -56,7 +56,7 @@ impl Economy {
         if ship.upgraded {
             return Err(EconomyError::AlreadyUpgraded);
         }
-        let cost = self.rules.hold_upgrade_price.0;
+        let cost = self.hold_upgrade_price().0;
         let credits = self
             .credits
             .0
@@ -86,7 +86,7 @@ impl Economy {
             return Err(EconomyError::NoDamage);
         }
         u64::from(ship.hull_damage)
-            .checked_mul(self.rules.repair_point_price.0)
+            .checked_mul(self.repair_price().0)
             .map(Credits)
             .ok_or(EconomyError::ArithmeticOverflow)
     }

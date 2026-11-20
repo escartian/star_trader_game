@@ -163,10 +163,17 @@ impl Session {
                 reason: "Route ended by new orders.".into(),
             });
         }
-        // A battle that ended with this command pays its raider bounty, once.
-        if let Some(report) = &candidate.state.navigation.last_combat
+        // A battle that ended with this command pays its raider bounty, once,
+        // at today's price level (the report records what was paid).
+        let level = candidate.economy.price_level_ppm;
+        if let Some(report) = candidate.state.navigation.last_combat.as_mut()
             && Some(report.encounter) != reported
         {
+            report.bounty = game_core::economy::Credits(
+                (u128::from(report.bounty.0) * u128::from(level)
+                    / u128::from(game_core::economy::PRICE_LEVEL_UNIT))
+                .min(u128::from(u64::MAX)) as u64,
+            );
             candidate.economy.credits = candidate
                 .economy
                 .credits

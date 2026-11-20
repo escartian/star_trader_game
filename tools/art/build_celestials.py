@@ -84,8 +84,8 @@ def moon_craters(obj):
 
 def export(name, colors, style):
     scene = setup()
-    obj = sphere(name, surface(name, colors, style), rough=style == "asteroid")
-    if style == "moon":
+    obj = sphere(name, surface(name, colors, style), rough=style in ("asteroid", "metallic_asteroid"))
+    if style in ("moon", "ice_moon"):
         moon_craters(obj)
     scene.render.filepath = f"//../sprites/{name}.png"
     bpy.ops.wm.save_as_mainfile(filepath=str(ROOT / "assets/source" / f"{name}.blend"))
@@ -103,10 +103,26 @@ EXPORTS = {
     # Frozen world: dark glacial rifts under blue-white ice sheets.
     "frozen-planet": ([(0.02, 0.06, 0.14), (0.12, 0.3, 0.48),
         (0.55, 0.75, 0.88), (0.9, 0.96, 1.0)], "ice"),
+    "ocean-planet": ([(0.005, 0.035, 0.13), (0.01, 0.16, 0.4),
+        (0.025, 0.48, 0.65), (0.72, 0.92, 0.89)], "deep_ocean"),
+    "jungle-planet": ([(0.015, 0.08, 0.04), (0.06, 0.28, 0.06),
+        (0.22, 0.47, 0.08), (0.66, 0.75, 0.21)], "jungle"),
+    "volcanic-planet": ([(0.015, 0.014, 0.025), (0.14, 0.035, 0.025),
+        (0.7, 0.075, 0.008), (1.0, 0.55, 0.015)], "volcanic"),
+    "barren-planet": ([(0.055, 0.048, 0.065), (0.22, 0.19, 0.2),
+        (0.43, 0.4, 0.39), (0.7, 0.67, 0.62)], "barren"),
     "gas-giant": ([(0.18, 0.1, 0.1), (0.55, 0.27, 0.15),
         (0.85, 0.63, 0.4), (0.95, 0.86, 0.68)], "bands"),
+    "storm-giant": ([(0.035, 0.025, 0.13), (0.18, 0.1, 0.42),
+        (0.43, 0.26, 0.7), (0.88, 0.65, 0.95)], "storm_bands"),
+    "methane-giant": ([(0.015, 0.13, 0.19), (0.045, 0.38, 0.49),
+        (0.16, 0.7, 0.69), (0.67, 0.93, 0.83)], "methane_bands"),
     "asteroid": ([(0.055, 0.04, 0.03), (0.25, 0.19, 0.13), (0.55, 0.44, 0.3)], "asteroid"),
+    "metallic-asteroid": ([(0.02, 0.035, 0.06), (0.12, 0.25, 0.34),
+        (0.46, 0.65, 0.68)], "metallic_asteroid"),
     "moon": ([(0.07, 0.08, 0.1), (0.33, 0.35, 0.38), (0.65, 0.67, 0.7)], "moon"),
+    "ice-moon": ([(0.06, 0.16, 0.24), (0.28, 0.55, 0.68),
+        (0.76, 0.89, 0.92)], "ice_moon"),
 }
 
 

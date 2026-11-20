@@ -241,7 +241,7 @@ fn visit_stop(
             && economy.refuel(ship, units).is_ok()
         {
             log.fuel += units;
-            log.fuel_cost += u64::from(units) * economy.rules.fuel_unit_price.0;
+            log.fuel_cost += u64::from(units) * economy.fuel_price().0;
         }
     }
     state.plan_destination(player, lead, next.system, Some(next.body), systems)?;

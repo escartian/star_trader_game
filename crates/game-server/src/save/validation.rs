@@ -52,6 +52,7 @@ impl SaveData {
         self.player.validate_navigation(&self.systems)?;
         self.player.validate_battle(&self.economy.rules)?;
         self.economy.validate_charters()?;
+        self.economy.validate_dynamics()?;
         self.validate_campaign()?;
         for ship in &self.player.ships {
             let hull = self

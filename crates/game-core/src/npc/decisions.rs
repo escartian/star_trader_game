@@ -192,7 +192,7 @@ impl Economy {
                 let Ok(sell) = quotes.quote(&arrival, good, quantity, TradeSide::Sell, 0) else {
                     continue;
                 };
-                let cost = buy.total.0 + fuel * self.rules.fuel_unit_price.0;
+                let cost = buy.total.0 + fuel * self.fuel_price().0;
                 let threshold = if trader.personality == Personality::Cautious {
                     cost / 10
                 } else {

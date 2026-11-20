@@ -15,6 +15,9 @@ from pathlib import Path
 import sys
 import bpy
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from clean_ai_courier import SPRITE_RESOLUTION, SPRITE_SCALE
+
 ROOT = Path(__file__).resolve().parents[2]
 # Export name -> (source .blend, triangle budget or None to keep every face).
 # The freighter, patrol and prospector are script-built and export themselves
@@ -76,6 +79,13 @@ def export(name):
     source, budget = SHIPS[name]
     bpy.ops.wm.open_mainfile(filepath=str(ROOT / "assets/source" / source))
     if name == "scout":
+        # The map sprite keeps the scan's detailed vertex colours. Battle paint
+        # is applied only to the exported GLB after this render.
+        bpy.context.scene.render.resolution_x = SPRITE_RESOLUTION
+        bpy.context.scene.render.resolution_y = SPRITE_RESOLUTION
+        bpy.context.scene.camera.data.ortho_scale = SPRITE_SCALE
+        bpy.context.scene.render.filepath = str(ROOT / "assets/sprites/scout.png")
+        bpy.ops.render.render(write_still=True)
         paint_scout()
     if budget:
         decimate(budget)

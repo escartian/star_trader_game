@@ -42,6 +42,10 @@ fn rocky_planets_use_biome_artwork() {
         (Biome::Temperate, ArtKind::RockyPlanet),
         (Biome::Arid, ArtKind::AridPlanet),
         (Biome::Frozen, ArtKind::FrozenPlanet),
+        (Biome::Ocean, ArtKind::OceanPlanet),
+        (Biome::Jungle, ArtKind::JunglePlanet),
+        (Biome::Volcanic, ArtKind::VolcanicPlanet),
+        (Biome::Barren, ArtKind::BarrenPlanet),
     ] {
         body.planet = Some(game_core::planet::PlanetProfile {
             economy: game_core::planet::EconomyType::Agricultural,
@@ -51,4 +55,21 @@ fn rocky_planets_use_biome_artwork() {
         });
         assert_eq!(ArtKind::for_body(&body), art);
     }
+    body.kind = game_core::BodyKind::GasGiant;
+    body.planet.as_mut().unwrap().biome = Biome::Gas;
+    for (danger, art) in [
+        (game_core::planet::Danger::Moderate, ArtKind::GasGiant),
+        (game_core::planet::Danger::Insidious, ArtKind::StormGiant),
+        (game_core::planet::Danger::Dangerous, ArtKind::MethaneGiant),
+    ] {
+        body.planet.as_mut().unwrap().danger = danger;
+        assert_eq!(ArtKind::for_body(&body), art);
+    }
+    body.planet = None;
+    body.kind = game_core::BodyKind::Moon;
+    body.name = "A".into();
+    assert_eq!(ArtKind::for_body(&body), ArtKind::IceMoon);
+    body.kind = game_core::BodyKind::Asteroid;
+    body.id = game_core::BodyId(3);
+    assert_eq!(ArtKind::for_body(&body), ArtKind::MetallicAsteroid);
 }

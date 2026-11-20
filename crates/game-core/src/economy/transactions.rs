@@ -139,6 +139,7 @@ impl Economy {
         });
         self.credits = Credits(credits);
         ship.cargo[commodity.index()] = cargo;
+        self.record_activity(quote.market, quote.total);
         // The holder's own trades earn the port share here; NPC trades pay it
         // once the holder's wallet is back in place (`npc::decisions`).
         if self.charter_holder(quote.market) == Some(ship.owner) {

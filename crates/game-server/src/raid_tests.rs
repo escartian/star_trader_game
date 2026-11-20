@@ -40,7 +40,11 @@ fn destroyed_raiders_pay_their_bounty_once_and_fled_ones_pay_nothing() {
             .side(Side::Hostile)
             .filter(|ship| ship.destroyed)
             .count() as u64;
-        let bounty = destroyed * session.economy.rules.raider_bounties.scout.0;
+        // Paid at today's price level.
+        let scout = session
+            .economy
+            .inflate(session.economy.rules.raider_bounties.scout);
+        let bounty = destroyed * scout.0;
         assert_eq!(report.bounty.0, bounty, "seed {seed}");
         assert_eq!(session.economy.credits.0, credits + bounty, "paid once");
         if report.outcome == CombatOutcome::Victory && destroyed == 0 {

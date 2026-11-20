@@ -156,11 +156,24 @@ impl PlanetCatalog {
             Some(matches[system_index % matches.len()])
         }
     }
+    /// Keep authored starter systems stable; vary planets within generated systems.
+    pub fn template_for_body(
+        &self,
+        system_index: usize,
+        body: &crate::LocalBody,
+    ) -> Option<&PlanetTemplate> {
+        let variant = if system_index < 3 {
+            system_index
+        } else {
+            system_index.wrapping_add(body.id.0 as usize)
+        };
+        self.template(variant, body.kind)
+    }
     pub fn populate(&self, systems: &mut [StarSystem]) {
         for (index, system) in systems.iter_mut().enumerate() {
             for body in &mut system.bodies {
                 body.planet = self
-                    .template(index, body.kind)
+                    .template_for_body(index, body)
                     .map(|template| template.profile.clone());
             }
         }

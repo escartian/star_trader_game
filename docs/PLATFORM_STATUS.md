@@ -54,9 +54,10 @@ leads the sheet. Not yet seen on screen: the end card (victory, defeat or
 campaign complete), the market's charter row and lane lines; their rules are
 covered by core and server tests, and manual play remains open.
 
-Original Blender 5.2.3 models and baked transparent sprites cover five star classes,
-a rocky planet, gas giant, moon, asteroid and trade port. Their images were visually
-inspected. One shared cache preloads sprites per egui context; system views reuse
+Original Blender 5.2.3 models and baked transparent sprites cover nine star classes,
+seven rocky biomes, three gas giants, two moon looks, two asteroid looks and the
+trade port. The new sprites were inspected in a contact sheet; a fresh in-game
+GPU capture remains open. One shared cache preloads sprites per egui context; system views reuse
 handles and refresh them when a graphics context is recreated. No animation frame
 sets or runtime Blender dependency were introduced. Surface images are billboards;
 star halos, galaxy markers, routes and selection remain procedural.

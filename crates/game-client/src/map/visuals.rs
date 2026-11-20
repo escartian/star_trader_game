@@ -8,6 +8,10 @@ pub fn appearance(kind: StarKind) -> (Color32, f32) {
         StarKind::BlueGiant => (Color32::from_rgb(113, 180, 255), 8.0),
         StarKind::RedGiant => (Color32::from_rgb(255, 143, 72), 10.0),
         StarKind::WhiteDwarf => (Color32::from_rgb(217, 235, 255), 3.0),
+        StarKind::OrangeDwarf => (Color32::from_rgb(255, 170, 81), 5.3),
+        StarKind::BlueWhiteStar => (Color32::from_rgb(171, 223, 255), 6.4),
+        StarKind::BrownDwarf => (Color32::from_rgb(174, 97, 64), 3.5),
+        StarKind::NeutronStar => (Color32::from_rgb(174, 255, 244), 3.3),
     }
 }
 
@@ -119,11 +123,21 @@ fn draw_star(
     hovered: bool,
 ) {
     let color = appearance(kind).0;
+    let halo = if kind == StarKind::NeutronStar {
+        7.0
+    } else {
+        5.0
+    };
+    let strength = if kind == StarKind::BrownDwarf {
+        0.1
+    } else {
+        0.2
+    };
     glow(
         painter,
         center,
-        Vec2::splat(radius * 5.0),
-        color.gamma_multiply(0.2),
+        Vec2::splat(radius * halo),
+        color.gamma_multiply(strength),
     );
     glow(
         painter,
@@ -138,14 +152,15 @@ fn draw_star(
         Vec2::splat(radius),
         Color32::from_white_alpha(210),
     );
-    painter.circle_filled(center, radius * 0.28, Color32::from_rgb(255, 249, 232));
-    if matches!(kind, StarKind::BlueGiant | StarKind::RedGiant) {
-        for axis in [Vec2::X, Vec2::Y] {
-            painter.line_segment(
-                [center - axis * radius * 1.9, center + axis * radius * 1.9],
-                Stroke::new(0.7_f32, color.gamma_multiply(0.5)),
-            );
-        }
+    if kind != StarKind::BrownDwarf {
+        painter.circle_filled(center, radius * 0.28, Color32::from_rgb(255, 249, 232));
+    }
+    if kind == StarKind::NeutronStar {
+        painter.circle_stroke(
+            center,
+            radius * 1.7,
+            Stroke::new(0.8_f32, color.gamma_multiply(0.6)),
+        );
     }
     if selected || hovered {
         painter.circle_stroke(

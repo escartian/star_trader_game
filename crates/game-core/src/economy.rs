@@ -3,10 +3,12 @@ use serde::{Deserialize, Serialize};
 mod bounties;
 pub(crate) mod cargo_json;
 mod charters;
+mod dynamics;
 mod market;
 mod rules;
 pub use bounties::RaiderBounties;
 pub use charters::{CampaignRules, Charter};
+pub use dynamics::{MarketDynamics, PRICE_LEVEL_UNIT};
 pub use rules::{EconomyRules, MarketTemplate};
 mod services;
 mod shipyard;
@@ -68,9 +70,33 @@ pub enum TradeSide {
 pub struct MarketGood {
     pub stock: u32,
     pub target: u32,
+    /// List price at the founding price level (see `price_level_ppm`).
     pub base_price: Credits,
     pub production: u32,
     pub consumption: u32,
+    /// The galaxy's price level (inflation), copied in each tick so a good
+    /// prices itself; parts per million of the founding level.
+    #[serde(
+        default = "unit_price_level",
+        skip_serializing_if = "is_unit_price_level"
+    )]
+    pub price_level_ppm: u64,
+}
+
+fn unit_price_level() -> u64 {
+    PRICE_LEVEL_UNIT
+}
+
+fn is_unit_price_level(level: &u64) -> bool {
+    *level == PRICE_LEVEL_UNIT
+}
+
+fn hundred() -> u32 {
+    100
+}
+
+fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
 
 impl MarketGood {
@@ -95,6 +121,16 @@ pub struct Market {
     #[serde(deserialize_with = "crate::fleet::per_class_stock")]
     pub ship_stock: [u32; crate::fleet::SHIP_KIND_COUNT],
     pub goods: [MarketGood; 6],
+    /// Treasury at founding; with size and price level it sets the level the
+    /// treasury drifts toward (see `dynamics`). 0 in older saves until adopted.
+    #[serde(default)]
+    pub founding_credits: Credits,
+    /// Economic size in percent of the founding size (50–400).
+    #[serde(default = "hundred")]
+    pub size_percent: u32,
+    /// Recent trade value (credits in cents), decaying each tick.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub activity: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -105,6 +141,9 @@ pub struct Economy {
     pub traders: Vec<crate::npc::Trader>,
     pub markets: Vec<Market>,
     pub rules: EconomyRules,
+    /// Galaxy-wide price level in parts per million of the founding prices.
+    #[serde(default = "unit_price_level")]
+    pub price_level_ppm: u64,
     /// Port charters bought so far (see `charters`). Omitted from saves when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub charters: Vec<Charter>,
@@ -200,5 +239,7 @@ impl Economy {
     }
 }
 
+#[cfg(test)]
+mod dynamics_tests;
 #[cfg(test)]
 mod tests;

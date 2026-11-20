@@ -49,6 +49,9 @@ pub struct EconomyRules {
     /// Victory goals, charter price and port share (defaults for older definitions).
     #[serde(default)]
     pub campaign: super::CampaignRules,
+    /// Market growth, treasury drift and inflation (defaults for older definitions).
+    #[serde(default)]
+    pub dynamics: super::MarketDynamics,
 }
 
 /// The player's 12% contact chance × one contact in three being raiders.
@@ -127,6 +130,7 @@ impl EconomyRules {
             || !self.raider_bounties.valid()
             || self.npc_raid_chance_percent > 100
             || !self.campaign.valid()
+            || !self.dynamics.valid()
         {
             return Err("Invalid initial credits or service prices".into());
         }

@@ -12,13 +12,18 @@ use super::{Credits, Economy, EconomyError, MarketId};
 use crate::travel::{PlayerId, Ship};
 use serde::{Deserialize, Serialize};
 
-/// Campaign tuning carried with the session rules. Defaults suit the
-/// generated economy (about 60,000 cr across all market treasuries).
+/// Campaign tuning carried with the session rules.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CampaignRules {
-    /// Net worth that wins the Trader road (credits in cents).
-    pub net_worth_goal: Credits,
+    /// Share of all galaxy wealth (see `campaign::galaxy_wealth`) your net
+    /// worth must reach to win the Trader road, in percent. A share rather
+    /// than a sum, so the goal scales with galaxy size and economic change.
+    #[serde(default = "default_wealth_share")]
+    pub wealth_share_percent: u32,
+    /// The fixed goal of the first version; read from older saves, ignored.
+    #[serde(default, rename = "net_worth_goal", skip_serializing)]
+    pub legacy_net_worth_goal: Option<Credits>,
     /// Price of one port charter (credits in cents).
     pub charter_price: Credits,
     /// Charters that win the Trader road.
@@ -30,7 +35,8 @@ pub struct CampaignRules {
 impl Default for CampaignRules {
     fn default() -> Self {
         Self {
-            net_worth_goal: Credits(2_500_000),
+            wealth_share_percent: default_wealth_share(),
+            legacy_net_worth_goal: None,
             charter_price: Credits(500_000),
             charters_to_win: 3,
             port_share_percent: 2,
@@ -38,9 +44,13 @@ impl Default for CampaignRules {
     }
 }
 
+fn default_wealth_share() -> u32 {
+    10
+}
+
 impl CampaignRules {
     pub(super) fn valid(&self) -> bool {
-        (1..=1_000_000_000_000).contains(&self.net_worth_goal.0)
+        (1..=100).contains(&self.wealth_share_percent)
             && (1..=1_000_000_000_000).contains(&self.charter_price.0)
             && (1..=64).contains(&self.charters_to_win)
             && self.port_share_percent <= 20
@@ -79,7 +89,7 @@ impl Economy {
         if self.charter_holder(market.id).is_some() {
             return Err(EconomyError::AlreadyChartered);
         }
-        let price = self.rules.campaign.charter_price;
+        let price = self.charter_price();
         if self.credits < price {
             return Err(EconomyError::InsufficientCredits);
         }

@@ -20,15 +20,16 @@ impl Economy {
             .find(|spec| spec.kind == kind)
             .ok_or(EconomyError::UnknownMarket)?
             .clone();
+        let price = self.inflate(spec.price);
         let credits = self
             .credits
             .0
-            .checked_sub(spec.price.0)
+            .checked_sub(price.0)
             .ok_or(EconomyError::InsufficientCredits)?;
         let market_credits = market
             .credits
             .0
-            .checked_add(spec.price.0)
+            .checked_add(price.0)
             .ok_or(EconomyError::ArithmeticOverflow)?;
         let market = self.market_mut(id)?;
         market.credits = Credits(market_credits);
@@ -45,20 +46,9 @@ impl Economy {
         if market.ship_stock[ship.kind.index()] >= 1000 {
             return Err(EconomyError::StockFull);
         }
-        let spec = self
-            .rules
-            .ship_catalog
-            .ships
-            .iter()
-            .find(|spec| spec.kind == ship.kind)
+        let price = self
+            .ship_resale(ship.kind)
             .ok_or(EconomyError::UnknownMarket)?;
-        let price = Credits(
-            spec.price
-                .0
-                .checked_mul(u64::from(self.rules.ship_resale_percent))
-                .ok_or(EconomyError::ArithmeticOverflow)?
-                / 100,
-        );
         if market.credits < price {
             return Err(EconomyError::MarketInsufficientCredits);
         }

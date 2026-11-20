@@ -27,6 +27,10 @@ STAR_COLORS = {
     "BlueGiant": (118, 177, 255),
     "RedGiant": (255, 143, 98),
     "WhiteDwarf": (215, 233, 255),
+    "OrangeDwarf": (255, 175, 77),
+    "BlueWhiteStar": (176, 216, 255),
+    "BrownDwarf": (154, 82, 66),
+    "NeutronStar": (224, 250, 255),
 }
 BODY_COLORS = {
     "RockyPlanet": (118, 190, 148),
@@ -35,6 +39,25 @@ BODY_COLORS = {
     "Asteroid": (189, 158, 126),
     "Station": CYAN,
 }
+BIOME_COLORS = {
+    "temperate": (118, 190, 148), "arid": (211, 143, 83),
+    "frozen": (179, 211, 232), "ocean": (38, 151, 198),
+    "jungle": (108, 182, 67), "volcanic": (238, 90, 45),
+    "barren": (167, 156, 150),
+}
+GAS_COLORS = {
+    "moderate": (207, 169, 126), "insidious": (163, 122, 213),
+    "dangerous": (89, 199, 204),
+}
+
+
+def body_color(body):
+    profile = body.get("planet")
+    if body["kind"] == "RockyPlanet" and profile:
+        return BIOME_COLORS[profile["biome"]]
+    if body["kind"] == "GasGiant" and profile:
+        return GAS_COLORS.get(profile["danger"], BODY_COLORS["GasGiant"])
+    return BODY_COLORS[body["kind"]]
 
 
 def font(size):
@@ -112,12 +135,14 @@ def galaxy_preview(data):
     value(draw, 275, "Market ports", len(systems))
     section(draw, 330, "STAR CLASSES")
     for index, (kind, count) in enumerate(Counter(s["star_kind"] for s in systems).most_common()):
-        y = 380 + index * 42
+        y = 380 + index * 29
         draw.ellipse((1130, y + 5, 1143, y + 18), fill=STAR_COLORS[kind])
-        draw.text((1158, y), kind.replace("Dwarf", " dwarf").replace("Giant", " giant"), font=font(18), fill=(218, 232, 236))
+        label = kind.replace("BlueWhite", "Blue-white ").replace("Neutron", "Neutron ")
+        label = label.replace("Dwarf", " dwarf").replace("Giant", " giant")
+        draw.text((1158, y), label, font=font(18), fill=(218, 232, 236))
         draw.text((1490, y), str(count), font=font(18), fill=MUTED, anchor="ra")
-    section(draw, 615, "TRAVEL")
-    draw.multiline_text((1130, 665), "Every star has a route back to Sol\nthrough hops of 20 ly or less.", font=font(18), fill=MUTED, spacing=9)
+    section(draw, 665, "TRAVEL")
+    draw.multiline_text((1130, 715), "Every star has a route back to Sol\nthrough hops of 20 ly or less.", font=font(18), fill=MUTED, spacing=9)
     PREVIEWS.mkdir(parents=True, exist_ok=True)
     image.convert("RGB").save(PREVIEWS / "generated-galaxy-150.png")
 
@@ -139,7 +164,7 @@ def system_preview(data):
         x, y = cx + pos["x_km"] * scale, cy - pos["z_km"] * scale
         kind = body["kind"]
         r = {"RockyPlanet": 9, "GasGiant": 14, "Moon": 5, "Asteroid": 5, "Station": 7}[kind]
-        color = BODY_COLORS[kind]
+        color = body_color(body)
         draw.ellipse((x - r, y - r, x + r, y + r), fill=color, outline=(218, 238, 240), width=1)
         draw.text((x + r + 5, y - 11), str(body["id"]), font=font(15), fill=(226, 240, 241))
     section(draw, 153, "ORBITING OBJECTS")
@@ -148,8 +173,9 @@ def system_preview(data):
         row = i % 8
         x = 1130 + col * 202
         y = 205 + row * 54
-        draw.ellipse((x, y + 5, x + 13, y + 18), fill=BODY_COLORS[body["kind"]])
-        draw.text((x + 20, y), f"{body['id']:02}  {body['kind'].replace('Planet', '')[:13]}", font=font(16), fill=(220, 235, 238))
+        draw.ellipse((x, y + 5, x + 13, y + 18), fill=body_color(body))
+        label = body["planet"]["biome"].title() if body.get("planet") and body["kind"] == "RockyPlanet" else body["kind"].replace("Planet", "")
+        draw.text((x + 20, y), f"{body['id']:02}  {label[:13]}", font=font(16), fill=(220, 235, 238))
     section(draw, 680, "SYSTEM RULES")
     draw.multiline_text((1130, 729), "Orbits remain clear at every tick.\nPlanet markets and the port use\nnormal trade rules.", font=font(17), fill=MUTED, spacing=6)
     image.save(PREVIEWS / "generated-system-15.png")

@@ -178,6 +178,30 @@ mod tests {
     }
 
     #[test]
+    fn dense_generated_systems_vary_planet_biomes_within_a_system() {
+        let systems = generate_galaxy_with(
+            42,
+            GalaxyConfig {
+                systems: 150,
+                radius_ly: 95,
+                max_objects: 15,
+            },
+        )
+        .unwrap();
+        assert!(systems.iter().skip(3).any(|system| {
+            let rocky: Vec<_> = system
+                .bodies
+                .iter()
+                .filter(|body| body.kind == BodyKind::RockyPlanet)
+                .filter_map(|body| body.planet.as_ref().map(|planet| planet.biome))
+                .collect();
+            rocky
+                .iter()
+                .any(|biome| rocky.iter().any(|other| other != biome))
+        }));
+    }
+
+    #[test]
     fn a_large_galaxy_is_connected_and_within_its_selected_radius() {
         let config = GalaxyConfig {
             systems: 150,

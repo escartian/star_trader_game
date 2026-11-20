@@ -19,6 +19,29 @@ fund and store; **Full** refuels as far as credits allow. These sizes come from 
 economy's own quote rules (`max_trade_quantity`, `max_refuel_units`), and the
 authority still validates every order.
 
+## Living markets and inflation
+
+Markets are not static (`game-core/src/economy/dynamics.rs`). Each tick:
+
+- **Activity:** every trade (yours or an NPC's) adds its value to its market's
+  recent activity, which fades by 1/40 per tick (about 10% per run).
+- **Size:** a port's economy, in percent of its founding size, steps one point
+  per tick toward 75% plus one point per 100 cr of activity, between 50% and
+  400%. Ports nobody trades with (because raiders scare traffic off, or nothing
+  pays) shrink; busy ones grow. The market header shows the size and trend.
+- **Treasury:** drifts 2% of the gap per tick toward founding treasury × size ×
+  price level. This is off-screen trade, taxes and investment: with bounties,
+  the only way money enters or leaves the galaxy. Trades still only move money.
+- **Inflation:** a galaxy-wide price level compounds by 125 parts per million
+  per tick (about 5% per 100 runs). Goods, fuel, repairs, hold upgrades, hulls,
+  charters and bounties all scale with it, and so do treasuries.
+
+Tuning lives in the session rules (`dynamics`); `MarketDynamics::frozen()`
+restores a static economy. In the three-system default world with two NPC
+traders, 400 runs with the player idle took galaxy wealth from about 65,000 cr
+to 54,000 cr by run 50 (idle ports shrinking) and to 98,000 cr by run 400 at a
+price level of 1.22; the ports NPC traders serve held 84–88%.
+
 ## Identity and production
 
 `config/planets.json` defines rocky/gas templates with economy type, biome, danger,

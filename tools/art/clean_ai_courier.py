@@ -23,6 +23,8 @@ from build_trade_port import light
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "assets/source"
 SHIP_LENGTH = 4.3            # Blender units, matches the hand-built ships
+SPRITE_RESOLUTION = 512
+SPRITE_SCALE = 5.2
 SMOOTH_ANGLE = math.radians(35)
 
 
@@ -32,6 +34,7 @@ def load_scan(path):
     # glTF Y-up -> Blender Z-up, the same conversion Blender's glTF importer applies.
     vertices = np.stack([gltf[:, 0], -gltf[:, 2], gltf[:, 1]], axis=1)
     vertices = align_heading(vertices)
+    vertices = level_attitude(vertices)
     vertices -= (vertices.min(0) + vertices.max(0)) / 2
     vertices *= SHIP_LENGTH / np.ptp(vertices[:, 1])
     return vertices, scan["faces"], scan["colors"]
@@ -54,6 +57,24 @@ def align_heading(vertices):
     back = vertices[y < y.min() + 0.15 * span]
     if np.ptp(front[:, 0]) > np.ptp(back[:, 0]):   # wider end is the engine pair
         vertices[:, :2] *= -1                       # turn 180 degrees about Z
+    return vertices
+
+
+def level_attitude(vertices):
+    """Remove the scan camera's pitch and roll after its heading is aligned."""
+    for _ in range(3):
+        centred = vertices - vertices.mean(0)
+        slope_y = np.dot(centred[:, 1], centred[:, 2]) / np.dot(centred[:, 1], centred[:, 1])
+        pitch = math.atan(-slope_y)
+        y, z = vertices[:, 1].copy(), vertices[:, 2].copy()
+        vertices[:, 1] = math.cos(pitch) * y - math.sin(pitch) * z
+        vertices[:, 2] = math.sin(pitch) * y + math.cos(pitch) * z
+        centred = vertices - vertices.mean(0)
+        slope_x = np.dot(centred[:, 0], centred[:, 2]) / np.dot(centred[:, 0], centred[:, 0])
+        roll = math.atan(slope_x)
+        x, z = vertices[:, 0].copy(), vertices[:, 2].copy()
+        vertices[:, 0] = math.cos(roll) * x + math.sin(roll) * z
+        vertices[:, 2] = -math.sin(roll) * x + math.cos(roll) * z
     return vertices
 
 
@@ -96,7 +117,7 @@ def setup_sprite_scene():
     scene.cycles.device = "CPU"
     scene.cycles.samples = 32
     scene.cycles.use_denoising = True
-    scene.render.resolution_x = scene.render.resolution_y = 256
+    scene.render.resolution_x = scene.render.resolution_y = SPRITE_RESOLUTION
     scene.render.resolution_percentage = 100
     scene.render.film_transparent = True
     scene.render.image_settings.file_format = "PNG"
@@ -109,7 +130,7 @@ def setup_sprite_scene():
     camera = bpy.context.object
     camera.rotation_euler = (-camera.location).to_track_quat("-Z", "Y").to_euler()
     camera.data.type = "ORTHO"
-    camera.data.ortho_scale = 6
+    camera.data.ortho_scale = SPRITE_SCALE
     scene.camera = camera
     scene.render.filepath = "//../sprites/scout.png"
 

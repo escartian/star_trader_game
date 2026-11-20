@@ -37,10 +37,16 @@ Each `data/slot-N.json` stores:
   the Raider `haven` in navigation (`system`, `body`, `garrison`, `sunk`, `destroyed_run`; contacts against it carry `haven: true`)
   and `campaign` (`run_limit`, `ended` as `won` with its `road`, `lost` or `time_up`, each with its `run`).
 - `economy`: shared player credits, current markets and exact session rules,
-  including ship/planet/combat catalogs and `campaign` goals (`net_worth_goal`,
-  `charter_price`, `charters_to_win`, `port_share_percent`), and port `charters`
+  including ship/planet/combat catalogs and `campaign` goals
+  (`wealth_share_percent`, `charter_price`, `charters_to_win`,
+  `port_share_percent`; an older `net_worth_goal` is read and ignored) and `dynamics`
+  (`treasury_drift_percent`, `idle_size_percent`, `inflation_ppm_per_tick`), the
+  galaxy `price_level_ppm`, and port `charters`
   (`market`, `owner`; omitted when none). Each market records a composite system/body ID,
-  station flag, treasury, hull inventory and commodity balances. Cargo is keyed by commodity name inside each ship.
+  station flag, treasury, `founding_credits`, `size_percent`, recent `activity`,
+  hull inventory and commodity balances (each good with its `price_level_ppm`).
+  Saves from before living markets load: a market without `founding_credits`
+  adopts its current treasury on the next tick. Cargo is keyed by commodity name inside each ship.
 
 The root schema is independent of the command protocol version. Money uses
 unsigned integer hundredths of a credit; credits and cargo cannot be negative.

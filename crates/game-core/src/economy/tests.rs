@@ -150,7 +150,9 @@ fn market_time_is_batch_independent_and_price_curves_are_bounded() {
             assert!(good.stock <= good.capacity());
             for stock in 0..=good.capacity() {
                 assert!(good.price(TradeSide::Sell, stock) < good.price(TradeSide::Buy, stock));
-                assert!(good.price(TradeSide::Buy, stock).0 <= good.base_price.0 * 165 / 100 + 1);
+                // Bounded relative to the base price at today's price level.
+                let base = batched.inflate(good.base_price).0;
+                assert!(good.price(TradeSide::Buy, stock).0 <= base * 165 / 100 + 1);
             }
         }
     }
@@ -173,7 +175,7 @@ fn representative_route_pays_for_fuel_and_makes_progress_to_upgrade() {
     assert!(economy.credits > Credits(100_000));
     assert_eq!(ship.cargo_used(), 0);
     assert_eq!(ship.fuel, 40);
-    economy.credits = economy.rules.hold_upgrade_price;
+    economy.credits = economy.hold_upgrade_price();
     economy.upgrade_hold(&mut ship).unwrap();
     assert_eq!(ship.cargo_capacity, 40);
     assert_eq!(economy.credits, Credits(0));

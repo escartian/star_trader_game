@@ -33,8 +33,10 @@ fn goods(economy: &game_core::economy::Economy, good: Commodity) -> u64 {
 #[test]
 fn traders_act_only_on_runs_and_conserve_cash_and_goods_through_real_trades() {
     let mut session = Session::default();
-    // Raids destroy cargo; this test is about trades alone.
+    // Raids destroy cargo, and living markets move money in and out of
+    // treasuries; this test is about trades alone.
     session.economy.rules.npc_raid_chance_percent = 0;
+    session.economy.rules.dynamics = game_core::economy::MarketDynamics::frozen();
     let initial_cash = money(&session);
     let initial = session.snapshot(Vec::new());
     for _ in 0..5 {

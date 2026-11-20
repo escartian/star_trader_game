@@ -48,7 +48,8 @@ impl LocalSession {
                     36.0,
                 );
                 ui.strong(spec.kind.label());
-                stat(ui, Icon::Credits, AMBER, &spec.price.to_string(), "Price");
+                let price = self.economy.inflate(spec.price);
+                stat(ui, Icon::Credits, AMBER, &price.to_string(), "Price");
                 stat(ui, Icon::Funds, CYAN, &stock.to_string(), "In stock");
                 stat(
                     ui,
@@ -73,14 +74,14 @@ impl LocalSession {
                 );
                 let blocked = if stock == 0 {
                     Some("Out of stock".to_string())
-                } else if self.economy.credits < spec.price {
+                } else if self.economy.credits < price {
                     Some("Not enough credits".to_string())
                 } else if self.state.ships.len() >= 64 {
                     Some("Fleet limit of 64 ships reached".to_string())
                 } else {
                     None
                 };
-                let tip = format!("Buy {} for {} cr", spec.kind.label(), spec.price);
+                let tip = format!("Buy {} for {price} cr", spec.kind.label());
                 if icons::action(ui, Icon::Buy, &tip, blocked).clicked() {
                     action = Some(ClientCommand::BuyShip {
                         ship: ship.id,

@@ -9,9 +9,10 @@ use crate::map::art::{ArtKind, Artwork};
 use crate::theme::{AMBER, CYAN, GREEN};
 use egui::{Color32, FontId, Pos2, Rect, Stroke, Vec2};
 use game_core::combat::{
-    CombatCatalog, Side,
+    CombatCatalog, HullSize, Side,
     tactical::{Band, Battle, Hex, Position, Unit},
 };
+use game_core::fleet::ShipKind;
 
 pub const HOSTILE: Color32 = Color32::from_rgb(255, 104, 84);
 
@@ -49,10 +50,18 @@ pub fn side_color(side: Side) -> Color32 {
     }
 }
 
-/// Billboard edge length in world units.
-const SHIP_SIZE: f32 = 1.45;
-/// Length of a 3D ship model in world units (hex centres are 1.0 apart).
-const MODEL_SIZE: f32 = 1.05;
+/// Model lengths in world units; adjacent hex centres are 1.0 apart.
+fn ship_length(size: HullSize, kind: ShipKind) -> f32 {
+    match (size, kind) {
+        (HullSize::Small, _) => 0.72,
+        (HullSize::Medium, ShipKind::Freighter) => 1.22,
+        (HullSize::Medium, _) => 1.05,
+        (HullSize::Large, _) => 1.38,
+    }
+}
+
+/// Transparent margins make the sprite's billboard larger than its model length.
+const SPRITE_TO_MODEL_RATIO: f32 = 1.38;
 /// Radius of the ring around a ship, in world units.
 const RING: f32 = 0.46;
 
@@ -73,7 +82,7 @@ pub fn pick(
         .filter(|(_, unit)| unit.active())
         .filter_map(|(index, unit)| {
             let at = projector.project(ScenePoint::of(unit.at))?;
-            let radius = (at.scale * SHIP_SIZE * 0.3).max(14.0);
+            let radius = (at.scale * ship_length(unit.profile.size, unit.kind) * 0.42).max(14.0);
             (at.pos.distance(pointer) <= radius).then_some((at.depth, index))
         })
         .min_by(|a, b| a.0.total_cmp(&b.0));
@@ -185,7 +194,8 @@ fn ships(canvas: &Canvas, frame: &Frame, input: &SceneInput, active: Option<usiz
     ships.sort_by(|a, b| b.3.depth.total_cmp(&a.3.depth));
     for (index, unit, point, at) in ships {
         let color = side_color(unit.side);
-        shadow(canvas, point.on_board());
+        let length = ship_length(unit.profile.size, unit.kind);
+        shadow(canvas, point.on_board(), length);
         canvas.dashed(
             point,
             point.on_board(),
@@ -214,12 +224,12 @@ fn ships(canvas: &Canvas, frame: &Frame, input: &SceneInput, active: Option<usiz
                 .effects
                 .heading(index, unit.at, frame.now)
                 .unwrap_or(side_heading);
-            model.paint(canvas.painter, canvas.projector, point, MODEL_SIZE, heading);
+            model.paint(canvas.painter, canvas.projector, point, length, heading);
         } else if !input.artwork.paint_facing(
             ArtKind::from(unit.kind),
             canvas.painter,
             at.pos,
-            at.scale * SHIP_SIZE,
+            at.scale * length * SPRITE_TO_MODEL_RATIO,
             facing_left,
         ) {
             canvas.painter.circle_filled(at.pos, at.scale * 0.3, color);
@@ -229,11 +239,11 @@ fn ships(canvas: &Canvas, frame: &Frame, input: &SceneInput, active: Option<usiz
 }
 
 /// A soft dark disc on the board under a ship.
-fn shadow(canvas: &Canvas, on_board: ScenePoint) {
+fn shadow(canvas: &Canvas, on_board: ScenePoint, ship_length: f32) {
     let points: Option<Vec<Pos2>> = (0..24)
         .map(|step| {
             let angle = step as f32 / 24.0 * std::f32::consts::TAU;
-            let offset = glam::Vec3::new(angle.cos(), angle.sin(), 0.0) * 0.3;
+            let offset = glam::Vec3::new(angle.cos(), angle.sin(), 0.0) * ship_length * 0.29;
             canvas.at(ScenePoint(on_board.0 + offset))
         })
         .collect();

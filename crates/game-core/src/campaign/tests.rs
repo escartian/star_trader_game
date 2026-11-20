@@ -69,7 +69,18 @@ fn the_trader_road_is_won_by_net_worth_or_by_charters_and_recorded_once() {
         Road::ALL
     );
     assert!(roads[0].open && roads[1].open && !roads[2].open && !roads[3].open);
-    economy.credits = economy.rules.campaign.net_worth_goal;
+    // Just under 10% of the galaxy's wealth, then just over it.
+    let others =
+        super::galaxy_wealth(&state, &economy, PLAYER).0 - net_worth(&state, &economy, PLAYER).0;
+    let hull = net_worth(&state, &economy, PLAYER).0 - economy.credits.0;
+    economy.credits = Credits(others / 9 - hull - 100);
+    assert_eq!(check_end(&state, &economy, PLAYER), None);
+    assert!(progress(&state, &economy, PLAYER)[0].percent >= 99);
+    economy.credits = Credits(others / 9 - hull + 100);
+    assert_eq!(
+        super::wealth_share_basis_points(&state, &economy, PLAYER),
+        1000
+    );
     state.navigation.run = 9;
     let won = check_end(&state, &economy, PLAYER);
     assert_eq!(
@@ -209,4 +220,13 @@ fn charters_sell_once_pay_a_port_share_and_conserve_credits() {
         owner: PLAYER,
     });
     assert!(economy.validate_charters().is_err(), "duplicate charter");
+}
+
+#[test]
+fn rules_from_the_fixed_goal_version_still_load_with_the_share_goal() {
+    let old = r#"{"net_worth_goal":2500000,"charter_price":500000,"charters_to_win":3,"port_share_percent":2}"#;
+    let rules: crate::economy::CampaignRules = serde_json::from_str(old).unwrap();
+    assert_eq!(rules.wealth_share_percent, 10);
+    let saved = serde_json::to_value(&rules).unwrap();
+    assert!(saved.get("net_worth_goal").is_none(), "never written again");
 }

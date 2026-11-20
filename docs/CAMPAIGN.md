@@ -19,17 +19,21 @@ toward a second road.
 
 | Road | Win condition | Status |
 | --- | --- | --- |
-| Trader | Net worth of **25,000 cr**, or **3 port charters** | Playable |
+| Trader | Net worth of **10% of all galaxy wealth**, or **3 port charters** | Playable |
 | Soldier | Destroy the Raider Haven | Playable |
 | Diplomat / Spy | Highest standing with a great power, then the frontier treaty | Locked until factions and missions |
 | Pirate | Take over the Raider Haven | Locked until factions and missions |
 
-**Why 25,000 cr and not the 1,000,000 cr first proposed:** trades only move
-money between wallets, and a new world holds about 64,000 cr in all (about
-59,000 cr in nine market treasuries, 4,000 cr with NPC traders, 1,000 cr with
-the player); bounties are the only new money. The goal, charter price, charter
-count and port share live in the session rules (`economy.rules.campaign`), so
-they can be rebalanced in data.
+**Galaxy wealth** = your net worth + every market treasury + every NPC
+trader's credits. The goal is a share rather than a sum (the 1,000,000 cr first
+proposed, and the 25,000 cr of the first build, were both fixed), so it scales
+with the number of systems and planets and will follow economies as they grow,
+shrink or inflate. In today's three-system default world (about 64,000 cr in
+all) 10% means roughly 7,000 cr of net worth; a bigger galaxy asks for more.
+The share, charter price, charter count and port share live in the session
+rules (`economy.rules.campaign`), so they can be rebalanced in data.
+Galaxy wealth changes over a game: markets grow and shrink with trade and
+prices inflate (see [planet economies](PLANET_ECONOMY.md#living-markets-and-inflation)).
 
 **Net worth** = credits + each owned hull at its resale price (60% of the
 shipyard price) + cargo at the best price any market currently pays.

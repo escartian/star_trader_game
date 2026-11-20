@@ -63,6 +63,22 @@ impl LocalSession {
         ui.horizontal_wrapped(|ui| {
             stat(ui, Icon::Funds, AMBER, &market.credits.to_string(), "Market funds available to buy your cargo");
             stat(ui, Icon::Credits, AMBER, &self.economy.credits.to_string(), "Your credits");
+            let trend = match market.size_percent {
+                size if size > 100 => "growing with trade",
+                size if size < 100 => "shrinking: little trade",
+                _ => "as founded",
+            };
+            stat(
+                ui,
+                Icon::Overview,
+                CYAN,
+                &format!("Size {}%", market.size_percent),
+                &format!(
+                    "Port economy {trend}. Trade here grows it, and with it the treasury; \
+                     idle ports shrink. Prices stand at {:.1}% of founding (inflation).",
+                    self.economy.price_level_ppm as f64 / 10_000.0
+                ),
+            );
             stat(
                 ui,
                 Icon::Cargo,
@@ -93,13 +109,13 @@ impl LocalSession {
                 missing > 0,
                 egui::DragValue::new(&mut self.market.fuel_units).range(1..=missing.max(1)),
             );
-            let cost = u64::from(units) * self.economy.rules.fuel_unit_price.0;
+            let cost = u64::from(units) * self.economy.fuel_price().0;
             stat(
                 ui,
                 Icon::Credits,
                 AMBER,
                 &game_core::economy::Credits(cost).to_string(),
-                &format!("{} cr per fuel unit", self.economy.rules.fuel_unit_price),
+                &format!("{} cr per fuel unit", self.economy.fuel_price()),
             );
             let blocked = (missing == 0).then(|| "The tanks are full.".to_owned());
             if icons::labeled_action(ui, Icon::Refuel, "Refuel", blocked)
@@ -122,7 +138,7 @@ impl LocalSession {
             };
             let response = icons::labeled_action(ui, Icon::Refuel, "Full", reason);
             if let Ok(units) = full {
-                let cost = u64::from(units).saturating_mul(self.economy.rules.fuel_unit_price.0);
+                let cost = u64::from(units).saturating_mul(self.economy.fuel_price().0);
                 if response
                     .on_hover_text(format!(
                         "Refuel {units} units for {} cr",
@@ -143,7 +159,8 @@ impl LocalSession {
                 .then(|| "First earnings goal completed: hold already upgraded.".to_string());
             let tip = format!(
                 "Upgrade hold: +{} cargo for {} cr",
-                self.economy.rules.hold_upgrade_capacity, self.economy.rules.hold_upgrade_price
+                self.economy.rules.hold_upgrade_capacity,
+                self.economy.hold_upgrade_price()
             );
             if icons::action(ui, Icon::Upgrade, &tip, blocked).clicked() {
                 action = Some(ClientCommand::UpgradeHold {

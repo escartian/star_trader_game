@@ -12,10 +12,7 @@ use crate::map::art::Artwork;
 use crate::theme::icons::{self, Icon};
 use crate::theme::{AMBER, GREEN, metal};
 use egui::{Color32, RichText, Vec2};
-use game_core::combat::{
-    Side,
-    tactical::{Battle, HEIGHT, home_edge},
-};
+use game_core::combat::{Side, tactical::Battle};
 use game_core::navigation::{ActiveBattle, BattleAction};
 use game_protocol::ClientCommand;
 
@@ -36,6 +33,16 @@ impl LocalSession {
             .battle
             .as_ref()
             .is_some_and(|open| self.battle.hidden != Some(open.encounter))
+    }
+
+    /// Capture helper: centres on the acting ship and zooms in `factor` times.
+    #[cfg(any(test, feature = "dev-tools"))]
+    pub(super) fn battle_close_up(&mut self, factor: f32) {
+        if let Some(open) = self.state.navigation.battle.clone() {
+            self.battle.view.sync(&open.battle);
+            self.battle.view.focus_active(&open.battle);
+            self.battle.view.camera.zoom(factor);
+        }
     }
 
     /// Brings a hidden battle back.
@@ -173,7 +180,7 @@ impl LocalSession {
         }
         ui.add_space(4.0);
         ui.horizontal(|ui| {
-            let at_edge = battle.units[me].cell.x == home_edge(Side::Player);
+            let at_edge = battle.units[me].cell.x == battle.size.home_edge(Side::Player);
             let blocked =
                 (!at_edge).then(|| "Move to your edge (the cyan column) to withdraw.".into());
             if icons::labeled_action(ui, Icon::Back, "Withdraw", blocked).clicked() {
@@ -191,26 +198,21 @@ impl LocalSession {
         }
     }
 
-    /// One button per layer; the shown layer's move cells are clickable.
+    /// A slider over the grid's layers (shown 1-based); the shown layer's move
+    /// cells are clickable. Grids are as tall as they are wide, so a row of
+    /// buttons would not fit the bigger battles.
     fn layer_picker(&mut self, ui: &mut egui::Ui) {
+        let top = (self.battle.view.layers - 1).max(0);
         ui.horizontal(|ui| {
             ui.label(RichText::new("LAYER").small().color(Color32::GRAY))
                 .on_hover_text("Which height's move cells are shown (Q / E)");
-            for layer in 0..HEIGHT {
-                let selected = self.battle.view.layer == layer;
-                let text = RichText::new((layer + 1).to_string()).color(if selected {
-                    Color32::BLACK
-                } else {
-                    GREEN
-                });
-                let mut button = egui::Button::new(text).min_size(Vec2::new(30.0, 24.0));
-                if selected {
-                    button = button.fill(GREEN.gamma_multiply(0.85));
-                }
-                if ui.add(button).clicked() {
-                    self.battle.view.layer = layer;
-                }
-            }
+            ui.spacing_mut().slider_width = SIDE_WIDTH - 120.0;
+            ui.add(
+                egui::Slider::new(&mut self.battle.view.layer, 0..=top)
+                    .custom_formatter(|value, _| format!("{}", value as i64 + 1))
+                    .custom_parser(|text| text.trim().parse::<f64>().ok().map(|value| value - 1.0)),
+            );
+            ui.label(RichText::new(format!("of {}", top + 1)).small());
         });
     }
 
@@ -225,7 +227,7 @@ impl LocalSession {
 fn turn_hint(battle: &Battle) -> &'static str {
     match (battle.moved, battle.fired) {
         (false, false) => {
-            "Click a green dot to move, or a ringed raider to fire. Drag to orbit, scroll to zoom."
+            "Click a green dot to move, or a ringed raider to fire. Drag to orbit, right-drag or Shift+drag to pan, scroll to zoom, arrows to slide, F to centre."
         }
         (true, false) => "Moved. Fire at a ringed raider, or end the turn.",
         (false, true) => "Fired. You may still move, then end the turn.",

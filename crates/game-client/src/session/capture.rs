@@ -196,6 +196,13 @@ impl LocalSession {
         self.capture_raiders(true)
     }
 
+    /// The battle, centred on the acting ship and zoomed in.
+    pub fn capture_battle_close(&mut self) -> Result<(), String> {
+        self.capture_raiders(true)?;
+        self.battle_close_up(2.5);
+        Ok(())
+    }
+
     fn capture_raiders(&mut self, open_battle: bool) -> Result<(), String> {
         use game_core::navigation::{EncounterChoice, EncounterKind};
         if open_battle && self.state.navigation.battle.is_some() {

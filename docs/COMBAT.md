@@ -42,12 +42,19 @@ Fights are turn-based battles on a 3D grid (`game-core/src/combat/tactical.rs`,
 pure and deterministic). One seed is drawn from the saved navigation RNG and
 stored in the report, so the same seed and actions replay the same battle.
 
-**Battle space.** 9 cells along x (between the two sides), 9 along y and 5
-vertical layers along z. Distance is Chebyshev: one step may change all three
-axes, so every movement and weapon range is a cube. Player ships deploy on the
-second column (x = 1), raiders on x = 7, in a checkerboard around the centre
-(centre first, then the middle layer, then the layers beside it) so no two ships
-of a side share a face; each side withdraws from its own edge (x = 0 or x = 8).
+**Battle space.** A cube that grows with the fleets: `9 + ships / 2` cells a
+side, so 10 for a duel (and for 3 ships), 11 for 4–5 ships, 16 for 7 v 7 and 17
+for the largest battle (16 ships). x runs between the two sides, y across them,
+z is the vertical layers. Battles saved before grids scaled keep their 9 × 9 × 5
+volume. Distance is Chebyshev: one step may change all three axes, so every
+movement and weapon range is a cube. Player ships deploy on the second column
+(x = 1), raiders one column in from the far edge, in a checkerboard around the
+centre (centre first, then the middle layer, then the layers beside it) so no two
+ships of a side share a face; each side withdraws from its own edge column.
+
+Bigger grids mean a longer approach: ships start `edge − 3` cells apart (7 in a
+duel, 13 at 7 v 7), so slow hulls spend a round or two closing before weapons
+reach, and long-range weapons (torpedo 6, photon beam 5) get the first shots.
 
 **Turns (HoMM-style initiative).** Each round every active ship acts once, by
 engine rating (high first); ties break by a seeded roll drawn once per battle.
@@ -71,20 +78,47 @@ penetration 2 leaves 11 hull damage.
 
 Battles are fought to a finish: there is no round limit. A battle ends when a
 side has no active ships (destroyed or withdrawn). It also ends if three whole
-rounds pass in which nobody fires (a ceasefire: both sides break off). A side
-wins only if every enemy ship was destroyed; otherwise the result is
-**Disengaged**. A 200-round safety cap bounds saved shot logs; normal play never
-reaches it, because every shot has at least a 5% hit chance and every hull hit
-deals at least 1 point. With Auto-resolve over 400 seeds, freighter vs scout
-averages 7 rounds (at most 14) and patrol vs patrol 13 (at most 26), with no
-ceasefires. Big fleets fight long, attritional battles: 7 v 7 averages 20–27
-rounds (at most 54), usually leaving one or two survivors; the largest possible
-battle, 8 patrols a side, peaked at 68 rounds over 2,000 seeds, always decided. Ships that were already damaged fight with their
-saved `hull_damage`, at full shields.
+rounds pass in which nobody fires, moves or withdraws (a ceasefire: both sides
+break off); movement counts, so a long approach never trips it. Outcomes:
+
+- **Victory:** no raider is left fighting, whether destroyed or fled.
+- **Defeat:** every one of your ships was destroyed.
+- **Disengaged:** your ships escaped by withdrawing, or a ceasefire.
+
+A 200-round safety cap bounds saved shot logs; normal play never reaches it,
+because every shot has at least a 5% hit chance and every hull hit deals at
+least 1 point. Ships that were already damaged fight with their saved
+`hull_damage`, at full shields.
+
+**Morale.** Each side has a morale of 0–100, derived from the battle so far
+(`tactical/morale.rs`):
+
+`100 − 50 × share of own hull lost − 30 × share of own ships destroyed
+− 20 × share of own ships withdrawn + 15 × share of enemy ships destroyed`.
+
+Below 50 the side **breaks**. The header shows both sides' morale.
 
 **AI and Auto-resolve.** Raiders, and both sides under Auto-resolve, focus the
 active enemy with the least hull + shields, move to the reachable cell nearest it
-when no weapon reaches, then fire on the weakest enemy in range.
+when no weapon reaches, then fire on the weakest enemy in range. A ship with 30%
+of its hull or less retreats, and so does every ship of a broken side (a rout):
+it fires a parting shot at the weakest enemy in reach, moves toward its own edge
+(away from enemies on ties) and withdraws as soon as it is there. Ships you
+command yourself never retreat on their own.
+
+With Auto-resolve over 400 seeds:
+
+| Matchup | You win | You lose | You escape | Avg rounds (max) | Ships lost / killed |
+| --- | --- | --- | --- | --- | --- |
+| Freighter v scout | 400 | 0 | 0 | 6.6 (12) | 0 / 0.8 |
+| Scout v scout | 200 | 112 | 88 | 5.3 (7) | 0.3 / 0.3 |
+| Patrol v patrol | 198 | 61 | 141 | 5.9 (13) | 0.2 / 0.2 |
+| 7 v 7 fleet-battle scenario | 271 | 8 | 121 | 12.5 (18) | 5.1 / 5.8 |
+| 8 patrols v 8 patrols | 205 | 1 | 194 | 19.9 (34) | 5.3 / 5.5 |
+
+Mirrors are even: each side is driven from the field about half the time.
+Big battles stay bloody (retreating ships are often caught), but almost never
+end in your fleet's destruction.
 
 ## Playing a battle
 
@@ -97,10 +131,16 @@ player action, so a saved battle is always waiting on one of your ships.
 - The view is a 3D grid over a starfield: your edge is the cyan strip on the
   left, the raiders' edge the red strip on the right. Ships stand on dashed
   stalks over the floor so their layer reads at a glance; rings lie in the
-  ship's own layer, and bars show hull and shields. Drag to orbit, scroll or
-  pinch to zoom.
+  ship's own layer, and bars show hull and shields.
+- **Camera:** drag to orbit; right-drag, middle-drag or Shift+drag to pan; scroll
+  or pinch to zoom (from half to six times the framing distance); arrow keys
+  slide the view and Page Up / Page Down raise and lower it. **F** (or the
+  crosshair button over the grid) centres on the acting ship, **R** (or the reset
+  button) restores the default view. The view never leaves the grid. While a
+  battle is open it owns these keys, so F and Escape do not reach the map
+  behind it.
 - **Move:** green dots are the free cells your ship can reach on the shown layer.
-  The **Layer 1–5** buttons (or Q / E) change the layer; it follows your ship at
+  The **Layer** slider (or Q / E) changes the layer; it follows your ship at
   the start of each turn. Hovering a dot draws the path and dashed lines to every
   raider your weapons would reach from there. Click a dot to move.
 - **Fire:** raiders your weapons reach have a red ring. Hovering any ship shows
@@ -148,7 +188,8 @@ After the fight:
   at 1 hull point and its cargo is seized. This avoids a game-over state that the
   design does not yet define.
 - **Victory:** each destroyed raider yields 2 ore, loaded into free cargo space
-  in fleet order; anything that does not fit is lost.
+  in fleet order; anything that does not fit is lost. Raiders that fled leave
+  no wreck to salvage.
 - Surviving fleets resume their course on the next run.
 
 ## Repairs
@@ -163,12 +204,13 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 
 | Matchup | Result |
 | --- | --- |
-| Freighter vs one scout raider | never lost (some fights disengage) |
-| Scout vs scout, patrol vs patrol | 40–60% player wins |
+| Freighter vs one scout raider | never lost |
+| Scout vs scout, patrol vs patrol | player holds the field 40–60% of the time |
+| 8 patrols a side | ends with a side off the field in under 50 rounds |
 
 ## Not yet implemented
 
-Animated raider turns and weapon effects, 3D models for every hull with a GPU
-renderer, NPC/faction hostility rules, credit
+A GPU renderer with a depth buffer, morale effects on accuracy, NPC/faction
+hostility rules, credit
 bounties, raider pursuit across runs, loadout changes and partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

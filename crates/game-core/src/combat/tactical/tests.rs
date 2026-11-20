@@ -1,6 +1,4 @@
-use super::{
-    Battle, BattleError, CEASEFIRE_ROUNDS, Cell, MAX_ROUNDS, auto_resolve, home_edge, move_range,
-};
+use super::{Battle, BattleError, CEASEFIRE_ROUNDS, Cell, MAX_ROUNDS, auto_resolve, move_range};
 use crate::combat::{
     CombatCatalog, CombatProfile, HullSize,
     engagement::{CombatantSetup, Side},
@@ -47,11 +45,11 @@ fn sides_deploy_on_opposite_columns_in_unique_cells() {
     let cells: std::collections::HashSet<_> = battle.units.iter().map(|unit| unit.cell).collect();
     assert_eq!(cells.len(), 7);
     for unit in &battle.units {
-        assert!(unit.cell.in_bounds());
+        assert!(battle.size.contains(unit.cell));
         let column = if unit.side == Side::Player {
             1
         } else {
-            super::WIDTH - 2
+            battle.size.width - 2
         };
         assert_eq!(unit.cell.x, column);
     }
@@ -125,7 +123,7 @@ fn fire_needs_an_enemy_in_weapon_range_and_happens_once_per_turn() {
     );
     // Put the player first in line, 7 cells from the raider: beyond every weapon.
     battle.order = vec![0, 1];
-    battle.units[1].cell = Cell { x: 8, y: 4, z: 2 };
+    battle.units[1].cell = Cell { x: 9, y: 4, z: 2 };
     assert_eq!(
         battle.fire(0, &catalog),
         Err(BattleError::InvalidTarget),
@@ -163,7 +161,7 @@ fn ships_withdraw_only_from_their_own_edge_and_a_full_withdrawal_disengages() {
     battle.order = vec![0, 1];
     assert_eq!(battle.withdraw(), Err(BattleError::NotAtEdge));
     let edge = Cell {
-        x: home_edge(Side::Player),
+        x: battle.size.home_edge(Side::Player),
         ..battle.units[0].cell
     };
     battle.move_to(edge).unwrap();
@@ -216,6 +214,8 @@ fn destroyed_ships_stop_acting_and_identical_seeds_replay_identically() {
     assert!(Battle::new(&[wreck], &catalog, 0).is_err());
 }
 
+/// Over 400 seeds: (fights where the raiders were driven off or destroyed,
+/// fights the player lost outright). Every other fight the player escaped.
 fn player_record(player: &[ShipKind], hostile: &[ShipKind]) -> (u32, u32) {
     let catalog = CombatCatalog::default();
     let mut setups: Vec<_> = player
@@ -233,30 +233,38 @@ fn player_record(player: &[ShipKind], hostile: &[ShipKind]) -> (u32, u32) {
 }
 
 #[test]
-fn the_largest_battles_end_decisively_far_below_the_safety_cap() {
-    // 8 patrols a side is the most a battle holds; 2,000 seeds peaked at 68 rounds.
+fn the_largest_battles_end_with_a_side_off_the_field_far_below_the_safety_cap() {
+    // 8 patrols a side is the most a battle holds; 400 seeds peaked at 49 rounds.
     let catalog = CombatCatalog::default();
     let mut setups: Vec<_> = (0..8)
         .map(|_| ship(ShipKind::Patrol, Side::Player))
         .collect();
     setups.extend((0..8).map(|_| ship(ShipKind::Patrol, Side::Hostile)));
     for seed in 0..60 {
-        let result = auto_resolve(&setups, &catalog, seed).unwrap();
-        assert!(result.winner.is_some(), "seed {seed} was undecided");
-        assert!(result.rounds.len() < MAX_ROUNDS as usize / 2, "seed {seed}");
+        let mut battle = Battle::new(&setups, &catalog, seed).unwrap();
+        super::finish(&mut battle, &catalog).unwrap();
+        let fighting = |side| {
+            battle
+                .units
+                .iter()
+                .any(|unit| unit.side == side && unit.active())
+        };
+        assert!(
+            !fighting(Side::Player) || !fighting(Side::Hostile),
+            "seed {seed}: ended without a side leaving the field"
+        );
+        assert!(battle.rounds.len() < MAX_ROUNDS as usize / 4, "seed {seed}");
     }
 }
 
 #[test]
 fn mirror_matches_are_fair_and_a_lone_trader_survives_a_scout_raider() {
+    // Fair = each side is driven from the field about half the time. Raiders
+    // that flee count as a player win; a player who flees has escaped.
     for kind in [ShipKind::Scout, ShipKind::Patrol] {
-        let (wins, losses) = player_record(&[kind], &[kind]);
-        let share = wins * 100 / (wins + losses).max(1);
-        assert!(
-            (40..=60).contains(&share),
-            "{kind:?} mirror: {share}% of {}",
-            wins + losses
-        );
+        let (wins, _) = player_record(&[kind], &[kind]);
+        let share = wins * 100 / 400;
+        assert!((40..=60).contains(&share), "{kind:?} mirror: {share}%");
     }
     let (_, losses) = player_record(&[ShipKind::Freighter], &[ShipKind::Scout]);
     assert_eq!(

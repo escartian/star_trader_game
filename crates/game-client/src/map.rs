@@ -196,6 +196,7 @@ impl Map {
         }
         self.follow_navigation_transitions();
         self.handle_focus_request();
+        crate::battle::claim_keyboard(ctx, self.session.battle_open());
         // The map fills the window; every HUD element floats above it as a card.
         if self.local.is_some() {
             self.local_ui(ctx);
@@ -281,7 +282,10 @@ impl Map {
             .frame(egui::Frame::NONE.fill(egui::Color32::BLACK))
             .show(ctx, |ui| self.draw_galaxy(ui))
             .inner;
-        if !ctx.wants_keyboard_input() && ctx.input(|i| i.key_pressed(egui::Key::F)) {
+        if !ctx.wants_keyboard_input()
+            && !crate::battle::keyboard_claimed(ctx)
+            && ctx.input(|i| i.key_pressed(egui::Key::F))
+        {
             self.focus_selection();
         }
         crate::theme::metal::card(

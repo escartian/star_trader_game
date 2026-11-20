@@ -92,8 +92,16 @@ fn raider_fights_are_reproducible_saved_and_resolve_once() {
     assert_eq!(entry.ship, Some(ShipId(1)));
     assert_eq!(session.state.ships[0].hull_damage, entry.final_damage);
     if report.outcome == CombatOutcome::Victory {
-        assert_eq!(report.salvage_ore, 2);
-        assert_eq!(session.state.ships[0].cargo[Commodity::Ore.index()], 2);
+        // Salvage comes from wrecks; a raider that fled leaves none.
+        let wrecks = report
+            .side(game_core::combat::Side::Hostile)
+            .filter(|ship| ship.destroyed)
+            .count() as u32;
+        assert_eq!(report.salvage_ore, 2 * wrecks);
+        assert_eq!(
+            session.state.ships[0].cargo[Commodity::Ore.index()],
+            2 * wrecks
+        );
     }
     let resolved = session.snapshot(Vec::new());
     assert!(matches!(

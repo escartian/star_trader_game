@@ -143,8 +143,10 @@ Loading never executes a run. Course geometry/durations, paid fuel, fleet refere
 Holds, encounter IDs and counter bounds are checked before replacing a session.
 Schema 6 also accepts additive `hostiles` (required exactly on raider contacts, at
 most 3) and an optional `last_combat` report whose damage, indices and encounter
-reference must be consistent. An open `battle` must belong to a pending raider
-contact, field exactly that fleet's ships and the contact's raiders with their
+reference must be consistent. An open `battle` records its grid `size` (width, depth, height; battles saved
+before grids scaled load as 9 × 9 × 5) and ceasefire state (`acted`,
+`quiet_rounds`). It must use the size its ship count gives (or that legacy size),
+belong to a pending raider contact, field exactly that fleet's ships and the contact's raiders with their
 catalog profiles and saved damage, keep ships in distinct cells inside the grid,
 and wait on a player ship; anything else rejects the save.
 Movement settings add `ticks_per_navigation_run` (default 4, 1–100) and

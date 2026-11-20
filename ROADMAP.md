@@ -167,6 +167,9 @@ Combat is the original README's first prioritized expansion.
 - [x] Every hull drawn from a Blender glTF export (the scout decimated to 1,600
   triangles); animated moves and weapon beams; side strength, portraits, hover
   cards and move-range previews.
+- [x] Morale: badly damaged AI ships and broken sides retreat and withdraw;
+  fleeing raiders count as a victory. Battle grids grow with the fleets (a
+  10-cell cube for a duel, up to 17).
 - [ ] A GPU mesh renderer with a depth buffer (the egui painter sorts faces).
 - [ ] Explicit hostility/engagement rules for NPC/faction fleets and credit bounties.
 

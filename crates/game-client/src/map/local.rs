@@ -179,8 +179,9 @@ impl LocalView {
     ) -> bool {
         // A resumed GPU window has a new egui context; refresh shared handles too.
         self.art = Some(Artwork::preload(ctx));
-        let mut back =
-            !ctx.wants_keyboard_input() && ctx.input(|i| i.key_pressed(egui::Key::Escape));
+        let mut back = !ctx.wants_keyboard_input()
+            && !crate::battle::keyboard_claimed(ctx)
+            && ctx.input(|i| i.key_pressed(egui::Key::Escape));
         let rect = egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(egui::Color32::BLACK))
             .show(ctx, |ui| self.draw_map(ui, ships, fleets))
@@ -262,7 +263,10 @@ impl LocalView {
             }
             None => {}
         }
-        if !ctx.wants_keyboard_input() && ui.input(|i| i.key_pressed(egui::Key::F)) {
+        if !ctx.wants_keyboard_input()
+            && !crate::battle::keyboard_claimed(ctx)
+            && ui.input(|i| i.key_pressed(egui::Key::F))
+        {
             self.focus();
         }
     }

@@ -4,10 +4,7 @@ use super::{
     navigation_tests::succeed,
 };
 use game_core::{
-    combat::{
-        CombatOutcome, Side,
-        tactical::{Cell, home_edge},
-    },
+    combat::{CombatOutcome, Side, tactical::Cell},
     fleet::{FleetId, ShipKind},
     navigation::{BattleAction, EncounterChoice},
     travel::ShipId,
@@ -159,7 +156,7 @@ fn withdrawing_every_ship_disengages_and_the_course_continues() {
     let battle = session.state.navigation.battle.clone().unwrap().battle;
     let me = battle.active().unwrap();
     let edge = Cell {
-        x: home_edge(Side::Player),
+        x: battle.size.home_edge(Side::Player),
         ..battle.units[me].cell
     };
     play(&mut session, BattleAction::Move(edge));

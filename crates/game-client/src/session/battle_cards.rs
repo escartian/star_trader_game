@@ -8,7 +8,7 @@ use egui::{Color32, CornerRadius, Rect, RichText, Sense, Stroke, Ui, Vec2};
 use game_core::combat::{
     CombatCatalog, Side,
     engagement::hit_chance,
-    tactical::{Battle, Unit, move_range},
+    tactical::{Battle, Unit, morale, move_range},
 };
 
 const CARD: Color32 = Color32::from_rgb(14, 22, 26);
@@ -27,7 +27,7 @@ pub fn meter(ui: &mut Ui, label: &str, fraction: f32, color: Color32, value: &st
     });
 }
 
-/// Combined hull and shields of one side's ships still in the fight.
+/// One side's ships still fighting, their combined hull and their morale.
 pub fn side_strength(ui: &mut Ui, battle: &Battle, side: Side, label: &str) {
     let ships: Vec<&Unit> = battle
         .units
@@ -54,9 +54,25 @@ pub fn side_strength(ui: &mut Ui, battle: &Battle, side: Side, label: &str) {
         let mut fill = rect;
         fill.set_width(rect.width() * fraction);
         ui.painter().rect_filled(fill, 2.0, side_color(side));
+        let morale = morale::morale(battle, side);
+        let (color, mood) = match morale {
+            value if value < morale::BREAK_MORALE => (HOSTILE, "BROKEN"),
+            value if value < 70 => (AMBER, "SHAKEN"),
+            _ => (GREEN, "STEADY"),
+        };
+        ui.label(
+            RichText::new(format!("Morale {morale} · {mood}"))
+                .small()
+                .color(color),
+        );
     })
     .response
-    .on_hover_text(format!("{left} of {total} hull points left"));
+    .on_hover_text(format!(
+        "{left} of {total} hull points left. Morale falls with damage, losses and \
+         retreats and rises with kills; below {} a side breaks and the AI pulls its \
+         ships out.",
+        morale::BREAK_MORALE
+    ));
 }
 
 /// Every ship in initiative order: portrait and hull (and the name, when there

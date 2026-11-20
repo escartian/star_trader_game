@@ -1,5 +1,5 @@
 //! Structural checks for a battle loaded from a save.
-use super::{Battle, MAX_ROUNDS};
+use super::{Battle, CEASEFIRE_ROUNDS, MAX_ROUNDS};
 use crate::combat::{
     CombatCatalog,
     engagement::{MAX_COMBATANTS, Side},
@@ -23,6 +23,8 @@ impl Battle {
             || self.turn >= count
             || !(1..=MAX_ROUNDS).contains(&self.round)
             || self.rounds.len() != self.round as usize
+            || !self.size.valid_for(count)
+            || self.quiet_rounds >= CEASEFIRE_ROUNDS
             || self.finished()
             || !self.units[usize::from(self.order[self.turn])].active()
         {
@@ -38,7 +40,7 @@ impl Battle {
                 || unit.damage > unit.profile.hull
                 || unit.shields > unit.profile.shields
                 || unit.hits > unit.shots
-                || !unit.cell.in_bounds()
+                || !self.size.contains(unit.cell)
                 || (unit.side == Side::Hostile) == unit.ship.is_some()
                 || (unit.active() && !cells.insert(unit.cell))
             {

@@ -50,7 +50,12 @@ fn pointing_at_a_ship_or_a_move_dot_picks_it_and_other_layers_are_ignored() {
         layer: here.z,
         artwork: &artwork,
     };
-    let screen = |cell| camera.project(rect, ScenePoint::of_cell(cell)).unwrap().pos;
+    let screen = |cell| {
+        camera
+            .project(rect, battle.size, ScenePoint::of_cell(cell))
+            .unwrap()
+            .pos
+    };
     assert_eq!(
         pick(rect, &camera, &input, Some(screen(here))),
         Some(Pick::Unit(0))

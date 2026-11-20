@@ -58,7 +58,7 @@ pub fn pick(
     pointer: Option<Pos2>,
 ) -> Option<Pick> {
     let pointer = pointer.filter(|pointer| rect.contains(*pointer))?;
-    let projector = camera.projector(rect);
+    let projector = camera.projector(rect, input.battle.size);
     let ship = input
         .battle
         .units
@@ -99,14 +99,14 @@ pub struct Frame<'a> {
 
 pub fn paint(painter: &egui::Painter, frame: &Frame, input: &SceneInput) {
     let painter = painter.with_clip_rect(frame.rect);
-    let projector = frame.camera.projector(frame.rect);
+    let projector = frame.camera.projector(frame.rect, input.battle.size);
     let canvas = Canvas {
         painter: &painter,
         projector: &projector,
     };
     backdrop::sky(&painter, frame.rect, frame.camera.yaw);
-    backdrop::floor(&canvas);
-    backdrop::layer(&canvas, input.layer);
+    backdrop::floor(&canvas, input.battle.size);
+    backdrop::layer(&canvas, input.battle.size, input.layer);
     let active = input.battle.active();
     if let (Some(me), Some(Pick::Cell(cell))) = (active, frame.hovered) {
         move_preview(&canvas, input, me, cell);

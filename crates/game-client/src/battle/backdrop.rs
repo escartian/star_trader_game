@@ -5,7 +5,7 @@ use super::canvas::Canvas;
 use super::scene::HOSTILE;
 use crate::theme::{CYAN, GREEN};
 use egui::{Color32, Mesh, Pos2, Rect, Shape, Stroke};
-use game_core::combat::tactical::{Cell, DEPTH, HEIGHT, WIDTH};
+use game_core::combat::tactical::GridSize;
 use glam::Vec3;
 
 const GRID: Color32 = Color32::from_rgb(70, 112, 116);
@@ -44,40 +44,48 @@ pub fn sky(painter: &egui::Painter, rect: Rect, yaw: f32) {
     }
 }
 
-fn half_extents() -> (f32, f32, f32) {
-    (
-        f32::from(WIDTH) / 2.0,
-        f32::from(DEPTH) / 2.0,
-        f32::from(HEIGHT) / 2.0,
-    )
+/// The volume's bounds in scene space: (low corner, high corner). Cells sit on
+/// integer points, so the volume reaches half a cell past the outer cells.
+fn bounds(size: GridSize) -> (Vec3, Vec3) {
+    let high = Vec3::new(
+        f32::from(size.width),
+        f32::from(size.depth),
+        f32::from(size.height),
+    ) - Vec3::splat(0.5);
+    (Vec3::splat(-0.5), high)
 }
 
 /// Floor grid fading with distance, both deployment edges and the volume outline.
-pub fn floor(canvas: &Canvas) {
-    let (hx, hy, hz) = half_extents();
-    let floor = -hz;
+pub fn floor(canvas: &Canvas, size: GridSize) {
+    let (low, high) = bounds(size);
+    let floor = low.z;
     let strip = |x0: f32, x1: f32| {
         [
-            Vec3::new(x0, -hy, floor),
-            Vec3::new(x1, -hy, floor),
-            Vec3::new(x1, hy, floor),
-            Vec3::new(x0, hy, floor),
+            Vec3::new(x0, low.y, floor),
+            Vec3::new(x1, low.y, floor),
+            Vec3::new(x1, high.y, floor),
+            Vec3::new(x0, high.y, floor),
         ]
     };
-    canvas.quad(strip(-hx, hx), GRID.gamma_multiply(0.05), Stroke::NONE);
     canvas.quad(
-        strip(-hx, -hx + 1.0),
+        strip(low.x, high.x),
+        GRID.gamma_multiply(0.05),
+        Stroke::NONE,
+    );
+    canvas.quad(
+        strip(low.x, low.x + 1.0),
         CYAN.gamma_multiply(0.16),
         Stroke::NONE,
     );
     canvas.quad(
-        strip(hx - 1.0, hx),
+        strip(high.x - 1.0, high.x),
         HOSTILE.gamma_multiply(0.16),
         Stroke::NONE,
     );
+    let middle = (low + high) / 2.0;
     let near = canvas
         .projector
-        .project(ScenePoint(Vec3::new(0.0, 0.0, floor)))
+        .project(ScenePoint(Vec3::new(middle.x, middle.y, floor)))
         .map_or(10.0, |at| at.depth);
     let faded = |a: Vec3, b: Vec3| {
         let depth = canvas
@@ -88,49 +96,48 @@ pub fn floor(canvas: &Canvas) {
         let weight = (near / depth).powi(2).clamp(0.25, 1.4);
         Stroke::new(1.0_f32, GRID.gamma_multiply(0.45 * weight))
     };
-    for step in 0..=WIDTH {
-        let x = -hx + f32::from(step);
-        let (a, b) = (Vec3::new(x, -hy, floor), Vec3::new(x, hy, floor));
+    for step in 0..=size.width {
+        let x = low.x + f32::from(step);
+        let (a, b) = (Vec3::new(x, low.y, floor), Vec3::new(x, high.y, floor));
         canvas.line(ScenePoint(a), ScenePoint(b), faded(a, b));
     }
-    for step in 0..=DEPTH {
-        let y = -hy + f32::from(step);
-        let (a, b) = (Vec3::new(-hx, y, floor), Vec3::new(hx, y, floor));
+    for step in 0..=size.depth {
+        let y = low.y + f32::from(step);
+        let (a, b) = (Vec3::new(low.x, y, floor), Vec3::new(high.x, y, floor));
         canvas.line(ScenePoint(a), ScenePoint(b), faded(a, b));
     }
     let edge = Stroke::new(1.0_f32, GRID.gamma_multiply(0.35));
-    let corners = [(-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy)];
+    let corners = [
+        (low.x, low.y),
+        (high.x, low.y),
+        (high.x, high.y),
+        (low.x, high.y),
+    ];
     for (index, (x, y)) in corners.iter().enumerate() {
         let (nx, ny) = corners[(index + 1) % 4];
         canvas.line(
             ScenePoint(Vec3::new(*x, *y, floor)),
-            ScenePoint(Vec3::new(*x, *y, hz)),
+            ScenePoint(Vec3::new(*x, *y, high.z)),
             edge,
         );
         canvas.line(
-            ScenePoint(Vec3::new(*x, *y, hz)),
-            ScenePoint(Vec3::new(nx, ny, hz)),
+            ScenePoint(Vec3::new(*x, *y, high.z)),
+            ScenePoint(Vec3::new(nx, ny, high.z)),
             edge,
         );
     }
 }
 
 /// The layer whose move cells are shown: a faint plane with a bright rim.
-pub fn layer(canvas: &Canvas, layer: i8) {
-    let (hx, hy, _) = half_extents();
-    let z = ScenePoint::of_cell(Cell {
-        x: 0,
-        y: 0,
-        z: layer,
-    })
-    .0
-    .z;
+pub fn layer(canvas: &Canvas, size: GridSize, layer: i8) {
+    let (low, high) = bounds(size);
+    let z = f32::from(layer);
     canvas.quad(
         [
-            Vec3::new(-hx, -hy, z),
-            Vec3::new(hx, -hy, z),
-            Vec3::new(hx, hy, z),
-            Vec3::new(-hx, hy, z),
+            Vec3::new(low.x, low.y, z),
+            Vec3::new(high.x, low.y, z),
+            Vec3::new(high.x, high.y, z),
+            Vec3::new(low.x, high.y, z),
         ],
         GREEN.gamma_multiply(0.035),
         Stroke::new(1.0_f32, GREEN.gamma_multiply(0.3)),

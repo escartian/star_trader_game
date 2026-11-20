@@ -27,6 +27,7 @@ impl Map {
             "encounter" => self.session.capture_encounter()?,
             "combat" => self.session.capture_combat()?,
             "battle" => self.session.capture_battle()?,
+            "battle-close" => self.session.capture_battle_close()?,
             "navigation" => self.session.request_movement(MoveTarget::Body {
                 system: SystemId(1),
                 body: BodyId(1),
@@ -130,6 +131,9 @@ mod tests {
         let mut battle = map(1);
         battle.prepare_capture("battle").unwrap();
         assert!(battle.session.battle_open());
+        let mut close = map(1);
+        close.prepare_capture("battle-close").unwrap();
+        assert!(close.session.battle_open());
         assert!(map(1).prepare_capture("nonsense").is_err());
     }
 }

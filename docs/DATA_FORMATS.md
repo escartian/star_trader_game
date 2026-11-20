@@ -108,8 +108,12 @@ load the project file when present; saves preserve the active catalog. See
 
 ## Movement definition (schema 1)
 
-`config/movement.json` controls cubic extents, local fuel/tick distance units and
-stellar exclusion. Configuration must contain every system/body within its bounds
+`config/movement.json` controls cubic extents, local fuel/tick distance units,
+stellar exclusion, map-scale `body_radii` (km per body kind) and `landing` (fuel
+per ship to land on or lift off from rocky planets, moons and asteroids, and ore
+mined per ship per run on moons and asteroids). Older definitions without the
+last two load with defaults. Ship locations add `Landed { system, body }`, which
+must name a rocky planet, moon or asteroid. Configuration must contain every system/body within its bounds
 and keep arithmetic in supported ranges. New sessions use these definitions;
 continuing restores saved rules. See [movement rules](MOVEMENT.md) for units,
 rounding, location variants and supported transitions. The primary station is

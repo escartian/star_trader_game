@@ -1,11 +1,15 @@
 //! Fleet movement across explicitly separate coordinate spaces.
 mod geometry;
+mod landing;
+mod obstacles;
 mod planning;
 mod routing;
 pub use routing::CoursePreview;
 mod rules;
 use crate::{BodyId, GalaxyPosition, LocalPosition, SystemId, fleet::FleetId, travel::Location};
-pub use planning::local_position;
+pub use landing::LandingRules;
+pub use obstacles::BodyRadii;
+pub use planning::{lift_off_fuel, local_position};
 pub use rules::MovementRules;
 use serde::{Deserialize, Serialize};
 
@@ -96,6 +100,10 @@ pub enum MovementError {
     WrongSpace,
     UnknownBody,
     StarCollision,
+    /// The segment passes through a planet, moon, asteroid or station.
+    BodyCollision,
+    /// The waypoint lies inside a body's volume.
+    InsideBody,
     AlreadyThere,
     InvalidRules,
 }
@@ -108,11 +116,15 @@ impl std::fmt::Display for MovementError {
             Self::WrongSpace => "Exit to deep space before travelling between systems; enter a system before moving locally.",
             Self::UnknownBody => "Unknown destination body or missing trade port.",
             Self::StarCollision => "The route intersects the star's exclusion zone. Choose a waypoint around it.",
+            Self::BodyCollision => "The route passes through a planet, moon or station. Choose a waypoint around it.",
+            Self::InsideBody => "That point lies inside a planet, moon or station. Pick a point outside it, or the body itself.",
             Self::AlreadyThere => "The fleet is already at that destination.",
             Self::InvalidRules => "Invalid movement configuration or world bounds.",
         })
     }
 }
 
+#[cfg(test)]
+mod obstacle_tests;
 #[cfg(test)]
 mod tests;

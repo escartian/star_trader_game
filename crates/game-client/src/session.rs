@@ -8,6 +8,7 @@ mod combat_report;
 mod fleets;
 pub use fleets::TradeOption;
 mod guide;
+mod landing;
 mod map_controls;
 mod market;
 mod market_table;
@@ -83,7 +84,7 @@ impl LocalSession {
             glide_seconds: motion::GLIDE_SECONDS,
             authority,
             active_ship,
-            state,
+            state: *state,
             economy: *economy,
             market: market::MarketPanel::default(),
             navigation: navigation::NavigationPanel::default(),
@@ -224,7 +225,7 @@ impl LocalSession {
                 economy,
                 events,
             } => {
-                let before = std::mem::replace(&mut self.state, state);
+                let before = std::mem::replace(&mut self.state, *state);
                 let economy_before = std::mem::replace(&mut self.economy, *economy);
                 if events.iter().any(|event| {
                     matches!(

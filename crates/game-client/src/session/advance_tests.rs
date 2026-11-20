@@ -135,3 +135,34 @@ fn loading_a_save_cancels_an_advance_in_progress() {
     assert_eq!(host.drive_advance(5.0), None);
     assert_eq!(host.state.navigation.run, 0);
 }
+
+#[test]
+fn advance_keeps_mining_until_the_holds_fill_then_stops() {
+    use game_core::{BodyId, economy::Commodity, movement::MoveTarget};
+    let mut host = session(0);
+    host.command(ClientCommand::Move {
+        ship: ShipId(1),
+        target: MoveTarget::Body {
+            system: SystemId(1),
+            body: BodyId(5),
+        },
+        expected_revision: host.state.revision,
+    });
+    host.toggle_advance();
+    drive_to_stop(&mut host);
+    host.command(ClientCommand::Land {
+        fleet: FleetId(1),
+        expected_revision: host.state.revision,
+    });
+    host.command(ClientCommand::HoldFleet {
+        fleet: FleetId(1),
+        expected_revision: host.state.revision,
+    });
+    assert_eq!(host.mining_with_room(), vec![FleetId(1)], "{}", host.notice);
+    host.toggle_advance();
+    let runs = drive_to_stop(&mut host);
+    let ship = &host.state.ships[0];
+    assert_eq!(ship.cargo[Commodity::Ore.index()], ship.cargo_capacity);
+    assert_eq!(u64::from(ship.cargo_capacity / 2), runs, "2 ore per run");
+    assert!(host.notice.contains("holds full"), "{}", host.notice);
+}

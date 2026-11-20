@@ -1,6 +1,6 @@
 use super::{
     KM_PER_LIGHT_YEAR, MoveTarget, MovementError, MovementMode, MovementPlan, SpacePosition,
-    geometry,
+    geometry, obstacles,
 };
 use crate::{
     BodyKind, LocalPosition, StarSystem, SystemId,
@@ -30,8 +30,13 @@ impl TravelState {
         } else {
             self.movement_rules.local_km_per_fuel
         };
+        // A course from the surface starts by lifting off, at the body's cost.
         let fuel_per_ship = u32::try_from(distance_km.div_ceil(cost_unit).max(1))
-            .map_err(|_| MovementError::Coordinates)?;
+            .ok()
+            .and_then(|fuel| {
+                fuel.checked_add(lift_off_fuel(&self.movement_rules, &origin, systems))
+            })
+            .ok_or(MovementError::Coordinates)?;
         let duration_ticks = if deep {
             distance_km.div_ceil(KM_PER_LIGHT_YEAR as u64).max(1)
         } else {
@@ -91,6 +96,15 @@ impl TravelState {
         let rules = &self.movement_rules;
         match target {
             MoveTarget::Body { system, body } => {
+                if *origin
+                    == (Location::Landed {
+                        system: *system,
+                        body: *body,
+                    })
+                {
+                    // Already down there: lift off instead.
+                    return Err(MovementError::AlreadyThere);
+                }
                 let start = local_position(origin, *system, systems)?;
                 let destination = systems
                     .iter()
@@ -120,15 +134,31 @@ impl TravelState {
                         body: *body,
                     }
                 };
-                self.local_destination(start, destination.position, location, MovementMode::Local)
+                self.local_destination(
+                    system_by_id(systems, *system)?,
+                    start,
+                    destination.position,
+                    location,
+                    MovementMode::Local,
+                )
             }
             MoveTarget::Local { system, position } => {
                 let start = local_position(origin, *system, systems)?;
+                let world = system_by_id(systems, *system)?;
                 if geometry::local(*position)
                     .iter()
                     .all(|value| value.unsigned_abs() <= rules.system_half_extent_km as u64)
                 {
+                    let volumes = obstacles::obstacles(rules, world);
+                    if let Some(volume) = obstacles::containing(*position, &volumes) {
+                        return Err(if volume.star {
+                            MovementError::StarCollision
+                        } else {
+                            MovementError::InsideBody
+                        });
+                    }
                     self.local_destination(
+                        world,
                         start,
                         *position,
                         Location::InSystem {
@@ -148,6 +178,7 @@ impl TravelState {
                         return Err(MovementError::OutsideGalaxy);
                     }
                     self.local_destination(
+                        world,
                         start,
                         outside,
                         Location::DeepSpace(absolute),
@@ -237,15 +268,19 @@ impl TravelState {
         }
     }
 
+    /// A straight local leg; it may not pass through the star or any body
+    /// other than one it leaves from or arrives at.
     fn local_destination(
         &self,
+        system: &StarSystem,
         start: LocalPosition,
         end: LocalPosition,
         destination: Location,
         mode: MovementMode,
     ) -> Result<(Location, MovementMode, u64), MovementError> {
-        if geometry::crosses_star(start, end, self.movement_rules.star_exclusion_radius_km) {
-            return Err(MovementError::StarCollision);
+        let volumes = obstacles::obstacles(&self.movement_rules, system);
+        if let Some(volume) = obstacles::blocking(start, end, &volumes) {
+            return Err(volume.error());
         }
         Ok((
             destination,
@@ -253,6 +288,31 @@ impl TravelState {
             geometry::distance(geometry::local(start), geometry::local(end))?,
         ))
     }
+}
+
+/// Fuel per ship to lift off before a course: the landed body's landing fuel,
+/// or 0 for a fleet that is not on a surface.
+pub fn lift_off_fuel(
+    rules: &super::MovementRules,
+    origin: &Location,
+    systems: &[StarSystem],
+) -> u32 {
+    let Location::Landed { system, body } = origin else {
+        return 0;
+    };
+    systems
+        .iter()
+        .find(|known| known.id == *system)
+        .and_then(|known| known.bodies.iter().find(|known| known.id == *body))
+        .and_then(|body| rules.landing.fuel(body.kind))
+        .unwrap_or(0)
+}
+
+fn system_by_id(systems: &[StarSystem], id: SystemId) -> Result<&StarSystem, MovementError> {
+    systems
+        .iter()
+        .find(|system| system.id == id)
+        .ok_or(MovementError::WrongSpace)
 }
 
 fn system_center(systems: &[StarSystem], id: SystemId) -> Result<SpacePosition, MovementError> {
@@ -282,6 +342,10 @@ pub fn local_position(
             .map(|body| body.position)
             .ok_or(MovementError::UnknownBody),
         Location::Orbiting {
+            system: known,
+            body,
+        }
+        | Location::Landed {
             system: known,
             body,
         } if *known == system => world

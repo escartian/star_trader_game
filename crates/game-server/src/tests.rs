@@ -10,7 +10,7 @@ fn state(session: &mut Session) -> TravelState {
     else {
         panic!("session snapshot missing")
     };
-    state
+    *state
 }
 
 #[test]

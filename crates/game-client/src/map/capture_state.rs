@@ -75,6 +75,18 @@ impl Map {
                     self.session.open_fleets();
                 }
             }
+            "landed" => {
+                // Mining on the asteroid: landed, waiting, a few runs of ore aboard.
+                let system = self.systems.first().ok_or("No system to capture")?.clone();
+                self.session.capture_movement(MoveTarget::Body {
+                    system: system.id,
+                    body: BodyId(5),
+                })?;
+                self.session.capture_landing(3)?;
+                let mut view = LocalView::new(system);
+                view.focus_ship(self.session.selected_ship());
+                self.local = Some(view);
+            }
             "market" => self.session.open_market(),
             "fleets" => self.session.open_fleets(),
             "saves" => self.session.open_saves(),
@@ -114,6 +126,7 @@ mod tests {
             "arrival",
             "approach",
             "orbit",
+            "landed",
             "planet-market",
             "planet-shipyard",
             "market",

@@ -56,6 +56,11 @@ impl Session {
         })
     }
 
+    /// The galaxy this session plays in (public knowledge, never hidden state).
+    pub fn systems(&self) -> &[StarSystem] {
+        &self.systems
+    }
+
     /// Local identity convenience adapter. A remote adapter must resolve authenticated identity.
     pub fn handle(&mut self, command: ClientCommand) -> ServerMessage {
         self.handle_as(LOCAL_PLAYER, command)
@@ -89,7 +94,9 @@ impl Session {
             | ClientCommand::ResolveEncounter { .. }
             | ClientCommand::SetTradeRoute { .. }
             | ClientCommand::CancelTradeRoute { .. }
-            | ClientCommand::BattleAction { .. }) => self.navigation_command(player, command),
+            | ClientCommand::BattleAction { .. }
+            | ClientCommand::Land { .. }
+            | ClientCommand::LiftOff { .. }) => self.navigation_command(player, command),
             command @ (ClientCommand::BuyShip { .. }
             | ClientCommand::SellShip { .. }
             | ClientCommand::RenameFleet { .. }
@@ -148,7 +155,7 @@ impl Session {
 
     fn snapshot(&self, events: Vec<SessionEvent>) -> ServerMessage {
         ServerMessage::SessionSnapshot {
-            state: self.state.clone(),
+            state: Box::new(self.state.clone()),
             economy: Box::new(self.economy.clone()),
             events,
         }
@@ -178,6 +185,8 @@ mod battle_tests;
 mod combat_tests;
 #[cfg(test)]
 mod encounter_tests;
+#[cfg(test)]
+mod landing_tests;
 #[cfg(test)]
 mod navigation_tests;
 

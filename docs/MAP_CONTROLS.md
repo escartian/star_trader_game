@@ -54,8 +54,9 @@ cube. Passing through the rest of a system does not automatically enter it.
 
 The map draws approved approach segments rather than inventing a direct line
 through the star. Fleet symbols are offset/tethered to true course/body anchors;
-the screen layout never changes simulated positions. Planet/moon collision volumes
-and landing physics are still future work.
+the screen layout never changes simulated positions. Bodies have collision volumes
+that courses also route around; landed fleets show a **LANDED** tag on an amber
+pad (see [movement](MOVEMENT.md#landing)).
 
 ## Command-console style and NPC traffic
 

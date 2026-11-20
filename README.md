@@ -19,6 +19,8 @@ through a readable native map. No game engine, browser, webview or JavaScript.
   known-market comparisons and a purchasable cargo-hold upgrade.
 - Fleet course planning, readiness highlighting, persistent Wait orders, parallel navigation
   runs and individual salvage, distress and raider encounters.
+- Bodies with collision volumes that courses route around; landing on planets,
+  moons and asteroids, and mining ore while a landed fleet waits.
 - Repeating trade routes: a fleet loops between two markets, buying the most
   profitable cargo at each end, and still stops for contacts.
 - Turn-based battles against raiders on a 3D grid with 3D ship models, fought to
@@ -205,7 +207,7 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [run review](docs/previews/run-review.png), [advancing](docs/previews/advance.png),
 [trade route](docs/previews/trade-route.png),
 [map command](docs/previews/destination.png),
-[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`, `battle`, `battle-close`. Captures do not test window
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [landed and mining](docs/previews/landed.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`, `battle`, `battle-close`, `landed`. Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

@@ -68,6 +68,7 @@ impl SaveData {
                 Location::Docked(system) if systems.contains(system) => {}
                 Location::InTransit(_)
                 | Location::Orbiting { .. }
+                | Location::Landed { .. }
                 | Location::InSystem { .. }
                 | Location::DeepSpace(_) => {}
                 Location::Travelling(journey)

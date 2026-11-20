@@ -181,7 +181,9 @@ impl Economy {
                 .find(|market| market.id.system == system && market.is_station)
                 .map(|market| market.id)
                 .ok_or(EconomyError::UnknownMarket)?,
-            crate::travel::Location::Orbiting { system, body } => MarketId { system, body },
+            // A planet's market serves fleets in orbit and on its surface alike.
+            crate::travel::Location::Orbiting { system, body }
+            | crate::travel::Location::Landed { system, body } => MarketId { system, body },
             _ => return Err(EconomyError::MustBeDocked),
         };
         self.market(id)

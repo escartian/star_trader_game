@@ -149,7 +149,10 @@ Galaxy anchors are integer ly; local offsets and absolute SpacePosition use km.
 The local cube exit clips a ray to its first face; entry projects the approach to
 its near face. Crossing an intermediate system never intercepts a deep-space move.
 Body arrivals attach to an orbit/berth; local stellar exclusion blocks invalid
-segments. Body collision volumes and planetary landing physics remain unmodeled.
+segments, and every body has a map-scale collision sphere that local legs route
+around (`movement::obstacles`). Landing (`movement::LandingRules`,
+`navigation::landing`) is a location, not physics: immediate, fuel-priced, and
+mining runs once per navigation run for waiting landed fleets.
 
 Movement previews validate all fleet members. Inputs contain a target and revision,
 never an executable plan. Plotting stores authoritative geometry without spending

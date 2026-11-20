@@ -40,6 +40,14 @@ pub(super) fn event_label(event: NavigationEvent) -> String {
         NavigationEvent::BattleTurn { fleet } => {
             format!("Fleet {}: your ship is up in the battle.", fleet.0)
         }
+        NavigationEvent::Landed { fleet, .. } => format!("Fleet {} landed.", fleet.0),
+        NavigationEvent::LiftedOff { fleet, .. } => {
+            format!("Fleet {} lifted off into orbit.", fleet.0)
+        }
+        NavigationEvent::Mined { fleet, ore: 0, .. } => {
+            format!("Fleet {}: holds full, mining stopped.", fleet.0)
+        }
+        NavigationEvent::Mined { fleet, ore, .. } => format!("Fleet {} mined {ore} ore.", fleet.0),
         NavigationEvent::RouteServiced { fleet, summary } => {
             format!("Fleet {} route · {summary}", fleet.0)
         }

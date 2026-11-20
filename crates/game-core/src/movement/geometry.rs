@@ -112,6 +112,21 @@ pub(super) fn entry(
     Ok(position(result))
 }
 
+/// Whether the segment touches the sphere of `radius` around `centre`.
+pub(super) fn crosses_sphere(
+    start: LocalPosition,
+    end: LocalPosition,
+    centre: LocalPosition,
+    radius: i64,
+) -> bool {
+    let shift = |point: LocalPosition| {
+        position(std::array::from_fn(|axis| {
+            local(point)[axis] - local(centre)[axis]
+        }))
+    };
+    crosses_star(shift(start), shift(end), radius)
+}
+
 /// Segment/sphere intersection using integer dot products, bounded local points.
 pub(super) fn crosses_star(start: LocalPosition, end: LocalPosition, radius: i64) -> bool {
     let start = local(start).map(i128::from);

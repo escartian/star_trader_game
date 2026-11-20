@@ -1,6 +1,7 @@
 //! Plot fleet courses, then advance all fleets through one shared navigation run.
 mod battle;
 mod hostile;
+mod landing;
 mod orders;
 mod position;
 pub use battle::{ActiveBattle, BattleAction};
@@ -135,6 +136,22 @@ pub enum NavigationEvent {
     BattleTurn {
         fleet: FleetId,
     },
+    /// The fleet set down on a body's surface.
+    Landed {
+        fleet: FleetId,
+        body: crate::BodyId,
+    },
+    /// The fleet lifted off back into orbit.
+    LiftedOff {
+        fleet: FleetId,
+        body: crate::BodyId,
+    },
+    /// A waiting landed fleet mined `ore` units this run (0: holds are full).
+    Mined {
+        fleet: FleetId,
+        body: crate::BodyId,
+        ore: u32,
+    },
     /// A route fleet traded at a stop and set off for the other one.
     RouteServiced {
         fleet: FleetId,
@@ -171,6 +188,11 @@ pub enum NavigationError {
     /// A route would leave with an empty hold: nothing aboard, nothing profitable.
     NothingProfitable,
     NoBattle,
+    /// Landing starts from orbit around the body.
+    NotInOrbit,
+    /// Gas giants and stations have no surface to land on.
+    CannotLand,
+    NotLanded,
     /// Another raider battle must finish first.
     BattleUnderway,
     Battle(crate::combat::tactical::BattleError),
@@ -193,7 +215,7 @@ impl std::fmt::Display for NavigationError {
             ),
             Self::NoCourse => f.write_str("This fleet has no course to cancel."),
             Self::FleetHasCourse => {
-                f.write_str("Cancel the plotted course before changing this fleet's ships.")
+                f.write_str("Cancel the plotted course first: a fleet with a course cannot change ships or land.")
             }
             Self::UnknownEncounter => {
                 f.write_str("This encounter has already been resolved or is unknown.")
@@ -214,6 +236,11 @@ impl std::fmt::Display for NavigationError {
                 "Nothing profitable to carry to that market right now; the hold would be empty.",
             ),
             Self::NoBattle => f.write_str("There is no battle in progress."),
+            Self::NotInOrbit => {
+                f.write_str("Enter orbit around a planet, moon or asteroid to land.")
+            }
+            Self::CannotLand => f.write_str("Gas giants and stations have no surface to land on."),
+            Self::NotLanded => f.write_str("This fleet is not on a surface."),
             Self::BattleUnderway => f.write_str("Finish the battle in progress first."),
             Self::Battle(error) => error.fmt(f),
         }

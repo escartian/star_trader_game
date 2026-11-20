@@ -27,6 +27,8 @@ enum Stop {
     Contact(FleetId),
     NeedsOrders(FleetId),
     NothingUnderway,
+    /// A fleet mining on a surface filled its holds.
+    HoldsFull(FleetId),
     Rejected,
     Limit,
 }
@@ -117,6 +119,7 @@ impl LocalSession {
 
     fn advance_step(&mut self, runs: u32) -> Option<Stop> {
         let before = self.state.navigation.run;
+        let mining = self.mining_with_room();
         self.command(ClientCommand::ExecuteNavigationRun {
             expected_revision: self.state.revision,
         });
@@ -130,7 +133,11 @@ impl LocalSession {
                 Stop::NeedsOrders(fleet)
             });
         }
-        if !self.anything_underway() {
+        let still = self.mining_with_room();
+        if let Some(full) = mining.into_iter().find(|fleet| !still.contains(fleet)) {
+            return Some(Stop::HoldsFull(full));
+        }
+        if !self.anything_underway() && still.is_empty() {
             return Some(Stop::NothingUnderway);
         }
         (runs >= MAX_RUNS).then_some(Stop::Limit)
@@ -176,6 +183,13 @@ impl LocalSession {
                 format!("Advanced {advanced} · {}{why}.", self.fleet_name(fleet))
             }
             Stop::NothingUnderway => format!("Advanced {advanced} · no fleet is underway."),
+            Stop::HoldsFull(fleet) => {
+                self.focus_fleet(fleet);
+                format!(
+                    "Advanced {advanced} · {}: holds full of ore. Lift off to sell it.",
+                    self.fleet_name(fleet)
+                )
+            }
             Stop::Rejected => format!("Advance stopped: {}", self.notice),
             Stop::Limit => format!("Advanced {advanced} without an event; paused."),
         };

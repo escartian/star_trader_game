@@ -68,13 +68,15 @@ ship's cargo, fuel and identity through save/load. These flows have behavior tes
 Planet/station shipyards have finite inventory and treasury-funded sales. Patrol
 hulls fight raiders (milestone 4); customization and used-hull loadouts remain later work.
 
-## 3. Restore the original movement and planetary world model — in progress
+## 3. Restore the original movement and planetary world model — implemented foundation
 
 - [x] Configurable galaxy/system cubic bounds in ly/km; extents contain generated
   bodies. Checked coordinates, edge/corner exits and exact range boundary tests.
 - [x] Explicit fleet local/body/deep-space position, shared by its members.
 - [x] Local movement to a waypoint/body, station docking and stellar exclusion.
-- [ ] Planet/moon collision volumes and more detailed proximity/landing rules.
+- [x] Map-scale collision volumes for every body; local legs and named routes
+  avoid them. Landing on rocky planets, moons and asteroids (fuel by gravity,
+  automatic lift-off on a new course) and ore mining while waiting landed.
 - [x] Exit at the first crossed cube face and place the fleet just outside it.
   Checked coordinate conversion preserves kilometer offsets in deep space.
 - [x] Deep-space linear movement within galaxy bounds.
@@ -98,8 +100,8 @@ Planet resource/ship markets, finite credit balances and metadata are implemente
 Schema 4 preserves old player assets/station stock, with explicit zero funding and
 inventory for newly tracked accounts. Planetary commerce and hull transactions
 have conservation/rejection/save tests. See [planet economies](docs/PLANET_ECONOMY.md).
-Biome/danger are descriptive until encounters use them. Detailed collision and
-landing volumes remain open, independently of the following gameplay work.
+Biome/danger are descriptive until encounters use them. Bodies have map-scale
+collision volumes and landing; there is still no orbital motion (bodies are fixed).
 
 ## 3a. Navigation runs and encounters — implemented foundation
 

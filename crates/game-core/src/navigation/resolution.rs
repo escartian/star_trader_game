@@ -143,6 +143,7 @@ impl TravelState {
                 self.navigation.orders.push(order);
             }
         }
+        events.extend(self.mine(systems)?);
         events.push(NavigationEvent::RunExecuted(run));
         Ok(events)
     }

@@ -34,6 +34,8 @@ pub enum Berth {
     /// Holding orbit around a body; `ring` is the on-screen orbit radius in points
     /// (0 hides the ring, e.g. at galaxy scale).
     Orbit { ring: f32, trade: bool },
+    /// Set down on a planet, moon or asteroid's surface.
+    Landed { trade: bool },
 }
 
 impl Berth {
@@ -41,6 +43,7 @@ impl Berth {
         match location {
             game_core::travel::Location::Docked(_) => Self::Docked { trade },
             game_core::travel::Location::Orbiting { .. } => Self::Orbit { ring, trade },
+            game_core::travel::Location::Landed { .. } => Self::Landed { trade },
             _ => Self::Free,
         }
     }
@@ -50,13 +53,16 @@ impl Berth {
             Self::Free => None,
             Self::Docked { .. } => Some(("DOCKED", crate::theme::GREEN, Icon::Dock)),
             Self::Orbit { .. } => Some(("ORBIT", crate::theme::CYAN, Icon::Orbit)),
+            Self::Landed { .. } => Some(("LANDED", crate::theme::AMBER, Icon::Dock)),
         }
     }
 
     fn trade(self) -> bool {
         matches!(
             self,
-            Self::Docked { trade: true } | Self::Orbit { trade: true, .. }
+            Self::Docked { trade: true }
+                | Self::Orbit { trade: true, .. }
+                | Self::Landed { trade: true }
         )
     }
 }
@@ -133,6 +139,15 @@ pub(super) fn paint(
                     Stroke::new(0.7_f32, cyan.gamma_multiply(0.5)),
                 );
             }
+        }
+        Berth::Landed { .. } => {
+            // A short amber stalk down to a pad on the body's surface.
+            let amber = crate::theme::AMBER;
+            painter.line_segment(
+                [anchor, center],
+                Stroke::new(1.6_f32, amber.gamma_multiply(0.8)),
+            );
+            painter.circle_filled(anchor, 4.0, amber);
         }
         Berth::Free if anchor.distance(center) > 32.0 => {
             painter.line_segment(

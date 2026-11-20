@@ -38,6 +38,12 @@ impl Session {
             }
             | ClientCommand::BattleAction {
                 expected_revision, ..
+            }
+            | ClientCommand::Land {
+                expected_revision, ..
+            }
+            | ClientCommand::LiftOff {
+                expected_revision, ..
             } => *expected_revision,
             _ => unreachable!("only navigation commands reach this handler"),
         };
@@ -102,6 +108,18 @@ impl Session {
                     candidate
                         .state
                         .battle_action(player, action, &self.economy.rules)?,
+                ]
+            }
+            ClientCommand::Land { fleet, .. } => {
+                ordered = Some(fleet);
+                vec![candidate.state.land(player, fleet, &candidate.systems)?]
+            }
+            ClientCommand::LiftOff { fleet, .. } => {
+                ordered = Some(fleet);
+                vec![
+                    candidate
+                        .state
+                        .lift_off(player, fleet, &candidate.systems)?,
                 ]
             }
             ClientCommand::CancelTradeRoute { fleet, .. } => {

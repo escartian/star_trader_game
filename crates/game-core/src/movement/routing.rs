@@ -1,5 +1,8 @@
-//! Point-and-select itineraries. A small visibility graph routes around the star.
-use super::{MoveTarget, MovementError, MovementPlan, SpacePosition, geometry, local_position};
+//! Point-and-select itineraries. A small visibility graph routes around the star
+//! and every body's collision volume.
+use super::{
+    MoveTarget, MovementError, MovementPlan, SpacePosition, geometry, local_position, obstacles,
+};
 use crate::{
     BodyId, LocalPosition, StarSystem, SystemId,
     fleet::FleetMovementError,
@@ -110,10 +113,15 @@ impl TravelState {
     ) -> Result<(), FleetMovementError> {
         let (player, ship) = actor;
         let start = local_position(&self.ship(ship)?.location, system, systems)?;
+        let world = systems
+            .iter()
+            .find(|known| known.id == system)
+            .ok_or(TravelError::UnknownSystem)?;
+        let volumes = obstacles::obstacles(&self.movement_rules, world);
         let path = safe_local_path(
             start,
             end,
-            self.movement_rules.star_exclusion_radius_km,
+            &volumes,
             self.movement_rules.system_half_extent_km,
         )?;
         for waypoint in path {
@@ -152,25 +160,36 @@ impl TravelState {
     }
 }
 
+/// Waypoints for a local course that avoids every collision volume: empty when
+/// the straight line is clear. A small visibility graph over points around each
+/// obstacle (the corners of a cube twice its radius, clamped to the system cube)
+/// finds the shortest clear chain by Dijkstra.
 fn safe_local_path(
     start: LocalPosition,
     end: LocalPosition,
-    radius: i64,
+    volumes: &[obstacles::Obstacle],
     half: i64,
 ) -> Result<Vec<LocalPosition>, MovementError> {
-    if !geometry::crosses_star(start, end, radius) {
+    let Some(first) = obstacles::blocking(start, end, volumes) else {
         return Ok(Vec::new());
-    }
-    let clearance = (radius * 2).min(half);
+    };
     let mut nodes = vec![start, end];
-    for corner in 0..8 {
-        nodes.push(geometry::position(std::array::from_fn(|axis| {
-            if corner & (1 << axis) == 0 {
-                -clearance
-            } else {
-                clearance
+    for volume in volumes {
+        let clearance = (volume.radius * 2).min(half);
+        let centre = geometry::local(volume.centre);
+        for corner in 0..8 {
+            let node = geometry::position(std::array::from_fn(|axis| {
+                let offset = if corner & (1 << axis) == 0 {
+                    -clearance
+                } else {
+                    clearance
+                };
+                (centre[axis] + offset).clamp(-half, half)
+            }));
+            if obstacles::containing(node, volumes).is_none() {
+                nodes.push(node);
             }
-        })));
+        }
     }
     let mut costs = vec![u64::MAX; nodes.len()];
     let mut previous = vec![None; nodes.len()];
@@ -190,7 +209,7 @@ fn safe_local_path(
         for next in 0..nodes.len() {
             if next == current
                 || visited[next]
-                || geometry::crosses_star(nodes[current], nodes[next], radius)
+                || obstacles::blocking(nodes[current], nodes[next], volumes).is_some()
             {
                 continue;
             }
@@ -208,13 +227,13 @@ fn safe_local_path(
         }
     }
     if costs[1] == u64::MAX {
-        return Err(MovementError::StarCollision);
+        return Err(first.error());
     }
     let mut path = Vec::new();
-    let mut index = previous[1].ok_or(MovementError::StarCollision)?;
+    let mut index = previous[1].ok_or(first.error())?;
     while index != 0 {
         path.push(nodes[index]);
-        index = previous[index].ok_or(MovementError::StarCollision)?;
+        index = previous[index].ok_or(first.error())?;
     }
     path.reverse();
     Ok(path)

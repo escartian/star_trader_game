@@ -123,6 +123,33 @@ impl LocalSession {
     }
 
     /// Capture fixtures execute ordinary commands in a fresh, unsaved session.
+    /// Lands the active fleet, orders it to wait and executes `runs` runs.
+    pub fn capture_landing(&mut self, runs: usize) -> Result<(), String> {
+        let fleet = self
+            .state
+            .fleet_for_ship(self.active_ship)
+            .map_err(|error| error.to_string())?
+            .id;
+        for command in [
+            ClientCommand::Land {
+                fleet,
+                expected_revision: self.state.revision,
+            },
+            ClientCommand::HoldFleet {
+                fleet,
+                expected_revision: self.state.revision + 1,
+            },
+        ] {
+            let response = self.authority.handle_offline(command);
+            if let ServerMessage::CommandRejected(error) = &response {
+                return Err(error.to_string());
+            }
+            self.accept(response);
+        }
+        self.capture_wait_runs(runs);
+        Ok(())
+    }
+
     pub fn capture_movement(&mut self, target: MoveTarget) -> Result<(), String> {
         let response = self.authority.handle_offline(ClientCommand::Move {
             ship: self.active_ship,

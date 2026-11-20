@@ -89,7 +89,11 @@ impl LocalSession {
                     (Icon::Plot, "READY")
                 }
             } else if self.state.navigation.holds.contains(&fleet.id) {
-                (Icon::Hold, "WAITING")
+                if self.mining(fleet.id, systems) {
+                    (Icon::Good(game_core::economy::Commodity::Ore), "MINING")
+                } else {
+                    (Icon::Hold, "WAITING")
+                }
             } else {
                 (Icon::Warning, "NEEDS ORDERS")
             };
@@ -184,6 +188,7 @@ impl LocalSession {
                 if let Ok(ship) = self.state.ship(ship) {
                     location_stat(ui, &ship.location, systems);
                 }
+                self.landing_controls(ui, fleet.id, systems);
                 self.route_line(ui, fleet.id, systems);
             });
         }

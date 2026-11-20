@@ -34,6 +34,9 @@ pub fn location_label(location: &Location, systems: &[StarSystem]) -> String {
                 .map_or("Unknown body", |body| body.name.as_str());
             format!("In orbit of {body}")
         }
+        Location::Landed { system, body } => {
+            format!("Landed on {}", body_name(systems, *system, *body))
+        }
         Location::InSystem { system, position } => format!(
             "{}: ({:.4}, {:.4}, {:.4}) AU",
             name(*system),
@@ -50,6 +53,14 @@ pub fn location_label(location: &Location, systems: &[StarSystem]) -> String {
         Location::InTransit(fleet) => format!("Fleet {} is underway", fleet.0),
         Location::Travelling(journey) => format!("Saved journey to {}", name(journey.destination)),
     }
+}
+
+fn body_name(systems: &[StarSystem], system: game_core::SystemId, body: game_core::BodyId) -> &str {
+    systems
+        .iter()
+        .find(|known| known.id == system)
+        .and_then(|known| known.bodies.iter().find(|known| known.id == body))
+        .map_or("Unknown body", |body| body.name.as_str())
 }
 
 /// Compact location: an icon for the kind of place plus its short name.
@@ -72,6 +83,10 @@ pub fn location_chip(location: &Location, systems: &[StarSystem]) -> (Icon, Stri
                     .and_then(|known| known.bodies.iter().find(|known| known.id == *body))
                     .map_or("Unknown body", |body| body.name.as_str())
             ),
+        ),
+        Location::Landed { system, body } => (
+            Icon::Dock,
+            format!("Landed · {}", body_name(systems, *system, *body)),
         ),
         Location::InSystem { system, .. } => (Icon::Pin, name(*system)),
         Location::DeepSpace(_) => (Icon::DeepSpace, "Deep space".into()),

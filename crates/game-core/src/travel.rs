@@ -27,6 +27,12 @@ pub enum Location {
         system: SystemId,
         body: crate::BodyId,
     },
+    /// On the surface of a rocky planet, moon or asteroid. Landing and lifting
+    /// off cost fuel by the body's gravity (`movement::LandingRules`).
+    Landed {
+        system: SystemId,
+        body: crate::BodyId,
+    },
     InSystem {
         system: SystemId,
         position: crate::LocalPosition,
@@ -290,6 +296,7 @@ impl Location {
         match self {
             Self::Docked(system)
             | Self::Orbiting { system, .. }
+            | Self::Landed { system, .. }
             | Self::InSystem { system, .. } => Some(*system),
             Self::Travelling(journey) => Some(journey.origin),
             Self::DeepSpace(_) | Self::InTransit(_) => None,

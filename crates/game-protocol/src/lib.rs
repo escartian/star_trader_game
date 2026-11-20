@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 12;
+pub const PROTOCOL_VERSION: u32 = 13;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -120,6 +120,16 @@ pub enum ClientCommand {
         fleet: FleetId,
         expected_revision: u64,
     },
+    /// Set an orbiting fleet down on its rocky planet, moon or asteroid.
+    Land {
+        fleet: FleetId,
+        expected_revision: u64,
+    },
+    /// Lift a landed fleet back into orbit.
+    LiftOff {
+        fleet: FleetId,
+        expected_revision: u64,
+    },
     /// Act with the player ship that is up in the open raider battle.
     BattleAction {
         action: game_core::navigation::BattleAction,
@@ -175,7 +185,7 @@ pub enum ServerMessage {
         systems: Vec<StarSystem>,
     },
     SessionSnapshot {
-        state: TravelState,
+        state: Box<TravelState>,
         economy: Box<Economy>,
         events: Vec<SessionEvent>,
     },

@@ -29,7 +29,7 @@ impl LocalView {
                     .iter()
                     .find(|body| body.kind == BodyKind::Station)
                     .map(|body| body.id),
-                Location::Orbiting { body, .. } => Some(body),
+                Location::Orbiting { body, .. } | Location::Landed { body, .. } => Some(body),
                 _ => None,
             };
         }
@@ -48,7 +48,7 @@ impl LocalView {
                 .bodies
                 .iter()
                 .find(|body| body.kind == BodyKind::Station),
-            Location::Orbiting { body, .. } => {
+            Location::Orbiting { body, .. } | Location::Landed { body, .. } => {
                 self.system.bodies.iter().find(|known| known.id == *body)
             }
             _ => None,

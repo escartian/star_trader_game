@@ -15,6 +15,12 @@ pub struct MovementRules {
     pub star_exclusion_radius_km: i64,
     pub local_km_per_tick: u64,
     pub local_km_per_fuel: u64,
+    /// Map-scale collision radius per body kind (defaults for older definitions).
+    #[serde(default)]
+    pub body_radii: super::BodyRadii,
+    /// Landing costs and mining yields (defaults for older definitions).
+    #[serde(default)]
+    pub landing: super::LandingRules,
 }
 
 fn default_run_ticks() -> u64 {
@@ -47,6 +53,8 @@ impl MovementRules {
             || !(1..self.system_half_extent_km).contains(&self.star_exclusion_radius_km)
             || !(1..=1_000_000_000).contains(&self.local_km_per_tick)
             || !(1..=1_000_000_000).contains(&self.local_km_per_fuel)
+            || !self.body_radii.valid(self.system_half_extent_km)
+            || !self.landing.valid()
         {
             return Err(MovementError::InvalidRules);
         }
@@ -71,18 +79,30 @@ impl MovementRules {
                     return Err(MovementError::InvalidRules);
                 }
             }
-            for body in &system.bodies {
-                let coordinates = [body.position.x_km, body.position.y_km, body.position.z_km];
+            // Every body's volume fits in the cube and overlaps neither the star's
+            // exclusion zone nor another body, so routes can pass between them.
+            let volumes = super::obstacles::obstacles(self, system);
+            for (index, volume) in volumes.iter().enumerate() {
+                let reach =
+                    u64::try_from(volume.radius).map_err(|_| MovementError::InvalidRules)?;
+                let coordinates = super::geometry::local(volume.centre);
                 if coordinates
                     .iter()
-                    .any(|value| value.unsigned_abs() > self.system_half_extent_km as u64)
-                    || coordinates
-                        .iter()
-                        .map(|value| i128::from(*value).pow(2))
-                        .sum::<i128>()
-                        <= i128::from(self.star_exclusion_radius_km).pow(2)
+                    .any(|value| value.unsigned_abs() + reach > self.system_half_extent_km as u64)
                 {
                     return Err(MovementError::InvalidRules);
+                }
+                for other in &volumes[..index] {
+                    let apart = super::geometry::distance_squared(
+                        coordinates,
+                        super::geometry::local(other.centre),
+                    )?;
+                    let touching = u128::try_from(volume.radius + other.radius)
+                        .map_err(|_| MovementError::InvalidRules)?
+                        .pow(2);
+                    if apart <= touching {
+                        return Err(MovementError::InvalidRules);
+                    }
                 }
             }
         }
@@ -150,6 +170,15 @@ impl MovementRules {
                 {
                     return Err(MovementError::StarCollision);
                 }
+                if let Some(world) = systems.iter().find(|known| known.id == *system)
+                    && super::obstacles::containing(
+                        *position,
+                        &super::obstacles::obstacles(self, world),
+                    )
+                    .is_some()
+                {
+                    return Err(MovementError::InsideBody);
+                }
             }
             Location::Orbiting { system, body } => {
                 if !systems.iter().any(|known| {
@@ -158,6 +187,16 @@ impl MovementRules {
                             known.id == *body && known.kind != crate::BodyKind::Station
                         })
                 }) {
+                    return Err(MovementError::UnknownBody);
+                }
+            }
+            Location::Landed { system, body } => {
+                let landable = systems
+                    .iter()
+                    .find(|known| known.id == *system)
+                    .and_then(|known| known.bodies.iter().find(|known| known.id == *body))
+                    .is_some_and(|body| self.landing.fuel(body.kind).is_some());
+                if !landable {
                     return Err(MovementError::UnknownBody);
                 }
             }

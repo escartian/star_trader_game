@@ -132,6 +132,25 @@ fn remembered_slot_and_controls_restore_without_altering_world_state() {
 }
 
 #[test]
+fn dismissing_the_guide_hides_it_and_remembers_the_choice() {
+    use crate::preferences::Preferences;
+    let directory = tempfile::tempdir().unwrap();
+    let settings_path = directory.path().join("settings.json");
+    let mut host = LocalSession::new(game_server::Session::default());
+    host.apply_preferences(Preferences::default(), Some(settings_path.clone()))
+        .unwrap();
+    assert!(host.saves.guide);
+    host.dismiss_guide();
+    assert!(!host.saves.guide);
+    assert!(!Preferences::load(&settings_path).unwrap().guide);
+    assert!(
+        host.notice.contains("Guide in the Save window"),
+        "{}",
+        host.notice
+    );
+}
+
+#[test]
 fn selected_ship_trades_into_its_own_hold_and_restores_from_preferences() {
     use game_core::{
         economy::{Commodity, TradeSide},

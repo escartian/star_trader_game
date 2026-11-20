@@ -63,7 +63,7 @@ edges; static, no brushed lines):
 | Card | Position | Contents |
 | --- | --- | --- |
 | Roster | top-left | fleets, status, destination, NPC traffic |
-| View toolbar | top-center | breadcrumb/Depart (system view), camera tools, zoom, guide |
+| View toolbar | top-center | breadcrumb/Depart (system view), camera tools, zoom, guide (× hides it; Guide in the Save window restores it) |
 | Status | top-right | Fleets / Navigation / Market / Session buttons, ship, stats |
 | Run | bottom-left | Advance / Stop, single-run clock button, latest event, contact decision |
 | Selection | bottom-center | selected system or body, destination tiles, traits |

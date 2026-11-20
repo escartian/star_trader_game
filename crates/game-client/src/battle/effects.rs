@@ -1,13 +1,13 @@
 //! Display-only animation that makes each battle update readable: ships glide
-//! to their new cells, then each new shot flies as a beam and flashes on its
+//! to their new hexes and bands, then each new shot flies as a beam and flashes on its
 //! target. The rules never wait for these; captures switch them off.
 use super::{camera::ScenePoint, canvas::Canvas, scene::side_color};
 use crate::theme::{AMBER, CYAN};
 use egui::{Color32, Stroke};
-use game_core::combat::tactical::{Battle, Cell};
+use game_core::combat::tactical::{Battle, Position};
 use glam::{Vec2, Vec3};
 
-/// Seconds a ship takes to glide to its new cell.
+/// Seconds a ship takes to glide to its new position.
 pub const GLIDE_SECONDS: f64 = 0.35;
 /// Seconds a beam takes to reach its target.
 const BEAM_SECONDS: f64 = 0.2;
@@ -18,7 +18,7 @@ const SHOT_GAP: f64 = 0.16;
 
 struct Glide {
     unit: usize,
-    from: Cell,
+    from: Position,
     start: f64,
 }
 
@@ -37,7 +37,7 @@ struct Beam {
 pub struct Effects {
     /// The battle the state below describes; a different seed starts afresh.
     seed: Option<u64>,
-    cells: Vec<Cell>,
+    cells: Vec<Position>,
     shots: usize,
     glides: Vec<Glide>,
     beams: Vec<Beam>,
@@ -48,7 +48,7 @@ impl Effects {
     /// changed. With `animate` off, the new state is adopted without effects.
     pub fn observe(&mut self, battle: &Battle, now: f64, animate: bool) {
         let shots: usize = battle.rounds.iter().map(Vec::len).sum();
-        let cells: Vec<Cell> = battle.units.iter().map(|unit| unit.cell).collect();
+        let cells: Vec<Position> = battle.units.iter().map(|unit| unit.at).collect();
         let fresh = self.seed != Some(battle.seed) || cells.len() != self.cells.len();
         if fresh || shots < self.shots || !animate {
             *self = Self {
@@ -76,8 +76,8 @@ impl Effects {
             let attacker = &battle.units[usize::from(shot.attacker)];
             let target = &battle.units[usize::from(shot.target)];
             self.beams.push(Beam {
-                from: ScenePoint::of_cell(attacker.cell),
-                to: ScenePoint::of_cell(target.cell),
+                from: ScenePoint::of(attacker.at),
+                to: ScenePoint::of(target.at),
                 color: side_color(attacker.side),
                 hit: shot.hit,
                 hull: shot.hull_damage > 0,
@@ -104,25 +104,25 @@ impl Effects {
                 .any(|beam| now < beam.start + BEAM_SECONDS + FLASH_SECONDS)
     }
 
-    /// Where to draw `unit`, standing at `cell`, at time `now`.
-    pub fn position(&self, unit: usize, cell: Cell, now: f64) -> ScenePoint {
-        let to = ScenePoint::of_cell(cell);
+    /// Where to draw `unit`, standing at `at`, at time `now`.
+    pub fn position(&self, unit: usize, at: Position, now: f64) -> ScenePoint {
+        let to = ScenePoint::of(at);
         let Some(glide) = self.glides.iter().rev().find(|glide| glide.unit == unit) else {
             return to;
         };
         let t = ((now - glide.start) / GLIDE_SECONDS).clamp(0.0, 1.0) as f32;
         let eased = t * t * (3.0 - 2.0 * t);
-        ScenePoint(ScenePoint::of_cell(glide.from).0.lerp(to.0, eased))
+        ScenePoint(ScenePoint::of(glide.from).0.lerp(to.0, eased))
     }
 
     /// Horizontal heading while a ship glides; a vertical move keeps its
     /// existing side-facing pose. This is presentation state, not a battle rule.
-    pub fn heading(&self, unit: usize, cell: Cell, now: f64) -> Option<Vec2> {
+    pub fn heading(&self, unit: usize, at: Position, now: f64) -> Option<Vec2> {
         let glide = self.glides.iter().rev().find(|glide| {
             glide.unit == unit && (glide.start..glide.start + GLIDE_SECONDS).contains(&now)
         })?;
-        let from = ScenePoint::of_cell(glide.from).0;
-        let to = ScenePoint::of_cell(cell).0;
+        let from = ScenePoint::of(glide.from).0;
+        let to = ScenePoint::of(at).0;
         let heading = (to - from).truncate().normalize_or_zero();
         (heading != Vec2::ZERO).then_some(heading)
     }
@@ -239,20 +239,20 @@ mod tests {
             "a new battle starts without replaying history"
         );
         let me = battle.active().unwrap();
-        let from = battle.units[me].cell;
+        let from = battle.units[me].at;
         let to = battle.reachable()[0];
         battle.move_to(to).unwrap();
         effects.observe(&battle, 1.0, true);
         assert!(effects.busy(1.0));
-        assert_eq!(effects.position(me, to, 1.0), ScenePoint::of_cell(from));
-        let horizontal = glam::Vec2::new(f32::from(to.x - from.x), f32::from(to.y - from.y));
+        assert_eq!(effects.position(me, to, 1.0), ScenePoint::of(from));
+        let horizontal = (ScenePoint::of(to).0 - ScenePoint::of(from).0).truncate();
         assert_eq!(
             effects.heading(me, to, 1.0),
             (horizontal != glam::Vec2::ZERO).then_some(horizontal.normalize_or_zero())
         );
         assert_eq!(
             effects.position(me, to, 1.0 + GLIDE_SECONDS),
-            ScenePoint::of_cell(to)
+            ScenePoint::of(to)
         );
         assert!(!effects.busy(10.0));
         effects.observe(&battle, 10.0, true);
@@ -269,6 +269,6 @@ mod tests {
         battle.move_to(to).unwrap();
         effects.observe(&battle, 1.0, false);
         assert!(!effects.busy(1.0));
-        assert_eq!(effects.position(me, to, 1.0), ScenePoint::of_cell(to));
+        assert_eq!(effects.position(me, to, 1.0), ScenePoint::of(to));
     }
 }

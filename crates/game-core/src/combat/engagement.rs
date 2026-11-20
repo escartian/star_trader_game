@@ -1,8 +1,10 @@
 //! Shared combat results and damage rules. Battles themselves are turn-based on a
-//! 3D grid (`combat::tactical`); this module is pure arithmetic and data.
+//! hex board with altitude bands (`combat::tactical`); this module is pure
+//! arithmetic and data.
 //!
 //! - Hit chance = accuracy − [`EVASION_PER_ENGINE`] × target engine −
-//!   [`RANGE_PENALTY_PERCENT`] × (distance − 1), at least [`MIN_HIT_PERCENT`].
+//!   [`RANGE_PENALTY_PERCENT`] × (distance − 1) ± the high-ground modifier, at
+//!   least [`MIN_HIT_PERCENT`].
 //! - A hit converts damage to shield points at `shield_efficiency_percent`. Any
 //!   damage left after shields fail converts back at the same rate, then loses
 //!   `max(armor − armor_penetration, 0)` and deals at least 1 hull point.
@@ -11,7 +13,7 @@ use crate::{fleet::ShipKind, travel::ShipId};
 use serde::{Deserialize, Serialize};
 
 pub const EVASION_PER_ENGINE: u32 = 3;
-/// Accuracy lost per grid cell of distance beyond adjacent.
+/// Accuracy lost per step of range (hex or band) beyond adjacent.
 pub const RANGE_PENALTY_PERCENT: u32 = 4;
 pub const MIN_HIT_PERCENT: u32 = 5;
 /// Upper bound on combatants in one engagement; keeps reports small.
@@ -75,14 +77,24 @@ pub struct Engagement {
 }
 
 /// Percent chance for one shot of `weapon` to hit a target with `target_engine`
-/// at `distance` grid cells.
+/// at `distance` (hex steps plus bands crossed).
 pub fn hit_chance(weapon: &WeaponSpec, target_engine: u32, distance: u32) -> u32 {
+    adjusted_hit_chance(weapon, target_engine, distance, 0)
+}
+
+/// [`hit_chance`] shifted by `modifier_percent` points (the high-ground rule)
+/// before the [`MIN_HIT_PERCENT`] floor; never above 100.
+pub fn adjusted_hit_chance(
+    weapon: &WeaponSpec,
+    target_engine: u32,
+    distance: u32,
+    modifier_percent: i32,
+) -> u32 {
     let penalty =
         EVASION_PER_ENGINE * target_engine + RANGE_PENALTY_PERCENT * distance.saturating_sub(1);
-    weapon
-        .accuracy_percent
-        .saturating_sub(penalty)
-        .max(MIN_HIT_PERCENT)
+    let chance =
+        i64::from(weapon.accuracy_percent) - i64::from(penalty) + i64::from(modifier_percent);
+    chance.clamp(i64::from(MIN_HIT_PERCENT), 100) as u32
 }
 
 /// Applies one hit to a target's `shields` and accumulated hull `damage`.

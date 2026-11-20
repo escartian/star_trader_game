@@ -112,7 +112,7 @@ Players plot courses and execute navigation runs; plotting alone consumes no tic
 The client's Advance control only repeats the single-run command until an event
 needs the player; it adds no authoritative rules.
 
-`game-server/src/save.rs` owns schema-7 authoritative JSON, validation, atomic
+`game-server/src/save.rs` owns schema-8 authoritative JSON, validation, atomic
 replacement and a previous-good backup. Saves contain the world/player/economy
 and their active definitions; continuing does not regenerate markets or apply
 changed startup definitions. The client replaces its session only after load
@@ -143,7 +143,9 @@ body anchors or at deep-space positions. The current primary trade station retai
 its system ID in Docked; planetary Orbiting locations resolve a market by body.
 Ship catalog definitions come from config/ships.json and weapons from
 config/combat.json, both embedded as fallbacks. `game-core::combat` validates them.
-Older save schemas are rejected during prototyping; only schema 7 is supported.
+Older save schemas are rejected during prototyping. Schema 8 is current; a
+schema-7 save differs only in its battle format and is upgraded on load, its
+open 3D-grid battle (if any) auto-resolved.
 
 ## Movement spaces and host resolution
 

@@ -34,8 +34,17 @@ Blender source and visually inspected in a Blender render: its ivory hull and
 teal wings are visible. Automated checks cover embedded model paint and battle
 glide heading. Offscreen captures of the galaxy traffic and battle view succeeded
 on the Apple M5 Pro and were visually inspected: trader markers have hull shapes,
-and the scout battle model shows teal paint at its grid position. Interactive
+and the scout battle model shows teal paint at its board position. Interactive
 window and device checks remain open.
+
+Hex battles (phone-first phase 4): offscreen captures at 1280 × 800, 1024 × 768
+and 390 × 844 of a duel, the 7 v 7 scenario and a close-up after a climb and an
+aim were visually inspected: the whole board fits both shapes, bands read by
+height and shadow, and the phone layout stacks the controls under the board with
+44-point Fire and End turn buttons. Automated tests cover board framing at wide
+and phone sizes, hex/ship picking and aim clearing. Real touch input (tap, drag,
+pinch) on a device, desktop mouse play and the wide view's unused space above
+the board (perspective makes the near edge the binding fit) are not yet checked.
 
 Original Blender 5.2.3 models and baked transparent sprites cover five star classes,
 a rocky planet, gas giant, moon, asteroid and trade port. Their images were visually

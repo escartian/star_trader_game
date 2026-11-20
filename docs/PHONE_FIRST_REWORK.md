@@ -1,6 +1,6 @@
 # Phone-first rework
 
-Status: **phone shell and flat play implemented; hex battles and victory work remain.** This plan reworks the interface,
+Status: **phone shell, flat play and hex battles implemented; victory work remains.** This plan reworks the interface,
 the map and battles around a phone-sized screen, and gives the game a goal.
 Where it conflicts with [map design](MAP_DESIGN.md) (3D map on a 2D screen) or
 [combat](COMBAT.md) (3D battle grid), this document wins once each phase lands.
@@ -222,8 +222,12 @@ Each phase ships on its own, keeps `./tools/check.sh` green and adds captures at
    `--capture-size` for phone captures. The floating cards are gone.
 3. **Flat play** (done): flat generation and saves, fixed-tilt map camera, orbit
    controls removed. Saves before schema 7 require a new session.
-4. **Hex battles:** core rules first (hex coordinates, bands, high ground, AI and
-   balance tests carried over), then the board view and touch controls.
+4. **Hex battles** (done): axial hex boards of radius 4–6, Low/Level/High bands,
+   movement points for steps and climbs/dives, high ground, an AI that takes
+   free height and closes until its whole volley reaches, the fixed-tilt board
+   view, tap-to-aim then Fire, Climb/Dive buttons and a stacked layout below
+   700 points. Schema 8; schema-7 saves auto-resolve an open 3D battle on load.
+   Balance tables are in [combat](COMBAT.md).
 5. **Victory framework:** Victory panel, score, campaign length, Raider Haven
    (bands spawn from it; destroying it wins), trade charters.
 6. **Unlocks:** progressive disclosure and guide cards.

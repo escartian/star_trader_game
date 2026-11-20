@@ -1,60 +1,142 @@
-//! Orbit camera for the battle volume.
+//! Fixed-tilt camera over the hex board.
 //!
 //! Coordinate spaces:
-//! - `Cell` (game-core): integer grid cells inside the battle's `GridSize`.
-//! - [`ScenePoint`]: world units, one cell = 1.0, z up, cell (0, 0, 0) at the
-//!   origin; +x points from the player's edge toward the raiders' edge.
+//! - `Hex` / `Position` (game-core): axial hexes and altitude bands.
+//! - [`ScenePoint`]: world units, z up, the board's centre hex at the origin
+//!   on the board plane (z = 0). Hex centres are 1.0 apart: a hex sits at
+//!   x = (√3 / 2) q, y = r + q / 2, so +x points from the player's edge toward
+//!   the raiders'. Bands stand above the board at [`band_height`].
 //! - Screen: egui points inside the view rect.
 //!
-//! The camera orbits a focus point (the grid's centre plus a pan offset) and
-//! stands back in proportion to the grid's bounding radius, so every grid size
-//! starts framed alike. Panning keeps the focus inside the grid.
+//! The camera looks at the board from the player's side at a fixed tilt; it
+//! only zooms and pans (flat play: no orbit). At zoom 1 it stands back just
+//! far enough for the whole board, and ships on the High band, to fit the
+//! view rect, whatever its shape.
 use egui::{Pos2, Rect, Vec2};
-use game_core::combat::tactical::{Cell, GridSize};
+use game_core::combat::tactical::{Band, Board, Hex, Position};
 use glam::{Mat4, Vec3};
 
 /// Vertical field of view in radians.
 const FOV: f32 = 0.75;
-const MIN_PITCH: f32 = 0.12;
-const MAX_PITCH: f32 = 1.45;
-/// Camera distance per world unit of the grid's bounding radius, at zoom 1;
-/// keeps the whole floor in view for every grid shape.
-const FRAMING: f32 = 2.5;
-const MIN_ZOOM: f32 = 0.5;
-const MAX_ZOOM: f32 = 6.0;
+/// Fixed tilt above the board plane, in radians (about 55°).
+const PITCH: f32 = 0.96;
+/// Share of the view rect the board may fill at zoom 1; the rest is margin.
+const FILL: f32 = 0.94;
+const MIN_ZOOM: f32 = 1.0;
+const MAX_ZOOM: f32 = 4.0;
+/// x spacing of hex columns, in world units (√3 / 2).
+const COLUMN: f32 = 0.866_025_4;
+/// A hex's circumradius in world units (centres are 1.0 apart).
+pub const HEX_RADIUS: f32 = 0.577_350_3;
+/// Height of the Low band above the board, and the gap between bands.
+const LOW_HEIGHT: f32 = 0.45;
+const BAND_GAP: f32 = 0.75;
+
+/// Height above the board plane of a band, in world units.
+pub fn band_height(band: Band) -> f32 {
+    LOW_HEIGHT + BAND_GAP * f32::from(band.height())
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ScenePoint(pub Vec3);
 
 impl ScenePoint {
-    pub fn of_cell(cell: Cell) -> Self {
-        Self(Vec3::new(
-            f32::from(cell.x),
-            f32::from(cell.y),
-            f32::from(cell.z),
-        ))
+    /// The centre of `hex` on the board plane.
+    pub fn of_hex(hex: Hex) -> Self {
+        let (q, r) = (f32::from(hex.q), f32::from(hex.r));
+        Self(Vec3::new(COLUMN * q, r + q / 2.0, 0.0))
     }
 
-    /// The same x/y on the volume's floor (half a cell below the lowest layer).
-    pub fn on_floor(self) -> Self {
-        Self(Vec3::new(self.0.x, self.0.y, -0.5))
+    /// Where a ship at `position` floats: over its hex, at its band's height.
+    pub fn of(position: Position) -> Self {
+        let mut point = Self::of_hex(position.hex).0;
+        point.z = band_height(position.band);
+        Self(point)
+    }
+
+    /// The same x/y on the board plane (a ship's shadow).
+    pub fn on_board(self) -> Self {
+        Self(Vec3::new(self.0.x, self.0.y, 0.0))
     }
 }
 
-/// The scene point at the centre of a grid.
-pub fn centre(size: GridSize) -> Vec3 {
-    Vec3::new(
-        f32::from(size.width - 1),
-        f32::from(size.depth - 1),
-        f32::from(size.height - 1),
-    ) / 2.0
+/// Half the board's extent along x and y, in world units, hex corners included.
+fn half_extent(board: Board) -> glam::Vec2 {
+    let radius = f32::from(board.radius);
+    glam::Vec2::new(COLUMN * radius + HEX_RADIUS, radius + 0.5)
+}
+
+/// The board's outline for framing: the corners of its six corner hexes, on
+/// the board and at the High band (a ship's centre there).
+fn outline(board: Board) -> Vec<Vec3> {
+    let radius = board.radius;
+    let corner_hexes = [
+        (radius, 0),
+        (radius, -radius),
+        (0, -radius),
+        (-radius, 0),
+        (-radius, radius),
+        (0, radius),
+    ];
+    let top = band_height(Band::High);
+    corner_hexes
+        .into_iter()
+        .flat_map(|(q, r)| {
+            let centre = ScenePoint::of_hex(Hex::new(q, r)).0;
+            (0..6).flat_map(move |corner| {
+                let angle = corner as f32 * std::f32::consts::FRAC_PI_3;
+                let point = centre + Vec3::new(angle.cos(), angle.sin(), 0.0) * HEX_RADIUS;
+                [point, point + Vec3::Z * top]
+            })
+        })
+        .collect()
+}
+
+/// The nearest distance from the board's centre at which its whole outline
+/// fits in [`FILL`] of `rect`: the zoom-1 framing for any board and any view
+/// shape. Found by bisection; the fit only improves with distance.
+fn fit_distance(rect: Rect, board: Board) -> f32 {
+    let points = outline(board);
+    let inner = Rect::from_center_size(rect.center(), rect.size() * FILL);
+    let centre = Vec3::new(0.0, 0.0, band_height(Band::Level));
+    let fits = |distance| {
+        let projector = look(centre, distance, rect);
+        points.iter().all(|point| {
+            projector
+                .project(ScenePoint(*point))
+                .is_some_and(|at| inner.contains(at.pos))
+        })
+    };
+    let (mut near, mut far) = (1.0_f32, 400.0_f32);
+    for _ in 0..24 {
+        let middle = (near + far) / 2.0;
+        if fits(middle) {
+            far = middle;
+        } else {
+            near = middle;
+        }
+    }
+    far
+}
+
+/// A projection looking at `focus` from `distance` away, from the player's
+/// side at the fixed tilt.
+fn look(focus: Vec3, distance: f32, rect: Rect) -> Projector {
+    let aspect = (rect.width() / rect.height().max(1.0)).max(0.1);
+    let eye = focus + Vec3::new(0.0, -PITCH.cos(), PITCH.sin()) * distance;
+    Projector {
+        matrix: Mat4::perspective_rh(FOV, aspect, 0.1, 400.0)
+            * Mat4::look_at_rh(eye, focus, Vec3::Z),
+        rect,
+        eye,
+    }
 }
 
 /// Scene-to-screen mapping for one view rect and camera pose.
 pub struct Projector {
     matrix: Mat4,
     rect: Rect,
-    /// Camera position in scene space.
+    /// Camera position in scene space (for back-face culling).
     pub eye: Vec3,
 }
 
@@ -89,85 +171,42 @@ pub struct Projected {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct OrbitCamera {
-    /// Radians around the vertical axis; 0 looks along +y with the player on the left.
-    pub yaw: f32,
-    /// Radians above the horizon.
-    pub pitch: f32,
-    /// Above 1 moves closer than the grid's framing distance.
+pub struct BoardCamera {
+    /// 1 fits the whole board; larger moves closer.
     pub zoom: f32,
-    /// Focus offset from the grid's centre, in world units.
-    pub pan: Vec3,
+    /// Focus offset from the board's centre on the board plane, in world units.
+    pub pan: glam::Vec2,
 }
 
-impl Default for OrbitCamera {
+impl Default for BoardCamera {
     fn default() -> Self {
         Self {
-            yaw: -0.3,
-            pitch: 0.62,
             zoom: 1.0,
-            pan: Vec3::ZERO,
+            pan: glam::Vec2::ZERO,
         }
     }
 }
 
-impl OrbitCamera {
-    /// World units from the focus to the eye.
-    fn distance(&self, size: GridSize) -> f32 {
-        let radius = Vec3::new(
-            f32::from(size.width),
-            f32::from(size.depth),
-            f32::from(size.height),
-        )
-        .length()
-            / 2.0;
-        FRAMING * radius / self.zoom
+impl BoardCamera {
+    /// The point the camera looks at: the pan offset, at Level band height.
+    pub fn focus(&self) -> Vec3 {
+        self.pan.extend(band_height(Band::Level))
     }
 
-    /// The point the camera looks at and orbits.
-    pub fn focus(&self, size: GridSize) -> Vec3 {
-        centre(size) + self.pan
+    /// World units from the focus to the eye (see [`fit_distance`]).
+    fn distance(&self, rect: Rect, board: Board) -> f32 {
+        fit_distance(rect, board) / self.zoom
     }
 
-    fn eye(&self, size: GridSize) -> Vec3 {
-        let distance = self.distance(size);
-        let flat = distance * self.pitch.cos();
-        self.focus(size)
-            + Vec3::new(
-                flat * self.yaw.sin(),
-                -flat * self.yaw.cos(),
-                distance * self.pitch.sin(),
-            )
-    }
-
-    /// Unit vectors on the floor plane: (toward the view, to its right).
-    fn ground_axes(&self) -> (Vec3, Vec3) {
-        let (sin, cos) = self.yaw.sin_cos();
-        (Vec3::new(-sin, cos, 0.0), Vec3::new(cos, sin, 0.0))
+    /// A projection fixed for one frame, for projecting many points.
+    pub fn projector(&self, rect: Rect, board: Board) -> Projector {
+        look(self.focus(), self.distance(rect, board), rect)
     }
 
     /// One-off projection (tests); frames use [`Self::projector`].
     #[cfg(test)]
-    pub fn project(&self, rect: Rect, size: GridSize, point: ScenePoint) -> Option<Projected> {
-        self.projector(rect, size).project(point)
-    }
-
-    /// A projection fixed for one frame, for projecting many points.
-    pub fn projector(&self, rect: Rect, size: GridSize) -> Projector {
-        let aspect = (rect.width() / rect.height().max(1.0)).max(0.1);
-        let eye = self.eye(size);
-        Projector {
-            matrix: Mat4::perspective_rh(FOV, aspect, 0.1, 400.0)
-                * Mat4::look_at_rh(eye, self.focus(size), Vec3::Z),
-            rect,
-            eye,
-        }
-    }
-
-    /// Drag orbits: horizontal turns around the volume, vertical tilts.
-    pub fn drag(&mut self, delta: Vec2) {
-        self.yaw -= delta.x * 0.008;
-        self.pitch = (self.pitch + delta.y * 0.006).clamp(MIN_PITCH, MAX_PITCH);
+    pub fn project(&self, rect: Rect, board: Board, point: ScenePoint) -> Option<Projected> {
+        self.projector(rect, board).project(point)
     }
 
     /// `factor` > 1 moves closer (egui's pinch convention).
@@ -175,33 +214,31 @@ impl OrbitCamera {
         self.zoom = (self.zoom * factor).clamp(MIN_ZOOM, MAX_ZOOM);
     }
 
-    /// Pans by a screen drag: the grid under the pointer follows it across the
-    /// floor plane, at the focus's depth.
-    pub fn drag_pan(&mut self, delta: Vec2, rect: Rect, size: GridSize) {
-        let per_point = 2.0 * self.distance(size) * (FOV / 2.0).tan() / rect.height().max(1.0);
-        let (forward, right) = self.ground_axes();
-        // Seen from above, dragging down pulls far cells toward the viewer.
-        let forward_scale = 1.0 / self.pitch.sin().max(0.2);
-        self.pan += (-right * delta.x + forward * delta.y * forward_scale) * per_point;
-        self.clamp_pan(size);
+    /// Pans by a screen drag: the board under the pointer follows it.
+    pub fn drag_pan(&mut self, delta: Vec2, rect: Rect, board: Board) {
+        let per_point =
+            2.0 * self.distance(rect, board) * (FOV / 2.0).tan() / rect.height().max(1.0);
+        // Seen at a tilt, a vertical drag covers more board than a horizontal one.
+        let forward_scale = 1.0 / PITCH.sin();
+        self.pan += glam::Vec2::new(-delta.x, delta.y * forward_scale) * per_point;
+        self.clamp_pan(board);
     }
 
-    /// Moves the focus by cells: `forward` away from the viewer, `right`, `up`.
-    pub fn nudge(&mut self, forward: f32, right: f32, up: f32, size: GridSize) {
-        let (ahead, side) = self.ground_axes();
-        self.pan += ahead * forward + side * right + Vec3::Z * up;
-        self.clamp_pan(size);
+    /// Moves the focus by world units: `forward` away from the viewer, `right`.
+    pub fn nudge(&mut self, forward: f32, right: f32, board: Board) {
+        self.pan += glam::Vec2::new(right, forward);
+        self.clamp_pan(board);
     }
 
-    /// Centres the view on `point` (kept inside the grid).
-    pub fn look_at(&mut self, point: ScenePoint, size: GridSize) {
-        self.pan = point.0 - centre(size);
-        self.clamp_pan(size);
+    /// Centres the view on `point` (kept over the board).
+    pub fn look_at(&mut self, point: ScenePoint, board: Board) {
+        self.pan = point.0.truncate();
+        self.clamp_pan(board);
     }
 
-    /// The focus never leaves the grid's volume.
-    fn clamp_pan(&mut self, size: GridSize) {
-        let half = centre(size) + Vec3::splat(0.5);
+    /// The focus never leaves the board.
+    fn clamp_pan(&mut self, board: Board) {
+        let half = half_extent(board);
         self.pan = self.pan.clamp(-half, half);
     }
 }
@@ -209,74 +246,68 @@ impl OrbitCamera {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use game_core::combat::Side;
+
+    fn screens() -> [Rect; 2] {
+        [
+            Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 500.0)),
+            Rect::from_min_size(Pos2::ZERO, Vec2::new(370.0, 420.0)),
+        ]
+    }
 
     #[test]
-    fn every_grid_size_is_framed_with_the_player_left_and_upper_layers_higher() {
-        let camera = OrbitCamera::default();
-        let rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 500.0));
-        for size in [
-            GridSize::default(),
-            GridSize::for_ships(2),
-            GridSize::for_ships(16),
-        ] {
-            let at = |x, z| {
-                let cell = Cell {
-                    x,
-                    y: size.depth / 2,
-                    z,
-                };
-                camera
-                    .project(rect, size, ScenePoint::of_cell(cell))
-                    .unwrap()
-                    .pos
-            };
-            assert!(at(0, 2).x < at(size.width - 1, 2).x);
-            assert!(at(size.width / 2, size.height - 1).y < at(size.width / 2, 0).y);
-            let middle = camera
-                .project(rect, size, ScenePoint(centre(size)))
-                .unwrap()
-                .pos;
-            assert!((middle - rect.center()).length() < 1.0);
-            // The far corners of the floor stay on screen.
-            for (x, y) in [(0, 0), (size.width - 1, size.depth - 1)] {
-                let corner = ScenePoint::of_cell(Cell { x, y, z: 0 }).on_floor();
-                assert!(rect.contains(camera.project(rect, size, corner).unwrap().pos));
+    fn every_board_fits_wide_and_phone_views_with_the_player_left_and_high_bands_higher() {
+        let camera = BoardCamera::default();
+        for rect in screens() {
+            for ships in [2, 4, 16] {
+                let board = Board::for_ships(ships);
+                let at = |position| camera.project(rect, board, position).unwrap().pos;
+                let player = Hex::new(board.home_column(Side::Player), 0);
+                let raider = Hex::new(board.home_column(Side::Hostile), 0);
+                assert!(at(ScenePoint::of_hex(player)).x < at(ScenePoint::of_hex(raider)).x);
+                let centre = Hex::new(0, 0);
+                let high = at(ScenePoint::of(Position::new(centre, Band::High)));
+                let low = at(ScenePoint::of(Position::new(centre, Band::Low)));
+                assert!(high.y < low.y, "higher bands stand higher on screen");
+                // Every hex, and a High ship on it, stays on screen.
+                for hex in board.hexes() {
+                    assert!(
+                        rect.contains(at(ScenePoint::of_hex(hex))),
+                        "{ships}: {hex:?}"
+                    );
+                    let ship = ScenePoint::of(Position::new(hex, Band::High));
+                    assert!(rect.contains(at(ship)), "{ships}: high {hex:?}");
+                }
             }
         }
     }
 
     #[test]
-    fn panning_moves_the_focus_and_stays_inside_the_grid() {
-        let size = GridSize::for_ships(14);
-        let rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 500.0));
-        let mut camera = OrbitCamera::default();
-        let corner = ScenePoint::of_cell(Cell { x: 0, y: 0, z: 0 });
-        camera.look_at(corner, size);
-        let at = camera.project(rect, size, corner).unwrap().pos;
+    fn panning_moves_the_focus_and_stays_over_the_board() {
+        let board = Board::for_ships(14);
+        let rect = screens()[0];
+        let mut camera = BoardCamera::default();
+        let corner = ScenePoint::of(Position::new(Hex::new(-6, 0), Band::Level));
+        camera.look_at(corner, board);
+        let at = camera.project(rect, board, corner).unwrap().pos;
         assert!(
             (at - rect.center()).length() < 1.0,
-            "focused cell is centred"
+            "focused hex is centred"
         );
-        // Dragging right moves the grid right with the pointer.
-        let mut camera = OrbitCamera::default();
-        let middle = ScenePoint(centre(size));
-        let before = camera.project(rect, size, middle).unwrap().pos;
-        camera.drag_pan(Vec2::new(40.0, 0.0), rect, size);
-        let after = camera.project(rect, size, middle).unwrap().pos;
+        // Dragging right moves the board right with the pointer.
+        let mut camera = BoardCamera::default();
+        let middle = ScenePoint(camera.focus());
+        let before = camera.project(rect, board, middle).unwrap().pos;
+        camera.drag_pan(Vec2::new(40.0, 0.0), rect, board);
+        let after = camera.project(rect, board, middle).unwrap().pos;
         assert!(after.x > before.x + 20.0, "{before:?} -> {after:?}");
-        camera.nudge(1_000.0, -1_000.0, 1_000.0, size);
-        let limit = centre(size) + Vec3::splat(0.5);
-        assert!(camera.pan.abs().cmple(limit).all());
-        let mut fresh = OrbitCamera::default();
-        fresh.drag_pan(Vec2::ZERO, rect, size);
-        assert_eq!(fresh.pan, Vec3::ZERO);
+        camera.nudge(1_000.0, -1_000.0, board);
+        assert!(camera.pan.abs().cmple(half_extent(board)).all());
     }
 
     #[test]
-    fn orbit_and_zoom_stay_within_limits() {
-        let mut camera = OrbitCamera::default();
-        camera.drag(Vec2::new(0.0, 10_000.0));
-        assert_eq!(camera.pitch, MAX_PITCH);
+    fn zoom_stays_within_limits_and_never_shrinks_the_board_below_fitting() {
+        let mut camera = BoardCamera::default();
         camera.zoom(100.0);
         assert_eq!(camera.zoom, MAX_ZOOM);
         camera.zoom(0.001);

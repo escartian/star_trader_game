@@ -1,4 +1,7 @@
-use super::{Battle, BattleError, CEASEFIRE_ROUNDS, Cell, MAX_ROUNDS, auto_resolve, move_range};
+use super::{
+    Band, Battle, BattleError, CEASEFIRE_ROUNDS, Hex, MAX_ROUNDS, Position, auto_resolve,
+    move_points, play_turn,
+};
 use crate::combat::{
     CombatCatalog, CombatProfile, HullSize,
     engagement::{CombatantSetup, Side},
@@ -35,35 +38,26 @@ fn battle(setups: &[CombatantSetup], seed: u64) -> Battle {
     Battle::new(setups, &CombatCatalog::default(), seed).unwrap()
 }
 
+/// Sets the initiative order and gives the new first ship its movement.
+pub(super) fn reorder(battle: &mut Battle, order: Vec<u8>) {
+    battle.order = order;
+    battle.turn = 0;
+    battle.moves_left = move_points(battle.units[usize::from(battle.order[0])].profile.engine);
+}
+
 #[test]
-fn sides_deploy_on_opposite_columns_in_unique_cells() {
+fn sides_deploy_on_opposite_columns_in_unique_hexes() {
     let setups: Vec<_> = (0..4)
         .map(|_| ship(ShipKind::Scout, Side::Player))
         .chain((0..3).map(|_| ship(ShipKind::Scout, Side::Hostile)))
         .collect();
     let battle = battle(&setups, 1);
-    let cells: std::collections::HashSet<_> = battle.units.iter().map(|unit| unit.cell).collect();
-    assert_eq!(cells.len(), 7);
+    let hexes: std::collections::HashSet<_> = battle.units.iter().map(|unit| unit.at.hex).collect();
+    assert_eq!(hexes.len(), 7);
     for unit in &battle.units {
-        assert!(battle.size.contains(unit.cell));
-        let column = if unit.side == Side::Player {
-            1
-        } else {
-            battle.size.width - 2
-        };
-        assert_eq!(unit.cell.x, column);
-    }
-    // Checkerboard: no two ships of a side share a face.
-    for a in &battle.units {
-        for b in &battle.units {
-            let face = (a.cell.y - b.cell.y).abs() + (a.cell.z - b.cell.z).abs() == 1;
-            assert!(
-                !(a.side == b.side && face),
-                "{:?} touches {:?}",
-                a.cell,
-                b.cell
-            );
-        }
+        assert!(battle.board.contains(unit.at.hex));
+        let column = battle.board.home_column(unit.side);
+        assert_eq!((unit.at.hex.q - column).abs(), 1);
     }
 }
 
@@ -80,7 +74,7 @@ fn faster_ships_act_first() {
 }
 
 #[test]
-fn moves_respect_engine_range_free_cells_and_one_move_per_turn() {
+fn moves_spend_engine_points_on_free_hexes_and_band_changes() {
     let mut battle = battle(
         &[
             ship(ShipKind::Freighter, Side::Player),
@@ -88,27 +82,43 @@ fn moves_respect_engine_range_free_cells_and_one_move_per_turn() {
         ],
         3,
     );
-    let me = battle.active().unwrap();
-    let from = battle.units[me].cell;
-    let reach = move_range(battle.units[me].profile.engine) as i8;
-    let far = Cell {
-        x: from.x - reach - 1,
-        ..from
-    };
-    assert_eq!(battle.move_to(far), Err(BattleError::TooFar));
-    let outside = Cell { z: -1, ..from };
-    assert_eq!(battle.move_to(outside), Err(BattleError::Blocked));
-    let occupied = battle.units[1 - me].cell;
-    assert_eq!(battle.move_to(occupied), Err(BattleError::Blocked));
-    let step = Cell {
-        x: from.x - reach,
-        ..from
-    };
-    assert!(battle.reachable().contains(&step));
-    battle.move_to(step).unwrap();
-    assert_eq!(battle.units[me].cell, step);
+    reorder(&mut battle, vec![0, 1]);
+    let from = battle.units[0].at;
+    let points = move_points(battle.units[0].profile.engine);
+    assert_eq!(points, 2, "freighter engine 3");
+    let step = |q: i8| Position::new(Hex::new(from.hex.q + q, from.hex.r), from.band);
+    assert_eq!(battle.move_to(step(3)), Err(BattleError::TooFar));
+    let off_board = Position::new(Hex::new(from.hex.q - 2, from.hex.r), from.band);
+    assert_eq!(battle.move_to(off_board), Err(BattleError::Blocked));
+    assert_eq!(battle.move_to(from), Err(BattleError::Blocked), "no-op");
+    // Two hexes and a climb is three points: one too many.
+    let far_high = Position::new(step(2).hex, Band::High);
+    assert!(!battle.reachable().contains(&far_high));
+    assert_eq!(battle.move_to(far_high), Err(BattleError::TooFar));
+    // Another ship's hex is blocked on every band.
+    battle.units[1].at = Position::new(step(1).hex, Band::Low);
+    assert_eq!(battle.move_to(step(1)), Err(BattleError::Blocked));
+    battle.units[1].at = Position::new(Hex::new(3, -1), Band::Level);
+    // Points split across actions: one hex, then a climb.
+    battle.move_to(step(1)).unwrap();
+    assert_eq!(battle.moves_left, 1);
+    assert!(battle.moved());
+    let climbed = Position::new(step(1).hex, Band::High);
+    assert_eq!(
+        battle.reachable().len(),
+        8,
+        "six neighbours, a climb or a dive"
+    );
+    battle.move_to(climbed).unwrap();
+    assert_eq!(battle.units[0].at, climbed);
     assert!(battle.reachable().is_empty());
-    assert_eq!(battle.move_to(from), Err(BattleError::AlreadyMoved));
+    assert_eq!(battle.move_to(step(0)), Err(BattleError::AlreadyMoved));
+    // The next ship starts with its own full allowance.
+    battle.end_turn().unwrap();
+    assert_eq!(
+        battle.moves_left,
+        move_points(battle.units[1].profile.engine)
+    );
 }
 
 #[test]
@@ -121,16 +131,20 @@ fn fire_needs_an_enemy_in_weapon_range_and_happens_once_per_turn() {
         ],
         5,
     );
-    // Put the player first in line, 7 cells from the raider: beyond every weapon.
-    battle.order = vec![0, 1];
-    battle.units[1].cell = Cell { x: 9, y: 4, z: 2 };
+    reorder(&mut battle, vec![0, 1]);
+    // Tough enough to survive one volley.
+    battle.units[1].profile.hull = 1_000;
+    // Eight hexes apart, edge to edge: beyond every weapon.
+    battle.units[0].at = Position::new(Hex::new(-4, 0), Band::Level);
+    battle.units[1].at = Position::new(Hex::new(4, 0), Band::Level);
     assert_eq!(
         battle.fire(0, &catalog),
         Err(BattleError::InvalidTarget),
         "own ship"
     );
     assert_eq!(battle.fire(1, &catalog), Err(BattleError::OutOfRange));
-    battle.units[0].cell = Cell { x: 4, y: 4, z: 2 };
+    // Three hexes and one band apart: range 4.
+    battle.units[0].at = Position::new(Hex::new(1, 0), Band::High);
     assert_eq!(battle.targets(0, &catalog), vec![1]);
     battle.fire(1, &catalog).unwrap();
     let shots = &battle.rounds[0];
@@ -140,13 +154,79 @@ fn fire_needs_an_enemy_in_weapon_range_and_happens_once_per_turn() {
                 .iter()
                 .all(|shot| (shot.attacker, shot.target) == (0, 1))
     );
-    // Distance 4: the photon beam and torpedo reach; the 3-cell disruptor does not.
+    // Range 4: the photon beam and torpedo reach; the 3-hex disruptor does not.
     assert!(
         shots
             .iter()
             .all(|shot| shot.weapon != "magnetic_resonance_disruptor")
     );
     assert_eq!(battle.fire(1, &catalog), Err(BattleError::AlreadyFired));
+}
+
+#[test]
+fn firing_down_a_band_hits_more_often_than_firing_up() {
+    let catalog = CombatCatalog::default();
+    let mut battle = battle(
+        &[
+            ship(ShipKind::Patrol, Side::Player),
+            ship(ShipKind::Scout, Side::Hostile),
+        ],
+        5,
+    );
+    let beam = catalog.weapon("photon_singularity_beam").unwrap();
+    let place = |battle: &mut Battle, mine: Band, theirs: Band| {
+        battle.units[0].at = Position::new(Hex::new(0, 0), mine);
+        battle.units[1].at = Position::new(Hex::new(2, 0), theirs);
+        battle.shot_chance(0, 1, beam)
+    };
+    let level = place(&mut battle, Band::Level, Band::Level);
+    // One band apart is one step farther (−4%) either way, then ±10%.
+    assert_eq!(place(&mut battle, Band::High, Band::Level), level - 4 + 10);
+    assert_eq!(place(&mut battle, Band::Low, Band::Level), level - 4 - 10);
+    assert_eq!(
+        place(&mut battle, Band::High, Band::Low),
+        level - 8 + 10,
+        "a flat bonus, not per band"
+    );
+}
+
+#[test]
+fn the_ai_takes_the_higher_band_when_it_costs_nothing() {
+    let catalog = CombatCatalog::default();
+    let mut battle = battle(
+        &[
+            ship(ShipKind::Scout, Side::Player),
+            ship(ShipKind::Patrol, Side::Hostile),
+        ],
+        2,
+    );
+    reorder(&mut battle, vec![1, 0]);
+    // The raider is already in reach with every weapon: it climbs, then fires.
+    battle.units[0].at = Position::new(Hex::new(-1, 0), Band::Level);
+    battle.units[1].at = Position::new(Hex::new(1, 0), Band::Level);
+    play_turn(&mut battle, &catalog).unwrap();
+    assert_eq!(battle.units[1].at.band, Band::High);
+    assert!(battle.units[1].shots > 0);
+    // Above its target already, it holds the band rather than climb out of reach.
+    let mut battle = battle_with_raider_above(&catalog);
+    play_turn(&mut battle, &catalog).unwrap();
+    assert_eq!(battle.units[1].at.band, Band::Level);
+}
+
+fn battle_with_raider_above(catalog: &CombatCatalog) -> Battle {
+    let mut battle = Battle::new(
+        &[
+            ship(ShipKind::Scout, Side::Player),
+            ship(ShipKind::Patrol, Side::Hostile),
+        ],
+        catalog,
+        2,
+    )
+    .unwrap();
+    reorder(&mut battle, vec![1, 0]);
+    battle.units[0].at = Position::new(Hex::new(-1, 0), Band::Low);
+    battle.units[1].at = Position::new(Hex::new(1, 0), Band::Level);
+    battle
 }
 
 #[test]
@@ -158,13 +238,16 @@ fn ships_withdraw_only_from_their_own_edge_and_a_full_withdrawal_disengages() {
         ],
         9,
     );
-    battle.order = vec![0, 1];
+    reorder(&mut battle, vec![0, 1]);
     assert_eq!(battle.withdraw(), Err(BattleError::NotAtEdge));
-    let edge = Cell {
-        x: battle.size.home_edge(Side::Player),
-        ..battle.units[0].cell
-    };
+    assert!(!battle.can_withdraw());
+    let here = battle.units[0].at;
+    let edge = Position::new(
+        Hex::new(battle.board.home_column(Side::Player), here.hex.r),
+        here.band,
+    );
     battle.move_to(edge).unwrap();
+    assert!(battle.can_withdraw());
     battle.withdraw().unwrap();
     assert!(battle.units[0].withdrawn && battle.units[0].alive());
     assert!(battle.finished());
@@ -234,7 +317,7 @@ fn player_record(player: &[ShipKind], hostile: &[ShipKind]) -> (u32, u32) {
 
 #[test]
 fn the_largest_battles_end_with_a_side_off_the_field_far_below_the_safety_cap() {
-    // 8 patrols a side is the most a battle holds; 400 seeds peaked at 49 rounds.
+    // 8 patrols a side is the most a battle holds.
     let catalog = CombatCatalog::default();
     let mut setups: Vec<_> = (0..8)
         .map(|_| ship(ShipKind::Patrol, Side::Player))

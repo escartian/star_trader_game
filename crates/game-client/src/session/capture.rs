@@ -255,10 +255,36 @@ impl LocalSession {
         self.capture_raiders(true)
     }
 
-    /// The battle, centred on the acting ship and zoomed in.
+    /// The battle after the acting ship climbs a band and aims at the nearest
+    /// raider (when one is in reach), centred on it and zoomed in.
     pub fn capture_battle_close(&mut self) -> Result<(), String> {
+        use game_core::combat::tactical::Position;
+        use game_core::navigation::BattleAction;
         self.capture_raiders(true)?;
-        self.battle_close_up(2.5);
+        let battle = &self
+            .state
+            .navigation
+            .battle
+            .as_ref()
+            .ok_or("No battle")?
+            .battle;
+        let me = battle.active().ok_or("No acting ship")?;
+        let at = battle.units[me].at;
+        if let Some(band) = at.band.above() {
+            self.battle_command(BattleAction::Move(Position::new(at.hex, band)));
+        }
+        self.battle_close_up(2.0);
+        let battle = &self
+            .state
+            .navigation
+            .battle
+            .as_ref()
+            .ok_or("No battle")?
+            .battle;
+        let targets = battle.targets(me, &self.economy.rules.combat_catalog);
+        // Sync first: a turn the view has not seen yet would clear the aim.
+        self.battle.view.sync(battle);
+        self.battle.view.aimed = targets.first().copied();
         Ok(())
     }
 

@@ -1,7 +1,8 @@
 use super::{
-    Battle, Cell, GridSize,
+    Band, Battle, Board, Hex, Position,
     morale::{BREAK_MORALE, morale, retreating},
     play_turn,
+    tests::reorder,
 };
 use crate::combat::{
     CombatCatalog,
@@ -30,20 +31,15 @@ fn duel(player: ShipKind, hostile: ShipKind) -> Battle {
 }
 
 #[test]
-fn grids_grow_from_a_ten_cell_cube_with_the_fleets() {
-    assert_eq!(GridSize::for_ships(2).width, 10);
-    assert_eq!(GridSize::for_ships(2), GridSize::for_ships(3));
-    assert_eq!(GridSize::for_ships(14).height, 16);
-    assert_eq!(GridSize::for_ships(16).depth, 17);
+fn battles_open_on_a_board_sized_for_the_fleets_with_ships_on_the_level_band() {
     let battle = duel(ShipKind::Freighter, ShipKind::Scout);
-    assert_eq!(battle.size, GridSize::for_ships(2));
-    assert_eq!(battle.units[1].cell.x, 8, "raiders deploy one column in");
-    // Battles saved before grids scaled load as the old 9 x 9 x 5 volume.
+    assert_eq!(battle.board, Board::for_ships(2));
+    assert_eq!(battle.units[1].at.hex.q, 3, "raiders deploy one column in");
+    assert!(battle.units.iter().all(|unit| unit.at.band == Band::Level));
+    // The board is part of the saved battle.
     let mut json = serde_json::to_value(&battle).unwrap();
-    json.as_object_mut().unwrap().remove("size");
-    let legacy: Battle = serde_json::from_value(json).unwrap();
-    assert_eq!(legacy.size, GridSize::default());
-    assert_eq!(legacy.size.height, 5);
+    json.as_object_mut().unwrap().remove("board");
+    assert!(serde_json::from_value::<Battle>(json).is_err());
 }
 
 #[test]
@@ -79,14 +75,14 @@ fn a_badly_damaged_ship_retreats_to_its_edge_and_withdraws() {
     let catalog = CombatCatalog::default();
     let mut battle = duel(ShipKind::Patrol, ShipKind::Scout);
     let raider = 1;
-    battle.order = vec![1, 0];
+    reorder(&mut battle, vec![1, 0]);
     assert!(!retreating(&battle, raider));
     battle.units[raider].damage = battle.units[raider].profile.hull * 3 / 4;
     assert!(retreating(&battle, raider), "25% hull left");
     play_turn(&mut battle, &catalog).unwrap();
     assert!(
         battle.units[raider].withdrawn,
-        "one cell from its edge: out at once"
+        "one hex from its edge: out at once"
     );
     assert_eq!(
         battle.outcome(),
@@ -113,22 +109,20 @@ fn a_broken_side_routs_even_healthy_ships() {
     battle.units[2].damage = battle.units[2].profile.hull;
     assert!(morale(&battle, Side::Hostile) < BREAK_MORALE);
     assert!(retreating(&battle, 3), "an untouched raider still flees");
-    battle.order = vec![3, 0, 1, 2];
-    let before = battle.units[3].cell;
+    reorder(&mut battle, vec![3, 0, 1, 2]);
+    let before = battle.units[3].at;
     play_turn(&mut battle, &catalog).unwrap();
-    let edge = battle.size.home_edge(Side::Hostile);
-    assert!(battle.units[3].withdrawn || battle.units[3].cell.x > before.x);
-    assert!(battle.units[3].cell.x <= edge);
+    let edge = battle.board.home_column(Side::Hostile);
+    assert!(battle.units[3].withdrawn || battle.units[3].at.hex.q > before.hex.q);
+    assert!(battle.units[3].at.hex.q <= edge);
 }
 
 #[test]
 fn the_player_escaping_is_not_a_defeat_and_movement_holds_off_the_ceasefire() {
     let mut battle = duel(ShipKind::Scout, ShipKind::Scout);
-    battle.order = vec![0, 1];
-    let edge = Cell {
-        x: battle.size.home_edge(Side::Player),
-        ..battle.units[0].cell
-    };
+    reorder(&mut battle, vec![0, 1]);
+    let here = battle.units[0].at;
+    let edge = Position::new(Hex::new(here.hex.q - 1, here.hex.r), here.band);
     battle.move_to(edge).unwrap();
     battle.withdraw().unwrap();
     assert_eq!(battle.outcome(), Some(None));
@@ -137,16 +131,13 @@ fn the_player_escaping_is_not_a_defeat_and_movement_holds_off_the_ceasefire() {
     for round in 0..4 {
         for _ in 0..2 {
             let me = battle.active().unwrap();
-            let here = battle.units[me].cell;
-            let step = Cell {
-                y: if round % 2 == 0 {
-                    here.y + 1
-                } else {
-                    here.y - 1
-                },
-                ..here
+            let here = battle.units[me].at;
+            let band = if round % 2 == 0 {
+                Band::High
+            } else {
+                Band::Level
             };
-            battle.move_to(step).unwrap();
+            battle.move_to(Position::new(here.hex, band)).unwrap();
             battle.end_turn().unwrap();
         }
     }
@@ -162,7 +153,7 @@ fn the_player_escaping_is_not_a_defeat_and_movement_holds_off_the_ceasefire() {
 #[test]
 fn only_the_player_side_surrenders_and_only_on_its_turn() {
     let mut battle = duel(ShipKind::Scout, ShipKind::Scout);
-    battle.order = vec![1, 0];
+    reorder(&mut battle, vec![1, 0]);
     assert_eq!(battle.surrender(), Err(super::BattleError::NotYourTurn));
     battle.end_turn().unwrap();
     battle.surrender().unwrap();

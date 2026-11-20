@@ -3,44 +3,22 @@ use crate::map::art::Artwork;
 use game_core::combat::tactical::Battle;
 use game_core::combat::{CombatCatalog, Side, engagement::CombatantSetup};
 use game_core::fleet::{ShipCatalog, ShipKind};
-use glam::Vec3;
 
 #[test]
-fn the_shown_layer_follows_each_new_turn_and_stays_in_the_volume() {
-    let setup = |side| CombatantSetup {
-        name: format!("{side:?}"),
-        side,
-        ship: None,
-        kind: ShipKind::Scout,
-        profile: ShipCatalog::default()
-            .spec(ShipKind::Scout)
-            .unwrap()
-            .combat
-            .clone(),
-        hull_damage: 0,
-    };
-    let mut battle = Battle::new(
-        &[setup(Side::Player), setup(Side::Hostile)],
-        &CombatCatalog::default(),
-        2,
-    )
-    .unwrap();
+fn the_aim_clears_when_the_turn_passes_or_the_volley_is_fired() {
+    let mut battle = duel();
     let mut view = BattleView::default();
     view.sync(&battle);
-    let me = battle.active().unwrap();
-    assert_eq!(view.layer, battle.units[me].cell.z);
-    let top = battle.size.height - 1;
-    view.shift_layer(30);
-    assert_eq!(view.layer, top);
+    view.aimed = Some(1);
     view.sync(&battle);
-    assert_eq!(view.layer, top, "same turn: the player's choice stays");
-    let next = battle.order[(battle.turn + 1) % battle.order.len()];
-    battle.units[usize::from(next)].cell.z = 0;
+    assert_eq!(view.aimed, Some(1), "same turn: the aim stays");
+    battle.fired = true;
+    view.sync(&battle);
+    assert_eq!(view.aimed, None, "fired: nothing left to aim");
+    view.aimed = Some(1);
     battle.end_turn().unwrap();
     view.sync(&battle);
-    assert_eq!(view.layer, 0, "a new turn shows the acting ship's layer");
-    view.shift_layer(-3);
-    assert_eq!(view.layer, 0);
+    assert_eq!(view.aimed, None, "a new turn starts unaimed");
 }
 
 fn duel() -> Battle {
@@ -81,7 +59,7 @@ fn frame(ctx: &egui::Context, view: &mut BattleView, battle: &Battle, events: Ve
             weapons: &weapons,
             reachable: &[],
             targets: &[],
-            layer: 0,
+            aimed: None,
             artwork: &artwork,
         };
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -108,21 +86,21 @@ fn keys_centre_on_the_acting_ship_and_reset_the_view() {
     view.sync(&battle);
     frame(&ctx, &mut view, &battle, vec![key(egui::Key::F)]);
     let me = battle.active().unwrap();
-    let ship = camera::ScenePoint::of_cell(battle.units[me].cell);
-    assert!((view.camera.focus(battle.size) - ship.0).length() < 1e-4);
+    let ship = camera::ScenePoint::of(battle.units[me].at);
+    assert!((view.camera.focus().truncate() - ship.0.truncate()).length() < 1e-4);
     frame(&ctx, &mut view, &battle, vec![key(egui::Key::R)]);
-    assert_eq!(view.camera, camera::OrbitCamera::default());
+    assert_eq!(view.camera, camera::BoardCamera::default());
 }
 
 #[test]
-fn right_dragging_pans_and_scrolling_zooms() {
+fn dragging_pans_and_scrolling_zooms() {
     let ctx = egui::Context::default();
     let battle = duel();
     let mut view = BattleView::default();
     let start = egui::pos2(300.0, 300.0);
     let button = |pressed, pos| egui::Event::PointerButton {
         pos,
-        button: egui::PointerButton::Secondary,
+        button: egui::PointerButton::Primary,
         pressed,
         modifiers: egui::Modifiers::NONE,
     };
@@ -148,12 +126,7 @@ fn right_dragging_pans_and_scrolling_zooms() {
         &battle,
         vec![button(false, start + egui::vec2(80.0, 0.0))],
     );
-    assert_ne!(view.camera.pan, Vec3::ZERO, "the view panned");
-    assert_eq!(
-        view.camera.yaw,
-        camera::OrbitCamera::default().yaw,
-        "no orbit"
-    );
+    assert_ne!(view.camera.pan, glam::Vec2::ZERO, "the view panned");
     let zoom = view.camera.zoom;
     frame(
         &ctx,

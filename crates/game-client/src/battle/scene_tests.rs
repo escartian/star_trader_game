@@ -1,11 +1,11 @@
-use super::camera::{OrbitCamera, ScenePoint};
+use super::camera::{BoardCamera, ScenePoint};
 use super::scene::{Pick, SceneInput, pick};
 use crate::map::art::Artwork;
 use egui::{Pos2, Rect};
 use game_core::combat::{CombatCatalog, engagement::CombatantSetup};
 use game_core::combat::{
     Side,
-    tactical::{Battle, Cell},
+    tactical::{Battle, Hex},
 };
 use game_core::fleet::{ShipCatalog, ShipKind};
 
@@ -26,56 +26,58 @@ fn battle() -> Battle {
 }
 
 #[test]
-fn pointing_at_a_ship_or_a_move_dot_picks_it_and_other_layers_are_ignored() {
+fn pointing_at_a_ship_or_a_lit_hex_picks_it_and_unlit_hexes_are_ignored() {
     let battle = battle();
-    let camera = OrbitCamera::default();
-    let rect = Rect::from_min_size(Pos2::ZERO, egui::vec2(900.0, 560.0));
+    let camera = BoardCamera::default();
     let artwork = Artwork::preload(&egui::Context::default());
-    let here = battle.units[0].cell;
-    let step = Cell {
-        x: here.x + 1,
-        ..here
-    };
-    let above = Cell {
-        z: here.z + 1,
-        x: here.x + 1,
-        ..here
-    };
-    let reachable = [step, above];
+    let here = battle.units[0].at;
+    let step = Hex::new(here.hex.q + 1, here.hex.r);
+    let unlit = Hex::new(here.hex.q + 2, here.hex.r - 1);
+    let reachable = [step];
     let input = SceneInput {
         battle: &battle,
         reachable: &reachable,
         weapons: &CombatCatalog::default(),
         targets: &[],
-        layer: here.z,
+        aimed: None,
         artwork: &artwork,
     };
-    let screen = |cell| {
-        camera
-            .project(rect, battle.size, ScenePoint::of_cell(cell))
-            .unwrap()
-            .pos
-    };
-    assert_eq!(
-        pick(rect, &camera, &input, Some(screen(here))),
-        Some(Pick::Unit(0))
-    );
-    let raider = battle.units[1].cell;
-    assert_eq!(
-        pick(rect, &camera, &input, Some(screen(raider))),
-        Some(Pick::Unit(1))
-    );
-    assert_eq!(
-        pick(rect, &camera, &input, Some(screen(step))),
-        Some(Pick::Cell(step))
-    );
-    // `above` is on another layer: not shown, so not clickable.
-    assert_ne!(
-        pick(rect, &camera, &input, Some(screen(above))),
-        Some(Pick::Cell(above))
-    );
-    assert_eq!(
-        pick(rect, &camera, &input, Some(Pos2::new(-5.0, -5.0))),
-        None
-    );
+    for rect in [
+        Rect::from_min_size(Pos2::ZERO, egui::vec2(900.0, 560.0)),
+        Rect::from_min_size(Pos2::ZERO, egui::vec2(374.0, 420.0)),
+    ] {
+        let screen = |point| camera.project(rect, battle.board, point).unwrap().pos;
+        assert_eq!(
+            pick(rect, &camera, &input, Some(screen(ScenePoint::of(here)))),
+            Some(Pick::Unit(0))
+        );
+        let raider = ScenePoint::of(battle.units[1].at);
+        assert_eq!(
+            pick(rect, &camera, &input, Some(screen(raider))),
+            Some(Pick::Unit(1))
+        );
+        assert_eq!(
+            pick(
+                rect,
+                &camera,
+                &input,
+                Some(screen(ScenePoint::of_hex(step)))
+            ),
+            Some(Pick::Hex(step))
+        );
+        assert_eq!(
+            pick(
+                rect,
+                &camera,
+                &input,
+                Some(screen(ScenePoint::of_hex(unlit)))
+            ),
+            None,
+            "only lit hexes take taps"
+        );
+        assert_eq!(
+            pick(rect, &camera, &input, Some(Pos2::new(-5.0, -5.0))),
+            None
+        );
+    }
 }

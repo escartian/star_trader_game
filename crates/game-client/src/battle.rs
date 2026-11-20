@@ -1,6 +1,6 @@
-//! The tactical battle view: an orbit camera over the 3D grid, the shown layer
-//! and pointer picking. View state only; battle rules and every mutation stay
-//! in game-core and the server.
+//! The tactical battle view: a fixed-tilt camera over the hex board, the
+//! aimed target and pointer picking. View state only; battle rules and every
+//! mutation stay in game-core and the server.
 mod backdrop;
 pub mod camera;
 mod canvas;
@@ -12,44 +12,34 @@ mod scene_tests;
 #[cfg(test)]
 mod view_tests;
 
-use egui::{Key, PointerButton, Rect, Sense, Vec2};
+use egui::{Key, Rect, Sense, Vec2};
 use game_core::combat::tactical::Battle;
 use scene::{Pick, SceneInput};
 
 #[derive(Default)]
 pub struct BattleView {
-    pub camera: camera::OrbitCamera,
-    /// Layer whose move cells are shown; follows the acting ship each new turn.
-    pub layer: i8,
-    /// Layers in the battle's grid.
-    pub layers: i8,
-    /// (round, turn position) the layer last followed.
-    synced: Option<(u32, usize)>,
+    pub camera: camera::BoardCamera,
+    /// The enemy picked for the next volley; firing needs a second tap on
+    /// Fire, so a stray tap never fires. Cleared each new turn and after firing.
+    pub aimed: Option<usize>,
+    /// (round, turn position, fired) the aim last belonged to.
+    synced: Option<(u32, usize, bool)>,
     effects: effects::Effects,
 }
 
 impl BattleView {
-    /// At the start of each turn, show the acting ship's own layer.
+    /// Drops the aim when a new turn starts or the volley has been fired.
     pub fn sync(&mut self, battle: &Battle) {
-        self.layers = battle.size.height;
-        let key = (battle.round, battle.turn);
+        let key = (battle.round, battle.turn, battle.fired);
         if self.synced != Some(key) {
             self.synced = Some(key);
-            if let Some(me) = battle.active() {
-                self.layer = battle.units[me].cell.z;
-            }
+            self.aimed = None;
         }
     }
 
-    pub fn shift_layer(&mut self, by: i8) {
-        self.layer = (self.layer + by).clamp(0, (self.layers - 1).max(0));
-    }
-
     /// Paints the scene and handles the camera:
-    /// - drag orbits; right-drag, middle-drag or Shift+drag pans;
-    /// - scroll or pinch zooms; arrow keys slide the view, Page Up/Down raise
-    ///   and lower it; F centres on the acting ship, R resets the view;
-    /// - Q/E change the shown layer.
+    /// - drag pans; scroll or pinch zooms (never smaller than fitting the board);
+    /// - arrow keys slide the view; F centres on the acting ship, R resets it.
     ///
     /// Moves and shots since the last frame animate unless the UI has
     /// animation turned off. Returns the hovered pick and any clicked one.
@@ -59,16 +49,10 @@ impl BattleView {
         size: Vec2,
         input: &SceneInput,
     ) -> (Option<Pick>, Option<Pick>) {
-        let grid = input.battle.size;
+        let board = input.battle.board;
         let (rect, response) = ui.allocate_exact_size(size, Sense::click_and_drag());
-        let shift = ui.input(|i| i.modifiers.shift);
-        let panning = response.dragged_by(PointerButton::Secondary)
-            || response.dragged_by(PointerButton::Middle)
-            || (response.dragged_by(PointerButton::Primary) && shift);
-        if panning {
-            self.camera.drag_pan(response.drag_delta(), rect, grid);
-        } else if response.dragged_by(PointerButton::Primary) {
-            self.camera.drag(response.drag_delta());
+        if response.dragged() {
+            self.camera.drag_pan(response.drag_delta(), rect, board);
         }
         if response.hovered() {
             let (scroll, pinch) = ui.input(|i| (i.smooth_scroll_delta.y, i.zoom_delta()));
@@ -92,8 +76,10 @@ impl BattleView {
             now,
         };
         scene::paint(ui.painter(), &frame, input);
-        // After the scene, so the buttons draw (and take clicks) on top of it.
-        if self.view_controls(ui, rect, input) {
+        // After the scene, so the buttons draw (and take clicks) on top of it,
+        // in a child Ui so placing them leaves the parent layout's cursor alone.
+        let mut overlay = ui.new_child(egui::UiBuilder::new().max_rect(rect));
+        if self.view_controls(&mut overlay, rect, input) {
             ui.ctx().request_repaint();
         }
         let clicked = response
@@ -103,10 +89,10 @@ impl BattleView {
         (hovered, clicked)
     }
 
-    /// Keyboard camera and layer controls. Held arrow keys slide the view at
-    /// [`SLIDE_CELLS_PER_SECOND`].
+    /// Keyboard camera controls. Held arrow keys slide the view at
+    /// [`SLIDE_HEXES_PER_SECOND`].
     fn keys(&mut self, ui: &egui::Ui, input: &SceneInput) {
-        let grid = input.battle.size;
+        let board = input.battle.board;
         let (dt, down, pressed) = ui.input(|i| {
             let down = |key| f32::from(u8::from(i.key_down(key)));
             (
@@ -114,31 +100,28 @@ impl BattleView {
                 [
                     down(Key::ArrowUp) - down(Key::ArrowDown),
                     down(Key::ArrowRight) - down(Key::ArrowLeft),
-                    down(Key::PageUp) - down(Key::PageDown),
                 ],
-                [Key::Q, Key::E, Key::F, Key::R].map(|key| i.key_pressed(key)),
+                [Key::F, Key::R].map(|key| i.key_pressed(key)),
             )
         });
         if down.iter().any(|value| *value != 0.0) {
-            let step = SLIDE_CELLS_PER_SECOND * dt / self.camera.zoom.sqrt();
-            self.camera
-                .nudge(down[0] * step, down[1] * step, down[2] * step, grid);
+            let step = SLIDE_HEXES_PER_SECOND * dt / self.camera.zoom.sqrt();
+            self.camera.nudge(down[0] * step, down[1] * step, board);
             ui.ctx().request_repaint();
         }
-        self.shift_layer(i8::from(pressed[1]) - i8::from(pressed[0]));
-        if pressed[2] {
+        if pressed[0] {
             self.focus_active(input.battle);
         }
-        if pressed[3] {
-            self.camera = camera::OrbitCamera::default();
+        if pressed[1] {
+            self.camera = camera::BoardCamera::default();
         }
     }
 
     /// Centres the camera on the acting ship.
     pub fn focus_active(&mut self, battle: &Battle) {
         if let Some(me) = battle.active() {
-            let at = camera::ScenePoint::of_cell(battle.units[me].cell);
-            self.camera.look_at(at, battle.size);
+            let at = camera::ScenePoint::of(battle.units[me].at);
+            self.camera.look_at(at, battle.board);
         }
     }
 
@@ -161,7 +144,7 @@ impl BattleView {
             self.focus_active(input.battle);
         }
         if reset.clicked() {
-            self.camera = camera::OrbitCamera::default();
+            self.camera = camera::BoardCamera::default();
         }
         focus.clicked() || reset.clicked()
     }
@@ -180,4 +163,4 @@ pub fn keyboard_claimed(ctx: &egui::Context) -> bool {
 }
 
 /// How fast held arrow keys slide the view, at zoom 1.
-const SLIDE_CELLS_PER_SECOND: f32 = 8.0;
+const SLIDE_HEXES_PER_SECOND: f32 = 6.0;

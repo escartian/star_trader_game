@@ -4,7 +4,10 @@ use super::{
     navigation_tests::succeed,
 };
 use game_core::{
-    combat::{CombatOutcome, Side, tactical::Cell},
+    combat::{
+        CombatOutcome, Side,
+        tactical::{Hex, Position},
+    },
     fleet::{FleetId, ShipKind},
     navigation::{BattleAction, EncounterChoice},
     travel::ShipId,
@@ -73,7 +76,7 @@ fn fight_opens_a_battle_that_waits_on_the_player_and_survives_reload() {
     let step = *start
         .reachable()
         .iter()
-        .min_by_key(|cell| (cell.distance(start.units[1].cell), cell.y, cell.z))
+        .min_by_key(|to| (to.range(start.units[1].at), to.hex.r, to.band))
         .unwrap();
     for session in [&mut session, &mut twin] {
         let revision = session.state.revision;
@@ -95,7 +98,7 @@ fn fight_opens_a_battle_that_waits_on_the_player_and_survives_reload() {
     }
     assert_eq!(session.state, twin.state, "same saved battle, same play");
     let after = battle(&session);
-    assert_eq!(after.units[me].cell, step);
+    assert_eq!(after.units[me].at, step);
     assert!(
         after.round > start.round,
         "the raider acted, a new round began"
@@ -124,11 +127,8 @@ fn illegal_battle_actions_are_rejected_without_changing_anything() {
     let mut session = open_battle();
     let battle = session.state.navigation.battle.clone().unwrap().battle;
     let me = battle.active().unwrap();
-    let here = battle.units[me].cell;
-    let far = Cell {
-        x: here.x + 5,
-        ..here
-    };
+    let here = battle.units[me].at;
+    let far = Position::new(Hex::new(here.hex.q + 5, here.hex.r - 2), here.band);
     let encounter = session.state.navigation.encounters[0].id;
     let before = session.snapshot(Vec::new());
     for action in [
@@ -155,10 +155,11 @@ fn withdrawing_every_ship_disengages_and_the_course_continues() {
     let mut session = open_battle();
     let battle = session.state.navigation.battle.clone().unwrap().battle;
     let me = battle.active().unwrap();
-    let edge = Cell {
-        x: battle.size.home_edge(Side::Player),
-        ..battle.units[me].cell
-    };
+    let here = battle.units[me].at;
+    let edge = Position::new(
+        Hex::new(battle.board.home_column(Side::Player), here.hex.r),
+        here.band,
+    );
     play(&mut session, BattleAction::Move(edge));
     play(&mut session, BattleAction::Withdraw);
     let report = session.state.navigation.last_combat.clone().unwrap();
@@ -195,9 +196,9 @@ fn forged_battles_fail_save_validation() {
     assert!(
         forge(&|s| {
             let battle = open(s);
-            battle.units[1].cell = battle.units[0].cell;
+            battle.units[1].at.hex = battle.units[0].at.hex;
         }),
-        "overlapping ships"
+        "two ships on one hex"
     );
     assert!(
         forge(&|s| {
@@ -206,6 +207,10 @@ fn forged_battles_fail_save_validation() {
             battle.turn = raider;
         }),
         "a raider waiting for orders"
+    );
+    assert!(
+        forge(&|s| open(s).moves_left = 99),
+        "more movement than the engine gives"
     );
     assert!(
         forge(&|s| s.state.navigation.encounters.clear()),
@@ -246,4 +251,43 @@ fn surrender_hands_over_the_cargo_and_lets_the_fleet_go() {
         "the course resumes"
     );
     reload(&session);
+}
+
+#[test]
+fn an_open_battle_from_a_3d_grid_save_is_auto_resolved_on_load() {
+    let session = open_battle();
+    let seed = open(&mut session.clone()).seed;
+    let mut value: serde_json::Value =
+        serde_json::from_str(&session.export_json().unwrap()).unwrap();
+    // Turn the saved battle back into its schema-7 shape.
+    value["schema_version"] = 7.into();
+    let battle = &mut value["player"]["navigation"]["battle"]["battle"];
+    let fields = battle.as_object_mut().unwrap();
+    fields.remove("board");
+    fields.remove("moves_left");
+    fields.insert(
+        "size".into(),
+        serde_json::json!({"width": 10, "depth": 10, "height": 10}),
+    );
+    fields.insert("moved".into(), false.into());
+    for unit in fields["units"].as_array_mut().unwrap() {
+        let unit = unit.as_object_mut().unwrap();
+        unit.remove("at");
+        unit.insert("cell".into(), serde_json::json!({"x": 1, "y": 4, "z": 4}));
+    }
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("grid.json");
+    std::fs::write(&path, value.to_string()).unwrap();
+    let (loaded, notice) = Session::load(&path).unwrap();
+    assert!(notice.unwrap().contains("auto-resolved"));
+    assert!(loaded.state.navigation.battle.is_none());
+    assert!(loaded.state.navigation.encounters.is_empty());
+    let report = loaded.state.navigation.last_combat.clone().unwrap();
+    assert_eq!(report.seed, seed);
+    assert_eq!(
+        loaded.state.ships[0].hull_damage,
+        report.combatants[0].final_damage
+    );
+    // It saves in the current schema from then on.
+    reload(&loaded);
 }

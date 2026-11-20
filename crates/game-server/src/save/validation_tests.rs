@@ -1,5 +1,6 @@
-//! Saves are flat (schema 7): older schemas and anything off the map plane are
-//! rejected; identity, rules and positions are validated before writing.
+//! Saves are flat (since schema 7; schema 8 moved battles to the hex board):
+//! older schemas and anything off the map plane are rejected; identity, rules
+//! and positions are validated before writing.
 use super::*;
 use game_core::travel::ShipId;
 
@@ -15,8 +16,11 @@ fn saves_from_before_flat_maps_are_rejected_with_a_clear_message() {
     let session = Session::default();
     let mut value: serde_json::Value =
         serde_json::from_str(&session.export_json().unwrap()).unwrap();
-    assert_eq!(value["schema_version"], 7);
+    assert_eq!(value["schema_version"], 8);
     assert!(load_value(&value).is_ok());
+    value["schema_version"] = 7.into();
+    let (_, notice) = load_value(&value).unwrap();
+    assert!(notice.is_none(), "schema 7 without a battle loads as is");
     for old in [1, 5, 6] {
         value["schema_version"] = old.into();
         let error = load_value(&value).map(|_| ()).unwrap_err();

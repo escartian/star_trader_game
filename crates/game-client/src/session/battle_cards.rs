@@ -7,8 +7,7 @@ use crate::theme::{AMBER, CYAN, GREEN};
 use egui::{Color32, CornerRadius, Rect, RichText, Sense, Stroke, Ui, Vec2};
 use game_core::combat::{
     CombatCatalog, Side,
-    engagement::hit_chance,
-    tactical::{Battle, Unit, morale, move_range},
+    tactical::{Battle, Unit, morale, move_points},
 };
 
 const CARD: Color32 = Color32::from_rgb(14, 22, 26);
@@ -222,7 +221,7 @@ pub fn ship_card(ui: &mut Ui, battle: &Battle, me: usize, artwork: &Artwork) {
                     );
                     ui.label(RichText::new(format!("{} · your turn", unit.kind.label())).small());
                     ui.horizontal(|ui| {
-                        step(ui, "MOVE", !battle.moved);
+                        step(ui, "MOVE", battle.moves_left > 0);
                         step(ui, "FIRE", !battle.fired);
                     });
                 });
@@ -233,10 +232,18 @@ pub fn ship_card(ui: &mut Ui, battle: &Battle, me: usize, artwork: &Artwork) {
             let shields = unit.shields as f32 / unit.profile.shields.max(1) as f32;
             let shield_text = format!("{}/{}", unit.shields, unit.profile.shields);
             meter(ui, "Shields", shields, CYAN, &shield_text, 120.0);
-            let reach = move_range(unit.profile.engine);
+            let points = move_points(unit.profile.engine);
             ui.horizontal(|ui| {
                 icons::glyph(ui, Icon::Engine, AMBER, "Engine");
-                ui.label(RichText::new(format!("Moves up to {reach} cells")).small());
+                ui.label(
+                    RichText::new(format!(
+                        "{} of {points} moves left · {} band",
+                        battle.moves_left,
+                        unit.at.band.label()
+                    ))
+                    .small(),
+                )
+                .on_hover_text("Each hex step, climb or dive costs one move.");
             });
         });
 }
@@ -253,7 +260,8 @@ fn step(ui: &mut Ui, label: &str, available: bool) {
         });
 }
 
-/// Fitted weapons: range pips, and hit chance against the hovered enemy.
+/// Fitted weapons: range pips, and hit chance against the aimed or hovered
+/// enemy (high ground included).
 pub fn weapon_list(
     ui: &mut Ui,
     battle: &Battle,
@@ -261,13 +269,13 @@ pub fn weapon_list(
     target: Option<usize>,
     catalog: &CombatCatalog,
 ) {
-    let distance = target.map(|index| battle.units[me].cell.distance(battle.units[index].cell));
+    let distance = target.map(|index| battle.units[me].at.range(battle.units[index].at));
     ui.horizontal(|ui| {
         ui.label(RichText::new("WEAPONS").small().color(Color32::GRAY));
         if let (Some(index), Some(distance)) = (target, distance) {
             ui.label(
                 RichText::new(format!(
-                    "vs {} · {distance} cells",
+                    "vs {} · range {distance}",
                     battle.units[index].name
                 ))
                 .small()
@@ -286,8 +294,7 @@ pub fn weapon_list(
                 egui::Layout::right_to_left(egui::Align::Center),
                 |ui| match (target, distance) {
                     (Some(index), Some(distance)) if distance <= weapon.range => {
-                        let chance =
-                            hit_chance(weapon, battle.units[index].profile.engine, distance);
+                        let chance = battle.shot_chance(me, index, weapon);
                         ui.label(
                             RichText::new(format!("{chance}% ×{}", weapon.shots)).color(GREEN),
                         );
@@ -302,7 +309,7 @@ pub fn weapon_list(
     }
 }
 
-/// One pip per cell of range, up to six.
+/// One pip per step of range, up to six.
 fn range_pips(ui: &mut Ui, range: u32) {
     let (rect, response) = ui.allocate_exact_size(Vec2::new(6.0 * 8.0, 10.0), Sense::hover());
     for pip in 0..6_u32 {
@@ -314,7 +321,7 @@ fn range_pips(ui: &mut Ui, range: u32) {
         };
         ui.painter().circle_filled(centre, 2.5, color);
     }
-    response.on_hover_text(format!("Range {range} cells"));
+    response.on_hover_text(format!("Range {range}: hexes plus bands crossed"));
 }
 
 /// The latest shots, newest last, tagged with their round.

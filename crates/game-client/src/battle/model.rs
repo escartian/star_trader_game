@@ -288,14 +288,14 @@ mod tests {
     }
 
     #[test]
-    fn scout_mesh_follows_its_battle_cell() {
-        use super::super::camera::OrbitCamera;
-        use game_core::combat::tactical::GridSize;
+    fn scout_mesh_follows_its_battle_hex() {
+        use super::super::camera::BoardCamera;
+        use game_core::combat::tactical::Board;
 
         let model = for_kind(ShipKind::Scout).unwrap();
         let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(900.0, 560.0));
-        let camera = OrbitCamera::default();
-        let projector = camera.projector(rect, GridSize::default());
+        let camera = BoardCamera::default();
+        let projector = camera.projector(rect, Board::for_ships(2));
         let painted_centre = |point: Vec3| {
             let ctx = egui::Context::default();
             let output = ctx.run(
@@ -324,8 +324,8 @@ mod tests {
             assert!(!positions.is_empty());
             positions.iter().map(|pos| pos.x).sum::<f32>() / positions.len() as f32
         };
-        let left = painted_centre(Vec3::new(2.0, 4.0, 2.0));
-        let right = painted_centre(Vec3::new(6.0, 4.0, 2.0));
-        assert!(right > left + 20.0, "the scout follows its new cell");
+        let left = painted_centre(Vec3::new(-2.0, 0.0, 1.0));
+        let right = painted_centre(Vec3::new(2.0, 0.0, 1.0));
+        assert!(right > left + 20.0, "the scout follows its new hex");
     }
 }

@@ -1,8 +1,9 @@
 # Combat
 
-Status: **turn-based battles you command in a 3D grid view.** Hulls and
-weapons are data-driven. Raider contacts resolve deterministic grid battles, damage persists, destroyed ships leave
-their fleet, wrecks yield salvage and markets sell hull repairs. A readable combat
+Status: **turn-based battles you command on a hex board with three altitude
+bands.** Hulls and weapons are data-driven. Raider contacts resolve
+deterministic battles, damage persists, destroyed ships leave their fleet,
+wrecks yield salvage and markets sell hull repairs. A readable combat
 report opens after each fight and survives saves.
 
 ## Definitions
@@ -12,11 +13,12 @@ report opens after each fight and survives saves.
 - Per-ship state: `hull_damage` only. Shields recharge before every engagement,
   so they are not saved. A ship whose damage reaches its hull is destroyed;
   saves reject ships at or beyond that value.
-- Battles: `game-core/src/combat/tactical.rs` and `tactical/ai.rs`; shared damage
+- Battles: `game-core/src/combat/tactical.rs`, `tactical/board.rs` (hexes,
+  bands, ranges), `tactical/actions.rs` and `tactical/ai.rs`; shared damage
   rules: `combat/engagement.rs` (all pure); raider contacts and applying results:
   `game-core/src/navigation/hostile.rs`; battles in progress:
   `game-core/src/navigation/battle.rs`; the battle window:
-  `game-client/src/battle*` and `session/battle.rs`.
+  `game-client/src/battle*`, `session/battle.rs` and `session/battle_controls.rs`.
 
 Units are abstract points. Engine is a 1–10 rating for evasion and initiative.
 
@@ -38,33 +40,34 @@ These numbers are first-pass balance. Expect them to change once the resolver ex
 
 ## Resolution rules
 
-Fights are turn-based battles on a 3D grid (`game-core/src/combat/tactical.rs`,
+Fights are turn-based battles on a hex board (`game-core/src/combat/tactical.rs`,
 pure and deterministic). One seed is drawn from the saved navigation RNG and
 stored in the report, so the same seed and actions replay the same battle.
 
-**Battle space.** A cube that grows with the fleets: `9 + ships / 2` cells a
-side, so 10 for a duel (and for 3 ships), 11 for 4–5 ships, 16 for 7 v 7 and 17
-for the largest battle (16 ships). x runs between the two sides, y across them,
-z is the vertical layers. Battles saved before grids scaled keep their 9 × 9 × 5
-volume. Distance is Chebyshev: one step may change all three axes, so every
-movement and weapon range is a cube. Player ships deploy on the second column
-(x = 1), raiders one column in from the far edge, in a checkerboard around the
-centre (centre first, then the middle layer, then the layers beside it) so no two
-ships of a side share a face; each side withdraws from its own edge column.
+**Board.** A hexagon of hexes in axial coordinates that grows with the fleets:
+radius 4 (61 hexes) for up to three ships, one more ring per four more ships
+(`4 + ships / 4`), at most radius 6 (127 hexes) from 8 ships. Columns run
+between the two sides; each side deploys on the column one in from its own
+edge, middle row first, and withdraws from its edge column. That column holds
+`radius + 2` ships, always enough for a side. A duel opens six hexes apart.
 
-Bigger grids mean a longer approach: ships start `edge − 3` cells apart (7 in a
-duel, 13 at 7 v 7), so slow hulls spend a round or two closing before weapons
-reach, and long-range weapons (torpedo 6, photon beam 5) get the first shots.
+**Altitude bands.** Every ship flies in one of three bands: Low, Level or High.
+Ships deploy on Level. One ship per hex whatever its band, so every ship is one
+tap target. **Range** is hex steps plus bands crossed.
 
 **Turns (HoMM-style initiative).** Each round every active ship acts once, by
 engine rating (high first); ties break by a seeded roll drawn once per battle.
 On its turn a ship may:
 
-1. **Move** once, up to `1 + engine / 3` cells (freighter 2, patrol 2, scout 3),
-   to a free cell inside the volume.
+1. **Move** with `1 + engine / 3` movement points (freighter 2, patrol 2, scout
+   3): each hex step costs 1, and so does each **Climb** or **Dive** of one band.
+   Points may be spent in several moves (a step, then a climb) to free hexes on
+   the board.
 2. **Fire** once: every fitted weapon whose `range` reaches the chosen enemy fires
-   its `shots`. Hit chance = `accuracy − 3 × target engine − 4 × (distance − 1)`,
-   at least 5%. A target destroyed mid-volley takes no further shots.
+   its `shots`. Hit chance = `accuracy − 3 × target engine − 4 × (range − 1)`,
+   **+10%** when firing at a lower band and **−10%** at a higher one (a flat
+   modifier, not per band), at least 5% and at most 100%. A target destroyed
+   mid-volley takes no further shots.
 3. **Withdraw** instead, if it stands on its own edge: it leaves the battle with
    the damage taken so far.
 4. **End turn.**
@@ -102,26 +105,31 @@ least 1 point. Ships that were already damaged fight with their saved
 Below 50 the side **breaks**. The header shows both sides' morale.
 
 **AI and Auto-resolve.** Raiders, and both sides under Auto-resolve, focus the
-active enemy with the least hull + shields, move to the reachable cell nearest it
-when no weapon reaches, then fire on the weakest enemy in range. A ship with 30%
+active enemy with the least hull + shields and close in until even their
+shortest-ranged weapon reaches it (on ties, the higher band). Before firing on
+the weakest enemy in range they climb one band when that costs nothing: a
+movement point is spare, the target is not below them, and no weapon would lose
+its reach. A ship with 30%
 of its hull or less retreats, and so does every ship of a broken side (a rout):
 it fires a parting shot at the weakest enemy in reach, moves toward its own edge
 (away from enemies on ties) and withdraws as soon as it is there. Ships you
 command yourself never retreat on their own.
 
-With Auto-resolve over 400 seeds:
+With Auto-resolve over 400 seeds on the hex board:
 
 | Matchup | You win | You lose | You escape | Avg rounds (max) | Ships lost / killed |
 | --- | --- | --- | --- | --- | --- |
-| Freighter v scout | 400 | 0 | 0 | 6.6 (12) | 0 / 0.8 |
-| Scout v scout | 200 | 112 | 88 | 5.3 (7) | 0.3 / 0.3 |
-| Patrol v patrol | 198 | 61 | 141 | 5.9 (13) | 0.2 / 0.2 |
-| 7 v 7 fleet-battle scenario | 271 | 8 | 121 | 12.5 (18) | 5.1 / 5.8 |
-| 8 patrols v 8 patrols | 205 | 1 | 194 | 19.9 (34) | 5.3 / 5.5 |
+| Freighter v scout | 400 | 0 | 0 | 6.0 (10) | 0 / 0.8 |
+| Scout v scout | 204 | 48 | 148 | 4.5 (7) | 0.1 / 0.2 |
+| Patrol v patrol | 183 | 158 | 59 | 5.0 (8) | 0.4 / 0.3 |
+| 7 v 7 fleet-battle scenario | 243 | 9 | 148 | 10.1 (14) | 5.1 / 6.0 |
+| 8 patrols v 8 patrols | 168 | 33 | 199 | 10.3 (14) | 6.1 / 5.9 |
 
-Mirrors are even: each side is driven from the field about half the time.
-Big battles stay bloody (retreating ships are often caught), but almost never
-end in your fleet's destruction.
+Mirrors stay even: each side is driven from the field about half the time.
+The board is smaller than the old 3D grid, so fights start sooner and end in
+fewer rounds, and a retreating patrol (two moves) is caught more often than it
+was: patrol duels end in a loss about 40% of the time, against 15% on the grid.
+Retreat and board balance are open playtest questions.
 
 ## Playing a battle
 
@@ -133,26 +141,31 @@ navigation runs wait for it. The server plays raider turns right after each
 player action, so a saved battle is always waiting on one of your ships.
 
 - The header shows the round and each side's remaining hull and ships.
-- The view is a 3D grid over a starfield: your edge is the cyan strip on the
-  left, the raiders' edge the red strip on the right. Ships stand on dashed
-  stalks over the floor so their layer reads at a glance; rings lie in the
-  ship's own layer, and bars show hull and shields.
-- **Camera:** drag to orbit; right-drag, middle-drag or Shift+drag to pan; scroll
-  or pinch to zoom (from half to six times the framing distance); arrow keys
-  slide the view and Page Up / Page Down raise and lower it. **F** (or the
-  crosshair button over the grid) centres on the acting ship, **R** (or the reset
-  button) restores the default view. The view never leaves the grid. While a
-  battle is open it owns these keys, so F and Escape do not reach the map
-  behind it.
-- **Move:** green dots are the free cells your ship can reach on the shown layer.
-  The **Layer** slider (or Q / E) changes the layer; it follows your ship at
-  the start of each turn. Hovering a dot draws the path and dashed lines to every
-  raider your weapons would reach from there. Click a dot to move.
-- **Fire:** raiders your weapons reach have a red ring. Hovering any ship shows
-  a card with its condition and, for a raider, the distance and each weapon's
-  hit chance; click a ringed raider to fire.
-- **End turn** (or Space), **Withdraw** from your edge column, or
-  **Auto-resolve** to let the AI fight every remaining turn on both sides.
+- The view is a flat hex board under a fixed tilted camera: your edge is the
+  cyan column on the left, the raiders' edge the red column on the right. Ships
+  float over their hex at their band's height, with a shadow and a dashed
+  stalk down to the board; a HIGH or LOW tag marks bands other than Level, and
+  bars show hull and shields.
+- **Camera:** drag to pan; scroll or pinch to zoom (from fitting the whole board
+  up to four times closer); arrow keys slide the view. **F** (or the crosshair
+  button) centres on the acting ship, **R** (or the reset button) restores the
+  fitted view. There is no orbit and no layer control. While a battle is open
+  it owns these keys, so F and Escape do not reach the map behind it.
+- **Move:** the acting ship is already selected, and green hexes are the free
+  hexes it can still reach on its own band. Hovering one draws the path and
+  dashed lines to every raider your weapons would reach from there; tap it to
+  move. **Climb** (E) and **Dive** (Q) change band for one movement point. The
+  ship card counts the moves left this turn.
+- **Fire:** raiders your weapons reach have a red ring. Tap one to **aim** (a
+  bold line of fire and the weapon list's hit chances, high ground included),
+  then tap **Fire at …** (or Enter) to shoot. The two steps prevent misfires on
+  a phone. Hovering any ship shows a card with its band, condition and, for a
+  raider, its range and each weapon's hit chance.
+- **End turn** (the large button beside Fire, or Space), **Withdraw** from your
+  edge column, or **Auto-resolve** to let the AI fight every remaining turn on
+  both sides.
+- On windows narrower than 700 points (phones) the controls stack under the
+  board, with Fire and End turn side by side as 44-point buttons.
 - Moves glide and shots fly as beams, flashing cyan on shields, amber on hulls
   and bursting when a ship is destroyed, so raider turns played by the server are
   visible. The animation is display-only; captures turn it off.
@@ -165,6 +178,11 @@ player action, so a saved battle is always waiting on one of your ships.
 
 Every hull is drawn as its real 3D model (see the asset notes); sprites remain
 as the fallback and for portraits.
+
+**Saves from before the hex board.** A save (schema 7) with a battle open on the
+old 3D grid still loads: the battle is rebuilt on a fresh hex board with every
+ship's damage, shields, withdrawal and shot record, auto-resolved at once, and
+the load reports it.
 
 **Large battles.** Play caps raider groups at three, but battles hold up to 16
 ships. The developer scenario `--scenario fleet-battle` (dev-tools build) opens a

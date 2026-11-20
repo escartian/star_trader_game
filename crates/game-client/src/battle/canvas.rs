@@ -1,6 +1,6 @@
 //! Drawing helpers that place scene-space geometry on screen for one frame.
 use super::camera::{Projector, ScenePoint};
-use egui::{Color32, Painter, Pos2, Shape, Stroke};
+use egui::{Painter, Pos2, Shape, Stroke};
 use glam::Vec3;
 
 pub struct Canvas<'a> {
@@ -30,19 +30,8 @@ impl Canvas<'_> {
         }
     }
 
-    pub fn quad(&self, corners: [Vec3; 4], fill: Color32, stroke: Stroke) {
-        let points: Option<Vec<Pos2>> = corners
-            .iter()
-            .map(|corner| self.at(ScenePoint(*corner)))
-            .collect();
-        if let Some(points) = points {
-            self.painter
-                .add(Shape::convex_polygon(points, fill, stroke));
-        }
-    }
-
     /// A horizontal ring of `radius` world units around `centre`, drawn in
-    /// perspective so it reads as lying in the ship's layer.
+    /// perspective so it reads as lying level with the ship.
     pub fn ring(&self, centre: ScenePoint, radius: f32, stroke: Stroke) {
         let points: Option<Vec<Pos2>> = (0..=32)
             .map(|step| {

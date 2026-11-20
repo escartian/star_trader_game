@@ -32,7 +32,7 @@ fn damaged_primary_recovers_previous_save_and_invalid_schema_is_rejected() {
     assert_eq!(restored.state, original);
     // A successful save over a damaged primary must preserve the good backup.
     session.save(&path).unwrap();
-    assert_eq!(read(&backup_path(&path)).unwrap().player, original);
+    assert_eq!(read(&backup_path(&path)).unwrap().0.player, original);
     fs::remove_file(backup_path(&path)).unwrap();
     let mut value: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     value["schema_version"] = 99.into();

@@ -1,5 +1,5 @@
 //! Structural checks for a battle loaded from a save.
-use super::{Battle, CEASEFIRE_ROUNDS, MAX_ROUNDS};
+use super::{Battle, CEASEFIRE_ROUNDS, MAX_ROUNDS, move_points};
 use crate::combat::{
     CombatCatalog,
     engagement::{MAX_COMBATANTS, Side},
@@ -9,7 +9,8 @@ use std::collections::HashSet;
 
 impl Battle {
     /// Rejects battles no sequence of legal actions could produce: bad indices,
-    /// impossible damage, overlapping ships, or a finished battle left open.
+    /// impossible damage, two ships on one hex, more movement left than the
+    /// acting ship has, or a finished battle left open.
     pub fn validate(&self, weapons: &CombatCatalog) -> Result<(), String> {
         let count = self.units.len();
         let mut order: Vec<usize> = self.order.iter().map(|&index| usize::from(index)).collect();
@@ -23,14 +24,17 @@ impl Battle {
             || self.turn >= count
             || !(1..=MAX_ROUNDS).contains(&self.round)
             || self.rounds.len() != self.round as usize
-            || !self.size.valid_for(count)
+            || !self.board.valid_for(count)
             || self.quiet_rounds >= CEASEFIRE_ROUNDS
             || self.finished()
-            || !self.units[usize::from(self.order[self.turn])].active()
         {
             return Err("Invalid battle turn state".into());
         }
-        let mut cells = HashSet::new();
+        let acting = &self.units[usize::from(self.order[self.turn])];
+        if !acting.active() || self.moves_left > move_points(acting.profile.engine) {
+            return Err("Invalid battle turn state".into());
+        }
+        let mut hexes = HashSet::new();
         for unit in &self.units {
             unit.profile.validate(weapons)?;
             if unit.name.is_empty()
@@ -40,9 +44,9 @@ impl Battle {
                 || unit.damage > unit.profile.hull
                 || unit.shields > unit.profile.shields
                 || unit.hits > unit.shots
-                || !self.size.contains(unit.cell)
+                || !self.board.contains(unit.at.hex)
                 || (unit.side == Side::Hostile) == unit.ship.is_some()
-                || (unit.active() && !cells.insert(unit.cell))
+                || (unit.active() && !hexes.insert(unit.at.hex))
             {
                 return Err(format!("Invalid battle state for {}", unit.name));
             }

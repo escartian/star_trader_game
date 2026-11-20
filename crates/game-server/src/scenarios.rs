@@ -302,6 +302,7 @@ mod fleet_battle_tests {
             .unwrap();
         let report = session.state.navigation.last_combat.clone().unwrap();
         assert!(session.state.navigation.battle.is_none());
-        assert!(report.outcome != game_core::combat::CombatOutcome::Disengaged);
+        // Fought, not a ceasefire: ships were lost, whoever left the field.
+        assert!(report.combatants.iter().any(|ship| ship.destroyed));
     }
 }

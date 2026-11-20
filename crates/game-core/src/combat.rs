@@ -1,7 +1,8 @@
 //! Data-driven combat definitions: weapons and per-hull combat profiles.
 //! Units are abstract game points: hull/shield/armor "points", engine is a 1–10
 //! rating used for evasion and initiative. Fights are turn-based battles on a
-//! 3D grid (`tactical`); `engagement` holds shared result types and damage rules.
+//! hex board with altitude bands (`tactical`); `engagement` holds shared result
+//! types and damage rules.
 pub mod engagement;
 pub mod report;
 mod rng;
@@ -44,7 +45,7 @@ pub struct WeaponSpec {
     pub accuracy_percent: u32,
     pub shield_efficiency_percent: u32,
     pub armor_penetration: u32,
-    /// Reach in tactical grid cells (Chebyshev distance). Older saved catalogs
+    /// Reach in battle-board steps: hexes plus bands crossed. Older saved catalogs
     /// without ranges load with [`DEFAULT_WEAPON_RANGE`].
     #[serde(default = "default_weapon_range")]
     pub range: u32,

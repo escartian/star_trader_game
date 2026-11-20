@@ -6,7 +6,7 @@ use super::{Encounter, EncounterKind, NavigationError, NavigationEvent};
 use crate::{
     combat::{
         CombatOutcome, CombatReport, Side,
-        tactical::{self, Battle, Cell},
+        tactical::{self, Battle, Position},
     },
     economy::EconomyRules,
     fleet::{Fleet, FleetError, FleetId, FleetMovementError},
@@ -27,7 +27,9 @@ pub struct ActiveBattle {
 /// What the acting player ship does next.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BattleAction {
-    Move(Cell),
+    /// Move to a hex and band within the remaining movement points; the same
+    /// hex on another band climbs or dives.
+    Move(Position),
     /// Fire every weapon that reaches this unit (an index into `Battle::units`).
     Fire {
         target: u8,
@@ -115,7 +117,7 @@ impl TravelState {
             .ok_or(NavigationError::NoBattle)?;
         let battle = &mut open.battle;
         match action {
-            BattleAction::Move(cell) => battle.move_to(cell),
+            BattleAction::Move(to) => battle.move_to(to),
             BattleAction::Fire { target } => battle.fire(usize::from(target), weapons),
             BattleAction::EndTurn => battle.end_turn(),
             BattleAction::Withdraw => battle.withdraw(),

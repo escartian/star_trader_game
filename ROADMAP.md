@@ -161,7 +161,7 @@ Combat is the original README's first prioritized expansion.
   profitability, real cargo/wallets, finite-market trades and navigation-run AI.
 - [ ] Expanded NPC personalities, interactions, encounters and faction affiliations.
 - [x] Ship type/size/engine, HP, shields, armor and weapon/loadout definitions
-  (`config/ships.json` schema 2, current save schema 7; see [combat](docs/COMBAT.md)).
+  (`config/ships.json` schema 2, current save schema 8; see [combat](docs/COMBAT.md)).
 - [x] Carry forward Photon Singularity Beam, Quantum Entanglement Torpedo, Neutron
   Beam, Graviton Pulse and Magnetic Resonance Disruptor as balanceable JSON content
   (`config/combat.json`).
@@ -169,17 +169,20 @@ Combat is the original README's first prioritized expansion.
   damage/destruction, salvage, saved results and a readable native combat report.
 - [x] Deterministic seeded resolution (seed saved in the report), withdrawal and
   ceasefire disengagement; last-ship rule; paid hull repairs at markets.
-- [x] Turn-based tactical rules on a 3D grid: HoMM-style engine initiative, move,
-  ranged fire, withdrawal from your own edge, raider AI and Auto-resolve.
+- [x] Turn-based tactical rules: HoMM-style engine initiative, move, ranged
+  fire, withdrawal from your own edge, raider AI and Auto-resolve.
 - [x] Play battles turn by turn: saved battles in progress, move/fire/withdraw/
-  auto-resolve commands, and a 3D battle view with orbit camera, layer selection
-  and grid picking. Battles run to a finish (no round limit).
+  auto-resolve commands. Battles run to a finish (no round limit).
+- [x] Hex board with Low/Level/High altitude bands (phone-first phase 4): boards
+  of radius 4–6 by fleet size, movement points spent on steps, climbs and dives,
+  range as hexes plus bands, ±10% high ground, an AI that takes free height,
+  a fixed-tilt board view, tap-to-aim then Fire, and a stacked phone layout.
+  Schema-7 saves auto-resolve an open 3D-grid battle on load.
 - [x] Every hull drawn from a Blender glTF export (the scout decimated to 1,600
   triangles); animated moves and weapon beams; side strength, portraits, hover
   cards and move-range previews.
 - [x] Morale: badly damaged AI ships and broken sides retreat and withdraw;
-  fleeing raiders count as a victory. Battle grids grow with the fleets (a
-  10-cell cube for a duel, up to 17).
+  fleeing raiders count as a victory. Battle boards grow with the fleets.
 - [ ] A GPU mesh renderer with a depth buffer (the egui painter sorts faces).
 - [x] Raider bounties by hull, paid once per battle for destroyed raiders.
 - [x] NPC traders meet raiders off-screen (auto-resolved tactical battles):

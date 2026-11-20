@@ -2,6 +2,7 @@
 mod advance;
 mod battle;
 mod battle_cards;
+mod battle_controls;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture;
 mod combat_report;

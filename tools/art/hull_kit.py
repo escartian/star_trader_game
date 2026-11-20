@@ -173,8 +173,8 @@ def set_render(scene, pixels, ortho_scale, path):
     scene.render.filepath = str(path)
 
 
-def publish(name, preview_scale, sprite_scale):
-    """Saves the .blend, renders preview and 256px sprite, exports the GLB.
+def publish(name, preview_scale, sprite_scale, sprite_pixels=256):
+    """Saves the .blend, renders preview and map sprite, exports the GLB.
 
     Returns the written paths and triangle count; fails over budget.
     """
@@ -189,7 +189,7 @@ def publish(name, preview_scale, sprite_scale):
     bpy.ops.wm.save_as_mainfile(filepath=str(source))
     set_render(scene, 768, preview_scale, preview)
     bpy.ops.render.render(write_still=True)
-    set_render(scene, 256, sprite_scale, sprite)
+    set_render(scene, sprite_pixels, sprite_scale, sprite)
     bpy.ops.render.render(write_still=True)
     set_render(scene, 768, preview_scale, preview)
     for obj in scene.objects:

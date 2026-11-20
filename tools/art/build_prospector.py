@@ -134,6 +134,11 @@ def build_drill(m):
             m["steel"] if index % 2 == 0 else m["tempered"], DRILL_SIDES,
             (-QUARTER, 0.22 * index, 0),  # Each step twists about the bow axis.
         )
+        for tooth in range(4):
+            angle = tooth * math.tau / 4 + index * 0.28
+            cone("Auger cutting flute", (radius * math.cos(angle), 2.78 + 0.28 * index,
+                                         radius * math.sin(angle)),
+                 0.065, 0.24, m["tempered"], 5)
     cone("Auger tip", (0, 4.27, 0), 0.16, 0.42, m["steel"], DRILL_SIDES)
     for index in range(6):
         angle = index * math.tau / 6 + math.pi / 6
@@ -178,6 +183,13 @@ def build_hoppers(m):
             x = side * 1.05
             box("Ore hopper", (x, y, 0.0), (0.95, 1.0, 0.6), m["paint"], 0.04)
             box("Ore bed", (x, y, 0.31), (0.8, 0.85, 0.04), m["dust"])
+            for dx in (-0.35, 0.35):
+                for dy in (-0.4, 0.4):
+                    box("Hopper rim fastener", (x + dx, y + dy, 0.35),
+                        (0.07, 0.07, 0.035), m["steel"])
+            for dy in (-0.46, 0.46):
+                box("Hopper grab rail", (x, y + dy, 0.38),
+                    (0.65, 0.035, 0.035), m["frame"])
             for index, (dx, dy, z) in enumerate(heaps):
                 rock("Ore lump", (x + side * dx, y + dy, z), 0.22 - 0.03 * index, m["ore"],
                      yaw=row + index + side)
@@ -210,6 +222,10 @@ def build_crane(m):
     box("Crane trolley", (0.7, -0.9, 0.99), (0.3, 0.3, 0.14), m["stripe"])
     box("Crane cable", (0.7, -0.9, 0.8), (0.03, 0.03, 0.3), m["steel"])
     box("Hook block", (0.7, -0.9, 0.6), (0.16, 0.16, 0.12), m["steel"])
+    for side in (-1, 1):
+        for index in range(5):
+            box("Crane beam rivet", (side * (0.3 + 0.25 * index), -0.9, 1.22),
+                (0.055, 0.055, 0.02), m["steel"])
 
 
 def build_bridge(m):
@@ -226,6 +242,8 @@ def build_engines(m):
     for x in (-0.48, 0.48):
         for z in (-0.24, 0.24):
             cylinder("Engine nozzle", (x, -3.48, z), 0.22, 0.3, m["steel"], 8, (QUARTER, 0, 0))
+            cylinder("Engine collar", (x, -3.42, z), 0.25, 0.055, m["paint"], 8,
+                     (QUARTER, 0, 0))
             cylinder("Engine glow", (x, -3.64, z), 0.17, 0.02, m["engine"], 8, (QUARTER, 0, 0))
     for side in (-1, 1):
         box("Radiator wing", (side * 1.45, -2.9, 0.25), (1.0, 0.8, 0.05), m["steel"], 0.02)
@@ -290,8 +308,8 @@ def configure_render(scene):
 
 
 def render_sprite(scene):
-    """The map sprite: the preview's three-quarter view, framed tight at 256px."""
-    scene.render.resolution_x = scene.render.resolution_y = 256
+    """The map sprite: the preview's three-quarter view, framed at 512px."""
+    scene.render.resolution_x = scene.render.resolution_y = 512
     scene.camera.data.ortho_scale = 7.6
     scene.render.filepath = str(SPRITE)
     bpy.ops.render.render(write_still=True)

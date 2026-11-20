@@ -36,6 +36,11 @@ glide heading. Offscreen captures of the galaxy traffic and battle view succeede
 on the Apple M5 Pro and were visually inspected: trader markers have hull shapes,
 and the scout battle model shows teal paint at its board position. Interactive
 window and device checks remain open.
+The scout source was levelled and its original-colour sprite re-exported at
+512px. Freighter, patrol and prospector models gained visible detail and have
+5,592, 4,336 and 3,676 triangles; the scout has 6,000. All four ship sprites
+are now 512px. These new renders were inspected as files; fresh in-game GPU
+captures of the revised battle scale remain open.
 
 Hex battles (phone-first phase 4): offscreen captures at 1280 × 800, 1024 × 768
 and 390 × 844 of a duel, the 7 v 7 scenario and a close-up after a climb and an

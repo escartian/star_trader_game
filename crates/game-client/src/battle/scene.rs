@@ -379,3 +379,18 @@ fn hover_card(painter: &egui::Painter, projector: &Projector, input: &SceneInput
         y += height;
     }
 }
+
+#[cfg(test)]
+mod scale_tests {
+    use super::*;
+
+    #[test]
+    fn battle_hulls_read_from_scout_to_heavy_ship() {
+        let scout = ship_length(HullSize::Small, ShipKind::Scout);
+        let patrol = ship_length(HullSize::Medium, ShipKind::Patrol);
+        let freighter = ship_length(HullSize::Medium, ShipKind::Freighter);
+        let prospector = ship_length(HullSize::Large, ShipKind::Prospector);
+        assert!(scout < patrol && patrol < freighter && freighter < prospector);
+        assert!(freighter / scout > 1.5);
+    }
+}

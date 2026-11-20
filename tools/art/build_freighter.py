@@ -55,6 +55,7 @@ def palette():
             material("Cargo slate", (0.20, 0.24, 0.30), 0.4, 0.5),
         ],
         "rib": material("Container rib", (0.05, 0.05, 0.06), 0.4, 0.5),
+        "seal": material("Cargo latches", (0.18, 0.21, 0.23), 0.5, 0.48),
     }
 
 
@@ -96,6 +97,8 @@ def build_yard(m):
                     box("Container", (side * x, y, z), CONTAINER, m["cargo"][colour])
                     box("Container rib", (side * x, y, z),
                         (CONTAINER[0] + 0.02, 0.05, CONTAINER[2] + 0.02), m["rib"])
+                    box("Container roof latch", (side * x, y + 0.15, z + 0.18),
+                        (0.18, 0.09, 0.025), m["seal"])
         gap = y - ROW_PITCH / 2
         if row < ROW_COUNT - 1 and row % 2 == 0:
             build_gantry(m, gap)
@@ -145,6 +148,9 @@ def build_bow(m):
         cylinder("Sensor dome", (side * 0.55, 3.5, 0.33), 0.12, 0.1, m["steel"], 10)
         box("Prow hazard", (side * 0.42, 3.75, 0.27), (0.24, 0.06, 0.04), m["hazard"], 0.0,
             side * 0.5)
+        for step in range(4):
+            box("Prow service hatch", (side * 0.38, 3.4 + step * 0.19, 0.34 - step * 0.04),
+                (0.16, 0.1, 0.025), m["seal"])
 
 
 def build_engines(m):
@@ -184,7 +190,7 @@ def build():
     build_bow(parts)
     build_engines(parts)
     stage((0, 0.2, 0.1), 9.4, "")
-    return publish("freighter", preview_scale=9.4, sprite_scale=8.8)
+    return publish("freighter", preview_scale=9.4, sprite_scale=8.8, sprite_pixels=512)
 
 
 if __name__ == "__main__":

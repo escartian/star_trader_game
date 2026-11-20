@@ -328,4 +328,23 @@ mod tests {
         let right = painted_centre(Vec3::new(2.0, 0.0, 1.0));
         assert!(right > left + 20.0, "the scout follows its new hex");
     }
+
+    #[test]
+    fn scout_hull_is_level_along_its_bow_axis() {
+        let model = for_kind(ShipKind::Scout).unwrap();
+        let points: Vec<_> = model
+            .triangles
+            .iter()
+            .flat_map(|face| face.corners)
+            .collect();
+        let mean = points.iter().copied().sum::<Vec3>() / points.len() as f32;
+        let (covariance, variance) = points.iter().fold((0.0, 0.0), |(cov, var), point| {
+            let y = point.y - mean.y;
+            (cov + y * (point.z - mean.z), var + y * y)
+        });
+        assert!(
+            (covariance / variance).abs() < 0.12,
+            "scout points nose-down"
+        );
+    }
 }

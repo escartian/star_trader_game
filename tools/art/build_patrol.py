@@ -147,6 +147,31 @@ def build_turret(m):
     box("Sensor head", (0.12, -0.65, 1.1), (0.08, 0.08, 0.04), m["port"])
 
 
+def surface_details(m):
+    """Small readable vents, fasteners and service panels on the visible hull."""
+    for side in (-1, 1):
+        for row in range(7):
+            y = -1.38 + row * 0.17
+            box("Wing cooling slot", (side * 1.12, y, 0.115),
+                (0.35, 0.055, 0.018), m["frame"])
+        for row in range(8):
+            y = -1.52 + row * 0.2
+            for x in (0.79, 1.57):
+                box("Armour fastener", (side * x, y, 0.116),
+                    (0.045, 0.045, 0.02), m["steel"])
+        for row in range(7):
+            y = -1.22 + row * 0.29
+            box("Cheek panel seam", (side * 0.72, y, 0.18),
+                (0.02, 0.045, 0.15), m["steel"])
+        for row in range(5):
+            y = -2.42 + row * 0.18
+            box("Nacelle heat rib", (side * 0.56, y, 0.29),
+                (0.37, 0.035, 0.025), m["frame"])
+    for y in (0.25, 0.7, 1.08):
+        box("Canopy crossbar", (0, y, 0.58 - y * 0.1),
+            (0.4 - y * 0.18, 0.035, 0.035), m["steel"])
+
+
 def build_engines(m):
     """Twin banded engines with bells and glow, a centre exhaust and tail fins."""
     for side in (-1, 1):
@@ -183,8 +208,9 @@ def build():
         wing(parts, side)
     build_turret(parts)
     build_engines(parts)
+    surface_details(parts)
     stage((0, 0.0, 0.1), 6.6, "")
-    return publish("patrol", preview_scale=6.6, sprite_scale=6.0)
+    return publish("patrol", preview_scale=6.6, sprite_scale=6.0, sprite_pixels=512)
 
 
 if __name__ == "__main__":

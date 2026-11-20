@@ -81,9 +81,13 @@ def export(name):
     if name == "scout":
         # The map sprite keeps the scan's detailed vertex colours. Battle paint
         # is applied only to the exported GLB after this render.
+        bpy.context.scene.render.resolution_x = 768
+        bpy.context.scene.render.resolution_y = 768
+        bpy.context.scene.camera.data.ortho_scale = SPRITE_SCALE
+        bpy.context.scene.render.filepath = str(ROOT / "assets/source/scout-preview.png")
+        bpy.ops.render.render(write_still=True)
         bpy.context.scene.render.resolution_x = SPRITE_RESOLUTION
         bpy.context.scene.render.resolution_y = SPRITE_RESOLUTION
-        bpy.context.scene.camera.data.ortho_scale = SPRITE_SCALE
         bpy.context.scene.render.filepath = str(ROOT / "assets/sprites/scout.png")
         bpy.ops.render.render(write_still=True)
         paint_scout()

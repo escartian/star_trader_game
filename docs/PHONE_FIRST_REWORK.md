@@ -120,6 +120,10 @@ withdraw from your own edge, End turn, Auto-resolve, Surrender.
 **View.** A flat hex board under a tilted camera with the 3D ship models; a ship's
 band shows as height above its hex with a shadow on the board. No layer slider
 and no orbit camera. Pinch-zoom and pan only when the board does not fit.
+The models have visual lengths by hull size: the scout is smallest, patrol and
+freighter are medium, and the prospector is largest. Freighters read larger than
+patrol ships despite sharing a combat size class. Shadows and hit targets scale
+with the visible hull; status bars stay readable at a fixed size.
 
 **Controls.**
 1. The acting ship is already selected, and its reachable hexes are lit.

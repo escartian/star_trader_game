@@ -99,7 +99,7 @@ under `~/Library/Application Support/StarTrader`.
 `source/freighter.blend` and `source/patrol.blend` are original editable models,
 each built by its own script on the shared part kit `tools/art/hull_kit.py`
 (conventions, 7,000-triangle budget, staging and export). One run writes the
-`.blend`, the battle model `models/<name>.glb`, the 256px map sprite
+`.blend`, the battle model `models/<name>.glb`, the 512px map sprite
 `sprites/<name>.png` and a review render `source/<name>-preview.png`:
 
 ```sh
@@ -111,15 +111,21 @@ The freighter is a bulk container hauler: a yard of about 85 small ribbed
 containers (eight rows, four columns, up to three high, mostly orange with ivory,
 teal, rust and slate) under hazard-yellow loading gantries, a lofted prow with a
 deliberately tiny bridge and lit windows so the hull reads as huge, and four
-blue-glow engines between radiator wings (about 4,450 triangles).
+blue-glow engines between radiator wings. Cargo roof latches and prow service
+hatches add visible surface detail (5,592 triangles).
 The patrol is an armoured gunship: a lofted fuselage with cheek armour, intakes
 and lit windows, swept wings with layered armour plates, under-wing missile racks
 and banded wingtip cannon pods, a dorsal twin-gun turret with a sensor mast, chin
-guns, canted lit tail fins and banded twin engines (about 3,450 triangles). The scout uses the AI
+guns, canted lit tail fins and banded twin engines. Cooling slots, armour
+fasteners, canopy frames and heat ribs bring it to 4,336 triangles. The scout uses the AI
 courier: `source/ai-courier.blend` is a vertex-colored model generated locally
 from a concept image with ComfyUI/TRELLIS.2, then remeshed and decimated.
-`tools/art/clean_ai_courier.py` rebuilds it and renders `sprites/scout.png` with
-the same camera and lights; `tools/comfyui/README.md` covers the full pipeline.
+`tools/art/clean_ai_courier.py` rebuilds it from the scan and levels the scan's
+pitch and roll. `tools/art/repair_scout_orientation.py` applies the same
+correction to the checked-in source when the raw scan is unavailable.
+`tools/art/export_battle_models.py -- scout` renders the 512px PNG from the
+original vertex colours, then paints and exports the battle GLB.
+`tools/comfyui/README.md` covers the full pipeline.
 
 ### Battle models
 
@@ -152,8 +158,9 @@ twisted 12-sided auger on a hazard-striped bow housing, two articulated digger a
 ore hoppers heaped with rock and glowing crystals, a conveyor spine, a gantry
 crane, radiator wings and a quad-nozzle amber engine block. Its crew bridge and
 lit portholes are deliberately tiny so the hull reads as huge.
-`models/prospector.glb` is its colored 2,700-triangle export (engines,
-floodlights and crystals are emissive), `sprites/prospector.png` its 256px map
+`models/prospector.glb` is its colored 3,676-triangle export with auger flutes,
+hopper fasteners and crane rivets (engines, floodlights and crystals are emissive),
+`sprites/prospector.png` its 512px map
 sprite, and `source/prospector-preview.png` a render for visual review.
 Battle models may use up to 7,000 triangles each (checked by the model test). The model follows the battle-model conventions (+Z up,
 bow along +Y, closed chunky parts for the depth-sorted flat renderer) and the

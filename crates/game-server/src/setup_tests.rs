@@ -71,3 +71,40 @@ fn impossible_setups_are_rejected() {
     };
     assert!(game(&bad_galaxy).is_err());
 }
+
+#[test]
+fn a_new_game_starts_as_a_captain_and_unlocks_arrive_as_events() {
+    use game_core::progress::Feature;
+    use game_protocol::{ClientCommand, ServerMessage, SessionEvent};
+    let mut session = game(&GameSetup::default()).unwrap();
+    assert!(session.state.progress.unlocked.is_empty());
+    // A sale counts as a delivery.
+    session.state.ships[0].cargo[0] = 2;
+    let revision = session.state.revision;
+    let sold = session.handle(ClientCommand::Trade {
+        ship: game_core::travel::ShipId(1),
+        commodity: game_core::economy::Commodity::Food,
+        quantity: 1,
+        side: game_core::economy::TradeSide::Sell,
+        expected_revision: revision,
+    });
+    assert!(matches!(sold, ServerMessage::SessionSnapshot { .. }));
+    assert_eq!(session.state.progress.deliveries, 1);
+    // Profit opens the shipyard, announced once.
+    session.economy.credits = Credits(session.economy.credits.0 + 100_000);
+    let ServerMessage::SessionSnapshot { events, state, .. } =
+        session.handle(ClientCommand::GetSession)
+    else {
+        panic!("snapshot");
+    };
+    assert!(events.contains(&SessionEvent::Unlocked {
+        feature: Feature::Fleets
+    }));
+    assert!(state.progress.has(Feature::Fleets));
+    let ServerMessage::SessionSnapshot { events, .. } = session.handle(ClientCommand::GetSession)
+    else {
+        panic!("snapshot");
+    };
+    assert!(events.is_empty(), "announced once");
+    crate::combat_tests::reload(&session);
+}

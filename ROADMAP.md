@@ -137,6 +137,9 @@ orbits (moons around planets). Navigation plans use their positions at the curre
   authority escorts, anomalies, comets, probes, debris, distress) beside raiders.
 - [x] New-game setup: galaxy size, starting credits, inflation, danger,
   campaign length and Trader goal; generated star and body names.
+- [x] Progressive unlocks (phone-first phase 6): shipyard, trade routes,
+  battles, landing and the Victory panel appear as play reaches them, each with
+  a guide card.
 - [ ] Faction outcomes for law contacts, branching authored story chains.
 
 See [navigation runs](docs/NAVIGATION_RUNS.md). The run itself is the visible

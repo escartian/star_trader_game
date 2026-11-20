@@ -6,6 +6,7 @@ mod fleets;
 mod movement;
 mod navigation;
 mod offline;
+mod progress;
 mod save;
 mod setup;
 pub use setup::{DangerLevel, GameSetup, InflationLevel, STARTING_CREDITS, WEALTH_SHARES};
@@ -117,6 +118,7 @@ impl Session {
         // Every rule reads body positions for the current tick.
         game_core::orbits::place(&mut self.systems, self.state.tick);
         let message = self.dispatch(player, command)?;
+        let message = self.record_unlocks(player, message);
         Ok(self.record_campaign_end(player, message))
     }
 

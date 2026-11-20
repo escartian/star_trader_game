@@ -48,13 +48,20 @@ impl Session {
                 quantity,
                 side,
                 ..
-            } => SessionEvent::Traded(economy.trade(
-                state.ship_mut(ship)?,
-                commodity,
-                quantity,
-                side,
-                expected_revision,
-            )?),
+            } => {
+                let quote = economy.trade(
+                    state.ship_mut(ship)?,
+                    commodity,
+                    quantity,
+                    side,
+                    expected_revision,
+                )?;
+                // Sales count toward unlocking trade routes.
+                if side == game_core::economy::TradeSide::Sell {
+                    state.progress.deliveries = state.progress.deliveries.saturating_add(1);
+                }
+                SessionEvent::Traded(quote)
+            }
             ClientCommand::Refuel { units, .. } => {
                 economy.refuel(state.ship_mut(ship)?, units)?;
                 SessionEvent::Refuelled { units }

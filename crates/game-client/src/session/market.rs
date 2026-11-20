@@ -103,7 +103,9 @@ impl LocalSession {
                 "Prices in credits for the first unit. Hover an order button for its total:\nbulk orders price every unit along the stock curve. Max fills your hold;\nAll sells everything this market can pay for.",
             );
         });
-        self.charter_row(ui, &ship, market.id);
+        if self.unlocked(game_core::progress::Feature::Victory) {
+            self.charter_row(ui, &ship, market.id);
+        }
         let mut action = self.trade_table(ui, &ship, &market, systems);
         ui.separator();
         ui.horizontal_wrapped(|ui| {

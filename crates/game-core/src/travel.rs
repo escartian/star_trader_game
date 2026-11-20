@@ -122,6 +122,10 @@ pub struct TravelState {
     /// Run limit and how the campaign ended (see `campaign`).
     #[serde(default)]
     pub campaign: crate::campaign::Campaign,
+    /// Features unlocked so far (see `progress`); saves from before unlocks
+    /// load with everything unlocked.
+    #[serde(default)]
+    pub progress: crate::progress::Progress,
 }
 
 impl Default for TravelState {
@@ -155,6 +159,7 @@ impl Default for TravelState {
             next_ship_id: 2,
             next_fleet_id: 2,
             campaign: crate::campaign::Campaign::default(),
+            progress: crate::progress::Progress::default(),
         }
     }
 }

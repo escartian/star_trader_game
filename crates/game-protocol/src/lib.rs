@@ -200,6 +200,10 @@ pub enum SessionEvent {
     RunLimitSet {
         runs: Option<u64>,
     },
+    /// A feature's controls just became available (see `game_core::progress`).
+    Unlocked {
+        feature: game_core::progress::Feature,
+    },
     Refuelled {
         units: u32,
     },

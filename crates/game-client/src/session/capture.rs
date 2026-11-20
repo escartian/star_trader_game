@@ -278,6 +278,11 @@ impl LocalSession {
         Ok(haven.system)
     }
 
+    /// The guide card a new captain sees when the shipyard opens.
+    pub fn capture_unlock(&mut self) {
+        self.announce_unlock(game_core::progress::Feature::Fleets);
+    }
+
     /// The Victory panel over the map.
     pub fn capture_victory(&mut self) {
         self.victory.open = true;

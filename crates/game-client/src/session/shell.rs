@@ -6,7 +6,7 @@ use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use crate::theme::{AMBER, CYAN, GREEN};
 use egui::{RichText, Vec2};
-use game_core::{StarSystem, fleet::FleetId};
+use game_core::{StarSystem, fleet::FleetId, progress::Feature};
 use game_server::LOCAL_PLAYER;
 
 /// Which page the context sheet shows.
@@ -128,9 +128,12 @@ impl LocalSession {
     /// Always at the top of the sheet: the guide, and the selected fleet's
     /// contact decision when one is pending.
     pub fn sheet_header(&mut self, ui: &mut egui::Ui) {
+        self.unlock_cards(ui);
         self.guide(ui);
         self.contact_panel(ui);
-        self.haven_prompt(ui);
+        if self.unlocked(Feature::Victory) {
+            self.haven_prompt(ui);
+        }
     }
 
     /// The Fleets page: the ship used for trading, then every fleet.
@@ -187,7 +190,17 @@ impl LocalSession {
                 "Save, load, settings, guide and log",
             ),
         ];
+        let shown = [
+            true,
+            self.unlocked(Feature::Fleets),
+            true,
+            self.unlocked(Feature::Victory),
+            true,
+        ];
         for (index, (icon, label, tip)) in entries.into_iter().enumerate() {
+            if !shown[index] {
+                continue;
+            }
             let button = ui.add_sized([ui.available_width(), 34.0], |ui: &mut egui::Ui| {
                 icons::button(ui, icon, label)
             });

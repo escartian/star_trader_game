@@ -25,6 +25,9 @@ impl LocalSession {
         let Some(body) = body else {
             return;
         };
+        if !self.unlocked(game_core::progress::Feature::TradeRoutes) {
+            return;
+        }
         let there = MarketId { system, body };
         if self.economy.market(there).is_err() {
             return;

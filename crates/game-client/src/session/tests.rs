@@ -272,3 +272,41 @@ fn tapping_a_destination_plots_the_course_without_moving() {
     host.select_destination(game_core::SystemId(3), None);
     assert_eq!(host.state.navigation.orders.len(), 1);
 }
+
+#[test]
+fn a_captain_sees_only_unlocked_controls_and_a_guide_card_per_unlock() {
+    use game_core::progress::Feature;
+    let mut authority = game_server::Session::default();
+    authority.begin_progression();
+    let mut host = LocalSession::new(authority);
+    assert!(!host.unlocked(Feature::Fleets) && !host.unlocked(Feature::Victory));
+    // An unlock event queues its card (and logs it); dismissing removes it.
+    let message = host.announce_unlock(Feature::Battles);
+    assert!(message.contains("Raider battles"));
+    assert!(host.unlock_card_open(Feature::Battles));
+    host.announce_unlock(Feature::Battles);
+    assert_eq!(
+        host.unlock_cards,
+        [Feature::Battles],
+        "one card per feature"
+    );
+    // The menu lists only what is unlocked.
+    let ctx = egui::Context::default();
+    let output = ctx.run(egui::RawInput::default(), |ctx| {
+        egui::CentralPanel::default().show(ctx, |ui| host.menu_sheet(ui));
+    });
+    let texts: Vec<String> = output
+        .shapes
+        .iter()
+        .filter_map(|shape| match &shape.shape {
+            egui::epaint::Shape::Text(text) => Some(text.galley.job.text.clone()),
+            _ => None,
+        })
+        .collect();
+    assert!(texts.iter().any(|text| text == "Trade"), "{texts:?}");
+    assert!(
+        !texts.iter().any(|text| text == "Fleets & shipyard"),
+        "{texts:?}"
+    );
+    assert!(!texts.iter().any(|text| text == "Victory"), "{texts:?}");
+}

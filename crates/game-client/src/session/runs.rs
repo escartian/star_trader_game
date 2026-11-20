@@ -357,17 +357,24 @@ impl LocalSession {
             )
         });
         let mut choice = None;
+        // A captain's first raider contact offers Auto-resolve first.
+        let first_fight = self.unlock_card_open(game_core::progress::Feature::Battles);
         ui.horizontal(|ui| {
+            let auto = |ui: &mut egui::Ui| {
+                icons::button(ui, Icon::Execute, "Auto-resolve")
+                    .on_hover_text("Fight the whole battle at once with the AI on both sides.")
+                    .clicked()
+            };
+            if first_fight && auto(ui) {
+                choice = Some(EncounterChoice::AutoResolve);
+            }
             if icons::button(ui, Icon::Weapon, "Fight")
-                .on_hover_text("Command your ships turn by turn on the battle grid.")
+                .on_hover_text("Command your ships turn by turn on the battle board.")
                 .clicked()
             {
                 choice = Some(EncounterChoice::Fight);
             }
-            if icons::button(ui, Icon::Execute, "Auto-resolve")
-                .on_hover_text("Fight the whole battle at once with the AI on both sides.")
-                .clicked()
-            {
+            if !first_fight && auto(ui) {
                 choice = Some(EncounterChoice::AutoResolve);
             }
             let evade = if encounter.haven {

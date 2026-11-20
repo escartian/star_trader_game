@@ -1,6 +1,6 @@
 # Phone-first rework
 
-Status: **phases 1–5 implemented (phone shell, flat play, hex battles, victory framework); unlocks remain.** This plan reworks the interface,
+Status: **all six phases implemented (phone shell, flat play, hex battles, victory framework, unlocks).** This plan reworks the interface,
 the map and battles around a phone-sized screen, and gives the game a goal.
 Where it conflicts with [map design](MAP_DESIGN.md) (3D map on a 2D screen) or
 [combat](COMBAT.md) (3D battle grid), this document wins once each phase lands.
@@ -192,13 +192,23 @@ names and reports are written in that voice.
 Rules exist from the start; controls appear when they become relevant, each with
 a one-line guide card.
 
+As built (`game-core/src/progress.rs`): new player games start as a captain;
+saves from before unlocks, tests and captures have everything unlocked. The
+host records unlocks after each command; the client shows a feature's controls
+once unlocked, with a dismissible guide card. Thresholds were rescaled for the
+small default economy (noted below).
+
 1. **Captain:** one freighter; market, refuel, plot a course, Advance.
-2. **First 2,000 cr of profit:** shipyard, more ships, fleets.
+2. **First 1,000 cr of profit** (net worth gained, at today's prices; the plan
+   said 2,000 cr, which in the default world already reaches half the Trader
+   goal): shipyard, more ships, fleets, standing orders.
 3. **Two fleets, or ten deliveries:** trade routes.
 4. **First raider contact:** battles (the first one offers Auto-resolve first,
    then the battle screen with a short guide).
 5. **First orbit of a moon or asteroid:** landing and mining.
-6. **First bounty, or 50,000 cr net worth:** the Victory panel and charters.
+6. **First bounty, or net worth at half the Trader goal's share of galaxy
+   wealth** (the plan's 50,000 cr was half-way to its old 1,000,000 cr goal):
+   the Victory panel, charters and the Raider Haven assault.
 
 ## What stays, changes or goes
 
@@ -242,7 +252,8 @@ Each phase ships on its own, keeps `./tools/check.sh` green and adds captures at
    ship is lost, the Raider Haven (assault from orbit; destroying it wins; bands
    stop returning once it falls) and trade charters with port share and
    shipping lanes. See [campaign](CAMPAIGN.md).
-6. **Unlocks:** progressive disclosure and guide cards.
+6. **Unlocks** (done): progressive disclosure with saved progress, one guide
+   card per unlock, and Auto-resolve offered first at the first raider contact.
 
 Diplomat/Spy and Pirate roads follow factions and missions (milestones 5 and 6).
 Mobile packaging stays deferred; phases 1 to 6 only make the layout and controls

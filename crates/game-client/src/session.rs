@@ -28,6 +28,7 @@ mod settings;
 mod setup;
 mod shell;
 mod standing_orders;
+mod unlocks;
 pub use shell::SheetTab;
 mod shipyard;
 use game_core::economy::Economy;
@@ -73,6 +74,8 @@ pub struct LocalSession {
     battle: battle::BattlePanel,
     saves: saves::SavePanel,
     victory: victory::VictoryPanel,
+    /// Guide cards for features unlocked this session, until dismissed.
+    unlock_cards: Vec<game_core::progress::Feature>,
     log: VecDeque<String>,
     loaded_galaxy: Option<Vec<game_core::StarSystem>>,
     notice: String,
@@ -108,6 +111,7 @@ impl LocalSession {
             battle: battle::BattlePanel::default(),
             saves: saves::SavePanel::default(),
             victory,
+            unlock_cards: Vec::new(),
             log: VecDeque::new(),
             loaded_galaxy: None,
             notice: String::new(),
@@ -323,6 +327,7 @@ impl LocalSession {
                         SessionEvent::RunLimitSet { runs: None } => {
                             "The campaign is open-ended.".into()
                         }
+                        SessionEvent::Unlocked { feature } => self.announce_unlock(feature),
                     };
                     self.record(message);
                 }

@@ -132,6 +132,10 @@ fn fresh_session(
     } else {
         game_server::Session::with_galaxy(seed, rules, options.galaxy)?
     };
+    // A player's new game starts as a captain; captures keep every control.
+    if !options.capturing() {
+        authority.begin_progression();
+    }
     if std::path::Path::new("config/movement.json").is_file() {
         authority.set_movement_rules(game_core::movement::MovementRules::from_json(
             &std::fs::read_to_string("config/movement.json")?,

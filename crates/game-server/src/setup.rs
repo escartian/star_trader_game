@@ -137,6 +137,7 @@ impl Session {
         let systems = game_core::generation::generate_galaxy_with(seed, setup.galaxy)?;
         let mut session = Self::from_generated(seed, rules, systems, movement)?;
         session.state.campaign.run_limit = setup.run_limit;
+        session.begin_progression();
         Ok(session)
     }
 }

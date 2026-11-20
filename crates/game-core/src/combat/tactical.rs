@@ -10,7 +10,10 @@
 //!   turn. A ship on its own side's edge may withdraw instead, leaving the battle
 //!   with its damage so far.
 //! - Hits and damage follow `engagement::{hit_chance, apply_hit}`.
-//! - The battle ends when a side has no active ships, or after [`MAX_ROUNDS`].
+//! - The battle is fought to a finish: it ends when a side has no active ships.
+//!   It also ends, disengaged, after [`CEASEFIRE_ROUNDS`] whole rounds in which
+//!   nobody fired, and [`MAX_ROUNDS`] is a safety backstop normal play never
+//!   reaches (every shot can hit and every hit deals at least one hull point).
 mod ai;
 mod grid;
 #[cfg(test)]
@@ -32,7 +35,10 @@ use super::{
 use crate::{fleet::ShipKind, travel::ShipId};
 use serde::{Deserialize, Serialize};
 
-pub const MAX_ROUNDS: u32 = 10;
+/// Safety backstop that bounds saved shot logs; not a gameplay limit.
+pub const MAX_ROUNDS: u32 = 100;
+/// Consecutive whole rounds without a shot after which both sides break off.
+pub const CEASEFIRE_ROUNDS: u32 = 3;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -185,6 +191,7 @@ impl Battle {
 
     pub fn finished(&self) -> bool {
         self.round > MAX_ROUNDS
+            || self.quiet_rounds() >= CEASEFIRE_ROUNDS
             || !self.side_active(Side::Player)
             || !self.side_active(Side::Hostile)
     }
@@ -205,6 +212,16 @@ impl Battle {
             (false, true) => Some(Side::Hostile),
             _ => None,
         })
+    }
+
+    /// Whole rounds just played in which nobody fired.
+    fn quiet_rounds(&self) -> u32 {
+        let played = &self.rounds[..self.rounds.len().saturating_sub(1)];
+        played
+            .iter()
+            .rev()
+            .take_while(|shots| shots.is_empty())
+            .count() as u32
     }
 
     fn side_active(&self, side: Side) -> bool {

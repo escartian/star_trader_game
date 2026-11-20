@@ -109,7 +109,8 @@ impl OrbitCamera {
             * Mat4::look_at_rh(self.eye(), Vec3::ZERO, Vec3::Z)
     }
 
-    /// `None` for points behind the camera.
+    /// One-off projection (tests); frames use [`Self::projector`].
+    #[cfg(test)]
     pub fn project(&self, rect: Rect, point: ScenePoint) -> Option<Projected> {
         self.projector(rect).project(point)
     }

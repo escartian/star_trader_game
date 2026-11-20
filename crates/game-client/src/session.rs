@@ -1,6 +1,7 @@
 //! Native session adapter. Course planning is separate from shared navigation runs.
 mod advance;
 mod battle;
+mod battle_cards;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture;
 mod combat_report;

@@ -1,18 +1,20 @@
-//! Paints the battle volume and finds what the pointer is over. Ships are
-//! sprite billboards standing on stalks over the floor grid, so their height
-//! reads at a glance; real 3D models replace the sprites later.
-use super::camera::{OrbitCamera, ScenePoint};
+//! Paints the battle volume and finds what the pointer is over. Ships are 3D
+//! models (or sprites) standing on stalks over the floor grid, so their layer
+//! reads at a glance; rings lie in each ship's own layer.
+use super::camera::{OrbitCamera, Projector, ScenePoint};
+use super::canvas::Canvas;
+use super::effects::Effects;
+use super::{backdrop, model};
 use crate::map::art::{ArtKind, Artwork};
 use crate::theme::{AMBER, CYAN, GREEN};
-use egui::{Color32, Painter, Pos2, Rect, Shape, Stroke};
+use egui::{Color32, FontId, Pos2, Rect, Stroke, Vec2};
 use game_core::combat::{
-    Side,
-    tactical::{Battle, Cell, DEPTH, HEIGHT, WIDTH},
+    CombatCatalog, Side,
+    engagement::hit_chance,
+    tactical::{Battle, Cell, Unit},
 };
-use glam::Vec3;
 
 pub const HOSTILE: Color32 = Color32::from_rgb(255, 104, 84);
-const GRID: Color32 = Color32::from_rgba_premultiplied(60, 84, 86, 120);
 
 /// What the pointer is over.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -23,6 +25,7 @@ pub enum Pick {
 
 pub struct SceneInput<'a> {
     pub battle: &'a Battle,
+    pub weapons: &'a CombatCatalog,
     /// Cells the acting ship may still move to.
     pub reachable: &'a [Cell],
     /// Enemies the acting ship can fire on now.
@@ -43,6 +46,8 @@ pub fn side_color(side: Side) -> Color32 {
 const SHIP_SIZE: f32 = 1.45;
 /// Length of a 3D ship model in world units (one cell is 1.0).
 const MODEL_SIZE: f32 = 1.6;
+/// Radius of the ring around a ship, in world units.
+const RING: f32 = 0.95;
 
 /// What is under `pointer`: ships first (nearest wins), then move cells on the
 /// shown layer.
@@ -53,6 +58,7 @@ pub fn pick(
     pointer: Option<Pos2>,
 ) -> Option<Pick> {
     let pointer = pointer.filter(|pointer| rect.contains(*pointer))?;
+    let projector = camera.projector(rect);
     let ship = input
         .battle
         .units
@@ -60,7 +66,7 @@ pub fn pick(
         .enumerate()
         .filter(|(_, unit)| unit.active())
         .filter_map(|(index, unit)| {
-            let at = camera.project(rect, ScenePoint::of_cell(unit.cell))?;
+            let at = projector.project(ScenePoint::of_cell(unit.cell))?;
             let radius = at.scale * SHIP_SIZE * 0.42;
             (at.pos.distance(pointer) <= radius).then_some((at.depth, index))
         })
@@ -73,7 +79,7 @@ pub fn pick(
         .iter()
         .filter(|cell| cell.z == input.layer)
         .filter_map(|cell| {
-            let at = camera.project(rect, ScenePoint::of_cell(*cell))?;
+            let at = projector.project(ScenePoint::of_cell(*cell))?;
             let reach = (at.scale * 0.32).max(7.0);
             let distance = at.pos.distance(pointer);
             (distance <= reach).then_some((distance, *cell))
@@ -82,326 +88,240 @@ pub fn pick(
         .map(|(_, cell)| Pick::Cell(cell))
 }
 
-pub fn paint(
-    painter: &Painter,
-    rect: Rect,
-    camera: &OrbitCamera,
-    input: &SceneInput,
-    hovered: Option<Pick>,
-) {
-    let painter = painter.with_clip_rect(rect);
-    painter.rect_filled(rect, 0.0, Color32::from_rgb(6, 10, 14));
-    let view = View {
+/// Everything in the view, back to front, at UI time `now`.
+pub struct Frame<'a> {
+    pub rect: Rect,
+    pub camera: &'a OrbitCamera,
+    pub hovered: Option<Pick>,
+    pub effects: &'a Effects,
+    pub now: f64,
+}
+
+pub fn paint(painter: &egui::Painter, frame: &Frame, input: &SceneInput) {
+    let painter = painter.with_clip_rect(frame.rect);
+    let projector = frame.camera.projector(frame.rect);
+    let canvas = Canvas {
         painter: &painter,
-        rect,
-        camera,
+        projector: &projector,
     };
-    view.floor();
-    view.layer(input.layer);
+    backdrop::sky(&painter, frame.rect, frame.camera.yaw);
+    backdrop::floor(&canvas);
+    backdrop::layer(&canvas, input.layer);
     let active = input.battle.active();
-    if let (Some(me), Some(Pick::Cell(cell))) = (active, hovered) {
-        let from = ScenePoint::of_cell(input.battle.units[me].cell);
-        let to = ScenePoint::of_cell(cell);
-        view.line(from, to, Stroke::new(2.0_f32, GREEN.gamma_multiply(0.8)));
-        view.line(
-            to,
-            to.on_floor(),
-            Stroke::new(1.0_f32, GREEN.gamma_multiply(0.4)),
-        );
+    if let (Some(me), Some(Pick::Cell(cell))) = (active, frame.hovered) {
+        move_preview(&canvas, input, me, cell);
     }
     for cell in input.reachable.iter().filter(|cell| cell.z == input.layer) {
-        if let Some(at) = camera.project(rect, ScenePoint::of_cell(*cell)) {
-            let lit = hovered == Some(Pick::Cell(*cell));
-            let radius = (at.scale * if lit { 0.14 } else { 0.07 }).max(2.0);
+        if let Some(at) = projector.project(ScenePoint::of_cell(*cell)) {
+            let lit = frame.hovered == Some(Pick::Cell(*cell));
+            let radius = (at.scale * if lit { 0.13 } else { 0.065 }).max(2.0);
+            painter.circle_filled(at.pos, radius * 2.2, GREEN.gamma_multiply(0.08));
             painter.circle_filled(
                 at.pos,
                 radius,
-                GREEN.gamma_multiply(if lit { 1.0 } else { 0.55 }),
+                GREEN.gamma_multiply(if lit { 1.0 } else { 0.6 }),
             );
         }
     }
-    if let (Some(me), Some(Pick::Unit(target))) = (active, hovered)
+    if let (Some(me), Some(Pick::Unit(target))) = (active, frame.hovered)
         && input.targets.contains(&target)
     {
         let from = ScenePoint::of_cell(input.battle.units[me].cell);
         let to = ScenePoint::of_cell(input.battle.units[target].cell);
-        view.line(from, to, Stroke::new(2.0_f32, HOSTILE));
+        canvas.dashed(from, to, 0.25, Stroke::new(2.0_f32, HOSTILE));
     }
-    view.ships(input, active, hovered);
+    ships(&canvas, frame, input, active);
+    frame.effects.paint(&canvas, frame.now);
+    if let Some(Pick::Unit(index)) = frame.hovered {
+        hover_card(&painter, &projector, input, index);
+    }
 }
 
-struct View<'a> {
-    painter: &'a Painter,
-    rect: Rect,
-    camera: &'a OrbitCamera,
+/// The path to a hovered move cell, and which enemies would be in reach from it.
+fn move_preview(canvas: &Canvas, input: &SceneInput, me: usize, cell: Cell) {
+    let from = ScenePoint::of_cell(input.battle.units[me].cell);
+    let to = ScenePoint::of_cell(cell);
+    canvas.line(from, to, Stroke::new(2.0_f32, GREEN.gamma_multiply(0.85)));
+    canvas.dashed(
+        to,
+        to.on_floor(),
+        0.2,
+        Stroke::new(1.0_f32, GREEN.gamma_multiply(0.4)),
+    );
+    canvas.ring(to, RING, Stroke::new(1.5_f32, GREEN.gamma_multiply(0.7)));
+    let reach = input.battle.max_range(me, input.weapons);
+    for unit in &input.battle.units {
+        if unit.side == Side::Hostile && unit.active() && cell.distance(unit.cell) <= reach {
+            let enemy = ScenePoint::of_cell(unit.cell);
+            canvas.dashed(
+                to,
+                enemy,
+                0.3,
+                Stroke::new(1.0_f32, HOSTILE.gamma_multiply(0.6)),
+            );
+        }
+    }
 }
 
-impl View<'_> {
-    fn at(&self, point: ScenePoint) -> Option<Pos2> {
-        self.camera.project(self.rect, point).map(|at| at.pos)
-    }
-
-    fn line(&self, a: ScenePoint, b: ScenePoint, stroke: Stroke) {
-        if let (Some(a), Some(b)) = (self.at(a), self.at(b)) {
-            self.painter.line_segment([a, b], stroke);
-        }
-    }
-
-    fn quad(&self, corners: [Vec3; 4], fill: Color32, stroke: Stroke) {
-        let points: Option<Vec<Pos2>> = corners
-            .iter()
-            .map(|corner| self.at(ScenePoint(*corner)))
-            .collect();
-        if let Some(points) = points {
-            self.painter
-                .add(Shape::convex_polygon(points, fill, stroke));
-        }
-    }
-
-    /// Floor grid, both deployment edges and the volume's outline.
-    fn floor(&self) {
-        let (hx, hy, hz) = half_extents();
-        let floor = -hz;
-        let edge = |x0: f32, x1: f32| {
-            [
-                Vec3::new(x0, -hy, floor),
-                Vec3::new(x1, -hy, floor),
-                Vec3::new(x1, hy, floor),
-                Vec3::new(x0, hy, floor),
-            ]
-        };
-        self.quad(
-            edge(-hx, -hx + 1.0),
-            CYAN.gamma_multiply(0.12),
-            Stroke::NONE,
-        );
-        self.quad(
-            edge(hx - 1.0, hx),
-            HOSTILE.gamma_multiply(0.12),
-            Stroke::NONE,
-        );
-        let stroke = Stroke::new(1.0_f32, GRID);
-        for step in 0..=WIDTH {
-            let x = -hx + f32::from(step);
-            self.line(
-                ScenePoint(Vec3::new(x, -hy, floor)),
-                ScenePoint(Vec3::new(x, hy, floor)),
-                stroke,
-            );
-        }
-        for step in 0..=DEPTH {
-            let y = -hy + f32::from(step);
-            self.line(
-                ScenePoint(Vec3::new(-hx, y, floor)),
-                ScenePoint(Vec3::new(hx, y, floor)),
-                stroke,
-            );
-        }
-        let faint = Stroke::new(1.0_f32, GRID.gamma_multiply(0.5));
-        for (x, y) in [(-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy)] {
-            self.line(
-                ScenePoint(Vec3::new(x, y, floor)),
-                ScenePoint(Vec3::new(x, y, hz)),
-                faint,
-            );
-        }
-        let top = [
-            Vec3::new(-hx, -hy, hz),
-            Vec3::new(hx, -hy, hz),
-            Vec3::new(hx, hy, hz),
-            Vec3::new(-hx, hy, hz),
-        ];
-        for index in 0..4 {
-            self.line(
-                ScenePoint(top[index]),
-                ScenePoint(top[(index + 1) % 4]),
-                faint,
-            );
-        }
-    }
-
-    /// Outline of the layer whose move cells are shown.
-    fn layer(&self, layer: i8) {
-        let (hx, hy, _) = half_extents();
-        let z = ScenePoint::of_cell(Cell {
-            x: 0,
-            y: 0,
-            z: layer,
+/// Ships far to near: stalk and footprint, ring, model or sprite, status bars.
+fn ships(canvas: &Canvas, frame: &Frame, input: &SceneInput, active: Option<usize>) {
+    let mut ships: Vec<_> = input
+        .battle
+        .units
+        .iter()
+        .enumerate()
+        .filter(|(_, unit)| unit.active())
+        .filter_map(|(index, unit)| {
+            let point = frame.effects.position(index, unit.cell, frame.now);
+            let at = canvas.projector.project(point)?;
+            Some((index, unit, point, at))
         })
-        .0
-        .z;
-        self.quad(
-            [
-                Vec3::new(-hx, -hy, z),
-                Vec3::new(hx, -hy, z),
-                Vec3::new(hx, hy, z),
-                Vec3::new(-hx, hy, z),
-            ],
-            GREEN.gamma_multiply(0.04),
-            Stroke::new(1.0_f32, GREEN.gamma_multiply(0.35)),
+        .collect();
+    ships.sort_by(|a, b| b.3.depth.total_cmp(&a.3.depth));
+    for (index, unit, point, at) in ships {
+        let color = side_color(unit.side);
+        canvas.dashed(
+            point,
+            point.on_floor(),
+            0.18,
+            Stroke::new(1.0_f32, color.gamma_multiply(0.5)),
         );
-    }
-
-    /// Ships far to near, each on a stalk to the floor, with hull and shield bars.
-    fn ships(&self, input: &SceneInput, active: Option<usize>, hovered: Option<Pick>) {
-        let mut ships: Vec<_> = input
-            .battle
-            .units
-            .iter()
-            .enumerate()
-            .filter(|(_, unit)| unit.active())
-            .filter_map(|(index, unit)| {
-                let at = self
-                    .camera
-                    .project(self.rect, ScenePoint::of_cell(unit.cell))?;
-                Some((index, unit, at))
-            })
-            .collect();
-        ships.sort_by(|a, b| b.2.depth.total_cmp(&a.2.depth));
-        for (index, unit, at) in ships {
-            let color = side_color(unit.side);
-            let point = ScenePoint::of_cell(unit.cell);
-            self.line(
-                point,
-                point.on_floor(),
-                Stroke::new(1.0_f32, color.gamma_multiply(0.45)),
-            );
-            if let Some(foot) = self.at(point.on_floor()) {
-                self.painter
-                    .circle_filled(foot, 2.5, color.gamma_multiply(0.6));
-            }
-            let size = at.scale * SHIP_SIZE;
-            let ring = if Some(index) == active {
-                Some((GREEN, 2.5_f32))
-            } else if input.targets.contains(&index) {
-                let lit = hovered == Some(Pick::Unit(index));
-                Some((HOSTILE, if lit { 3.0 } else { 1.5 }))
-            } else {
-                None
-            };
-            if let Some((ring, width)) = ring {
-                self.painter
-                    .circle_stroke(at.pos, size * 0.45, Stroke::new(width, ring));
-            }
-            let facing_left = unit.side == Side::Hostile;
-            if let Some(model) = super::model::for_kind(unit.kind) {
-                let projector = self.camera.projector(self.rect);
-                model.paint(self.painter, &projector, point, MODEL_SIZE, facing_left);
-            } else if !input.artwork.paint_facing(
-                ArtKind::from(unit.kind),
-                self.painter,
-                at.pos,
-                size,
-                facing_left,
-            ) {
-                self.painter.circle_filled(at.pos, size * 0.2, color);
-            }
-            self.bars(unit, at.pos, size);
-        }
-    }
-
-    fn bars(&self, unit: &game_core::combat::tactical::Unit, centre: Pos2, size: f32) {
-        let width = (size * 0.7).max(18.0);
-        let left = centre.x - width / 2.0;
-        let top = centre.y - size * 0.55;
-        let bar = |row: f32, fraction: f32, color: Color32| {
-            let back = Rect::from_min_size(Pos2::new(left, top + row), egui::vec2(width, 3.0));
-            self.painter
-                .rect_filled(back, 0.0, Color32::from_black_alpha(170));
-            let mut fill = back;
-            fill.set_width(width * fraction.clamp(0.0, 1.0));
-            self.painter.rect_filled(fill, 0.0, color);
-        };
-        let hull = unit.profile.hull.max(1) as f32;
-        let left_hull = (unit.profile.hull - unit.damage) as f32 / hull;
-        let hull_color = match left_hull {
-            f if f > 0.6 => GREEN,
-            f if f > 0.3 => AMBER,
-            _ => HOSTILE,
-        };
-        bar(0.0, left_hull, hull_color);
-        if unit.profile.shields > 0 {
-            bar(4.0, unit.shields as f32 / unit.profile.shields as f32, CYAN);
-        }
-    }
-}
-
-fn half_extents() -> (f32, f32, f32) {
-    (
-        f32::from(WIDTH) / 2.0,
-        f32::from(DEPTH) / 2.0,
-        f32::from(HEIGHT) / 2.0,
-    )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use game_core::combat::{CombatCatalog, engagement::CombatantSetup};
-    use game_core::fleet::{ShipCatalog, ShipKind};
-
-    fn battle() -> Battle {
-        let setup = |kind, side| CombatantSetup {
-            name: format!("{kind:?}"),
-            side,
-            ship: None,
-            kind,
-            profile: ShipCatalog::default().spec(kind).unwrap().combat.clone(),
-            hull_damage: 0,
-        };
-        let setups = [
-            setup(ShipKind::Freighter, Side::Player),
-            setup(ShipKind::Scout, Side::Hostile),
-        ];
-        Battle::new(&setups, &CombatCatalog::default(), 1).unwrap()
-    }
-
-    #[test]
-    fn pointing_at_a_ship_or_a_move_dot_picks_it_and_other_layers_are_ignored() {
-        let battle = battle();
-        let camera = OrbitCamera::default();
-        let rect = Rect::from_min_size(Pos2::ZERO, egui::vec2(900.0, 560.0));
-        let artwork = Artwork::preload(&egui::Context::default());
-        let here = battle.units[0].cell;
-        let step = Cell {
-            x: here.x + 1,
-            ..here
-        };
-        let above = Cell {
-            z: here.z + 1,
-            x: here.x + 1,
-            ..here
-        };
-        let reachable = [step, above];
-        let input = SceneInput {
-            battle: &battle,
-            reachable: &reachable,
-            targets: &[],
-            layer: here.z,
-            artwork: &artwork,
-        };
-        let screen = |cell| camera.project(rect, ScenePoint::of_cell(cell)).unwrap().pos;
-        assert_eq!(
-            pick(rect, &camera, &input, Some(screen(here))),
-            Some(Pick::Unit(0))
+        canvas.ring(
+            point.on_floor(),
+            0.25,
+            Stroke::new(1.0_f32, color.gamma_multiply(0.5)),
         );
-        let raider = battle.units[1].cell;
-        assert_eq!(
-            pick(rect, &camera, &input, Some(screen(raider))),
-            Some(Pick::Unit(1))
-        );
-        assert_eq!(
-            pick(rect, &camera, &input, Some(screen(step))),
-            Some(Pick::Cell(step))
-        );
-        // `above` is on another layer: not shown, so not clickable.
-        assert_ne!(
-            pick(rect, &camera, &input, Some(screen(above))),
-            Some(Pick::Cell(above))
-        );
-        assert_eq!(
-            pick(rect, &camera, &input, Some(Pos2::new(-5.0, -5.0))),
+        let ring = if Some(index) == active {
+            Some((GREEN, 2.5_f32))
+        } else if input.targets.contains(&index) {
+            let lit = frame.hovered == Some(Pick::Unit(index));
+            Some((HOSTILE, if lit { 3.0 } else { 1.5 }))
+        } else {
             None
-        );
+        };
+        if let Some((ring, width)) = ring {
+            canvas.ring(point, RING, Stroke::new(width, ring));
+        }
+        let facing_left = unit.side == Side::Hostile;
+        if let Some(model) = model::for_kind(unit.kind) {
+            model.paint(
+                canvas.painter,
+                canvas.projector,
+                point,
+                MODEL_SIZE,
+                facing_left,
+            );
+        } else if !input.artwork.paint_facing(
+            ArtKind::from(unit.kind),
+            canvas.painter,
+            at.pos,
+            at.scale * SHIP_SIZE,
+            facing_left,
+        ) {
+            canvas.painter.circle_filled(at.pos, at.scale * 0.3, color);
+        }
+        bars(canvas.painter, unit, at.pos, at.scale);
+    }
+}
+
+fn bars(painter: &egui::Painter, unit: &Unit, centre: Pos2, scale: f32) {
+    let width = (scale * 0.9).clamp(22.0, 70.0);
+    let left = centre.x - width / 2.0;
+    let top = centre.y - scale * 0.75;
+    let bar = |row: f32, fraction: f32, color: Color32| {
+        let back = Rect::from_min_size(Pos2::new(left, top + row), Vec2::new(width, 3.0));
+        painter.rect_filled(back.expand(1.0), 1.0, Color32::from_black_alpha(190));
+        let mut fill = back;
+        fill.set_width(width * fraction.clamp(0.0, 1.0));
+        painter.rect_filled(fill, 1.0, color);
+    };
+    let hull = hull_left(unit);
+    bar(0.0, hull, hull_color(hull));
+    if unit.profile.shields > 0 {
+        bar(5.0, unit.shields as f32 / unit.profile.shields as f32, CYAN);
+    }
+}
+
+/// Fraction of hull points left.
+pub fn hull_left(unit: &Unit) -> f32 {
+    (unit.profile.hull - unit.damage) as f32 / unit.profile.hull.max(1) as f32
+}
+
+pub fn hull_color(fraction: f32) -> Color32 {
+    match fraction {
+        f if f > 0.6 => GREEN,
+        f if f > 0.3 => AMBER,
+        _ => HOSTILE,
+    }
+}
+
+/// Name, condition and (for an enemy) distance and hit chances, by the ship.
+fn hover_card(painter: &egui::Painter, projector: &Projector, input: &SceneInput, index: usize) {
+    let battle = input.battle;
+    let unit = &battle.units[index];
+    let Some(at) = projector.project(ScenePoint::of_cell(unit.cell)) else {
+        return;
+    };
+    let mut lines = vec![
+        (unit.name.clone(), side_color(unit.side)),
+        (
+            format!(
+                "{} · hull {}/{} · shields {}/{}",
+                unit.kind.label(),
+                unit.profile.hull - unit.damage,
+                unit.profile.hull,
+                unit.shields,
+                unit.profile.shields
+            ),
+            Color32::from_gray(200),
+        ),
+    ];
+    if let Some(me) = battle
+        .active()
+        .filter(|me| battle.units[*me].side != unit.side)
+    {
+        let distance = battle.units[me].cell.distance(unit.cell);
+        let chances: Vec<String> = battle.units[me]
+            .profile
+            .loadout
+            .iter()
+            .filter_map(|id| input.weapons.weapon(id))
+            .filter(|weapon| weapon.range >= distance)
+            .map(|weapon| format!("{}%", hit_chance(weapon, unit.profile.engine, distance)))
+            .collect();
+        let line = if chances.is_empty() {
+            (format!("{distance} cells · out of range"), Color32::GRAY)
+        } else {
+            (
+                format!("{distance} cells · hit {}", chances.join(" / ")),
+                GREEN,
+            )
+        };
+        lines.push(line);
+    }
+    let galleys: Vec<_> = lines
+        .into_iter()
+        .map(|(text, color)| painter.layout_no_wrap(text, FontId::proportional(13.0), color))
+        .collect();
+    let width = galleys
+        .iter()
+        .map(|galley| galley.size().x)
+        .fold(0.0, f32::max)
+        + 16.0;
+    let height = galleys.iter().map(|galley| galley.size().y).sum::<f32>() + 10.0;
+    let origin = at.pos + Vec2::new(at.scale * 0.7, -height / 2.0);
+    let card = Rect::from_min_size(origin, Vec2::new(width, height));
+    painter.rect_filled(card, 4.0, Color32::from_rgba_unmultiplied(8, 14, 18, 230));
+    painter.rect_stroke(
+        card,
+        4.0,
+        Stroke::new(1.0_f32, side_color(unit.side).gamma_multiply(0.6)),
+        egui::StrokeKind::Inside,
+    );
+    let mut y = card.top() + 5.0;
+    for galley in galleys {
+        let height = galley.size().y;
+        painter.galley(Pos2::new(card.left() + 8.0, y), galley, Color32::WHITE);
+        y += height;
     }
 }

@@ -21,7 +21,8 @@ through a readable native map. No game engine, browser, webview or JavaScript.
   runs and individual salvage, distress and raider encounters.
 - Repeating trade routes: a fleet loops between two markets, buying the most
   profitable cargo at each end, and still stops for contacts.
-- Turn-based battles against raiders on a 3D grid (engine initiative, movement,
+- Turn-based battles against raiders on a 3D grid with 3D ship models, fought to
+  a finish (engine initiative, movement,
   weapon ranges, withdrawal) that you command or auto-resolve, with a saved
   combat report, destroyed ships, salvage and paid hull repairs.
 - Seeded starts, a first-delivery guide, session logs and

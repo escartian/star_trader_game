@@ -1,9 +1,14 @@
 //! The tactical battle view: an orbit camera over the 3D grid, the shown layer
 //! and pointer picking. View state only; battle rules and every mutation stay
 //! in game-core and the server.
+mod backdrop;
 pub mod camera;
+mod canvas;
+pub mod effects;
 pub mod model;
 pub mod scene;
+#[cfg(test)]
+mod scene_tests;
 
 use egui::{Sense, Vec2};
 use game_core::combat::tactical::{Battle, HEIGHT};
@@ -16,6 +21,7 @@ pub struct BattleView {
     pub layer: i8,
     /// (round, turn position) the layer last followed.
     synced: Option<(u32, usize)>,
+    effects: effects::Effects,
 }
 
 impl BattleView {
@@ -35,7 +41,8 @@ impl BattleView {
     }
 
     /// Paints the scene; drag orbits, scroll or pinch zooms, Q/E change layer.
-    /// Returns the hovered pick and, on a click, the clicked one.
+    /// Moves and shots since the last frame animate unless the UI has
+    /// animation turned off. Returns the hovered pick and any clicked one.
     pub fn show(
         &mut self,
         ui: &mut egui::Ui,
@@ -59,7 +66,20 @@ impl BattleView {
             self.shift_layer(i8::from(higher) - i8::from(lower));
         }
         let hovered = scene::pick(rect, &self.camera, input, response.hover_pos());
-        scene::paint(ui.painter(), rect, &self.camera, input, hovered);
+        let now = ui.input(|i| i.time);
+        let animate = ui.ctx().style().animation_time > 0.0;
+        self.effects.observe(input.battle, now, animate);
+        if self.effects.busy(now) {
+            ui.ctx().request_repaint();
+        }
+        let frame = scene::Frame {
+            rect,
+            camera: &self.camera,
+            hovered,
+            effects: &self.effects,
+            now,
+        };
+        scene::paint(ui.painter(), &frame, input);
         let clicked = response
             .clicked()
             .then(|| scene::pick(rect, &self.camera, input, response.interact_pointer_pos()))

@@ -12,7 +12,7 @@ pub enum CombatOutcome {
     Victory,
     /// Every player ship in the fleet was destroyed (one may survive crippled).
     Defeat,
-    /// Both sides still had ships: the round limit passed or a side withdrew.
+    /// Both sides still had ships: a side withdrew or both stopped firing.
     Disengaged,
 }
 

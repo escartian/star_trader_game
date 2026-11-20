@@ -157,15 +157,17 @@ Combat is the original README's first prioritized expansion.
   (`config/combat.json`).
 - [x] Authoritative raider encounters: Fight/Evade, focus-fire targeting,
   damage/destruction, salvage, saved results and a readable native combat report.
-- [x] Deterministic seeded resolution (seed saved in the report), round limit and
-  disengagement; last-ship rule; paid hull repairs at markets.
+- [x] Deterministic seeded resolution (seed saved in the report), withdrawal and
+  ceasefire disengagement; last-ship rule; paid hull repairs at markets.
 - [x] Turn-based tactical rules on a 3D grid: HoMM-style engine initiative, move,
   ranged fire, withdrawal from your own edge, raider AI and Auto-resolve.
 - [x] Play battles turn by turn: saved battles in progress, move/fire/withdraw/
   auto-resolve commands, and a 3D battle view with orbit camera, layer selection
-  and grid picking. Freighter and patrol hulls are drawn from Blender glTF exports.
-- [ ] 3D models for every hull (scout needs a lighter mesh), a GPU mesh renderer
-  with depth buffer, and animated raider turns and weapon effects.
+  and grid picking. Battles run to a finish (no round limit).
+- [x] Every hull drawn from a Blender glTF export (the scout decimated to 1,600
+  triangles); animated moves and weapon beams; side strength, portraits, hover
+  cards and move-range previews.
+- [ ] A GPU mesh renderer with a depth buffer (the egui painter sorts faces).
 - [ ] Explicit hostility/engagement rules for NPC/faction fleets and credit bounties.
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,

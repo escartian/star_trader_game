@@ -1,4 +1,4 @@
-use super::{Battle, BattleError, Cell, MAX_ROUNDS, auto_resolve, home_edge, move_range};
+use super::{Battle, BattleError, CEASEFIRE_ROUNDS, Cell, auto_resolve, home_edge, move_range};
 use crate::combat::{
     CombatCatalog, CombatProfile, HullSize,
     engagement::{CombatantSetup, Side},
@@ -161,14 +161,15 @@ fn ships_withdraw_only_from_their_own_edge_and_a_full_withdrawal_disengages() {
 }
 
 #[test]
-fn unarmed_fleets_disengage_after_the_round_limit() {
+fn fleets_that_stop_firing_disengage_after_a_ceasefire() {
     let result = auto_resolve(
         &[unarmed(Side::Player), unarmed(Side::Hostile)],
         &CombatCatalog::default(),
         4,
     )
     .unwrap();
-    assert_eq!(result.rounds.len(), MAX_ROUNDS as usize);
+    // The ceasefire rounds, plus the round that had just begun when it ended.
+    assert_eq!(result.rounds.len(), CEASEFIRE_ROUNDS as usize + 1);
     assert_eq!(result.winner, None);
 }
 

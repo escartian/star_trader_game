@@ -70,7 +70,7 @@ pub struct ShotRecord {
 pub struct Engagement {
     pub combatants: Vec<CombatantResult>,
     pub rounds: Vec<Vec<ShotRecord>>,
-    /// `None` when both sides still have ships (round limit or withdrawal).
+    /// `None` when both sides still have ships (withdrawal or ceasefire).
     pub winner: Option<Side>,
 }
 

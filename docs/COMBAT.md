@@ -68,9 +68,15 @@ least 1 point, and never exceeds the remaining hull. Example: 20 damage at 200%
 against 10 shields → 5 raw damage breaks the shields, 15 passes; armor 6 with
 penetration 2 leaves 11 hull damage.
 
-The battle ends when a side has no active ships (destroyed or withdrawn), or
-after 10 rounds. A side wins only if every enemy ship was destroyed; otherwise
-the result is **Disengaged**. Ships that were already damaged fight with their
+Battles are fought to a finish: there is no round limit. A battle ends when a
+side has no active ships (destroyed or withdrawn). It also ends if three whole
+rounds pass in which nobody fires (a ceasefire: both sides break off). A side
+wins only if every enemy ship was destroyed; otherwise the result is
+**Disengaged**. A 100-round safety cap bounds saved shot logs; normal play never
+reaches it, because every shot has at least a 5% hit chance and every hull hit
+deals at least 1 point. With Auto-resolve over 400 seeds, freighter vs scout
+averages 7 rounds (at most 14) and patrol vs patrol 13 (at most 26), with no
+ceasefires. Ships that were already damaged fight with their
 saved `hull_damage`, at full shields.
 
 **AI and Auto-resolve.** Raiders, and both sides under Auto-resolve, focus the
@@ -84,24 +90,32 @@ saved with the session (`navigation.battle`) and its contact stays pending, so
 navigation runs wait for it. The server plays raider turns right after each
 player action, so a saved battle is always waiting on one of your ships.
 
-- The view is a 3D grid: your edge is the cyan strip on the left, the raiders'
-  edge the red strip on the right. Ships stand on stalks over the floor so their
-  layer reads at a glance; bars show hull and shields. Drag to orbit, scroll or
+- The header shows the round and each side's remaining hull and ships.
+- The view is a 3D grid over a starfield: your edge is the cyan strip on the
+  left, the raiders' edge the red strip on the right. Ships stand on dashed
+  stalks over the floor so their layer reads at a glance; rings lie in the
+  ship's own layer, and bars show hull and shields. Drag to orbit, scroll or
   pinch to zoom.
 - **Move:** green dots are the free cells your ship can reach on the shown layer.
-  **Lower** / **Higher** (or Q / E) change the layer; it follows your ship at the
-  start of each turn. Click a dot to move.
-- **Fire:** raiders your weapons reach have a red ring. Hover one to see each
-  weapon's hit chance at that distance; click it to fire.
-- **Withdraw** from your edge column, **End turn**, or **Auto-resolve** to let
-  the AI fight every remaining turn on both sides.
-- The turn-order bar lists every ship, outlines the one acting and marks lost or
-  departed ships. The last shots are listed below the grid.
+  The **Layer 1–5** buttons (or Q / E) change the layer; it follows your ship at
+  the start of each turn. Hovering a dot draws the path and dashed lines to every
+  raider your weapons would reach from there. Click a dot to move.
+- **Fire:** raiders your weapons reach have a red ring. Hovering any ship shows
+  a card with its condition and, for a raider, the distance and each weapon's
+  hit chance; click a ringed raider to fire.
+- **End turn** (or Space), **Withdraw** from your edge column, or
+  **Auto-resolve** to let the AI fight every remaining turn on both sides.
+- Moves glide and shots fly as beams, flashing cyan on shields, amber on hulls
+  and bursting when a ship is destroyed, so raider turns played by the server are
+  visible. The animation is display-only; captures turn it off.
+- The turn-order bar shows every ship with its portrait and hull, lights the one
+  acting and marks lost or departed ships. The ship card shows whether it can
+  still move and fire this turn, and the combat log lists the latest shots.
 - Hide the window (×) to look at the map; **Return to battle** in the contact
   panel brings it back. The combat report opens when the battle ends.
 
-Freighters and patrol ships are drawn as their real 3D models (see the asset
-notes); the scout still uses its sprite until it has a lighter mesh.
+Every hull is drawn as its real 3D model (see the asset notes); sprites remain
+as the fallback and for portraits.
 
 ## Raider contacts
 

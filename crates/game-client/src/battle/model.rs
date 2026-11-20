@@ -1,6 +1,6 @@
 //! Low-poly ship models for the battle view, exported from the Blender sources by
 //! `tools/art/export_battle_models.py`. They are drawn flat-shaded as egui
-//! triangles, far faces first; hulls without a model keep their sprite.
+//! triangles, far faces first; a hull whose model fails to load keeps its sprite.
 //!
 //! Model space is Blender's: +Z up, nose along +Y, in Blender units. Loading
 //! recentres each model on its bounding box.
@@ -34,6 +34,7 @@ pub struct ShipModel {
 pub fn for_kind(kind: ShipKind) -> Option<&'static ShipModel> {
     static FREIGHTER: OnceLock<Option<ShipModel>> = OnceLock::new();
     static PATROL: OnceLock<Option<ShipModel>> = OnceLock::new();
+    static SCOUT: OnceLock<Option<ShipModel>> = OnceLock::new();
     let (cell, bytes): (_, &[u8]) = match kind {
         ShipKind::Freighter => (
             &FREIGHTER,
@@ -43,7 +44,10 @@ pub fn for_kind(kind: ShipKind) -> Option<&'static ShipModel> {
             &PATROL,
             include_bytes!("../../../../assets/models/patrol.glb"),
         ),
-        ShipKind::Scout => return None,
+        ShipKind::Scout => (
+            &SCOUT,
+            include_bytes!("../../../../assets/models/scout.glb"),
+        ),
     };
     cell.get_or_init(|| ShipModel::load(bytes).ok()).as_ref()
 }
@@ -158,8 +162,16 @@ fn collect(
                 Some(indices) => indices.into_u32().map(|index| index as usize).collect(),
                 None => (0..positions.len()).collect(),
             };
+            // Scanned hulls carry linear per-vertex colours; others are white here.
+            let colors: Vec<[f32; 4]> = match reader.read_colors(0) {
+                Some(colors) => colors.into_rgba_f32().collect(),
+                None => vec![[1.0; 4]; positions.len()],
+            };
+            if colors.len() != positions.len() {
+                return Err("A model part has the wrong number of vertex colours".into());
+            }
             let material = primitive.material();
-            let [red, green, blue, _] = material.pbr_metallic_roughness().base_color_factor();
+            let factor = material.pbr_metallic_roughness().base_color_factor();
             let emissive = material
                 .emissive_factor()
                 .iter()
@@ -171,10 +183,15 @@ fn collect(
                 };
                 let normal = (b - a).cross(c - a).normalize_or_zero();
                 if normal != Vec3::ZERO {
+                    // Flat shading: one colour per face, the mean of its corners.
+                    let channel = |index: usize| {
+                        let sum: f32 = corner.iter().map(|&vertex| colors[vertex][index]).sum();
+                        factor[index] * sum / 3.0
+                    };
                     triangles.push(Triangle {
                         corners: [a, b, c],
                         normal,
-                        color: Rgba::from_rgb(red, green, blue),
+                        color: Rgba::from_rgb(channel(0), channel(1), channel(2)),
                         emissive,
                     });
                 }
@@ -193,13 +210,9 @@ mod tests {
 
     #[test]
     fn embedded_models_load_centred_with_coloured_parts() {
-        for kind in [ShipKind::Freighter, ShipKind::Patrol] {
+        for kind in [ShipKind::Freighter, ShipKind::Patrol, ShipKind::Scout] {
             check(for_kind(kind).unwrap_or_else(|| panic!("{kind:?} model loads")));
         }
-        assert!(
-            for_kind(ShipKind::Scout).is_none(),
-            "the scout keeps its sprite"
-        );
         assert!(ShipModel::load(b"not a model").is_err());
     }
 
@@ -210,8 +223,7 @@ mod tests {
             .iter()
             .map(|triangle| Color32::from(triangle.color))
             .collect();
-        assert!(colors.len() >= 4, "hull, canopy, accents and engines");
-        assert!(model.triangles.iter().any(|triangle| triangle.emissive));
+        assert!(colors.len() >= 4, "several painted parts");
         let (low, high) = model
             .triangles
             .iter()

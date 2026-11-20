@@ -114,9 +114,10 @@ the same camera and lights; `tools/comfyui/README.md` covers the full pipeline.
 
 `models/*.glb` are runtime glTF exports of the low-poly hull sources for the
 battle view: `models/freighter.glb` and `models/patrol.glb` (about 1,100–1,300
-triangles each, four plain-colour materials, no textures). The scout still
-appears as its sprite there; the 60,000-triangle AI courier needs a lighter
-version before it can join.
+triangles each, four plain-colour materials, no textures) and `models/scout.glb`,
+the AI courier collapse-decimated on export from 60,000 to 1,600 triangles with
+its per-vertex paint kept (the loader gives each face the mean of its corners).
+The `.blend` sources are not modified.
 Re-export with:
 
 ```sh

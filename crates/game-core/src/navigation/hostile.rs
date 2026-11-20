@@ -10,6 +10,9 @@ use crate::{
 
 /// Largest raider group; keeps first contacts survivable for small fleets.
 pub const MAX_RAIDERS: usize = 3;
+/// Largest raider group a save may hold. Play never exceeds [`MAX_RAIDERS`],
+/// but developer fixtures stage bigger battles (within `MAX_COMBATANTS`).
+pub const MAX_SAVED_RAIDERS: usize = 8;
 /// Ore recovered per destroyed raider hull, if cargo space allows.
 pub const SALVAGE_ORE_PER_RAIDER: u32 = 2;
 

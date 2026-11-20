@@ -125,7 +125,7 @@ impl TravelState {
                 || encounter.run > self.navigation.run
                 || (encounter.kind == super::EncounterKind::Raiders)
                     != !encounter.hostiles.is_empty()
-                || encounter.hostiles.len() > super::hostile::MAX_RAIDERS
+                || encounter.hostiles.len() > super::hostile::MAX_SAVED_RAIDERS
                 || !self
                     .navigation
                     .order(encounter.fleet)

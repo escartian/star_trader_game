@@ -49,6 +49,8 @@ cargo run -p game-client -- --continue
 # Built with ordinary commands plus a 25,000 cr test budget; reload with --continue:
 cargo run -p game-client --features dev-tools -- --scenario multi-fleet --save data/multi-fleet.json
 cargo run -p game-client -- --continue --save data/multi-fleet.json
+# Seven ships against seven raiders, the battle open on your first turn:
+cargo run -p game-client --features dev-tools -- --scenario fleet-battle --save data/fleet-battle.json
 # macOS: build target/StarTrader.app with the game icon:
 ./tools/package_macos.sh
 # Export a complete initial world/player save as JSON without a window:
@@ -203,7 +205,7 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [run review](docs/previews/run-review.png), [advancing](docs/previews/advance.png),
 [trade route](docs/previews/trade-route.png),
 [map command](docs/previews/destination.png),
-[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`, `battle`. Captures do not test window
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `combat`, `battle`. Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

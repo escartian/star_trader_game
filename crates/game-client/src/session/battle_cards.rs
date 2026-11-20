@@ -59,9 +59,12 @@ pub fn side_strength(ui: &mut Ui, battle: &Battle, side: Side, label: &str) {
     .on_hover_text(format!("{left} of {total} hull points left"));
 }
 
-/// Every ship in initiative order: portrait, name and hull; the acting ship is lit.
+/// Every ship in initiative order: portrait and hull (and the name, when there
+/// is room); the acting ship is lit and kept in view.
 pub fn initiative_bar(ui: &mut Ui, battle: &Battle, artwork: &Artwork) {
     let active = battle.active();
+    // Past six ships, chips drop their names (shown on hover) so all fit.
+    let compact = battle.units.len() > 6;
     egui::ScrollArea::horizontal()
         .id_salt("battle-initiative")
         .show(ui, |ui| {
@@ -69,14 +72,25 @@ pub fn initiative_bar(ui: &mut Ui, battle: &Battle, artwork: &Artwork) {
                 ui.label(RichText::new("TURN ORDER").small().color(Color32::GRAY));
                 for &index in &battle.order {
                     let index = usize::from(index);
-                    chip(ui, &battle.units[index], Some(index) == active, artwork);
+                    let acting = Some(index) == active;
+                    let chip = chip(ui, &battle.units[index], acting, compact, artwork);
+                    if acting {
+                        chip.scroll_to_me(Some(egui::Align::Center));
+                    }
                 }
             });
         });
 }
 
-fn chip(ui: &mut Ui, unit: &Unit, acting: bool, artwork: &Artwork) {
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(148.0, 38.0), Sense::hover());
+fn chip(
+    ui: &mut Ui,
+    unit: &Unit,
+    acting: bool,
+    compact: bool,
+    artwork: &Artwork,
+) -> egui::Response {
+    let width = if compact { 52.0 } else { 148.0 };
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 38.0), Sense::hover());
     let painter = ui.painter();
     let color = if unit.active() {
         side_color(unit.side)
@@ -100,13 +114,18 @@ fn chip(ui: &mut Ui, unit: &Unit, acting: bool, artwork: &Artwork) {
         stroke,
         egui::StrokeKind::Inside,
     );
-    let portrait = rect.left_center() + Vec2::new(19.0, 0.0);
+    let portrait = if compact {
+        rect.center_top() + Vec2::new(0.0, 15.0)
+    } else {
+        rect.left_center() + Vec2::new(19.0, 0.0)
+    };
     if unit.active() {
+        let size = if compact { 26.0 } else { 32.0 };
         artwork.paint_facing(
             ArtKind::from(unit.kind),
             painter,
             portrait,
-            32.0,
+            size,
             unit.side == Side::Hostile,
         );
     }
@@ -117,17 +136,23 @@ fn chip(ui: &mut Ui, unit: &Unit, acting: bool, artwork: &Artwork) {
     } else {
         None
     };
-    let text = Rect::from_min_max(
-        rect.min + Vec2::new(38.0, 4.0),
-        rect.max - Vec2::new(6.0, 4.0),
-    );
-    painter.text(
-        text.left_top(),
-        egui::Align2::LEFT_TOP,
-        &unit.name,
-        egui::FontId::proportional(13.0),
-        color,
-    );
+    let text = if compact {
+        rect.shrink2(Vec2::new(5.0, 4.0))
+    } else {
+        Rect::from_min_max(
+            rect.min + Vec2::new(38.0, 4.0),
+            rect.max - Vec2::new(6.0, 4.0),
+        )
+    };
+    if !compact {
+        painter.text(
+            text.left_top(),
+            egui::Align2::LEFT_TOP,
+            &unit.name,
+            egui::FontId::proportional(13.0),
+            color,
+        );
+    }
     match status {
         Some(status) => {
             painter.text(
@@ -140,7 +165,7 @@ fn chip(ui: &mut Ui, unit: &Unit, acting: bool, artwork: &Artwork) {
         }
         None => {
             let bar = Rect::from_min_size(
-                text.left_bottom() - Vec2::new(0.0, 5.0),
+                text.left_bottom() - Vec2::new(0.0, 4.0),
                 Vec2::new(text.width(), 4.0),
             );
             painter.rect_filled(bar, 1.0, Color32::from_black_alpha(170));
@@ -151,12 +176,13 @@ fn chip(ui: &mut Ui, unit: &Unit, acting: bool, artwork: &Artwork) {
         }
     }
     response.on_hover_text(format!(
-        "{} · engine {} · hull {}/{}",
+        "{} · {} · engine {} · hull {}/{}",
+        unit.name,
         unit.kind.label(),
         unit.profile.engine,
         unit.profile.hull - unit.damage,
         unit.profile.hull
-    ));
+    ))
 }
 
 /// Portrait, condition and what the acting ship has left to do this turn.

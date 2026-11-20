@@ -121,7 +121,12 @@ fn dev_scenario(
 ) -> Result<game_server::Session, Box<dyn std::error::Error>> {
     let session = match name {
         "multi-fleet" => game_server::Session::multi_fleet_scenario(options.seed)?,
-        other => return Err(format!("Unknown scenario {other}; available: multi-fleet").into()),
+        "fleet-battle" => game_server::Session::fleet_battle_scenario(options.seed)?,
+        other => {
+            return Err(
+                format!("Unknown scenario {other}; available: multi-fleet, fleet-battle").into(),
+            );
+        }
     };
     if !options.capturing() {
         session.save(&options.save)?;

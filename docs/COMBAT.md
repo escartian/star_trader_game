@@ -45,8 +45,9 @@ stored in the report, so the same seed and actions replay the same battle.
 **Battle space.** 9 cells along x (between the two sides), 9 along y and 5
 vertical layers along z. Distance is Chebyshev: one step may change all three
 axes, so every movement and weapon range is a cube. Player ships deploy on the
-second column (x = 1), raiders on x = 7, nearest the centre first; each side
-withdraws from its own edge (x = 0 or x = 8).
+second column (x = 1), raiders on x = 7, in a checkerboard around the centre
+(centre first, then the middle layer, then the layers beside it) so no two ships
+of a side share a face; each side withdraws from its own edge (x = 0 or x = 8).
 
 **Turns (HoMM-style initiative).** Each round every active ship acts once, by
 engine rating (high first); ties break by a seeded roll drawn once per battle.
@@ -72,11 +73,13 @@ Battles are fought to a finish: there is no round limit. A battle ends when a
 side has no active ships (destroyed or withdrawn). It also ends if three whole
 rounds pass in which nobody fires (a ceasefire: both sides break off). A side
 wins only if every enemy ship was destroyed; otherwise the result is
-**Disengaged**. A 100-round safety cap bounds saved shot logs; normal play never
+**Disengaged**. A 200-round safety cap bounds saved shot logs; normal play never
 reaches it, because every shot has at least a 5% hit chance and every hull hit
 deals at least 1 point. With Auto-resolve over 400 seeds, freighter vs scout
 averages 7 rounds (at most 14) and patrol vs patrol 13 (at most 26), with no
-ceasefires. Ships that were already damaged fight with their
+ceasefires. Big fleets fight long, attritional battles: 7 v 7 averages 20–27
+rounds (at most 54), usually leaving one or two survivors; the largest possible
+battle, 8 patrols a side, peaked at 68 rounds over 2,000 seeds, always decided. Ships that were already damaged fight with their
 saved `hull_damage`, at full shields.
 
 **AI and Auto-resolve.** Raiders, and both sides under Auto-resolve, focus the
@@ -116,6 +119,13 @@ player action, so a saved battle is always waiting on one of your ships.
 
 Every hull is drawn as its real 3D model (see the asset notes); sprites remain
 as the fallback and for portraits.
+
+**Large battles.** Play caps raider groups at three, but battles hold up to 16
+ships. The developer scenario `--scenario fleet-battle` (dev-tools build) opens a
+7 v 7 battle on your first turn: a strike group of three freighters, two patrol
+ships and two scouts against two raider patrols and five scouts. Saves accept up
+to 8 raiders per contact for such fixtures. With more than six ships the
+turn-order bar switches to compact portrait chips (names on hover).
 
 ## Raider contacts
 

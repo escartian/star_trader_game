@@ -1,11 +1,13 @@
 //! Reproducible test scenarios built through ordinary authoritative commands.
-//! The only non-command steps are an explicit, documented test budget grant and
-//! the encounter-chance override that makes contact tests deterministic.
+//! The only non-command steps are an explicit, documented test budget grant, the
+//! encounter-chance override that makes contact tests deterministic, and the
+//! fleet-battle fixture's restocked home shipyard and raider group.
 use super::Session;
 use game_core::{
     BodyId, BodyKind, SystemId,
     economy::Credits,
     fleet::{FleetId, ShipKind},
+    navigation::{EncounterChoice, EncounterKind},
     travel::ShipId,
 };
 use game_protocol::{ClientCommand, ServerMessage};
@@ -62,6 +64,69 @@ impl Session {
             session.quiet_run()?;
         }
         session.state.movement_rules.encounter_chance_percent = chance;
+        Ok(session)
+    }
+
+    /// Seven ships against seven raiders, with the battle open on the player's
+    /// first turn:
+    /// - "Strike Group": the starting freighter, two more freighters, two patrol
+    ///   ships and two scouts, bound for the first planet;
+    /// - raiders: two patrol ships and five scouts. Play caps raider groups at
+    ///   three; this fixture sets the group directly.
+    pub fn fleet_battle_scenario(seed: u64) -> Result<Self, String> {
+        let mut session = Self::with_seed(seed);
+        session.economy.credits = Credits(TEST_BUDGET.0 * 4);
+        let yard = session
+            .economy
+            .current_market(&session.state.ships[0])
+            .map_err(|error| error.to_string())?
+            .id;
+        // Fixture: enough hulls in stock for the whole strike group.
+        let yard = session
+            .economy
+            .market_mut(yard)
+            .map_err(|error| error.to_string())?;
+        yard.ship_stock = yard.ship_stock.map(|stock| stock.max(4));
+        for kind in [
+            ShipKind::Freighter,
+            ShipKind::Freighter,
+            ShipKind::Patrol,
+            ShipKind::Patrol,
+            ShipKind::Scout,
+            ShipKind::Scout,
+        ] {
+            session.buy(kind)?;
+        }
+        session.rename(ShipId(1), "Strike Group")?;
+        let home = session.state.ships[0]
+            .location
+            .system()
+            .ok_or("Starting ship must begin in a system")?;
+        let planet = session.body(home, |kind| {
+            kind == BodyKind::RockyPlanet || kind == BodyKind::GasGiant
+        })?;
+        session.plot(ShipId(1), home, Some(planet))?;
+        let chance = session.state.movement_rules.encounter_chance_percent;
+        session.set_encounter_chance(100);
+        session.quiet_run()?;
+        session.state.movement_rules.encounter_chance_percent = chance;
+        let encounter = session
+            .state
+            .navigation
+            .encounters
+            .first_mut()
+            .ok_or("The strike group met no contact")?;
+        encounter.kind = EncounterKind::Raiders;
+        encounter.hostiles = [ShipKind::Patrol; 2]
+            .into_iter()
+            .chain([ShipKind::Scout; 5])
+            .collect();
+        let encounter = encounter.id;
+        session.run(ClientCommand::ResolveEncounter {
+            encounter,
+            choice: EncounterChoice::Fight,
+            expected_revision: session.state.revision,
+        })?;
         Ok(session)
     }
 
@@ -197,5 +262,46 @@ mod tests {
         session.save(&path).unwrap();
         let (loaded, _) = Session::load(&path).unwrap();
         assert_eq!(loaded.state.fleets.len(), 4);
+    }
+}
+
+#[cfg(test)]
+mod fleet_battle_tests {
+    use super::*;
+    use game_core::{combat::Side, navigation::BattleAction};
+
+    #[test]
+    fn seven_against_seven_opens_on_a_player_turn_saves_and_fights_to_a_finish() {
+        let mut session = Session::fleet_battle_scenario(1).unwrap();
+        let open = session
+            .state
+            .navigation
+            .battle
+            .clone()
+            .expect("battle open");
+        let side = |side| {
+            open.battle
+                .units
+                .iter()
+                .filter(|unit| unit.side == side)
+                .count()
+        };
+        assert_eq!((side(Side::Player), side(Side::Hostile)), (7, 7));
+        let me = open.battle.active().unwrap();
+        assert_eq!(open.battle.units[me].side, Side::Player);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("fleet-battle.json");
+        session.save(&path).unwrap();
+        let (loaded, _) = Session::load(&path).unwrap();
+        assert_eq!(loaded.state, session.state);
+        session
+            .run(ClientCommand::BattleAction {
+                action: BattleAction::AutoResolve,
+                expected_revision: session.state.revision,
+            })
+            .unwrap();
+        let report = session.state.navigation.last_combat.clone().unwrap();
+        assert!(session.state.navigation.battle.is_none());
+        assert!(report.outcome != game_core::combat::CombatOutcome::Disengaged);
     }
 }

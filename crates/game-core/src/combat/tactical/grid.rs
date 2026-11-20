@@ -47,7 +47,10 @@ pub fn home_edge(side: Side) -> i8 {
 }
 
 /// Deployment: a side's ships fill its second column (one cell in from the edge,
-/// so a damaged ship can step back and withdraw), nearest the centre first.
+/// so a damaged ship can step back and withdraw) in a checkerboard around the
+/// centre: no two ships share a face, so even a large fleet stays readable.
+/// Order: the centre cell, then the middle layer, then the layers beside it.
+/// With 23 checkerboard cells per column, every legal fleet fits.
 pub(super) fn deployment_cell(side: Side, rank: usize) -> Cell {
     let x = match side {
         Side::Player => 1,
@@ -58,11 +61,9 @@ pub(super) fn deployment_cell(side: Side, rank: usize) -> Cell {
         .flat_map(|y| (0..HEIGHT).map(move |z| Cell { x, y, z }))
         .collect();
     cells.sort_by_key(|cell| {
-        (
-            (cell.y - mid_y).abs() * 2 + (cell.z - mid_z).abs(),
-            cell.y,
-            cell.z,
-        )
+        let (dy, dz) = ((cell.y - mid_y).abs(), (cell.z - mid_z).abs());
+        let off_lattice = (dy + dz) % 2 != 0;
+        (off_lattice, dy + dz, dz, cell.y, cell.z)
     });
     cells[rank % cells.len()]
 }

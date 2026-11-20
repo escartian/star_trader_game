@@ -36,7 +36,7 @@ use crate::{fleet::ShipKind, travel::ShipId};
 use serde::{Deserialize, Serialize};
 
 /// Safety backstop that bounds saved shot logs; not a gameplay limit.
-pub const MAX_ROUNDS: u32 = 100;
+pub const MAX_ROUNDS: u32 = 200;
 /// Consecutive whole rounds without a shot after which both sides break off.
 pub const CEASEFIRE_ROUNDS: u32 = 3;
 

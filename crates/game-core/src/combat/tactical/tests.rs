@@ -1,4 +1,6 @@
-use super::{Battle, BattleError, CEASEFIRE_ROUNDS, Cell, auto_resolve, home_edge, move_range};
+use super::{
+    Battle, BattleError, CEASEFIRE_ROUNDS, Cell, MAX_ROUNDS, auto_resolve, home_edge, move_range,
+};
 use crate::combat::{
     CombatCatalog, CombatProfile, HullSize,
     engagement::{CombatantSetup, Side},
@@ -52,6 +54,18 @@ fn sides_deploy_on_opposite_columns_in_unique_cells() {
             super::WIDTH - 2
         };
         assert_eq!(unit.cell.x, column);
+    }
+    // Checkerboard: no two ships of a side share a face.
+    for a in &battle.units {
+        for b in &battle.units {
+            let face = (a.cell.y - b.cell.y).abs() + (a.cell.z - b.cell.z).abs() == 1;
+            assert!(
+                !(a.side == b.side && face),
+                "{:?} touches {:?}",
+                a.cell,
+                b.cell
+            );
+        }
     }
 }
 
@@ -216,6 +230,21 @@ fn player_record(player: &[ShipKind], hostile: &[ShipKind]) -> (u32, u32) {
             None => (wins, losses),
         }
     })
+}
+
+#[test]
+fn the_largest_battles_end_decisively_far_below_the_safety_cap() {
+    // 8 patrols a side is the most a battle holds; 2,000 seeds peaked at 68 rounds.
+    let catalog = CombatCatalog::default();
+    let mut setups: Vec<_> = (0..8)
+        .map(|_| ship(ShipKind::Patrol, Side::Player))
+        .collect();
+    setups.extend((0..8).map(|_| ship(ShipKind::Patrol, Side::Hostile)));
+    for seed in 0..60 {
+        let result = auto_resolve(&setups, &catalog, seed).unwrap();
+        assert!(result.winner.is_some(), "seed {seed} was undecided");
+        assert!(result.rounds.len() < MAX_ROUNDS as usize / 2, "seed {seed}");
+    }
 }
 
 #[test]

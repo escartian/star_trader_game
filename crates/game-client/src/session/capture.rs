@@ -198,6 +198,9 @@ impl LocalSession {
 
     fn capture_raiders(&mut self, open_battle: bool) -> Result<(), String> {
         use game_core::navigation::{EncounterChoice, EncounterKind};
+        if open_battle && self.state.navigation.battle.is_some() {
+            return Ok(());
+        }
         for leg in 0..400_u64 {
             if open_battle
                 && let Some(encounter) = self

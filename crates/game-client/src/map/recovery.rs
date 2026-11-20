@@ -126,7 +126,19 @@ impl Map {
         let mut finished = false;
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.heading("Choose a game");
+                ui.horizontal(|ui| {
+                    if let Some(icon) = crate::app_icon::texture(ui.ctx()) {
+                        ui.add(egui::Image::new((icon.id(), egui::vec2(64.0, 64.0))));
+                    }
+                    ui.vertical(|ui| {
+                        ui.label(
+                            egui::RichText::new("STAR TRADER")
+                                .font(crate::theme::fonts::display(ui.ctx(), 22.0))
+                                .color(crate::theme::GREEN),
+                        );
+                        ui.heading("Choose a game");
+                    });
+                });
                 if let Some(error) = &recovery.startup_error {
                     ui.label("The last used save could not be loaded. Your files are still intact.");
                     ui.label(error);

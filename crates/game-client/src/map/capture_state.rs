@@ -31,6 +31,7 @@ impl Map {
             "victory" => self.session.capture_victory(),
             "roster" => self.sheet = crate::session::SheetTab::Fleets,
             "unlock" => self.session.capture_unlock(),
+            "chooser" => self.open_save_chooser("data/slot-1.json".into(), None),
             "haven" => {
                 let id = self.session.capture_haven()?;
                 let system = self

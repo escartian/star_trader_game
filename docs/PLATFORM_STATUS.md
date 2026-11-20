@@ -198,3 +198,11 @@ fleets' standing orders (1280 × 800 and 390 × 844, `--scenario multi-fleet
 --capture-view encounter`) were visually inspected. Patrol tours, automatic
 contacts and every contact kind are covered by server tests; patrols over many
 runs and the balance of contact rewards have not been playtested.
+
+Unlocks and icon: offscreen captures of a guide card (`--capture-view unlock`,
+390 × 844) and the game chooser with the re-rendered app icon as its logo
+(`--capture-view chooser`, 390 × 844) were visually inspected; the 1024 px
+icon render was inspected directly. Unlock conditions, delivery counting, the
+captain start and menu gating are covered by tests. Not yet checked: a full
+playthrough of the unlock order, and the packaged macOS app's Dock icon after
+this re-render (`tools/package_macos.sh` was not run).

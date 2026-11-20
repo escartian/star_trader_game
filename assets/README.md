@@ -80,7 +80,10 @@ glyph fallbacks.
 ## App icon
 
 `app-icon/app-icon.png` (1024 px) and `app-icon-256.png` are rendered from
-`source/app-icon.blend`:
+`source/app-icon.blend`: a ringed world on a gunmetal plate with a neon orbit,
+and the game's freighter (imported from `models/freighter.glb`, so the icon
+follows hull rebuilds) flying along it. Re-render after changing the hull or
+the celestial materials:
 
 ```sh
 /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
@@ -88,8 +91,10 @@ glyph fallbacks.
 sips -z 256 256 assets/app-icon/app-icon.png --out assets/app-icon/app-icon-256.png
 ```
 
-The 256 px PNG is embedded as the window icon. That covers the taskbar and title
-bar on Windows and X11; Wayland and macOS ignore runtime window icons. On macOS,
+The 256 px PNG is embedded as the window icon and the game chooser's logo. The
+window icon covers the taskbar and title bar on Windows and X11; Wayland and
+macOS ignore runtime window icons (a runtime macOS Dock icon would need unsafe
+AppKit calls, which the workspace forbids). On macOS,
 `tools/package_macos.sh` builds an unsigned `target/StarTrader.app` with an
 `.icns` file so the Dock and Finder show the icon. It stores saves and settings
 under `~/Library/Application Support/StarTrader`.

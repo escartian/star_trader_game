@@ -1,4 +1,5 @@
-"""Render the application icon: a ringed world on a gunmetal plate with a neon orbit.
+"""Render the application icon: a ringed world on a gunmetal plate with a neon
+orbit and the game's freighter (assets/models/freighter.glb) riding it.
 
 blender --background --factory-startup --python tools/art/build_app_icon.py
 Writes assets/source/app-icon.blend and assets/app-icon/app-icon.png (1024 px).
@@ -67,6 +68,38 @@ def setup():
     return scene
 
 
+def freighter(scene):
+    """The battle freighter model, scaled to ride the orbit at its left end."""
+    before = set(scene.objects)
+    bpy.ops.import_scene.gltf(filepath=str(ROOT / "assets/models/freighter.glb"))
+    parts = [obj for obj in scene.objects if obj not in before and obj.type == "MESH"]
+    bpy.ops.object.select_all(action="DESELECT")
+    for part in parts:
+        part.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    if len(parts) > 1:
+        bpy.ops.object.join()
+    ship = bpy.context.object
+    bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
+    length = max(ship.dimensions)
+    ship.scale = [0.46 / length] * 3
+    ship.location = (-0.6, 0.36, 0.5)
+    # The glTF nose axis imports pointing at the camera: lay the hull flat, then
+    # turn it to fly along the orbit, seen from above. (The importer leaves
+    # objects in quaternion mode, which ignores Euler angles.)
+    ship.rotation_mode = "XYZ"
+    ship.rotation_euler = (math.radians(90), 0, math.radians(LONG_AXIS_TURN))
+    for obj in [o for o in scene.objects if o not in before and o.type == "EMPTY"]:
+        bpy.data.objects.remove(obj)
+    return ship
+
+
+# Turns the model's long axis to run along the orbit at the ship's position.
+LONG_AXIS_TURN = 125
+
+
 def build():
     scene = setup()
     # Chamfered plate echoing the in-game HUD cards.
@@ -90,11 +123,7 @@ def build():
     ring.scale = (1, 0.36, 1)
     ring.rotation_euler = (0, 0, math.radians(-25))
     ring.data.materials.append(emission("neon", (0.3, 1.0, 0.12), 2.2))
-    # A small freighter wedge riding the ring.
-    bpy.ops.mesh.primitive_cone_add(vertices=3, radius1=0.12, depth=0.04, location=(-0.62, 0.38, 0.45))
-    ship = bpy.context.object
-    ship.rotation_euler = (0, 0, math.radians(35))
-    ship.data.materials.append(emission("hull", (0.2, 0.85, 0.88), 2.0))
+    freighter(scene)
     scene.render.filepath = str(ROOT / "assets/app-icon/app-icon.png")
     bpy.ops.wm.save_as_mainfile(filepath=str(ROOT / "assets/source/app-icon.blend"))
     bpy.ops.render.render(write_still=True)

@@ -100,8 +100,8 @@ player action, so a saved battle is always waiting on one of your ships.
 - Hide the window (×) to look at the map; **Return to battle** in the contact
   panel brings it back. The combat report opens when the battle ends.
 
-The freighter is drawn as its real 3D model (see the asset notes); other hulls
-still use their sprites until their models are exported.
+Freighters and patrol ships are drawn as their real 3D models (see the asset
+notes); the scout still uses its sprite until it has a lighter mesh.
 
 ## Raider contacts
 

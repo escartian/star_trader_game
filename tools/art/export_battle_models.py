@@ -7,7 +7,7 @@ as bevels are applied on export. Run from the repository root:
     /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
       --python tools/art/export_battle_models.py
 
-Append `-- freighter` (any names) to export only those ships.
+Append `-- patrol` (any names) to export only those ships.
 """
 from pathlib import Path
 import sys
@@ -15,7 +15,7 @@ import bpy
 
 ROOT = Path(__file__).resolve().parents[2]
 # Low-poly sources the battle view draws as meshes; other hulls keep sprites.
-SHIPS = ["freighter"]
+SHIPS = ["freighter", "patrol"]
 
 
 def export(name):

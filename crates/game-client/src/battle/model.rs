@@ -33,14 +33,19 @@ pub struct ShipModel {
 /// The embedded model for a hull, if it has one that loaded.
 pub fn for_kind(kind: ShipKind) -> Option<&'static ShipModel> {
     static FREIGHTER: OnceLock<Option<ShipModel>> = OnceLock::new();
-    match kind {
-        ShipKind::Freighter => FREIGHTER
-            .get_or_init(|| {
-                ShipModel::load(include_bytes!("../../../../assets/models/freighter.glb")).ok()
-            })
-            .as_ref(),
-        ShipKind::Scout | ShipKind::Patrol => None,
-    }
+    static PATROL: OnceLock<Option<ShipModel>> = OnceLock::new();
+    let (cell, bytes): (_, &[u8]) = match kind {
+        ShipKind::Freighter => (
+            &FREIGHTER,
+            include_bytes!("../../../../assets/models/freighter.glb"),
+        ),
+        ShipKind::Patrol => (
+            &PATROL,
+            include_bytes!("../../../../assets/models/patrol.glb"),
+        ),
+        ShipKind::Scout => return None,
+    };
+    cell.get_or_init(|| ShipModel::load(bytes).ok()).as_ref()
 }
 
 impl ShipModel {
@@ -187,15 +192,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_embedded_freighter_loads_centred_with_coloured_parts() {
-        let model = for_kind(ShipKind::Freighter).expect("freighter model loads");
+    fn embedded_models_load_centred_with_coloured_parts() {
+        for kind in [ShipKind::Freighter, ShipKind::Patrol] {
+            check(for_kind(kind).unwrap_or_else(|| panic!("{kind:?} model loads")));
+        }
+        assert!(
+            for_kind(ShipKind::Scout).is_none(),
+            "the scout keeps its sprite"
+        );
+        assert!(ShipModel::load(b"not a model").is_err());
+    }
+
+    fn check(model: &ShipModel) {
         assert!((500..5_000).contains(&model.triangles.len()));
         let colors: std::collections::HashSet<_> = model
             .triangles
             .iter()
             .map(|triangle| Color32::from(triangle.color))
             .collect();
-        assert!(colors.len() >= 4, "hull, canopy, cargo pods and engines");
+        assert!(colors.len() >= 4, "hull, canopy, accents and engines");
         assert!(model.triangles.iter().any(|triangle| triangle.emissive));
         let (low, high) = model
             .triangles
@@ -207,6 +222,5 @@ mod tests {
         assert!(((low + high) / 2.0).length() < 1e-3);
         // Nose along +Y: the model is longer than it is wide.
         assert_eq!((high - low).max_element(), high.y - low.y);
-        assert!(ShipModel::load(b"not a model").is_err());
     }
 }

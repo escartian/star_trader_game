@@ -163,7 +163,7 @@ Combat is the original README's first prioritized expansion.
   ranged fire, withdrawal from your own edge, raider AI and Auto-resolve.
 - [x] Play battles turn by turn: saved battles in progress, move/fire/withdraw/
   auto-resolve commands, and a 3D battle view with orbit camera, layer selection
-  and grid picking. The freighter is drawn from a Blender glTF export.
+  and grid picking. Freighter and patrol hulls are drawn from Blender glTF exports.
 - [ ] 3D models for every hull (scout needs a lighter mesh), a GPU mesh renderer
   with depth buffer, and animated raider turns and weapon effects.
 - [ ] Explicit hostility/engagement rules for NPC/faction fleets and credit bounties.

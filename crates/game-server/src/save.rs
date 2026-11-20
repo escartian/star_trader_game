@@ -147,6 +147,14 @@ fn read(path: &Path) -> Result<SaveData, String> {
     let mut data: SaveData = serde_json::from_value(value).map_err(|error| error.to_string())?;
     data.migrated = migrated;
     data.migration_from = source_version.filter(|_| migrated);
+    // Reject malformed orbit definitions before `place` divides by a period
+    // or adds a moon offset to its parent.
+    data.player
+        .movement_rules
+        .validate_world(&data.systems)
+        .map_err(|error| error.to_string())?;
+    // Bodies stand where their orbits put them at the saved tick.
+    game_core::orbits::place(&mut data.systems, data.player.tick);
     data.validate()?;
     Ok(data)
 }

@@ -47,6 +47,10 @@ config/movement.json). Course durations retain their distance-based calculations
 a 15-tick voyage takes at least four runs. Short courses can arrive in one run.
 Long voyages automatically continue on following runs without reissuing orders.
 The shared world advances four ticks regardless of fleet count or course length.
+Bodies orbit as the world tick advances. A queued leg is recalculated at departure
+if the clock changed since plotting. After a leg, the next leg uses the bodies'
+current positions and re-routes an obstructed detour. If a clear route cannot be
+found, the fleet stops and needs a new course.
 
 Fuel is charged once per leg when that leg departs. A selected destination can
 include safe waypoints, departure, entry and local arrival legs; all are previewed

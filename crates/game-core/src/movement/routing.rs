@@ -24,6 +24,9 @@ impl TravelState {
         body: Option<BodyId>,
         systems: &[StarSystem],
     ) -> Result<CoursePreview, FleetMovementError> {
+        // Courses always use bodies where they stand at this state's own tick.
+        let placed = crate::orbits::placed(systems, self.tick);
+        let systems = placed.as_slice();
         self.authorize(player, ship)?;
         self.movement_rules.validate_world(systems)?;
         self.fleet_position(self.fleet_for_ship(ship)?.id, player)?;
@@ -158,6 +161,18 @@ impl TravelState {
         course.legs.push(plan);
         Ok(())
     }
+}
+
+/// Waypoints from `start` to `end` inside `system` that avoid the star and every
+/// body as they stand now (empty when the straight line is clear).
+pub(crate) fn safe_route(
+    rules: &super::MovementRules,
+    system: &StarSystem,
+    start: LocalPosition,
+    end: LocalPosition,
+) -> Result<Vec<LocalPosition>, MovementError> {
+    let volumes = obstacles::obstacles(rules, system);
+    safe_local_path(start, end, &volumes, rules.system_half_extent_km)
 }
 
 /// Waypoints for a local course that avoids every collision volume: empty when

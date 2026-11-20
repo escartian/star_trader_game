@@ -47,13 +47,13 @@ fn every_body_has_a_volume_and_the_demo_worlds_fit_without_overlaps() {
     }
     // A moon pushed into its planet, or a planet poking out of the cube, is invalid.
     let mut systems = crate::demo_galaxy();
-    systems[0].bodies[3].position = at(45_500_000, 8_000_000, -20_000_000);
+    systems[0].bodies[3].orbit.as_mut().unwrap().epoch = at(500_000, 0, 0);
     assert_eq!(
         rules.validate_world(&systems),
         Err(MovementError::InvalidRules)
     );
     let mut systems = crate::demo_galaxy();
-    systems[0].bodies[0].position.x_km = rules.system_half_extent_km - 100_000;
+    systems[0].bodies[0].orbit.as_mut().unwrap().epoch.x_km = rules.system_half_extent_km - 100_000;
     assert_eq!(
         rules.validate_world(&systems),
         Err(MovementError::InvalidRules)

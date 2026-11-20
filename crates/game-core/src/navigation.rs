@@ -2,6 +2,7 @@
 mod battle;
 mod hostile;
 mod landing;
+mod next_leg;
 mod orders;
 mod position;
 pub use battle::{ActiveBattle, BattleAction};
@@ -136,6 +137,9 @@ pub enum NavigationEvent {
     BattleTurn {
         fleet: FleetId,
     },
+    /// A body moved across the rest of the course and no clear way around it
+    /// was found: the fleet stopped and needs a new course.
+    CourseBlocked(FleetId),
     /// The fleet set down on a body's surface.
     Landed {
         fleet: FleetId,

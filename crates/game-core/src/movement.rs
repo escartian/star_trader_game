@@ -5,6 +5,7 @@ mod obstacles;
 mod planning;
 mod routing;
 pub use routing::CoursePreview;
+pub(crate) use routing::safe_route;
 mod rules;
 use crate::{BodyId, GalaxyPosition, LocalPosition, SystemId, fleet::FleetId, travel::Location};
 pub use landing::LandingRules;
@@ -91,6 +92,10 @@ pub struct MovementPlan {
     pub fuel_per_ship: u32,
     pub duration_ticks: u64,
     pub revision: u64,
+    /// World tick the plan was computed at: bodies stood where their orbits put
+    /// them then. Saves re-check plans at this tick.
+    #[serde(default)]
+    pub tick: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

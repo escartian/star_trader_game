@@ -129,6 +129,8 @@ impl Session {
                 let mut events = candidate
                     .state
                     .execute_navigation_run(player, &candidate.systems)?;
+                // The run moved the clock: bodies move on along their orbits.
+                game_core::orbits::place(&mut candidate.systems, candidate.state.tick);
                 candidate
                     .economy
                     .advance(candidate.state.movement_rules.ticks_per_navigation_run);

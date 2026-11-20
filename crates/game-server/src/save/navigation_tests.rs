@@ -58,3 +58,20 @@ fn forged_course_geometry_counters_membership_and_encounters_are_rejected() {
     fs::write(&path, invalid.to_string()).unwrap();
     assert!(Session::load(&path).is_err());
 }
+
+#[test]
+fn invalid_orbits_are_rejected_before_saved_bodies_are_placed() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("invalid-orbit.json");
+    let session = Session::default();
+    let valid: serde_json::Value = serde_json::from_str(&session.export_json().unwrap()).unwrap();
+    for (field, value) in [
+        ("period_ticks", json!(0)),
+        ("epoch", json!({"x_km": i64::MAX, "y_km": 0, "z_km": 0})),
+    ] {
+        let mut invalid = valid.clone();
+        invalid["systems"][0]["bodies"][0]["orbit"][field] = value;
+        fs::write(&path, invalid.to_string()).unwrap();
+        assert!(Session::load(&path).is_err(), "{field}");
+    }
+}

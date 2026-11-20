@@ -15,6 +15,9 @@ impl TravelState {
         target: &MoveTarget,
         systems: &[StarSystem],
     ) -> Result<MovementPlan, crate::fleet::FleetMovementError> {
+        // Plans always use bodies where they stand at this state's own tick.
+        let placed = crate::orbits::placed(systems, self.tick);
+        let systems = placed.as_slice();
         self.movement_rules.validate_world(systems)?;
         self.authorize(player, ship)?;
         let fleet = self.fleet_for_ship(ship)?;
@@ -84,6 +87,7 @@ impl TravelState {
             fuel_per_ship,
             duration_ticks,
             revision: self.revision,
+            tick: self.tick,
         })
     }
 

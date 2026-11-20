@@ -6,6 +6,7 @@ mod fixtures;
 mod fleets;
 mod interaction;
 mod local;
+mod orbit_view;
 mod panels;
 mod render;
 mod toolbar;
@@ -194,6 +195,7 @@ impl Map {
         if let Some(delay) = self.session.frame(ctx.input(|input| input.time), animate) {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64(delay));
         }
+        self.follow_orbits();
         self.follow_navigation_transitions();
         self.handle_focus_request();
         crate::battle::claim_keyboard(ctx, self.session.battle_open());
@@ -214,6 +216,25 @@ impl Map {
         self.session.show_navigation(ctx, &self.session_systems);
         self.session.show_battle(ctx);
         self.session.show_combat_report(ctx);
+    }
+
+    /// Session bodies drawn where their orbits are now (gliding after a run).
+    fn follow_orbits(&mut self) {
+        let (from, to, progress) = self.session.orbit_clock();
+        self.session_systems =
+            orbit_view::display_systems(&self.session_systems, from, to, progress);
+        if self.scene != Scene::Session {
+            return;
+        }
+        self.systems.clone_from(&self.session_systems);
+        if let Some(local) = &mut self.local
+            && let Some(system) = self
+                .session_systems
+                .iter()
+                .find(|system| system.id == local.system().id)
+        {
+            local.follow_orbits(system);
+        }
     }
 
     fn handle_focus_request(&mut self) {

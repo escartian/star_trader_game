@@ -150,9 +150,17 @@ The local cube exit clips a ray to its first face; entry projects the approach t
 its near face. Crossing an intermediate system never intercepts a deep-space move.
 Body arrivals attach to an orbit/berth; local stellar exclusion blocks invalid
 segments, and every body has a map-scale collision sphere that local legs route
-around (`movement::obstacles`). Landing (`movement::LandingRules`,
+around (`movement::obstacles`). Bodies orbit (`orbits`): positions are a deterministic integer function of the
+tick, placed by the server before every command and after every run, and by each
+movement planner for its own state's tick. Landing (`movement::LandingRules`,
 `navigation::landing`) is a location, not physics: immediate, fuel-priced, and
 mining runs once per navigation run for waiting landed fleets.
+`game-core::orbits` places circular, integer-defined star and moon orbits from
+the world tick. The server stores their current positions after each time advance;
+movement planning independently places a copy at its own tick. Saved courses
+remember their planning tick for validation. A queued course is recalculated on
+departure if time passed, and itinerary detours are checked again at each leg.
+The client interpolates body positions only for drawing during a run glide.
 
 Movement previews validate all fleet members. Inputs contain a target and revision,
 never an executable plan. Plotting stores authoritative geometry without spending

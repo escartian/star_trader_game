@@ -62,6 +62,12 @@ moon 250,000, asteroid 150,000, station 50,000. A saved world must keep every
 volume inside the system cube and clear of the star's exclusion zone and of every
 other body (so routes can always pass between them).
 
+New galaxies give bodies circular paths around the vertical axis; moons circle
+their parent planet. Their positions come from the world tick using integer
+arithmetic. The map glides between ticks after each navigation run. Saved bodies
+without orbit definitions stay fixed. Collision checks cover each body's swept
+path, including moons, so a valid world stays clear as time advances.
+
 - A local leg may not pass through the star's sphere or any body's, except a body
   it leaves from or arrives at. Raw advanced segments that do are rejected
   ("passes through a planet, moon or station"), and so are waypoints inside a
@@ -70,6 +76,38 @@ other body (so routes can always pass between them).
   graph over points around each obstacle (cube corners at twice its radius) finds
   the shortest clear chain of waypoints.
 - Arrival at a body is still a symbolic orbit or berth at the body's centre.
+
+A queued course is recalculated if the world clock changes before departure.
+After each leg, remaining detours are checked against the bodies' new positions;
+if no clear path remains, the fleet stops and asks for a new course.
+
+## Orbits
+
+Bodies move. Each circles the star (the Moon circles its planet) on a fixed
+circular orbit around the system's vertical (y) axis, keeping its height. A
+body's position is a pure function of the world tick (`game_core::orbits`):
+
+- Each orbiting body stores its tick-0 offset from what it circles and its
+  period; nothing else is saved. Positions are rotated with integer fixed-point
+  trigonometry, so every machine computes identical kilometres.
+- Periods follow a Kepler-like rule: 400 ticks (100 navigation runs) at 50
+  million km from the star, scaling with radius^1.5. Per lap: the trade port
+  about 89 runs, the Inner world 98, the asteroid 148 and the outer gas giant
+  410; the Moon circles the Inner world every 12 runs.
+- Rules always use bodies where they stand at the planning state's own tick.
+  Each plan records its tick, and saves re-check a course at that tick.
+- Courses re-aim at each leg: a leg to a body is planned to where it is when the
+  leg starts. If a moving body now blocks a detour, the stale waypoints are
+  dropped and the rest of the course is re-routed from where the fleet is; if no
+  clear way exists the course ends ("a moving body blocks the rest of the course")
+  and the fleet needs new orders. A run never fails because a body moved.
+- Saved worlds must stay valid at every tick, not just the current one: each
+  body's ring around the star (a planet's ring widened by its moons) must stay
+  inside the cube and clear of the star and of every other ring.
+- The map shows positions for the current tick; while a run's glide plays, bodies
+  glide from where they were to where they are, along their curves.
+
+Bodies without an orbit (older saves) stay where they are.
 
 ## Landing
 

@@ -29,6 +29,7 @@ fn rocky_planets_use_biome_artwork() {
         id: game_core::BodyId(1),
         name: "Test".into(),
         kind: game_core::BodyKind::RockyPlanet,
+        orbit: None,
         position: game_core::LocalPosition {
             x_km: 0,
             y_km: 0,

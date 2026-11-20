@@ -86,6 +86,16 @@ impl LocalSession {
     }
 
     /// True while the latest run's glide is still playing out.
+    /// (tick before the latest run, current tick, glide progress 0 to 1): what
+    /// the map needs to draw bodies moving along their orbits.
+    pub fn orbit_clock(&self) -> (u64, u64, f64) {
+        let from = self
+            .motion
+            .as_ref()
+            .map_or(self.state.tick, |motion| motion.before.tick);
+        (from, self.state.tick, self.glide_progress())
+    }
+
     pub(super) fn gliding(&self) -> bool {
         self.glide_progress() < 1.0
     }

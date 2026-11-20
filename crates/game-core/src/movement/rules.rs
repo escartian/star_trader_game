@@ -79,32 +79,9 @@ impl MovementRules {
                     return Err(MovementError::InvalidRules);
                 }
             }
-            // Every body's volume fits in the cube and overlaps neither the star's
-            // exclusion zone nor another body, so routes can pass between them.
-            let volumes = super::obstacles::obstacles(self, system);
-            for (index, volume) in volumes.iter().enumerate() {
-                let reach =
-                    u64::try_from(volume.radius).map_err(|_| MovementError::InvalidRules)?;
-                let coordinates = super::geometry::local(volume.centre);
-                if coordinates
-                    .iter()
-                    .any(|value| value.unsigned_abs() + reach > self.system_half_extent_km as u64)
-                {
-                    return Err(MovementError::InvalidRules);
-                }
-                for other in &volumes[..index] {
-                    let apart = super::geometry::distance_squared(
-                        coordinates,
-                        super::geometry::local(other.centre),
-                    )?;
-                    let touching = u128::try_from(volume.radius + other.radius)
-                        .map_err(|_| MovementError::InvalidRules)?
-                        .pow(2);
-                    if apart <= touching {
-                        return Err(MovementError::InvalidRules);
-                    }
-                }
-            }
+            // Every body's volume fits in the cube and stays clear of the star's
+            // exclusion zone and of every other body, at every tick.
+            super::obstacles::validate_volumes(self, system)?;
         }
         // Overlapping cubes would make entry/exit ambiguous.
         for (index, system) in systems.iter().enumerate() {

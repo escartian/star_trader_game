@@ -81,6 +81,8 @@ impl Session {
     ) -> Result<ServerMessage, CommandError> {
         // The initial world has one player; don't disclose its state to another identity.
         self.state.authorize(player, self.state.ships[0].id)?;
+        // Every rule reads body positions for the current tick.
+        game_core::orbits::place(&mut self.systems, self.state.tick);
         match command {
             ClientCommand::GetGalaxy => Ok(ServerMessage::GalaxySnapshot {
                 protocol_version: PROTOCOL_VERSION,
@@ -141,6 +143,7 @@ impl Session {
     pub fn advance(&mut self, ticks: u64) -> ServerMessage {
         match self.state.advance(ticks) {
             Ok(arrived) => {
+                game_core::orbits::place(&mut self.systems, self.state.tick);
                 self.economy.advance(ticks);
                 self.snapshot(
                     arrived
@@ -189,6 +192,8 @@ mod encounter_tests;
 mod landing_tests;
 #[cfg(test)]
 mod navigation_tests;
+#[cfg(test)]
+mod orbit_tests;
 
 #[cfg(test)]
 mod npc_tests;

@@ -43,7 +43,9 @@ impl TravelState {
             .ok_or(TravelError::TimeOverflow)?;
         let mut orders = self.navigation.orders.clone();
         orders.sort_by_key(|order| order.plan.fleet.0);
-        for order in &mut orders {
+        let mut ready_orders = Vec::with_capacity(orders.len());
+        let mut events = Vec::new();
+        for mut order in orders {
             let fleet = self
                 .fleets
                 .iter()
@@ -55,6 +57,16 @@ impl TravelState {
             }
             if !order.started {
                 let ship = *fleet.ships.first().ok_or(FleetError::InvalidSelection)?;
+                if order.plan.tick < self.tick {
+                    let target = order.target;
+                    let remaining = order.remaining_waypoints;
+                    let Some(updated) = self.next_leg(player, ship, target, remaining, systems)?
+                    else {
+                        events.push(NavigationEvent::CourseBlocked(fleet.id));
+                        continue;
+                    };
+                    order = updated;
+                }
                 let mut checked = self.plan_movement(player, ship, &order.target, systems)?;
                 checked.revision = order.plan.revision;
                 if checked != order.plan {
@@ -70,14 +82,17 @@ impl TravelState {
                 }
                 order.started = true;
             }
+            ready_orders.push(order);
         }
         // One shared clock advance, regardless of fleet count or course length.
         self.advance(ticks)?;
+        // From here on, bodies stand where their orbits put them after the run.
+        let placed = crate::orbits::placed(systems, self.tick);
+        let systems = placed.as_slice();
         self.navigation.run = run;
         // Wait orders deliberately survive the run; only a new course replaces one.
-        let mut events = Vec::new();
         self.navigation.orders.clear();
-        for mut order in orders {
+        for mut order in ready_orders {
             let roll = self.navigation.rolls();
             if roll % 100 < u64::from(self.movement_rules.encounter_chance_percent) {
                 let next = self
@@ -130,14 +145,10 @@ impl TravelState {
                         .find(|fleet| fleet.id == order.plan.fleet)
                         .and_then(|fleet| fleet.ships.first())
                         .ok_or(FleetError::UnknownFleet)?;
-                    let plan = self.plan_movement(player, ship, &target, systems)?;
-                    self.navigation.orders.push(super::NavigationOrder {
-                        target,
-                        remaining_ticks: plan.duration_ticks,
-                        plan,
-                        started: false,
-                        remaining_waypoints: order.remaining_waypoints,
-                    });
+                    match self.next_leg(player, ship, target, order.remaining_waypoints, systems)? {
+                        Some(next) => self.navigation.orders.push(next),
+                        None => events.push(NavigationEvent::CourseBlocked(order.plan.fleet)),
+                    }
                 }
             } else {
                 self.navigation.orders.push(order);

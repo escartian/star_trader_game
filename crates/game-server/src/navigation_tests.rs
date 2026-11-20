@@ -247,6 +247,36 @@ fn queued_courses_can_be_replaced_or_cancelled_without_charging_fuel() {
 }
 
 #[test]
+fn a_queued_course_replans_when_its_destination_moves_before_departure() {
+    let mut session = Session::default();
+    session.state.movement_rules.encounter_chance_percent = 0;
+    plot(&mut session, ShipId(1), body(1));
+    let original = session.state.navigation.orders[0].plan.clone();
+    let original_position = session.systems[0].bodies[0].position;
+    let fuel = session.state.ships[0].fuel;
+    assert!(matches!(
+        session.advance(4),
+        ServerMessage::SessionSnapshot { .. }
+    ));
+    assert_eq!(session.state.ships[0].fuel, fuel);
+    assert_ne!(session.state.tick, original.tick);
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("queued-orbit.json");
+    session.save(&path).unwrap();
+    let (mut session, _) = Session::load(&path).unwrap();
+    run(&mut session);
+    assert_eq!(session.state.tick, 8);
+    assert_eq!(
+        session.state.ships[0].location,
+        Location::Orbiting {
+            system: SystemId(1),
+            body: BodyId(1)
+        }
+    );
+    assert_ne!(session.systems[0].bodies[0].position, original_position);
+}
+
+#[test]
 fn longer_courses_progress_over_runs_and_cannot_trade_or_recharge_fuel_in_transit() {
     let mut session = Session::default();
     session.state.movement_rules.encounter_chance_percent = 0;

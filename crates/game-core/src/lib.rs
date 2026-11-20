@@ -8,6 +8,7 @@ pub mod generation;
 pub mod movement;
 pub mod navigation;
 pub mod npc;
+pub mod orbits;
 pub mod planet;
 pub mod routes;
 pub mod travel;
@@ -65,8 +66,12 @@ pub struct LocalBody {
     pub id: BodyId,
     pub name: String,
     pub kind: BodyKind,
+    /// Where the body is now (placed for the current tick; see `orbits`).
     pub position: LocalPosition,
     pub planet: Option<planet::PlanetProfile>,
+    /// Circular orbit; `None` keeps the body fixed (older saves).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orbit: Option<orbits::Orbit>,
 }
 
 /// Display classification; rendering sizes are symbolic, not physical scale.
@@ -134,10 +139,11 @@ pub fn demo_galaxy() -> Vec<StarSystem> {
     systems
 }
 
-/// Fixed navigation destinations, not an orbital simulation or astronomical model.
+/// Fixed tick-0 destinations on circular orbits (see `orbits`): the Moon
+/// circles the Inner world, everything else the star.
 fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
     // IDs remain fixed even if display ordering changes or destinations are added.
-    [
+    let mut bodies: Vec<LocalBody> = [
         (
             BodyId(1),
             "Inner world",
@@ -182,12 +188,15 @@ fn demo_bodies(system_name: &str) -> Vec<LocalBody> {
     .into_iter()
     .map(|(id, name, kind, x_km, y_km, z_km)| LocalBody {
         planet: None,
+        orbit: None,
         id,
         name: format!("{system_name} {name}"),
         kind,
         position: LocalPosition { x_km, y_km, z_km },
     })
-    .collect()
+    .collect();
+    orbits::assign_orbits(&mut bodies, &[(BodyId(4), BodyId(1))]);
+    bodies
 }
 
 #[cfg(test)]

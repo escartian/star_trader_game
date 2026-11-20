@@ -19,7 +19,8 @@ through a readable native map. No game engine, browser, webview or JavaScript.
   known-market comparisons and a purchasable cargo-hold upgrade.
 - Fleet course planning, readiness highlighting, persistent Wait orders, parallel navigation
   runs and individual salvage, distress and raider encounters.
-- Bodies with collision volumes that courses route around; landing on planets,
+- Planets and moons on deterministic orbits, with collision volumes that courses
+  route around; landing on planets,
   moons and asteroids, and mining ore while a landed fleet waits.
 - Repeating trade routes: a fleet loops between two markets, buying the most
   profitable cargo at each end, and still stops for contacts.

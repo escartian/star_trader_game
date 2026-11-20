@@ -95,6 +95,13 @@ impl LocalView {
         &self.system
     }
 
+    /// Moves the shown bodies to `system`'s positions (same system, later tick).
+    pub fn follow_orbits(&mut self, system: &StarSystem) {
+        if system.id == self.system.id {
+            self.system.bodies.clone_from(&system.bodies);
+        }
+    }
+
     pub fn set_fleet_context(&mut self, active_ship: game_core::travel::ShipId) {
         self.active_ship = active_ship;
     }

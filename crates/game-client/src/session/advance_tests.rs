@@ -162,7 +162,12 @@ fn advance_keeps_mining_until_the_holds_fill_then_stops() {
     host.toggle_advance();
     let runs = drive_to_stop(&mut host);
     let ship = &host.state.ships[0];
-    assert_eq!(ship.cargo[Commodity::Ore.index()], ship.cargo_capacity);
+    assert_eq!(
+        ship.cargo[Commodity::Ore.index()],
+        ship.cargo_capacity,
+        "{:?}",
+        host.log
+    );
     assert_eq!(u64::from(ship.cargo_capacity / 2), runs, "2 ore per run");
     assert!(host.notice.contains("holds full"), "{}", host.notice);
 }

@@ -4,9 +4,22 @@ use crate::{
     travel::{Location, PlayerId, ShipId, TravelState},
 };
 
+/// The demo galaxy with every body held still: these tests check geometry,
+/// not orbital motion.
+fn fixed_galaxy() -> Vec<crate::StarSystem> {
+    let mut systems = crate::demo_galaxy();
+    for body in systems
+        .iter_mut()
+        .flat_map(|system| system.bodies.iter_mut())
+    {
+        body.orbit = None;
+    }
+    systems
+}
+
 fn plan(state: &TravelState, target: MoveTarget) -> MovementPlan {
     state
-        .plan_movement(PlayerId(1), ShipId(1), &target, &crate::demo_galaxy())
+        .plan_movement(PlayerId(1), ShipId(1), &target, &fixed_galaxy())
         .unwrap()
 }
 
@@ -21,11 +34,11 @@ fn local_body_movement_and_first_face_exit_use_real_kilometers() {
     assert_eq!(movement.mode, MovementMode::Local);
     assert_eq!(movement.fuel_per_ship, 1);
     state
-        .plot_course(PlayerId(1), ShipId(1), target, &crate::demo_galaxy())
+        .plot_course(PlayerId(1), ShipId(1), target, &fixed_galaxy())
         .unwrap();
     assert_eq!(state.tick, 0);
     state
-        .execute_navigation_run(PlayerId(1), &crate::demo_galaxy())
+        .execute_navigation_run(PlayerId(1), &fixed_galaxy())
         .unwrap();
     assert_eq!(state.tick, 4);
     assert_eq!(
@@ -110,16 +123,16 @@ fn crossing_a_system_never_intercepts_but_exact_target_explicitly_enters() {
             PlayerId(1),
             ShipId(1),
             MoveTarget::DeepSpace(GalaxyPosition { x: 2, y: 0, z: 0 }),
-            &crate::demo_galaxy(),
+            &fixed_galaxy(),
         )
         .unwrap();
     state
-        .execute_navigation_run(PlayerId(1), &crate::demo_galaxy())
+        .execute_navigation_run(PlayerId(1), &fixed_galaxy())
         .unwrap();
     while !state.navigation.orders.is_empty() {
         state.movement_rules.encounter_chance_percent = 0;
         state
-            .execute_navigation_run(PlayerId(1), &crate::demo_galaxy())
+            .execute_navigation_run(PlayerId(1), &fixed_galaxy())
             .unwrap();
     }
     assert!(matches!(state.ships[0].location, Location::DeepSpace(_)));
@@ -166,7 +179,7 @@ fn invalid_coordinates_collisions_and_zero_distance_are_rejected_without_mutatio
     ] {
         assert!(
             state
-                .plan_movement(PlayerId(1), ShipId(1), &target, &crate::demo_galaxy())
+                .plan_movement(PlayerId(1), ShipId(1), &target, &fixed_galaxy())
                 .is_err()
         );
         assert_eq!(state, TravelState::default());
@@ -211,7 +224,7 @@ fn range_boundary_uses_exact_squared_kilometers_and_checks_every_member() {
     });
     assert!(
         state
-            .plan_movement(PlayerId(1), ShipId(1), &target, &crate::demo_galaxy())
+            .plan_movement(PlayerId(1), ShipId(1), &target, &fixed_galaxy())
             .is_err()
     );
     state.ships[0].location = Location::DeepSpace(origin);
@@ -222,14 +235,14 @@ fn range_boundary_uses_exact_squared_kilometers_and_checks_every_member() {
     state.fleets[0].ships.push(ShipId(2));
     assert!(
         state
-            .plan_movement(PlayerId(1), ShipId(1), &target, &crate::demo_galaxy())
+            .plan_movement(PlayerId(1), ShipId(1), &target, &fixed_galaxy())
             .is_err()
     );
     state.store_course(target, movement).unwrap();
     let before = state.clone();
     assert!(
         state
-            .execute_navigation_run(PlayerId(1), &crate::demo_galaxy())
+            .execute_navigation_run(PlayerId(1), &fixed_galaxy())
             .is_err()
     );
     assert_eq!(state, before);
@@ -278,7 +291,7 @@ fn maximum_supported_local_geometry_and_configuration_remain_checked() {
         system_half_extent_km: 10,
         ..MovementRules::default()
     };
-    assert!(rules.validate_world(&crate::demo_galaxy()).is_err());
+    assert!(rules.validate_world(&fixed_galaxy()).is_err());
     rules.system_half_extent_km = i64::MAX;
     assert!(rules.validate().is_err());
     assert!(MovementRules::from_json("{}").is_err());

@@ -41,6 +41,11 @@ impl TravelState {
                 order.plan.origin.clone()
             };
             let mut preview = self.clone();
+            if order.plan.tick > self.tick {
+                return Err("Course planned in the future".into());
+            }
+            // Re-plan where the bodies stood when the course was computed.
+            preview.tick = order.plan.tick;
             for id in &fleet.ships {
                 let member = preview.ship_mut(*id).map_err(|_| "Unknown course member")?;
                 if member.location != expected {

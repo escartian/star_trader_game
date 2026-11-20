@@ -40,6 +40,10 @@ pub(super) fn event_label(event: NavigationEvent) -> String {
         NavigationEvent::BattleTurn { fleet } => {
             format!("Fleet {}: your ship is up in the battle.", fleet.0)
         }
+        NavigationEvent::CourseBlocked(fleet) => format!(
+            "Fleet {}: a moving body blocks the rest of the course. Plot a new one.",
+            fleet.0
+        ),
         NavigationEvent::Landed { fleet, .. } => format!("Fleet {} landed.", fleet.0),
         NavigationEvent::LiftedOff { fleet, .. } => {
             format!("Fleet {} lifted off into orbit.", fleet.0)

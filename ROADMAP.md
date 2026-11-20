@@ -77,6 +77,9 @@ hulls fight raiders (milestone 4); customization and used-hull loadouts remain l
 - [x] Map-scale collision volumes for every body; local legs and named routes
   avoid them. Landing on rocky planets, moons and asteroids (fuel by gravity,
   automatic lift-off on a new course) and ore mining while waiting landed.
+- [x] Orbits: bodies circle the star (moons their planet) as a deterministic
+  function of the tick; courses re-aim each leg and re-route around bodies that
+  moved into the way; saves stay valid at every tick.
 - [x] Exit at the first crossed cube face and place the fleet just outside it.
   Checked coordinate conversion preserves kilometer offsets in deep space.
 - [x] Deep-space linear movement within galaxy bounds.
@@ -101,7 +104,9 @@ Schema 4 preserves old player assets/station stock, with explicit zero funding a
 inventory for newly tracked accounts. Planetary commerce and hull transactions
 have conservation/rejection/save tests. See [planet economies](docs/PLANET_ECONOMY.md).
 Biome/danger are descriptive until encounters use them. Bodies have map-scale
-collision volumes and landing; there is still no orbital motion (bodies are fixed).
+collision volumes and landing. New galaxies give bodies deterministic circular
+orbits (moons around planets); bodies in older saves without orbit definitions
+remain fixed. Navigation plans use their positions at the current world tick.
 
 ## 3a. Navigation runs and encounters — implemented foundation
 

@@ -6,6 +6,8 @@ mod movement;
 mod navigation;
 mod offline;
 mod save;
+mod setup;
+pub use setup::{DangerLevel, GameSetup, InflationLevel, STARTING_CREDITS, WEALTH_SHARES};
 #[cfg(any(test, feature = "dev-tools"))]
 mod scenarios;
 mod shipyard;
@@ -43,7 +45,7 @@ impl Session {
     ) -> Result<Self, String> {
         rules.validate()?;
         let systems = game_core::generation::generate_galaxy(seed);
-        Self::from_generated(seed, rules, systems)
+        Self::from_generated(seed, rules, systems, Default::default())
     }
 
     pub fn with_galaxy(
@@ -53,17 +55,26 @@ impl Session {
     ) -> Result<Self, String> {
         rules.validate()?;
         let systems = game_core::generation::generate_galaxy_with(seed, config)?;
-        Self::from_generated(seed, rules, systems)
+        Self::from_generated(seed, rules, systems, Default::default())
     }
 
+    /// Builds the world; movement rules (contact chance, band size) apply
+    /// before NPC traders and raider bands are placed.
     fn from_generated(
         seed: u64,
         rules: game_core::economy::EconomyRules,
         mut systems: Vec<StarSystem>,
+        movement: game_core::movement::MovementRules,
     ) -> Result<Self, String> {
         rules.planet_catalog.populate(&mut systems);
+        movement
+            .validate_world(&systems)
+            .map_err(|error| error.to_string())?;
         let mut economy = Economy::with_rules(&systems, rules)?;
-        let mut state = TravelState::default();
+        let mut state = TravelState {
+            movement_rules: movement,
+            ..TravelState::default()
+        };
         state.navigation.rng_state = seed;
         state.ships[0].cargo_capacity = economy.rules.cargo_capacity;
         state.ships[0].base_cargo_capacity = economy.rules.cargo_capacity;
@@ -233,6 +244,8 @@ mod navigation_tests;
 mod orbit_tests;
 #[cfg(test)]
 mod raid_tests;
+#[cfg(test)]
+mod setup_tests;
 
 #[cfg(test)]
 mod npc_tests;

@@ -10,6 +10,9 @@ pub struct MovementRules {
     pub ticks_per_navigation_run: u64,
     #[serde(default = "default_encounter_chance")]
     pub encounter_chance_percent: u32,
+    /// Extra scouts in every raider band (0–2; the new-game danger level).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub raider_band_extra: u32,
     pub galaxy_half_extent_ly: i64,
     pub system_half_extent_km: i64,
     pub star_exclusion_radius_km: i64,
@@ -47,6 +50,7 @@ impl MovementRules {
     pub fn validate(&self) -> Result<(), MovementError> {
         if !(1..=100).contains(&self.ticks_per_navigation_run)
             || self.encounter_chance_percent > 100
+            || self.raider_band_extra > 2
             || self.schema_version != 1
             || !(1..=10_000).contains(&self.galaxy_half_extent_ly)
             || !(10..=1_000_000_000).contains(&self.system_half_extent_km)
@@ -215,4 +219,8 @@ fn flat(system: &StarSystem) -> Result<(), MovementError> {
     } else {
         Err(MovementError::OffPlane)
     }
+}
+
+fn is_zero(value: &u32) -> bool {
+    *value == 0
 }

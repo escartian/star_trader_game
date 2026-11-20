@@ -1,6 +1,5 @@
 //! The startup save chooser keeps every session idle until the player picks a game.
 use super::Map;
-use game_core::generation::GalaxyConfig;
 use std::{
     fs,
     io::ErrorKind,
@@ -50,7 +49,7 @@ pub(super) struct SaveRecovery {
     entries: Vec<SaveEntry>,
     pending_delete: Option<PathBuf>,
     message: Option<String>,
-    galaxy: GalaxyConfig,
+    setup: game_server::GameSetup,
 }
 
 impl SaveRecovery {
@@ -84,7 +83,7 @@ impl SaveRecovery {
             entries,
             pending_delete: None,
             message: None,
-            galaxy: GalaxyConfig::default(),
+            setup: game_server::GameSetup::default(),
         }
     }
 
@@ -135,8 +134,8 @@ impl Map {
                     ui.label("Load a saved game or start a new one in an empty slot.");
                 }
                 ui.separator();
-                ui.heading("New map size");
-                crate::session::galaxy_controls(ui, &mut recovery.galaxy);
+                ui.heading("New game setup");
+                crate::session::setup_controls(ui, &mut recovery.setup);
                 ui.separator();
                 for entry in recovery.entries.clone() {
                     ui.group(|ui| {
@@ -169,9 +168,9 @@ impl Map {
                                         recovery.message = Some("This slot changed. Choose it again.".into());
                                     } else {
                                         let seed = crate::seed::new_seed();
-                                        match self.session.start_new_at(entry.path.clone(), seed, recovery.galaxy) {
+                                        match self.session.start_new_at(entry.path.clone(), seed, recovery.setup) {
                                             Ok(()) => {
-                                                self.notify(format!("New map (seed {seed}, {} systems, {} ly radius, up to {} objects per system). This slot will save on close.", recovery.galaxy.systems, recovery.galaxy.radius_ly, recovery.galaxy.max_objects));
+                                                self.notify(format!("{} This slot will save on close.", crate::session::setup_summary(seed, &recovery.setup)));
                                                 finished = true;
                                             }
                                             Err(error) => recovery.message = Some(error),

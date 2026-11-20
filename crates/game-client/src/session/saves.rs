@@ -2,7 +2,6 @@
 use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use crate::theme::{CYAN, GREEN};
-use game_core::generation::GalaxyConfig;
 use game_protocol::{ClientCommand, ServerMessage};
 use std::path::Path;
 use std::path::PathBuf;
@@ -13,7 +12,7 @@ pub(super) struct SavePanel {
     pub(super) slot: u8,
     seed: u64,
     fixed_seed: bool,
-    galaxy: GalaxyConfig,
+    setup: game_server::GameSetup,
     pub guide: bool,
     pub autosave: bool,
 }
@@ -26,7 +25,7 @@ impl Default for SavePanel {
             slot: 1,
             seed: 0,
             fixed_seed: false,
-            galaxy: GalaxyConfig::default(),
+            setup: game_server::GameSetup::default(),
             guide: true,
             autosave: true,
         }
@@ -75,11 +74,15 @@ impl LocalSession {
         &mut self,
         path: PathBuf,
         seed: u64,
-        galaxy: GalaxyConfig,
+        setup: game_server::GameSetup,
     ) -> Result<(), String> {
-        let mut authority =
-            game_server::Session::with_galaxy(seed, self.economy.rules.clone(), galaxy)?;
-        authority.set_movement_rules(self.state.movement_rules.clone())?;
+        // The current game's rules are the base; the setup overrides its choices.
+        let authority = game_server::Session::new_game(
+            seed,
+            self.economy.rules.clone(),
+            self.state.movement_rules.clone(),
+            &setup,
+        )?;
         self.replace_authority(authority);
         self.set_save_path(path);
         if let Err(error) = self.persist_preferences() {
@@ -138,7 +141,7 @@ impl LocalSession {
     fn controls_ui(&mut self, ui: &mut egui::Ui) {
         self.slot_controls(ui);
         ui.separator();
-        galaxy_controls(ui, &mut self.saves.galaxy);
+        super::setup::setup_controls(ui, &mut self.saves.setup);
         ui.horizontal_wrapped(|ui| {
             icons::glyph(ui, Icon::Seed, CYAN, "Map seed for a new session");
             ui.checkbox(&mut self.saves.fixed_seed, "Use fixed seed");
@@ -156,13 +159,12 @@ impl LocalSession {
                 } else {
                     crate::seed::new_seed()
                 };
-                match self.start_new_at(self.saves.path.clone(), seed, self.saves.galaxy) {
+                let setup = self.saves.setup;
+                match self.start_new_at(self.saves.path.clone(), seed, setup) {
                     Ok(()) => {
                         self.record(format!(
-                            "New map (seed {seed}, {} systems, {} ly radius, up to {} objects per system). Autosave uses the selected slot; choose another slot to preserve an older run.",
-                            self.saves.galaxy.systems,
-                            self.saves.galaxy.radius_ly,
-                            self.saves.galaxy.max_objects
+                            "{} Autosave uses the selected slot; choose another slot to preserve an older run.",
+                            super::setup::setup_summary(seed, &setup)
                         ));
                         ui.ctx().request_repaint();
                     }
@@ -243,23 +245,4 @@ impl LocalSession {
             });
         }
     }
-}
-
-/// Shared by the startup chooser and in-game new-session controls.
-pub(crate) fn galaxy_controls(ui: &mut egui::Ui, config: &mut GalaxyConfig) {
-    ui.horizontal_wrapped(|ui| {
-        ui.label("STAR SYSTEMS");
-        ui.add(egui::DragValue::new(&mut config.systems).range(4..=150));
-        ui.label("MAP RADIUS (ly)");
-        ui.add(egui::DragValue::new(&mut config.radius_ly).range(20..=95));
-        ui.label("MAX OBJECTS / SYSTEM");
-        ui.add(egui::DragValue::new(&mut config.max_objects).range(6..=15));
-        ui.small("Includes the star and trade port");
-    });
-    let area = std::f64::consts::PI * f64::from(config.radius_ly).powi(2);
-    ui.small(format!(
-        "Up to {} ly across · target density {:.1} systems per 1,000 ly². Every system is reachable by hops of 20 ly or less.",
-        u32::from(config.radius_ly) * 2,
-        f64::from(config.systems) * 1000.0 / area
-    ));
 }

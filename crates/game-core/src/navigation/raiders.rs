@@ -71,11 +71,14 @@ impl TravelState {
 
     fn spawn_band(&mut self, system: &StarSystem) {
         let roll = self.band_roll();
-        let ships = if roll.is_multiple_of(3) {
+        let mut ships = if roll.is_multiple_of(3) {
             vec![ShipKind::Patrol, ShipKind::Scout]
         } else {
             vec![ShipKind::Scout, ShipKind::Scout]
         };
+        // Perilous games field bigger bands.
+        let extra = self.movement_rules.raider_band_extra as usize;
+        ships.extend(std::iter::repeat_n(ShipKind::Scout, extra));
         let position = self.patrol_point(system);
         let id = self.navigation.next_band_id;
         self.navigation.next_band_id += 1;

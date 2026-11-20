@@ -131,6 +131,24 @@ mod tests {
         let mut battle = map(1);
         battle.prepare_capture("battle").unwrap();
         assert!(battle.session.battle_open());
+        // While a battle is open, Escape asks about surrendering; the map
+        // behind it keeps its view.
+        let ctx = egui::Context::default();
+        let local = battle.local.is_some();
+        let escape = egui::RawInput {
+            events: vec![egui::Event::Key {
+                key: egui::Key::Escape,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+            ..Default::default()
+        };
+        let _ = ctx.run(escape, |ctx| battle.ui(ctx));
+        assert!(battle.session.surrender_prompt_open());
+        assert_eq!(battle.local.is_some(), local);
+        assert!(battle.session.battle_open(), "asking does not surrender");
         let mut close = map(1);
         close.prepare_capture("battle-close").unwrap();
         assert!(close.session.battle_open());

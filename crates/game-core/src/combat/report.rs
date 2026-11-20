@@ -8,12 +8,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CombatOutcome {
-    /// Every hostile ship was destroyed.
+    /// No hostile ship was left fighting: destroyed or fled.
     Victory,
     /// Every player ship in the fleet was destroyed (one may survive crippled).
     Defeat,
     /// Both sides still had ships: a side withdrew or both stopped firing.
     Disengaged,
+    /// The player gave up: the raiders seized the fleet's cargo and let it go.
+    Surrendered,
 }
 
 impl CombatOutcome {
@@ -22,6 +24,7 @@ impl CombatOutcome {
             Self::Victory => "Victory",
             Self::Defeat => "Defeat",
             Self::Disengaged => "Disengaged",
+            Self::Surrendered => "Surrendered",
         }
     }
 
@@ -47,7 +50,8 @@ pub struct CombatReport {
     pub rounds: Vec<Vec<ShotRecord>>,
     /// Ore recovered into the fleet's free cargo space from destroyed hostiles.
     pub salvage_ore: u32,
-    /// Cargo units lost with destroyed (or crippled) player ships.
+    /// Cargo units lost with destroyed (or crippled) player ships, or seized
+    /// on surrender.
     pub cargo_lost: u32,
     /// The last owned ship is never lost; it limps away at 1 hull point.
     pub crippled: Option<ShipId>,

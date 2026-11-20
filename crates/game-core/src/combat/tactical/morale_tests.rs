@@ -158,3 +158,15 @@ fn the_player_escaping_is_not_a_defeat_and_movement_holds_off_the_ceasefire() {
     assert!(battle.finished());
     assert_eq!(battle.outcome(), Some(None));
 }
+
+#[test]
+fn only_the_player_side_surrenders_and_only_on_its_turn() {
+    let mut battle = duel(ShipKind::Scout, ShipKind::Scout);
+    battle.order = vec![1, 0];
+    assert_eq!(battle.surrender(), Err(super::BattleError::NotYourTurn));
+    battle.end_turn().unwrap();
+    battle.surrender().unwrap();
+    assert!(battle.finished());
+    assert_eq!(battle.outcome(), Some(None), "nobody won");
+    assert_eq!(battle.surrender(), Err(super::BattleError::Finished));
+}

@@ -37,6 +37,8 @@ pub enum BattleAction {
     Withdraw,
     /// Let the AI play every remaining turn on both sides.
     AutoResolve,
+    /// Give up: the raiders seize all cargo in the fleet and let its ships go.
+    Surrender,
 }
 
 impl TravelState {
@@ -118,6 +120,7 @@ impl TravelState {
             BattleAction::EndTurn => battle.end_turn(),
             BattleAction::Withdraw => battle.withdraw(),
             BattleAction::AutoResolve => tactical::finish(battle, weapons),
+            BattleAction::Surrender => battle.surrender(),
         }
         .map_err(NavigationError::Battle)?;
         self.progress_battle(rules)
@@ -172,7 +175,11 @@ impl TravelState {
             fleet: fleet.id,
             run: encounter.run,
             seed: open.battle.seed,
-            outcome: CombatOutcome::from_winner(result.winner),
+            outcome: if open.battle.surrendered {
+                CombatOutcome::Surrendered
+            } else {
+                CombatOutcome::from_winner(result.winner)
+            },
             combatants: result.combatants,
             rounds: result.rounds,
             salvage_ore: 0,
@@ -180,6 +187,15 @@ impl TravelState {
             crippled: None,
         };
         self.apply_engagement(&fleet, &mut report)?;
+        if open.battle.surrendered {
+            // The raiders take every cargo unit still aboard the fleet.
+            for id in &fleet.ships {
+                if let Ok(ship) = self.ship_mut(*id) {
+                    report.cargo_lost += ship.cargo.iter().sum::<u32>();
+                    ship.cargo = [0; 6];
+                }
+            }
+        }
         let evaded = if open.evasion_failed {
             "Evasion failed. "
         } else {

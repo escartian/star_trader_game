@@ -6,7 +6,7 @@ use super::LocalSession;
 use super::battle_cards::{initiative_bar, ship_card, shot_log, side_strength, weapon_list};
 use crate::battle::{
     BattleView,
-    scene::{Pick, SceneInput},
+    scene::{HOSTILE, Pick, SceneInput},
 };
 use crate::map::art::Artwork;
 use crate::theme::icons::{self, Icon};
@@ -19,20 +19,28 @@ use game_protocol::ClientCommand;
 #[derive(Default)]
 pub(super) struct BattlePanel {
     view: BattleView,
-    /// Encounter whose battle the player hid to look at the map.
-    hidden: Option<u64>,
+    /// The × (or Escape) was pressed: ask before surrendering.
+    confirm_surrender: bool,
     hovered: Option<Pick>,
 }
 
 const SIDE_WIDTH: f32 = 290.0;
+/// Space around the battle screen's content, in points.
+const MARGIN: f32 = 14.0;
+/// Height of everything but the grid: header, turn order, combat log, margins.
+const CHROME_HEIGHT: f32 = 290.0;
+/// Height of the surrender question's row, in points.
+const PROMPT_HEIGHT: f32 = 44.0;
 
 impl LocalSession {
+    #[cfg(test)]
+    pub fn surrender_prompt_open(&self) -> bool {
+        self.battle.confirm_surrender
+    }
+
+    /// A battle is open; it covers the whole window until it ends.
     pub fn battle_open(&self) -> bool {
-        self.state
-            .navigation
-            .battle
-            .as_ref()
-            .is_some_and(|open| self.battle.hidden != Some(open.encounter))
+        self.state.navigation.battle.is_some()
     }
 
     /// Capture helper: centres on the acting ship and zooms in `factor` times.
@@ -45,40 +53,40 @@ impl LocalSession {
         }
     }
 
-    /// Brings a hidden battle back.
-    pub fn resume_battle(&mut self) {
-        self.battle.hidden = None;
-    }
-
+    /// The battle fills the whole window while it is open; leaving it means
+    /// fighting it out, withdrawing, auto-resolving or surrendering.
     pub fn show_battle(&mut self, ctx: &egui::Context) {
         let Some(open) = self.state.navigation.battle.clone() else {
+            self.battle.confirm_surrender = false;
             return;
         };
-        if self.battle.hidden == Some(open.encounter) {
-            return;
-        }
         self.battle.view.sync(&open.battle);
         let artwork = Artwork::preload(ctx);
-        let screen = ctx.screen_rect().size();
-        let width = (screen.x - 40.0).clamp(600.0, 1220.0);
+        let screen = ctx.screen_rect();
+        // The surrender question takes a row of its own while it is open.
+        let prompt = if self.battle.confirm_surrender {
+            PROMPT_HEIGHT
+        } else {
+            0.0
+        };
         let scene = Vec2::new(
-            width - SIDE_WIDTH - 36.0,
-            (screen.y - 330.0).clamp(280.0, 640.0),
+            (screen.width() - SIDE_WIDTH - 3.0 * MARGIN).max(320.0),
+            (screen.height() - CHROME_HEIGHT - prompt).max(240.0),
         );
-        egui::Window::new("Battle")
-            .title_bar(false)
-            .frame(egui::Frame::NONE)
-            .resizable(false)
-            .pivot(egui::Align2::CENTER_CENTER)
-            .default_pos(ctx.screen_rect().center())
+        egui::Area::new(egui::Id::new("battle-screen"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(screen.min)
             .show(ctx, |ui| {
-                metal::frame(ui, 255, |ui| {
-                    ui.set_width(width);
+                ui.painter().extend(metal::plate(screen, 255));
+                ui.set_min_size(screen.size());
+                egui::Frame::NONE.inner_margin(MARGIN).show(ui, |ui| {
+                    ui.set_width(screen.width() - 2.0 * MARGIN);
                     self.battle_header(ui, &open);
                     initiative_bar(ui, &open.battle, &artwork);
                     ui.add_space(6.0);
                     ui.horizontal_top(|ui| {
                         self.battle_scene(ui, &open.battle, scene, &artwork);
+                        ui.add_space(MARGIN / 2.0);
                         ui.vertical(|ui| {
                             ui.set_width(SIDE_WIDTH);
                             self.battle_side(ui, &open.battle, &artwork);
@@ -91,6 +99,11 @@ impl LocalSession {
     }
 
     fn battle_header(&mut self, ui: &mut egui::Ui, open: &ActiveBattle) {
+        let escape = ui.input(|i| i.key_pressed(egui::Key::Escape));
+        if escape {
+            // Escape opens the surrender question, or backs out of it.
+            self.battle.confirm_surrender = !self.battle.confirm_surrender;
+        }
         ui.horizontal(|ui| {
             ui.label(
                 RichText::new(format!("BATTLE · ROUND {}", open.battle.round))
@@ -105,14 +118,59 @@ impl LocalSession {
             ui.add_space(8.0);
             side_strength(ui, &open.battle, Side::Hostile, "RAIDERS");
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if icons::icon_button(ui, Icon::Cancel, "Hide the battle to look at the map")
-                    .clicked()
+                if icons::toggle(
+                    ui,
+                    Icon::Cancel,
+                    "Surrender (Esc)",
+                    self.battle.confirm_surrender,
+                )
+                .clicked()
                 {
-                    self.battle.hidden = Some(open.encounter);
+                    self.battle.confirm_surrender = !self.battle.confirm_surrender;
                 }
             });
         });
+        if self.battle.confirm_surrender {
+            self.surrender_prompt(ui);
+        }
         ui.separator();
+    }
+
+    /// A warning row under the header: the cost of surrendering and the choice.
+    fn surrender_prompt(&mut self, ui: &mut egui::Ui) {
+        egui::Frame::new()
+            .fill(HOSTILE.gamma_multiply(0.12))
+            .stroke(egui::Stroke::new(1.0_f32, HOSTILE.gamma_multiply(0.6)))
+            .corner_radius(4)
+            .inner_margin(egui::Margin::symmetric(10, 6))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new(
+                            "Surrender? The raiders seize all cargo in this fleet and let it go.",
+                        )
+                        .color(AMBER),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui
+                            .add(egui::Button::new(
+                                RichText::new("Keep fighting").color(GREEN),
+                            ))
+                            .clicked()
+                        {
+                            self.battle.confirm_surrender = false;
+                        }
+                        let surrender =
+                            egui::Button::new(RichText::new("SURRENDER").color(Color32::BLACK))
+                                .fill(HOSTILE);
+                        if ui.add(surrender).clicked() {
+                            self.battle.confirm_surrender = false;
+                            self.battle_command(BattleAction::Surrender);
+                        }
+                    });
+                });
+            });
     }
 
     fn battle_scene(&mut self, ui: &mut egui::Ui, battle: &Battle, size: Vec2, artwork: &Artwork) {

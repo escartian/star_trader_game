@@ -56,6 +56,7 @@ fn report_ui(ui: &mut egui::Ui, report: &CombatReport) {
         CombatOutcome::Victory => GREEN,
         CombatOutcome::Defeat => AMBER,
         CombatOutcome::Disengaged => CYAN,
+        CombatOutcome::Surrendered => AMBER,
     };
     ui.horizontal_wrapped(|ui| {
         icons::glyph(ui, Icon::Weapon, color, "Engagement outcome");

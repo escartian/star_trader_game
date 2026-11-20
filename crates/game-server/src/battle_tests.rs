@@ -216,3 +216,34 @@ fn forged_battles_fail_save_validation() {
         "wrong fleet"
     );
 }
+
+#[test]
+fn surrender_hands_over_the_cargo_and_lets_the_fleet_go() {
+    let mut session = open_battle();
+    session.state.ships[0].cargo[game_core::economy::Commodity::Food.index()] = 6;
+    let damage = session
+        .state
+        .navigation
+        .battle
+        .as_ref()
+        .unwrap()
+        .battle
+        .units[0]
+        .damage;
+    play(&mut session, BattleAction::Surrender);
+    let report = session.state.navigation.last_combat.clone().unwrap();
+    assert_eq!(report.outcome, CombatOutcome::Surrendered);
+    assert_eq!(report.cargo_lost, 6);
+    assert_eq!(session.state.ships[0].cargo_used(), 0);
+    assert_eq!(
+        session.state.ships[0].hull_damage, damage,
+        "ships keep their damage"
+    );
+    assert!(session.state.navigation.battle.is_none());
+    assert!(session.state.navigation.encounters.is_empty());
+    assert!(
+        session.state.navigation.order(FleetId(1)).is_some(),
+        "the course resumes"
+    );
+    reload(&session);
+}

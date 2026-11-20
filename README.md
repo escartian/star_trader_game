@@ -109,7 +109,7 @@ it executes navigation runs, moving all fleets and markets together, until a
 fleet arrives, meets a contact or needs orders. The clock button runs exactly one
 run. Missing orders select/highlight the fleet first. Each travelling fleet can
 encounter salvage, a distress signal or raiders; resolve contacts in Navigation.
-**Fight** opens the battle window (**Auto-resolve** skips it); each battle ends
+**Fight** opens the full-screen battle (**Auto-resolve** skips it; × surrenders your cargo); each battle ends
 with a combat report. Repair damaged hulls in the Market window.
 Random state and choices persist. To automate a loop, select a destination market
 while the fleet is at another market and choose **TRADE ROUTE**; **End route** on

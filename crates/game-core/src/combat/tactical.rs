@@ -91,6 +91,8 @@ pub enum BattleError {
     InvalidTarget,
     OutOfRange,
     NotAtEdge,
+    /// Only the player side surrenders, on one of its own turns.
+    NotYourTurn,
 }
 
 impl std::fmt::Display for BattleError {
@@ -104,6 +106,7 @@ impl std::fmt::Display for BattleError {
             Self::InvalidTarget => "Pick an enemy ship that is still fighting.",
             Self::OutOfRange => "No fitted weapon reaches that target.",
             Self::NotAtEdge => "Ships withdraw from their own edge of the battle.",
+            Self::NotYourTurn => "You can surrender only on one of your ships' turns.",
         })
     }
 }
@@ -134,6 +137,9 @@ pub struct Battle {
     /// Whole rounds in a row, just played, in which nobody acted.
     #[serde(default)]
     pub quiet_rounds: u32,
+    /// The player side gave up; the battle is over.
+    #[serde(default)]
+    pub surrendered: bool,
 }
 
 impl Battle {
@@ -200,6 +206,7 @@ impl Battle {
             rounds: vec![Vec::new()],
             acted: false,
             quiet_rounds: 0,
+            surrendered: false,
         })
     }
 
@@ -209,7 +216,8 @@ impl Battle {
     }
 
     pub fn finished(&self) -> bool {
-        self.round > MAX_ROUNDS
+        self.surrendered
+            || self.round > MAX_ROUNDS
             || self.quiet_rounds >= CEASEFIRE_ROUNDS
             || !self.side_active(Side::Player)
             || !self.side_active(Side::Hostile)
@@ -374,6 +382,16 @@ impl Battle {
         self.rng = rng.state();
         self.fired = true;
         self.acted = true;
+        Ok(())
+    }
+
+    /// The player side gives up, on one of its own turns; ends the battle.
+    pub fn surrender(&mut self) -> Result<(), BattleError> {
+        let me = self.active().ok_or(BattleError::Finished)?;
+        if self.units[me].side != Side::Player {
+            return Err(BattleError::NotYourTurn);
+        }
+        self.surrendered = true;
         Ok(())
     }
 

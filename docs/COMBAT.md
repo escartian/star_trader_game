@@ -84,6 +84,9 @@ break off); movement counts, so a long approach never trips it. Outcomes:
 - **Victory:** no raider is left fighting, whether destroyed or fled.
 - **Defeat:** every one of your ships was destroyed.
 - **Disengaged:** your ships escaped by withdrawing, or a ceasefire.
+- **Surrendered:** you gave up on one of your turns. The raiders seize every
+  cargo unit aboard the fleet and let its ships go with the damage they have;
+  nothing is destroyed and the course resumes.
 
 A 200-round safety cap bounds saved shot logs; normal play never reaches it,
 because every shot has at least a 5% hit chance and every hull hit deals at
@@ -122,7 +125,9 @@ end in your fleet's destruction.
 
 ## Playing a battle
 
-**Fight** and a failed **Evade** open the battle window. The open battle is
+**Fight** and a failed **Evade** open the battle screen, which fills the whole
+window until the battle ends: fight it out, withdraw, auto-resolve or surrender.
+The open battle is
 saved with the session (`navigation.battle`) and its contact stays pending, so
 navigation runs wait for it. The server plays raider turns right after each
 player action, so a saved battle is always waiting on one of your ships.
@@ -154,8 +159,9 @@ player action, so a saved battle is always waiting on one of your ships.
 - The turn-order bar shows every ship with its portrait and hull, lights the one
   acting and marks lost or departed ships. The ship card shows whether it can
   still move and fire this turn, and the combat log lists the latest shots.
-- Hide the window (×) to look at the map; **Return to battle** in the contact
-  panel brings it back. The combat report opens when the battle ends.
+- **×** (or Escape) asks whether to surrender, naming the cost; **SURRENDER**
+  confirms, **Keep fighting** (or Escape again) backs out. The combat report
+  opens when the battle ends.
 
 Every hull is drawn as its real 3D model (see the asset notes); sprites remain
 as the fallback and for portraits.

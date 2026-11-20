@@ -314,10 +314,6 @@ impl LocalSession {
             .is_some_and(|open| open.encounter == encounter.id)
         {
             ui.label(format!("Battle in progress against {}.", names.join(", ")));
-            if !self.battle_open() && icons::button(ui, Icon::Weapon, "Return to battle").clicked()
-            {
-                self.resume_battle();
-            }
             return;
         }
         ui.label(format!(

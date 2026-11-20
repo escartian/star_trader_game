@@ -63,19 +63,25 @@ impl LocalSession {
         ui.horizontal_wrapped(|ui| {
             stat(ui, Icon::Funds, AMBER, &market.credits.to_string(), "Market funds available to buy your cargo");
             stat(ui, Icon::Credits, AMBER, &self.economy.credits.to_string(), "Your credits");
-            let trend = match market.size_percent {
-                size if size > 100 => "growing with trade",
-                size if size < 100 => "shrinking: little trade",
-                _ => "as founded",
+            let flow = self.economy.market_flow(&market);
+            let trend = match flow.net() {
+                net if net > 0 => "growing",
+                net if net < 0 => "shrinking",
+                _ => "steady",
             };
             stat(
                 ui,
                 Icon::Overview,
                 CYAN,
-                &format!("Size {}%", market.size_percent),
+                &format!("Economy {trend}"),
                 &format!(
-                    "Port economy {trend}. Trade here grows it, and with it the treasury; \
-                     idle ports shrink. Prices stand at {:.1}% of founding (inflation).",
+                    "Per tick this port earns {} cr from its own industry and {} cr from \
+                     recent trade, and spends {} cr. Trade here makes it richer; quiet \
+                     ports fall back to what their industry supports. Prices stand at \
+                     {:.1}% of a new game's (inflation).",
+                    flow.local_income,
+                    flow.trade_income,
+                    flow.upkeep,
                     self.economy.price_level_ppm as f64 / 10_000.0
                 ),
             );

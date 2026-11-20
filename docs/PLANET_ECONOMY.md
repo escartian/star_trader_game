@@ -21,26 +21,32 @@ authority still validates every order.
 
 ## Living markets and inflation
 
-Markets are not static (`game-core/src/economy/dynamics.rs`). Each tick:
+Markets are not static (`game-core/src/economy/dynamics.rs`). A market's future
+depends only on its current state and recent past; nothing remembers how it was
+founded. Each tick:
 
 - **Activity:** every trade (yours or an NPC's) adds its value to its market's
   recent activity, which fades by 1/40 per tick (about 10% per run).
-- **Size:** a port's economy, in percent of its founding size, steps one point
-  per tick toward 75% plus one point per 100 cr of activity, between 50% and
-  400%. Ports nobody trades with (because raiders scare traffic off, or nothing
-  pays) shrink; busy ones grow. The market header shows the size and trend.
-- **Treasury:** drifts 2% of the gap per tick toward founding treasury × size ×
-  price level. This is off-screen trade, taxes and investment: with bounties,
-  the only way money enters or leaves the galaxy. Trades still only move money.
-- **Inflation:** a galaxy-wide price level compounds by 125 parts per million
-  per tick (about 5% per 100 runs). Goods, fuel, repairs, hold upgrades, hulls,
-  charters and bounties all scale with it, and so do treasuries.
+- **Income:** 4% of the value of the port's own production and consumption at
+  today's prices (its local industry), plus 0.15% of its recent activity.
+- **Upkeep:** 0.5% of its current treasury.
+
+So a treasury settles where income meets upkeep: trade makes a port richer, a
+quiet port falls back to what its industry supports, and a change in traffic
+moves it from wherever it is now. Income and upkeep stand for off-screen trade,
+taxes and spending; with bounties they are the only way money enters or leaves
+the galaxy. Trades still only move money. The market header shows whether the
+port's economy is growing or shrinking, with its income and upkeep per tick.
+
+**Inflation:** the galaxy's price level compounds from its current value by 125
+parts per million per tick (about 5% per 100 runs). Goods, fuel, repairs, hold
+upgrades, hulls, charters and bounties all scale with it.
 
 Tuning lives in the session rules (`dynamics`); `MarketDynamics::frozen()`
-restores a static economy. In the three-system default world with two NPC
-traders, 400 runs with the player idle took galaxy wealth from about 65,000 cr
-to 54,000 cr by run 50 (idle ports shrinking) and to 98,000 cr by run 400 at a
-price level of 1.22; the ports NPC traders serve held 84–88%.
+gives a static economy. In the three-system default world with two NPC traders
+and the player idle, galaxy wealth went from 65,000 cr to about 56,000 cr by
+run 50 as treasuries settled to their ports' industry and trade (2,000–8,000
+cr), then rose with inflation to about 91,000 cr by run 400 (price level 1.22).
 
 ## Identity and production
 

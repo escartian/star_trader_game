@@ -1,76 +1,105 @@
-//! Living markets and inflation. Each tick (`Economy::advance`):
+//! Living markets and inflation. A market's future depends only on its current
+//! state and its recent past; nothing remembers how it was founded. Each tick
+//! (`Economy::advance`):
 //!
 //! - **Activity:** every trade adds its value to its market's `activity`, which
-//!   decays by [`ACTIVITY_DECAY_DIVISOR`]ths per tick (about 10% per run).
-//! - **Size:** a market's economic size (percent of its founding size) steps one
-//!   point per tick toward `idle_size_percent + activity / ACTIVITY_PER_POINT`,
-//!   within [`MIN_SIZE_PERCENT`]–[`MAX_SIZE_PERCENT`]. Busy ports grow; ports
-//!   nobody trades with (because raiders scare traffic off, or nothing pays)
-//!   shrink toward the idle size.
-//! - **Treasury:** drifts `treasury_drift_percent` of the gap per tick toward
-//!   founding treasury × size × price level. The difference is off-screen trade,
-//!   taxes and investment: the only way, besides bounties, that money enters or
-//!   leaves the galaxy. Trades themselves still only move money.
-//! - **Inflation:** a galaxy-wide price level (parts per million) compounds by
-//!   `inflation_ppm_per_tick`. It scales goods, fuel, repairs, hold upgrades,
-//!   hulls, charters and bounties alike, and the treasuries that pay for them.
+//!   fades by 1/[`ACTIVITY_DECAY_DIVISOR`] per tick (about 10% per run): the
+//!   market's recent past.
+//! - **Income:** `local_income_percent` of the value of the port's own
+//!   production and consumption at today's prices (its local industry), plus
+//!   `trade_income_ppm` of its recent activity (business from trade).
+//! - **Upkeep:** `upkeep_ppm_per_tick` of the current treasury.
+//!
+//! Treasuries therefore settle where income meets upkeep: a port that trades
+//! more grows richer, a quiet one falls back to what its own industry supports,
+//! and a port whose trade picks up or dies away moves from wherever it is now.
+//! Income and upkeep are off-screen trade, taxes and spending: with bounties,
+//! the only way money enters or leaves the galaxy. Trades still only move money.
+//!
+//! - **Inflation:** the galaxy's price level (parts per million) compounds from
+//!   its current value by `inflation_ppm_per_tick`. Goods, fuel, repairs, hold
+//!   upgrades, hulls, charters and bounties all scale with it.
 //!
 //! All integer arithmetic, so a run replays exactly.
-use super::{Credits, Economy, MarketId};
+use super::{Credits, Economy, Market, MarketId};
 use crate::fleet::ShipKind;
 use serde::{Deserialize, Serialize};
 
-/// The price level at the start of every game: 1.0 in parts per million.
+/// The price level of a new game: 1.0 in parts per million.
 pub const PRICE_LEVEL_UNIT: u64 = 1_000_000;
-/// Inflation stops compounding at 100 times the starting prices.
+/// Inflation stops compounding at 100 times a new game's prices.
 pub const MAX_PRICE_LEVEL: u64 = 100 * PRICE_LEVEL_UNIT;
-pub const MIN_SIZE_PERCENT: u32 = 50;
-pub const MAX_SIZE_PERCENT: u32 = 400;
-/// Activity (credits in cents of recent trade) per point of market size: a
-/// steady full freighter hold each run (about 1,000 cr) keeps a port near 150%.
-pub const ACTIVITY_PER_POINT: u64 = 10_000;
 /// Activity loses 1/40 of itself each tick.
 pub const ACTIVITY_DECAY_DIVISOR: u64 = 40;
+const PER_MILLION: u64 = 1_000_000;
 
 /// Tuning for living markets and inflation, carried with the session rules.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MarketDynamics {
-    /// Share of the gap to its target a treasury closes each tick (0 freezes
-    /// treasuries, as before this existed).
-    pub treasury_drift_percent: u32,
-    /// Size a market settles at with no trade, in percent of its founding size.
-    pub idle_size_percent: u32,
-    /// Price-level growth per tick, in parts per million (0: no inflation).
+    /// Share of the value of a port's own output (production plus
+    /// consumption, at today's list prices) it earns per tick, in percent.
+    pub local_income_percent: u32,
+    /// Share of a port's recent trade activity it earns per tick, in ppm.
+    pub trade_income_ppm: u32,
+    /// Share of its treasury a port spends per tick, in ppm.
+    pub upkeep_ppm_per_tick: u32,
+    /// Price-level growth per tick, in ppm (0: no inflation).
     pub inflation_ppm_per_tick: u32,
 }
 
 impl Default for MarketDynamics {
-    /// About 8% of the treasury gap per run, idle ports at 75% and roughly
-    /// 5% inflation per 100 runs (four ticks per run).
+    /// Upkeep of 0.5% per tick; local industry and trade income sized so a
+    /// port of the default template settles near 4,600 cr with no trade and
+    /// gains roughly half again with a full freighter hold traded each run;
+    /// prices rise about 5% per 100 runs (four ticks per run).
     fn default() -> Self {
         Self {
-            treasury_drift_percent: 2,
-            idle_size_percent: 75,
+            local_income_percent: 4,
+            trade_income_ppm: 1_500,
+            upkeep_ppm_per_tick: 5_000,
             inflation_ppm_per_tick: 125,
         }
     }
 }
 
 impl MarketDynamics {
-    /// No growth, drift or inflation: the static economy of earlier versions.
+    /// No income, upkeep or inflation: the static economy of earlier versions.
     pub fn frozen() -> Self {
         Self {
-            treasury_drift_percent: 0,
-            idle_size_percent: 100,
+            local_income_percent: 0,
+            trade_income_ppm: 0,
+            upkeep_ppm_per_tick: 0,
             inflation_ppm_per_tick: 0,
         }
     }
 
     pub(super) fn valid(&self) -> bool {
-        self.treasury_drift_percent <= 50
-            && (MIN_SIZE_PERCENT..=MAX_SIZE_PERCENT).contains(&self.idle_size_percent)
+        self.local_income_percent <= 100
+            && self.trade_income_ppm <= 100_000
+            && self.upkeep_ppm_per_tick <= 100_000
             && self.inflation_ppm_per_tick <= 10_000
+    }
+}
+
+/// One tick of a market's money: what it earns and what it spends.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MarketFlow {
+    /// From its own industry (credits in cents per tick).
+    pub local_income: Credits,
+    /// From recent trade (credits in cents per tick).
+    pub trade_income: Credits,
+    pub upkeep: Credits,
+}
+
+impl MarketFlow {
+    pub fn income(self) -> Credits {
+        Credits(self.local_income.0.saturating_add(self.trade_income.0))
+    }
+
+    /// Positive while the treasury grows.
+    pub fn net(self) -> i128 {
+        i128::from(self.income().0) - i128::from(self.upkeep.0)
     }
 }
 
@@ -117,6 +146,29 @@ impl Economy {
         )))
     }
 
+    /// What `market` earns and spends this tick, from its current state.
+    pub fn market_flow(&self, market: &Market) -> MarketFlow {
+        let dynamics = &self.rules.dynamics;
+        let output = market.goods.iter().fold(0_u64, |sum, good| {
+            let units = u64::from(good.production) + u64::from(good.consumption);
+            let price = scale(good.base_price.0, good.price_level_ppm, PRICE_LEVEL_UNIT);
+            sum.saturating_add(units.saturating_mul(price))
+        });
+        MarketFlow {
+            local_income: Credits(scale(output, u64::from(dynamics.local_income_percent), 100)),
+            trade_income: Credits(scale(
+                market.activity,
+                u64::from(dynamics.trade_income_ppm),
+                PER_MILLION,
+            )),
+            upkeep: Credits(scale(
+                market.credits.0,
+                u64::from(dynamics.upkeep_ppm_per_tick),
+                PER_MILLION,
+            )),
+        }
+    }
+
     /// Adds a trade worth `value` to its market's recent activity.
     pub(super) fn record_activity(&mut self, market: MarketId, value: Credits) {
         if let Ok(market) = self.market_mut(market) {
@@ -124,73 +176,46 @@ impl Economy {
         }
     }
 
-    /// One tick of market growth, treasury drift and inflation.
+    /// One tick of inflation, market income and upkeep, and fading activity.
     pub(super) fn advance_dynamics(&mut self) {
-        let dynamics = self.rules.dynamics.clone();
         let level = scale(
             self.price_level_ppm,
-            PRICE_LEVEL_UNIT + u64::from(dynamics.inflation_ppm_per_tick),
+            PRICE_LEVEL_UNIT + u64::from(self.rules.dynamics.inflation_ppm_per_tick),
             PRICE_LEVEL_UNIT,
         )
         .min(MAX_PRICE_LEVEL);
         self.price_level_ppm = level;
-        for market in &mut self.markets {
-            // Saves from before living markets: today's treasury is the founding one.
-            if market.founding_credits.0 == 0 {
-                market.founding_credits = market.credits;
-            }
-            market.activity -= market.activity / ACTIVITY_DECAY_DIVISOR;
-            let wanted =
-                u64::from(dynamics.idle_size_percent) + market.activity / ACTIVITY_PER_POINT;
-            let wanted =
-                wanted.clamp(u64::from(MIN_SIZE_PERCENT), u64::from(MAX_SIZE_PERCENT)) as u32;
-            market.size_percent = match market.size_percent.cmp(&wanted) {
-                std::cmp::Ordering::Less => market.size_percent + 1,
-                std::cmp::Ordering::Greater => market.size_percent - 1,
-                std::cmp::Ordering::Equal => market.size_percent,
-            };
-            let target = scale(
-                scale(
-                    market.founding_credits.0,
-                    u64::from(market.size_percent),
-                    100,
-                ),
-                level,
-                PRICE_LEVEL_UNIT,
-            );
-            let current = market.credits.0;
-            let gap = target.abs_diff(current);
-            let step = scale(gap, u64::from(dynamics.treasury_drift_percent), 100);
-            // Close at least a cent of a remaining gap, so treasuries settle.
-            let step = if dynamics.treasury_drift_percent > 0 {
-                step.max(gap.min(1))
-            } else {
-                0
-            };
-            market.credits = Credits(if target > current {
-                current + step
-            } else {
-                current - step
-            });
-            for good in &mut market.goods {
+        for index in 0..self.markets.len() {
+            for good in &mut self.markets[index].goods {
                 good.price_level_ppm = level;
             }
+            let flow = self.market_flow(&self.markets[index]);
+            let market = &mut self.markets[index];
+            market.credits = Credits(
+                market
+                    .credits
+                    .0
+                    .saturating_add(flow.income().0)
+                    .saturating_sub(flow.upkeep.0),
+            );
+            // At least a cent, so a market with no trade reaches zero activity.
+            let fade = (market.activity / ACTIVITY_DECAY_DIVISOR).max(market.activity.min(1));
+            market.activity -= fade;
         }
     }
 
-    /// Rejects markets outside the size range or out of step with the price level.
+    /// Rejects goods out of step with the galaxy's price level.
     pub fn validate_dynamics(&self) -> Result<(), String> {
         let level = self.price_level_ppm;
         let bad = !(PRICE_LEVEL_UNIT..=MAX_PRICE_LEVEL).contains(&level)
             || self.markets.iter().any(|market| {
-                !(MIN_SIZE_PERCENT..=MAX_SIZE_PERCENT).contains(&market.size_percent)
-                    || market
-                        .goods
-                        .iter()
-                        .any(|good| good.price_level_ppm != level)
+                market
+                    .goods
+                    .iter()
+                    .any(|good| good.price_level_ppm != level)
             });
         if bad {
-            return Err("Invalid market size or price level".into());
+            return Err("Invalid market price level".into());
         }
         Ok(())
     }

@@ -68,7 +68,7 @@ impl Economy {
 
     /// Simultaneous net production/consumption. Bulk advancement equals individual
     /// ticks, including at capacity boundaries; no UI refresh randomness is involved.
-    /// Then, tick by tick, market growth, treasury drift and inflation (`dynamics`).
+    /// Then, tick by tick, inflation and market income and upkeep (`dynamics`).
     pub fn advance(&mut self, ticks: u64) {
         for market in &mut self.markets {
             for good in &mut market.goods {
@@ -95,8 +95,6 @@ impl Market {
             id,
             is_station,
             credits,
-            founding_credits: credits,
-            size_percent: 100,
             activity: 0,
             ship_stock,
             goods: std::array::from_fn(|commodity| MarketGood {

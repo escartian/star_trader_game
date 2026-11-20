@@ -1,64 +1,54 @@
-use super::{
-    Credits, Economy, MarketDynamics, PRICE_LEVEL_UNIT, TradeSide,
-    dynamics::{ACTIVITY_PER_POINT, MAX_SIZE_PERCENT},
-};
+use super::{Credits, Economy, MarketDynamics, PRICE_LEVEL_UNIT, TradeSide};
 use crate::fleet::ShipKind;
 
 fn economy() -> Economy {
-    Economy::new(&crate::demo_galaxy())
-}
-
-#[test]
-fn idle_ports_shrink_and_busy_ports_grow_one_point_per_tick_within_bounds() {
-    let mut economy = economy();
-    let busy = economy.markets[0].id;
-    economy.advance(10);
-    assert!(
-        economy
-            .markets
-            .iter()
-            .all(|market| market.size_percent == 90)
-    );
-    economy.advance(100);
-    assert!(
-        economy
-            .markets
-            .iter()
-            .skip(1)
-            .all(|market| market.size_percent == 75)
-    );
-    // Heavy, steady trade at one port.
-    for _ in 0..600 {
-        economy.record_activity(busy, Credits(ACTIVITY_PER_POINT * 20));
-        economy.advance(1);
-    }
-    let size = economy.market(busy).unwrap().size_percent;
-    assert!(size > 200 && size <= MAX_SIZE_PERCENT, "{size}");
-    assert!(economy.validate_dynamics().is_ok());
-}
-
-#[test]
-fn treasuries_drift_toward_founding_size_and_price_level() {
-    let mut economy = economy();
+    let mut economy = Economy::new(&crate::demo_galaxy());
     economy.rules.dynamics.inflation_ppm_per_tick = 0;
-    let founding = economy.markets[0].founding_credits.0;
-    economy.markets[0].credits = Credits(0);
-    // 2% of the gap per tick: an exponential approach, then a cent at a time.
-    economy.advance(1_000);
-    // Idle: 75% of the founding treasury, reached within a cent.
-    let settled = economy.markets[0].credits.0;
-    assert!(settled.abs_diff(founding * 75 / 100) <= 1, "{settled}");
-    economy.markets[0].credits = Credits(founding * 10);
-    economy.advance(1);
-    assert!(
-        economy.markets[0].credits.0 < founding * 10,
-        "a rich port pays out"
-    );
+    economy
+}
+
+/// Where a market's treasury settles, after long enough.
+fn settle(economy: &mut Economy, ticks: u64) -> u64 {
+    economy.advance(ticks);
+    economy.markets[0].credits.0
 }
 
 #[test]
-fn inflation_compounds_into_goods_services_hulls_and_treasuries() {
-    let mut economy = economy();
+fn a_treasury_settles_where_income_meets_upkeep_from_any_starting_point() {
+    let mut poor = economy();
+    poor.markets[0].credits = Credits(0);
+    let mut rich = economy();
+    rich.markets[0].credits = Credits(100_000_000);
+    let (low, high) = (settle(&mut poor, 6_000), settle(&mut rich, 6_000));
+    // Same state now, same future: the starting treasury is forgotten.
+    assert!(low.abs_diff(high) * 1_000 <= high, "{low} vs {high}");
+    let flow = poor.market_flow(&poor.markets[0]);
+    assert!(flow.net().abs() <= 1, "{flow:?}");
+    assert!(flow.local_income.0 > 0 && flow.trade_income.0 == 0);
+}
+
+#[test]
+fn recent_trade_raises_a_port_and_fades_when_trade_stops() {
+    let mut quiet = economy();
+    let idle = settle(&mut quiet, 6_000);
+    let mut busy = quiet.clone();
+    let port = busy.markets[0].id;
+    for _ in 0..2_000 {
+        busy.record_activity(port, Credits(25_000));
+        busy.advance(1);
+    }
+    let thriving = busy.markets[0].credits.0;
+    assert!(thriving > idle * 13 / 10, "{idle} -> {thriving}");
+    assert!(busy.market_flow(&busy.markets[0]).trade_income.0 > 0);
+    // Trade stops: activity fades, then the treasury falls back.
+    let after = settle(&mut busy, 6_000);
+    assert!(after.abs_diff(idle) * 100 <= idle, "{after} vs {idle}");
+    assert_eq!(busy.markets[0].activity, 0);
+}
+
+#[test]
+fn inflation_compounds_into_goods_services_and_hulls() {
+    let mut economy = Economy::new(&crate::demo_galaxy());
     let food = economy.markets[0].goods[0].clone();
     let before = food.price(TradeSide::Buy, food.stock);
     let fuel = economy.fuel_price();
@@ -77,37 +67,18 @@ fn inflation_compounds_into_goods_services_hulls_and_treasuries() {
         .price;
     assert!(economy.ship_price(ShipKind::Scout).unwrap() > catalog);
     assert!(economy.charter_price() > economy.rules.campaign.charter_price);
-    // Out-of-step price levels are rejected.
+    assert!(economy.validate_dynamics().is_ok());
     economy.markets[1].goods[2].price_level_ppm = PRICE_LEVEL_UNIT;
-    assert!(economy.validate_dynamics().is_err());
+    assert!(economy.validate_dynamics().is_err(), "out of step");
 }
 
 #[test]
-fn frozen_rules_keep_the_static_economy_and_old_markets_adopt_their_treasury() {
-    let mut economy = economy();
+fn frozen_rules_keep_a_static_economy() {
+    let mut economy = Economy::new(&crate::demo_galaxy());
     economy.rules.dynamics = MarketDynamics::frozen();
-    let credits: Vec<_> = economy
-        .markets
-        .iter()
-        .map(|market| market.credits)
-        .collect();
+    let before = economy.markets.clone();
     economy.advance(200);
-    let after: Vec<_> = economy
-        .markets
-        .iter()
-        .map(|market| market.credits)
-        .collect();
-    assert_eq!(credits, after);
+    let credits = |markets: &[super::Market]| markets.iter().map(|m| m.credits).collect::<Vec<_>>();
+    assert_eq!(credits(&before), credits(&economy.markets));
     assert_eq!(economy.price_level_ppm, PRICE_LEVEL_UNIT);
-    // A market from before living markets has no founding treasury yet.
-    let mut json = serde_json::to_value(&economy.markets[0]).unwrap();
-    let fields = json.as_object_mut().unwrap();
-    for field in ["founding_credits", "size_percent", "activity"] {
-        fields.remove(field);
-    }
-    let old: super::Market = serde_json::from_value(json).unwrap();
-    assert_eq!((old.founding_credits, old.size_percent), (Credits(0), 100));
-    economy.markets[0] = old;
-    economy.advance(1);
-    assert_eq!(economy.markets[0].founding_credits, credits[0]);
 }

@@ -25,6 +25,26 @@ impl LocalSession {
         }
     }
 
+    /// Where each own fleet under way is heading (its current leg's end), in
+    /// galaxy-space kilometres; the map draws a short direction tick from it.
+    pub fn fleet_headings(
+        &self,
+        systems: &[StarSystem],
+    ) -> Vec<(
+        game_core::fleet::FleetId,
+        game_core::movement::SpacePosition,
+    )> {
+        self.state
+            .navigation
+            .orders
+            .iter()
+            .filter_map(|order| {
+                game_core::navigation::space_position(&order.plan.destination, systems)
+                    .map(|position| (order.plan.fleet, position))
+            })
+            .collect()
+    }
+
     pub fn raider_bands(&self) -> &[game_core::navigation::RaiderBand] {
         &self.state.navigation.bands
     }

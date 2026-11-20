@@ -46,7 +46,8 @@ No participants have been contacted and no playtest results are claimed here.
   the destination system, and dock at its trade port before trading.
 - [ ] Inspect another system without moving; verify the ship remains where it was.
 - [ ] Try a local route through the star, then route around it with a waypoint.
-- [ ] Visit a planet/moon, focus the selected ship and inspect its tethered marker.
+- [ ] Visit a planet/moon, focus the selected ship and inspect its fleet chip; with
+  several fleets there, tap the stack to cycle through them.
 - [ ] Show the system boundary and save/continue from an entry face/deep space.
 
 - [ ] Trade at two planets in the same system and verify separate stock/funds.

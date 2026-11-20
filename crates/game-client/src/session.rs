@@ -31,7 +31,7 @@ use game_protocol::{ClientCommand, ServerMessage, SessionEvent};
 use std::collections::VecDeque;
 
 /// Galaxy-space kilometers to the light-year coordinates the galaxy map draws in.
-fn light_years(position: SpacePosition) -> glam::DVec3 {
+pub(crate) fn light_years(position: SpacePosition) -> glam::DVec3 {
     glam::DVec3::new(
         position.x_km as f64,
         position.y_km as f64,

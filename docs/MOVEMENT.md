@@ -21,7 +21,8 @@ coordinates (optional), rather than the normal interaction flow.
 
 **Focus fleet** in the galaxy and **Focus selected ship** inside a system reveal
 ships outside the current view. **Show system boundary** draws the local cube.
-Ship illustrations are offset and tethered to body/waypoint anchors for readability.
+Fleets show as small chips beside their body (stacked when several share it) or on
+their course; see [map controls](MAP_CONTROLS.md).
 Moons retain the same schematic display spacing; simulation uses true coordinates.
 
 ## Units and costs

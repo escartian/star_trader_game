@@ -59,6 +59,11 @@ pub struct LocalView {
     fleet_hits: Vec<crate::map::fleets::FleetHit>,
     trade_ready: Vec<game_core::travel::ShipId>,
     contacts: Vec<game_core::fleet::FleetId>,
+    /// Where own fleets under way are heading (galaxy-space km).
+    headings: Vec<(
+        game_core::fleet::FleetId,
+        game_core::movement::SpacePosition,
+    )>,
     /// Roaming raider bands (drawn when in this system).
     bands: Vec<game_core::navigation::RaiderBand>,
     trade_options: Vec<crate::session::TradeOption>,
@@ -82,6 +87,7 @@ impl LocalView {
             trade_ready: Vec::new(),
             contacts: Vec::new(),
             bands: Vec::new(),
+            headings: Vec::new(),
             trade_options: Vec::new(),
             market_request: None,
             selection_request: None,

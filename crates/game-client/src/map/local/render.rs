@@ -4,6 +4,9 @@ use egui::{Color32, Rect, Sense, Stroke, Vec2};
 use game_core::BodyKind;
 use glam::DVec3;
 
+/// Camera zoom from which every body is named on the system map.
+const LABEL_ZOOM: f32 = 1.8;
+
 impl LocalView {
     pub(super) fn draw_map(
         &mut self,
@@ -131,7 +134,10 @@ impl LocalView {
                 egui::FontId::proportional(13.0),
                 Color32::WHITE,
             );
-            if rect.contains(point)
+            // Names only when zoomed in, or for the body selected or pointed at.
+            let named = selected || hover.contains(&body.id) || self.camera.zoom >= LABEL_ZOOM;
+            if named
+                && rect.contains(point)
                 && let Some(label) = labels::place(
                     point,
                     radius,
@@ -147,16 +153,8 @@ impl LocalView {
                 painter.galley(label.min, galley, Color32::WHITE);
             }
         }
-        let reserved_labels = label_bounds;
         self.draw_bands(&painter, rect);
-        self.draw_fleets(
-            &painter,
-            rect,
-            ships,
-            fleets,
-            &reserved_labels,
-            &marker_bounds,
-        );
+        self.draw_fleets(&painter, rect, ships, fleets, &label_bounds);
         if response.clicked()
             && let Some(pointer) = response.interact_pointer_pos()
         {

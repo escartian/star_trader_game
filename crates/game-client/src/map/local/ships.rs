@@ -1,10 +1,11 @@
 //! Fleet symbols are grouped, clickable and separated from all star/body silhouettes.
 use super::{KM_PER_VIEW_UNIT, LocalView, display_position, kilometers, scale::SymbolScale};
 use crate::map::fleets;
-use egui::{Rect, Vec2};
+use egui::Rect;
 use game_core::{
     BodyKind,
     fleet::Fleet,
+    movement::SpacePosition,
     travel::{Location, Ship},
 };
 use glam::DVec3;
@@ -13,6 +14,11 @@ impl LocalView {
     /// Ships the authority reports as able to trade where they are.
     pub fn set_trade_ready(&mut self, ships: Vec<game_core::travel::ShipId>) {
         self.trade_ready = ships;
+    }
+
+    /// Where each own fleet under way is heading, in galaxy-space kilometres.
+    pub fn set_headings(&mut self, headings: Vec<(game_core::fleet::FleetId, SpacePosition)>) {
+        self.headings = headings;
     }
 
     /// Fleets paused by an unresolved contact, for the marker badge.
@@ -68,21 +74,15 @@ impl LocalView {
         rect: Rect,
         ships: &[Ship],
         records: &[Fleet],
-        label_bounds: &[Rect],
-        marker_bounds: &[Rect],
+        labels: &[Rect],
     ) {
         self.fleet_hits.clear();
         let Some(art) = &self.art else {
             return;
         };
-        let mut reserved = label_bounds.to_vec();
-        reserved.extend_from_slice(marker_bounds);
         let scale = SymbolScale::new(self.camera.zoom);
-        let radius = scale.star_radius(self.system.star_kind) + 24.0;
-        reserved.push(Rect::from_center_size(
-            self.camera.project(DVec3::ZERO, rect),
-            Vec2::splat(radius * 2.0),
-        ));
+        let centre = SpacePosition::from_galaxy(self.system.position).ok();
+        let mut entries = Vec::new();
         for fleet in records {
             let Some(ship) = fleet
                 .ships
@@ -94,34 +94,48 @@ impl LocalView {
             let Some(anchor) = self.ship_anchor(&ship.location) else {
                 continue;
             };
-            let anchor = self.camera.project(anchor, rect);
-            let ring = match ship.location {
-                Location::Orbiting { body, .. } => self
+            let body = match ship.location {
+                Location::Docked(_) => self
                     .system
                     .bodies
                     .iter()
-                    .find(|known| known.id == body)
-                    .map_or(0.0, |body| scale.body_radius(body.kind) + 16.0),
+                    .find(|body| body.kind == BodyKind::Station),
+                Location::Orbiting { body, .. } | Location::Landed { body, .. } => {
+                    self.system.bodies.iter().find(|known| known.id == body)
+                }
+                _ => None,
+            };
+            let clearance = body.map_or(0.0, |body| scale.body_radius(body.kind));
+            let ring = match ship.location {
+                Location::Orbiting { .. } => clearance + 16.0,
                 _ => 0.0,
             };
-            let berth =
-                fleets::Berth::new(&ship.location, self.trade_ready.contains(&ship.id), ring);
-            if let Some(hit) = fleets::paint(
-                painter,
-                art,
-                rect,
-                anchor,
-                fleets::FleetSymbol {
-                    fleet,
-                    ship,
-                    selected: fleet.ships.contains(&self.active_ship),
-                    berth,
-                    contact: self.contacts.contains(&fleet.id),
-                },
-                &mut reserved,
-            ) {
-                self.fleet_hits.push(hit);
-            }
+            let heading = centre.and_then(|centre| {
+                let (_, target) = self.headings.iter().find(|(id, _)| *id == fleet.id)?;
+                let local = game_core::LocalPosition {
+                    x_km: target.x_km - centre.x_km,
+                    y_km: target.y_km - centre.y_km,
+                    z_km: target.z_km - centre.z_km,
+                };
+                Some(
+                    self.camera
+                        .project(kilometers(local) / KM_PER_VIEW_UNIT, rect),
+                )
+            });
+            entries.push(fleets::StackEntry {
+                fleet,
+                ship,
+                anchor: self.camera.project(anchor, rect),
+                berth: fleets::Berth::new(&ship.location, clearance),
+                contact: self.contacts.contains(&fleet.id),
+                heading,
+                ring,
+            });
         }
+        let selected = records
+            .iter()
+            .find(|fleet| fleet.ships.contains(&self.active_ship))
+            .map(|fleet| fleet.id);
+        self.fleet_hits = fleets::paint_stacks(painter, art, rect, &entries, selected, labels);
     }
 }

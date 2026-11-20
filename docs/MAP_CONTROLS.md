@@ -36,11 +36,21 @@ Each run's movement plays out as a short glide on both maps, including NPC
 traffic. A ship arriving at a body or port flies in, then takes its berth marker.
 
 Local labels and input units are AU; galaxy distances are light-years. Rendering
-retains symbolic body/fleet sizes and schematic moon spacing. Fleet symbols are
-placed away from star/body silhouettes and labels. In free space they sit directly
-on their physical course position; displaced berth/orbit symbols have an anchor
-and tether. A roster card remains usable
-when a crowded viewport cannot safely place another fleet symbol.
+retains symbolic body/fleet sizes and schematic moon spacing.
+
+**Fleet chips.** Fleets at the same place merge into one small chip showing a
+ship, with a count when there are several. Resting fleets sit just below-left of
+their body (or, in the galaxy view, their star), clear of labels and other chips.
+Fleets in flight sit on their course position with a short tick toward where
+they are heading. There are no tether lines. Only the selected fleet is named
+and ringed green; a fleet with an unresolved contact is ringed amber. Tapping a
+chip selects the next fleet in it, cycling through the stack. The roster lists
+every fleet.
+
+**Labels and traffic.** Body names show when zoomed in, or for the body selected
+or pointed at. NPC traders are small amber dots without labels in the galaxy
+view. A raider band's heading line is drawn only while it hunts one of your
+fleets. The orbit ring appears only around the selected fleet's body.
 **System overview** refits the scene; **Focus selected fleet** provides a close
 view. The simulation's system limits have no boundary cube or display toggle.
 
@@ -53,10 +63,10 @@ segments crossing any known stellar core also reject, using a conservative core
 cube. Passing through the rest of a system does not automatically enter it.
 
 The map draws approved approach segments rather than inventing a direct line
-through the star. Fleet symbols are offset/tethered to true course/body anchors;
-the screen layout never changes simulated positions. Bodies have collision volumes
-that courses also route around; landed fleets show a **LANDED** tag on an amber
-pad (see [movement](MOVEMENT.md#landing)).
+through the star. Fleet chips sit beside their true course or body anchors; the
+screen layout never changes simulated positions. Bodies have collision volumes
+that courses also route around; landed fleets show an amber pad on the body
+(see [movement](MOVEMENT.md#landing)).
 
 ## Command-console style and NPC traffic
 
@@ -76,20 +86,19 @@ Market, Fleets, Navigation and Session open as centered, movable metal windows.
 The system overview framing reserves the card insets, so bodies are framed into
 the clear middle of the screen.
 
-**Resting states.** A fleet at a body is either **docked** at the system's
-trade port or **in orbit** around a body (that body's orbital berth). There is
-no separate landed state.
+**Resting states.** A fleet at a body is **docked** at the system's trade port,
+**in orbit** around a body, or **landed** on its surface.
 
-| State | Map marker | Chip |
+| State | Map marker | Location chip |
 | --- | --- | --- |
-| Docked | green `F1 DOCKED`, clamp badge, solid clamp line to a bracketed port | `Docked · Sol port` (green) |
-| In orbit | cyan `F1 ORBIT`, orbit badge, dashed orbit ring around the body | `Orbit · Inner world` (cyan) |
-| Flying | `F1 · n`, thin tether | course / position |
-| Paused by a contact | amber `F1 CONTACT` with contact badge | `Underway`; the decision appears under **Advance** |
+| Docked | chip beside the port | `Docked · Sol port` (green) |
+| In orbit | chip beside the body; dashed orbit ring when selected | `Orbit · Inner world` (cyan) |
+| Landed | chip beside the body, amber pad on it | `Landed · Moon` |
+| Flying | chip on its course with a heading tick | course / position |
+| Paused by a contact | amber ring | `Underway`; the decision appears under **Advance** |
 
-A green market badge on the marker, and a **TRADE HERE** button in the
-selection card, appear only when the authoritative economy allows that ship to
-trade where it is. Moons and asteroids have no market. The status card's panel
+A **TRADE HERE** button in the selection card appears only when the authoritative
+economy allows that ship to trade where it is. Moons and asteroids have no market. The status card's panel
 buttons are labelled **Fleets**, **Nav**, **Trade** and **Save**.
 
 **Zoom:** the mouse wheel, two-finger trackpad scroll and trackpad pinch zoom

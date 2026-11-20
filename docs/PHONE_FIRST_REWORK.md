@@ -210,9 +210,10 @@ a one-line guide card.
 Each phase ships on its own, keeps `./tools/check.sh` green and adds captures at
 390 × 844 and 1280 × 800.
 
-1. **Declutter on the current desktop UI:** fleet stacks, no tethers,
-   selected-only courses, zoom-based labels, quiet traffic. Low risk; immediately
-   visible.
+1. **Declutter on the current desktop UI** (done): fleet stacks that cycle on
+   tap, no tethers, heading ticks, labels by zoom or selection, quiet traffic
+   dots, band lines only while hunting, the orbit ring only when selected. The
+   list sheet for a stack arrives with phase 2.
 2. **Phone shell:** status strip, action bar, bottom sheet, attention queue,
    full-screen sheets, responsive layout. Removes the floating cards.
 3. **Flat play:** flat generation and saves, top-down map camera, controls removed.

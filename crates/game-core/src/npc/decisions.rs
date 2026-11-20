@@ -83,12 +83,16 @@ impl Economy {
             Some(market.body),
             systems,
         )?;
-        trader.last_action = format!(
-            "Hauling {quantity} {} to system {} / body {}",
-            good.label(),
-            market.system.0,
-            market.body.0
-        );
+        // Players read this in the traffic roster, so name the destination body.
+        let destination = systems
+            .iter()
+            .find(|system| system.id == market.system)
+            .and_then(|system| system.bodies.iter().find(|body| body.id == market.body))
+            .map_or_else(
+                || format!("system {} / body {}", market.system.0, market.body.0),
+                |body| body.name.clone(),
+            );
+        trader.last_action = format!("Hauling {quantity} {} to {destination}", good.label());
         Ok(())
     }
 

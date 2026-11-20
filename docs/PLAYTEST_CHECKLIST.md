@@ -20,6 +20,8 @@ Mobile builds and device checks are deferred by user direction.
 - [ ] Identify fuel/cargo/stock/funds constraints before a failed order.
 - [ ] Compare another commodity/route and include journey fuel costs in the choice.
 - [ ] Refuel and complete a profitable return trip.
+- [ ] Use Max, All and Full; check hover totals and whether the margin column
+  makes a profitable next cargo obvious without opening Price comparison.
 - [ ] Discover and purchase the cargo-hold upgrade without outside explanation.
 - [ ] Record first-delivery and upgrade times, credits and any confusing decisions.
 - [ ] Judge whether the 20–30 minute upgrade hypothesis should change.

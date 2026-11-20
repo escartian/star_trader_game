@@ -64,6 +64,79 @@ fn rejected_trade_and_service_operations_preserve_all_balances() {
 }
 
 #[test]
+fn max_trade_quantity_is_the_largest_order_a_quote_accepts() {
+    let food = Commodity::Food;
+    let largest = |economy: &Economy, ship: &crate::travel::Ship, side| {
+        let max = economy.max_trade_quantity(ship, food, side);
+        if max > 0 {
+            assert!(economy.quote(ship, food, max, side, 0).is_ok());
+        }
+        assert!(economy.quote(ship, food, max + 1, side, 0).is_err());
+        max
+    };
+    let mut ship = TravelState::default().ships[0].clone();
+    let mut economy = economy();
+    economy.credits = Credits(10_000_000);
+    assert_eq!(
+        largest(&economy, &ship, TradeSide::Buy),
+        20,
+        "fills the hold"
+    );
+    ship.cargo_capacity = 200;
+    economy.markets[0].goods[food.index()].stock = 7;
+    assert_eq!(
+        largest(&economy, &ship, TradeSide::Buy),
+        7,
+        "limited by stock"
+    );
+    economy.markets[0].goods[food.index()].stock = 100;
+    economy.credits = Credits(2_500);
+    let affordable = largest(&economy, &ship, TradeSide::Buy);
+    assert!(
+        (1..10).contains(&affordable),
+        "limited by credits: {affordable}"
+    );
+    economy.credits = Credits(0);
+    assert_eq!(largest(&economy, &ship, TradeSide::Buy), 0);
+
+    ship.cargo[food.index()] = 12;
+    assert_eq!(
+        largest(&economy, &ship, TradeSide::Sell),
+        12,
+        "sells everything held"
+    );
+    economy.markets[0].credits = Credits(2_000);
+    let funded = largest(&economy, &ship, TradeSide::Sell);
+    assert!(
+        (1..12).contains(&funded),
+        "limited by buyer funds: {funded}"
+    );
+    ship.location = Location::DeepSpace(crate::movement::SpacePosition {
+        x_km: 0,
+        y_km: 0,
+        z_km: 0,
+    });
+    assert_eq!(economy.max_trade_quantity(&ship, food, TradeSide::Sell), 0);
+}
+
+#[test]
+fn full_refuel_fills_the_tank_as_far_as_credits_allow() {
+    let mut economy = economy();
+    let mut ship = TravelState::default().ships[0].clone();
+    assert_eq!(economy.max_refuel_units(&ship), Err(EconomyError::FuelFull));
+    ship.fuel = 10;
+    let missing = ship.fuel_capacity - 10;
+    assert_eq!(economy.max_refuel_units(&ship), Ok(missing));
+    economy.credits = Credits(economy.rules.fuel_unit_price.0 * 3 + 1);
+    assert_eq!(economy.max_refuel_units(&ship), Ok(3));
+    economy.refuel(&mut ship, 3).unwrap();
+    assert_eq!(
+        economy.max_refuel_units(&ship),
+        Err(EconomyError::InsufficientCredits)
+    );
+}
+
+#[test]
 fn market_time_is_batch_independent_and_price_curves_are_bounded() {
     let mut batched = economy();
     let mut stepped = batched.clone();

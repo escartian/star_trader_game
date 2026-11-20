@@ -41,6 +41,7 @@ commerce, combat, factions and missions define the destination.
 - [x] Starfield/nebula background, star-type colors/glows/sizes, local system view.
 - [x] Blender-authored celestial/station sprites and schematic moon separation.
 - [x] Stock-sensitive commerce, per-ship holds, refuel and cargo upgrade.
+- [x] Market quick actions: Max/All orders, Full refuel and best-margin hints.
 - [x] Atomic JSON saves, backup recovery, slots, settings and trader onboarding.
 - [x] Shared navigation-run planning/resolution, with no real-time scheduler.
 - [ ] Manual desktop navigation/DPI/lifecycle acceptance and pacing study.

@@ -5,10 +5,19 @@ ship inventory. Gas-giant commerce takes place at an orbital berth. The primary
 station in each system retains a separate market. Moons, asteroids, arbitrary
 waypoints and deep space currently have no markets.
 
-Inspect a planet, choose **Preview movement to body**, then plot a course and execute navigation runs. At the body,
-open **Market / refuel** or **Fleets / shipyard**. Commerce uses the selected ship's
+Select a planet on the map, plot a course and Advance. At the body, open **Trade**
+or **Fleets** (shipyard). Commerce uses the selected ship's
 actual location, not the body or system being inspected. Every market is identified
 by the pair `(system ID, body ID)`; IDs scoped to different systems never share stock.
+
+The Trade window lists first-unit buy/sell prices per good and the best known
+margin for buying here and selling elsewhere (first-unit prices before fuel; a
+market in the same system is named by its body). Buy/Sell press the chosen order
+quantity and show the whole order's total on hover. **Max** buys as much as cargo
+space, stock and credits allow; **All** sells as much as is held and the buyer can
+fund and store; **Full** refuels as far as credits allow. These sizes come from the
+economy's own quote rules (`max_trade_quantity`, `max_refuel_units`), and the
+authority still validates every order.
 
 ## Identity and production
 

@@ -25,9 +25,9 @@
   and hull stock are finite; sales need a buyer that can afford them. Production and
   consumption run on ticks. Prices respond to stock within bounds, with a spread.
   Bulk orders price each unit; immediate buy/sell reversal cannot make a profit.
-- First delivery: buy food at Sol, exit the system in Navigation, explicitly enter
-  Meridian, then inspect its trade port, plot docking and Advance until arrival.
-  Sell and refuel. Compare
+- First delivery: at Sol press **Max** on food to fill the hold, select Meridian's
+  trade port on the map, Plot course and Advance until arrival. Sell with **All**
+  and refuel with **Full**. The margin column compares
   known markets for return cargo. Fixed-price fuel service costs 2.00 credits/unit
   by default. Earn enough for the cargo upgrade while budgeting for future journeys.
 - Continue restores the exact saved journey, cargo, prices, markets and tick.

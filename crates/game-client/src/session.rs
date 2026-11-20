@@ -8,6 +8,7 @@ pub use fleets::TradeOption;
 mod guide;
 mod map_controls;
 mod market;
+mod market_table;
 mod motion;
 mod navigation;
 mod panel;

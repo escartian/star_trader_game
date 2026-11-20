@@ -3,13 +3,23 @@ use crate::theme::icons::{self, Icon, stat};
 use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{
     StarSystem,
-    economy::{Commodity, TradeSide},
+    economy::{Commodity, Market, TradeSide},
 };
 use game_protocol::ClientCommand;
 
+/// Display name of a market: the body (planet or station) it trades at.
+pub(super) fn market_name<'a>(systems: &'a [StarSystem], market: &Market) -> &'a str {
+    systems
+        .iter()
+        .find(|system| system.id == market.id.system)
+        .and_then(|system| system.bodies.iter().find(|body| body.id == market.id.body))
+        .map_or("Unknown", |body| body.name.as_str())
+}
+
 pub(super) struct MarketPanel {
     pub open: bool,
-    quantity: u32,
+    /// Units per Buy/Sell order button press.
+    pub(super) quantity: u32,
     fuel_units: u32,
 }
 impl Default for MarketPanel {
@@ -68,88 +78,10 @@ impl LocalSession {
                 ui,
                 Icon::Info,
                 CYAN,
-                &format!(
-                    "Prices in credits. Unit prices are for the first unit; totals price every unit along the stock curve.\nQuote revision {} • tick {}",
-                    self.state.revision, self.state.tick
-                ),
+                "Prices in credits for the first unit. Hover an order button for its total:\nbulk orders price every unit along the stock curve. Max fills your hold;\nAll sells everything this market can pay for.",
             );
         });
-        let mut action = None;
-        egui::ScrollArea::horizontal()
-            .id_salt("trade_table")
-            .show(ui, |ui| {
-                egui::Grid::new("live_market").striped(true).show(ui, |ui| {
-                    ui.label("");
-                    for (icon, color, text, tip) in [
-                        (Icon::Funds, CYAN, "", "Market stock"),
-                        (Icon::Cargo, GREEN, "", "Held in your selected ship"),
-                        (Icon::Buy, GREEN, "1", "Buy price for one unit"),
-                        (Icon::Sell, AMBER, "1", "Sell price for one unit"),
-                        (
-                            Icon::Buy,
-                            GREEN,
-                            "Σ",
-                            "Total cost to buy the order quantity",
-                        ),
-                        (
-                            Icon::Sell,
-                            AMBER,
-                            "Σ",
-                            "Total paid to sell the order quantity",
-                        ),
-                    ] {
-                        stat(ui, icon, color, text, tip);
-                    }
-                    ui.end_row();
-                    for commodity in Commodity::ALL {
-                        let good = &market.goods[commodity.index()];
-                        let quote = |side| {
-                            self.economy.quote(
-                                &ship,
-                                commodity,
-                                self.market.quantity,
-                                side,
-                                self.state.revision,
-                            )
-                        };
-                        let buy = quote(TradeSide::Buy);
-                        let sell = quote(TradeSide::Sell);
-                        ui.horizontal(|ui| {
-                            icons::commodity(ui, commodity);
-                            ui.label(commodity.label());
-                        });
-                        ui.label(good.stock.to_string());
-                        ui.label(ship.cargo[commodity.index()].to_string());
-                        ui.label(good.price(TradeSide::Buy, good.stock).to_string());
-                        ui.label(good.price(TradeSide::Sell, good.stock).to_string());
-                        ui.label(buy.as_ref().map_or("—".into(), |q| q.total.to_string()));
-                        ui.label(sell.as_ref().map_or("—".into(), |q| q.total.to_string()));
-                        ui.horizontal(|ui| {
-                            for (side, icon, verb, quote) in [
-                                (TradeSide::Buy, Icon::Buy, "Buy", buy),
-                                (TradeSide::Sell, Icon::Sell, "Sell", sell),
-                            ] {
-                                let tip = format!(
-                                    "{verb} {} {}",
-                                    self.market.quantity,
-                                    commodity.label()
-                                );
-                                let blocked = quote.as_ref().err().map(ToString::to_string);
-                                if icons::action(ui, icon, &tip, blocked).clicked() {
-                                    action = Some(ClientCommand::Trade {
-                                        ship: ship.id,
-                                        commodity,
-                                        quantity: self.market.quantity,
-                                        side,
-                                        expected_revision: self.state.revision,
-                                    });
-                                }
-                            }
-                        });
-                        ui.end_row();
-                    }
-                });
-            });
+        let mut action = self.trade_table(ui, &ship, &market, systems);
         ui.separator();
         ui.horizontal_wrapped(|ui| {
             icons::glyph(ui, Icon::Fuel, CYAN, "Fuel units to buy");
@@ -168,6 +100,29 @@ impl LocalSession {
                     units: self.market.fuel_units,
                     expected_revision: self.state.revision,
                 });
+            }
+            let full = self.economy.max_refuel_units(&ship);
+            let response = icons::labeled_action(
+                ui,
+                Icon::Refuel,
+                "Full",
+                full.as_ref().err().map(ToString::to_string),
+            );
+            if let Ok(units) = full {
+                let cost = u64::from(units).saturating_mul(self.economy.rules.fuel_unit_price.0);
+                if response
+                    .on_hover_text(format!(
+                        "Refuel {units} units for {} cr",
+                        game_core::economy::Credits(cost)
+                    ))
+                    .clicked()
+                {
+                    action = Some(ClientCommand::Refuel {
+                        ship: ship.id,
+                        units,
+                        expected_revision: self.state.revision,
+                    });
+                }
             }
             ui.separator();
             let blocked = ship
@@ -232,15 +187,7 @@ impl LocalSession {
                     egui::Grid::new("comparison").striped(true).show(ui, |ui| {
                         ui.label("");
                         for market in &self.economy.markets {
-                            ui.strong(
-                                systems
-                                    .iter()
-                                    .find(|s| s.id == market.id.system)
-                                    .and_then(|system| {
-                                        system.bodies.iter().find(|body| body.id == market.id.body)
-                                    })
-                                    .map_or("Unknown", |body| body.name.as_str()),
-                            );
+                            ui.strong(market_name(systems, market));
                         }
                         ui.end_row();
                         for commodity in Commodity::ALL {

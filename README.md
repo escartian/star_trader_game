@@ -85,11 +85,11 @@ NPC traders with cautious/opportunistic route choices and real funds/cargo.
 
 ## First delivery
 
-At Sol, open **Trade** and buy food. Select your fleet on the map or in the
+At Sol, open **Trade** and press **Max** on food. Select your fleet on the map or in the
 **Fleets** roster. Double-click Meridian, select its trade port, then choose
 **PLOT COURSE** in the left-hand destination card. Departure, entry and docking
 are planned automatically. Press **Advance** to run until the fleet arrives;
-resolve any contacts along the way, then sell and refuel at the destination.
+resolve any contacts along the way, then sell (**All**) and refuel (**Full**).
 
 Within a system, click planets, moons, asteroids or stations to choose them.
 **Back to galaxy** only changes the view; **Depart system → galaxy** selects a

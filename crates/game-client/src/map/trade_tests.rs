@@ -83,6 +83,49 @@ fn switching_fleet_trade_opens_the_planet_market_it_orbits() {
 }
 
 #[test]
+fn max_fills_the_hold_all_sells_it_back_and_full_refuels() {
+    use game_protocol::{ClientCommand, ServerMessage};
+    let ctx = egui::Context::default();
+    let mut authority = game_server::Session::default();
+    authority.set_encounter_chance(0);
+    let systems = match authority.handle(ClientCommand::GetGalaxy) {
+        ServerMessage::GalaxySnapshot { systems, .. } => systems,
+        _ => unreachable!(),
+    };
+    // One run to the inner world's planet market leaves the tank short of full.
+    for command in [
+        ClientCommand::Move {
+            ship: game_core::travel::ShipId(1),
+            target: game_core::movement::MoveTarget::Body {
+                system: game_core::SystemId(1),
+                body: game_core::BodyId(1),
+            },
+            expected_revision: 0,
+        },
+        ClientCommand::ExecuteNavigationRun {
+            expected_revision: 1,
+        },
+    ] {
+        assert!(matches!(
+            authority.handle(command),
+            ServerMessage::SessionSnapshot { .. }
+        ));
+    }
+    let mut map = Map::new(systems, authority);
+    map.session.open_market();
+    let food = game_core::economy::Commodity::Food.index();
+    click(&ctx, &mut map, "Max");
+    let ship = map.session.selected_ship();
+    assert_eq!(ship.cargo[food], ship.cargo_capacity, "Max fills the hold");
+    click(&ctx, &mut map, "All");
+    assert_eq!(map.session.selected_ship().cargo_used(), 0, "All sells it");
+    assert!(map.session.selected_ship().fuel < map.session.selected_ship().fuel_capacity);
+    click(&ctx, &mut map, "Full");
+    let ship = map.session.selected_ship();
+    assert_eq!(ship.fuel, ship.fuel_capacity, "Full refuels");
+}
+
+#[test]
 fn a_contact_can_be_resolved_from_the_run_card_without_opening_navigation() {
     let ctx = egui::Context::default();
     let mut authority = game_server::Session::with_seed(2);

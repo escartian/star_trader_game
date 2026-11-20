@@ -34,6 +34,23 @@ impl Economy {
         Ok(())
     }
 
+    /// Fuel units that fill the tank as far as credits allow: the order a "Full"
+    /// refuel sends. Errors explain why nothing can be bought (no market, full tank,
+    /// no credits for one unit).
+    pub fn max_refuel_units(&self, ship: &Ship) -> Result<u32, EconomyError> {
+        self.current_market(ship)?;
+        let missing = ship.fuel_capacity.saturating_sub(ship.fuel);
+        if missing == 0 {
+            return Err(EconomyError::FuelFull);
+        }
+        let price = self.rules.fuel_unit_price.0;
+        let affordable = self.credits.0.checked_div(price).unwrap_or(u64::MAX);
+        match u32::try_from(affordable).map_or(missing, |units| units.min(missing)) {
+            0 => Err(EconomyError::InsufficientCredits),
+            units => Ok(units),
+        }
+    }
+
     pub fn upgrade_hold(&mut self, ship: &mut Ship) -> Result<(), EconomyError> {
         let id = self.current_market(ship)?.id;
         if ship.upgraded {

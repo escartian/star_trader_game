@@ -76,6 +76,34 @@ impl Economy {
         })
     }
 
+    /// The largest order of `commodity` this ship can place on `side` now, or 0.
+    /// Every quote constraint (stock, cargo space, cumulative price against credits or
+    /// buyer funds, market storage) tightens as quantity grows, so feasibility is
+    /// monotonic and a binary search over the cargo/stock bound finds the boundary.
+    pub fn max_trade_quantity(&self, ship: &Ship, commodity: Commodity, side: TradeSide) -> u32 {
+        let Ok(market) = self.current_market(ship) else {
+            return 0;
+        };
+        let free_space = u64::from(ship.cargo_capacity).saturating_sub(ship.cargo_used());
+        let upper = match side {
+            TradeSide::Buy => market.goods[commodity.index()]
+                .stock
+                .min(u32::try_from(free_space).unwrap_or(u32::MAX)),
+            TradeSide::Sell => ship.cargo[commodity.index()],
+        };
+        // Invariant: `low` is tradable (0 trivially) and nothing above `high` is.
+        let (mut low, mut high) = (0, upper);
+        while low < high {
+            let middle = low + (high - low).div_ceil(2);
+            if self.quote(ship, commodity, middle, side, 0).is_ok() {
+                low = middle;
+            } else {
+                high = middle - 1;
+            }
+        }
+        low
+    }
+
     pub fn trade(
         &mut self,
         ship: &mut Ship,

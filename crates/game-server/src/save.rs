@@ -139,6 +139,12 @@ fn read(path: &Path) -> Result<(SaveData, Option<&'static str>), String> {
     game_core::orbits::place(&mut data.systems, data.player.tick);
     // Saves from before the Raider Haven get the one a new game would place.
     data.player.place_haven(&data.systems);
+    // Saves from before moon and asteroid surfaces get the ones a new game
+    // would give them.
+    data.economy
+        .rules
+        .planet_catalog
+        .populate_surfaces(&mut data.systems);
     let notice = match grid_battle {
         Some(battle) => {
             legacy_battle::resolve(&mut data, battle)?;

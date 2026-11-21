@@ -33,6 +33,8 @@ pub enum Biome {
     Jungle,
     Volcanic,
     Barren,
+    /// Iron-nickel rock: metallic asteroids.
+    Metallic,
 }
 impl Biome {
     pub fn label(self) -> &'static str {
@@ -45,6 +47,7 @@ impl Biome {
             Self::Jungle => "Jungle",
             Self::Volcanic => "Volcanic",
             Self::Barren => "Barren",
+            Self::Metallic => "Metallic",
         }
     }
 }
@@ -81,6 +84,35 @@ pub struct PlanetProfile {
     pub danger: Danger,
 }
 
+/// A moon's or asteroid's surface. It has no market; it shapes the art,
+/// where raiders patrol and how much ore a landed fleet mines.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfaceProfile {
+    pub biome: Biome,
+    pub danger: Danger,
+    /// Ore mined, as a percentage of the landing rules' per-ship yield for
+    /// the body's kind (rounded down, at least 1 when the base yield is).
+    pub ore_percent: u32,
+}
+
+impl SurfaceProfile {
+    /// Ore per ship per run on this surface, from the kind's `base` yield.
+    pub fn ore_per_ship(&self, base: u32) -> u32 {
+        if base == 0 {
+            return 0;
+        }
+        (u64::from(base) * u64::from(self.ore_percent) / 100).clamp(1, u64::from(u32::MAX)) as u32
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfaceTemplate {
+    pub kind: BodyKind,
+    pub profile: SurfaceProfile,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlanetTemplate {
@@ -106,6 +138,9 @@ fn neutral_prices() -> [u32; 6] {
 pub struct PlanetCatalog {
     pub schema_version: u32,
     pub templates: Vec<PlanetTemplate>,
+    /// Moon and asteroid surfaces (none in older definitions).
+    #[serde(default)]
+    pub surfaces: Vec<SurfaceTemplate>,
 }
 impl Default for PlanetCatalog {
     fn default() -> Self {
@@ -127,6 +162,17 @@ impl PlanetCatalog {
             if !self.templates.iter().any(|template| template.kind == kind) {
                 return Err("Missing planet class templates".into());
             }
+        }
+        for surface in &self.surfaces {
+            if !matches!(surface.kind, BodyKind::Moon | BodyKind::Asteroid)
+                || surface.profile.biome == Biome::Gas
+                || !(10..=1000).contains(&surface.profile.ore_percent)
+            {
+                return Err("Invalid surface template".into());
+            }
+        }
+        if self.surfaces.len() > 64 {
+            return Err("Too many surface templates".into());
         }
         for template in &self.templates {
             if !matches!(template.kind, BodyKind::RockyPlanet | BodyKind::GasGiant)
@@ -175,7 +221,39 @@ impl PlanetCatalog {
                 body.planet = self
                     .template_for_body(index, body)
                     .map(|template| template.profile.clone());
+                body.surface = self.surface_for_body(index, body);
             }
         }
+        // Saves from before surfaces get them in `populate_surfaces`.
+    }
+
+    /// Gives moons and asteroids that lack one the surface a new game would
+    /// (saves from before surfaces). Deterministic: the same pick as `populate`.
+    pub fn populate_surfaces(&self, systems: &mut [StarSystem]) {
+        for (index, system) in systems.iter_mut().enumerate() {
+            for body in &mut system.bodies {
+                if body.surface.is_none() {
+                    body.surface = self.surface_for_body(index, body);
+                }
+            }
+        }
+    }
+
+    /// The surface a moon or asteroid gets: varied by system and body ID.
+    pub fn surface_for_body(
+        &self,
+        system_index: usize,
+        body: &crate::LocalBody,
+    ) -> Option<SurfaceProfile> {
+        let matches: Vec<_> = self
+            .surfaces
+            .iter()
+            .filter(|surface| surface.kind == body.kind)
+            .collect();
+        if matches.is_empty() {
+            return None;
+        }
+        let variant = system_index.wrapping_add(body.id.0 as usize);
+        Some(matches[variant % matches.len()].profile.clone())
     }
 }

@@ -7,6 +7,10 @@ pub const SOURCES: &[(&str, &str)] = &[
         include_str!("../../../../../assets/icons/biome-arid.svg"),
     ),
     (
+        "biome-barren",
+        include_str!("../../../../../assets/icons/biome-barren.svg"),
+    ),
+    (
         "biome-frozen",
         include_str!("../../../../../assets/icons/biome-frozen.svg"),
     ),
@@ -15,8 +19,24 @@ pub const SOURCES: &[(&str, &str)] = &[
         include_str!("../../../../../assets/icons/biome-gas.svg"),
     ),
     (
+        "biome-jungle",
+        include_str!("../../../../../assets/icons/biome-jungle.svg"),
+    ),
+    (
+        "biome-metallic",
+        include_str!("../../../../../assets/icons/biome-metallic.svg"),
+    ),
+    (
+        "biome-ocean",
+        include_str!("../../../../../assets/icons/biome-ocean.svg"),
+    ),
+    (
         "biome-temperate",
         include_str!("../../../../../assets/icons/biome-temperate.svg"),
+    ),
+    (
+        "biome-volcanic",
+        include_str!("../../../../../assets/icons/biome-volcanic.svg"),
     ),
     ("buy", include_str!("../../../../../assets/icons/buy.svg")),
     (

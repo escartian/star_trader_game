@@ -49,6 +49,10 @@ impl LocalSession {
         &self.state.navigation.bands
     }
 
+    pub fn landing_rules(&self) -> &game_core::movement::LandingRules {
+        &self.state.movement_rules.landing
+    }
+
     pub fn traffic(&self) -> &[game_core::npc::Trader] {
         &self.economy.traders
     }

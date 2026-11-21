@@ -5,6 +5,23 @@ ship inventory. Gas-giant commerce takes place at an orbital berth. The primary
 station in each system retains a separate market. Moons, asteroids, arbitrary
 waypoints and deep space currently have no markets.
 
+Moons and asteroids carry a **surface** instead (`surfaces` in
+`config/planets.json`): a biome, a danger rating and an ore richness. It sets
+their look, how strongly raider bands favour patrolling them (like planets'
+danger), where the Raider Haven may stand, and how much ore a landed fleet
+mines each run (the landing rules' yield × `ore_percent`):
+
+| Body | Surface | Danger | Ore per ship per run |
+| --- | --- | --- | --- |
+| Moon | barren (rocky moon) | safe | 2 |
+| Moon | frozen (ice moon) | very safe | 1 |
+| Asteroid | barren | moderate | 2 |
+| Asteroid | metallic | dangerous | 4 |
+
+Richer surfaces are riskier places to sit and mine. The info card shows a
+selected moon's or asteroid's biome, danger and yield. Saves from before
+surfaces get the ones a new game would give them when they load.
+
 Select a planet on the map, plot a course and Advance. At the body, open **Trade**
 or **Fleets** (shipyard). Commerce uses the selected ship's
 actual location, not the body or system being inspected. Every market is identified

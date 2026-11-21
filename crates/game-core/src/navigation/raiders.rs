@@ -127,9 +127,9 @@ impl TravelState {
 
     /// A point beside a body, chosen by danger (stations are avoided).
     fn patrol_point(&mut self, system: &StarSystem) -> LocalPosition {
-        let weight = |body: &crate::LocalBody| match (body.kind, body.planet.as_ref()) {
+        let weight = |body: &crate::LocalBody| match (body.kind, body.danger()) {
             (BodyKind::Station, _) => 0,
-            (_, Some(profile)) => match profile.danger {
+            (_, Some(danger)) => match danger {
                 Danger::VerySafe | Danger::Safe => 1,
                 Danger::Moderate => 2,
                 Danger::Dangerous => 4,

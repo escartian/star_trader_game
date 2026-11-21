@@ -56,7 +56,7 @@ impl RaiderHaven {
 }
 
 fn danger_rank(body: &crate::LocalBody) -> u8 {
-    match body.planet.as_ref().map(|profile| profile.danger) {
+    match body.danger() {
         Some(Danger::Insidious) => 6,
         Some(Danger::VeryDangerous) => 5,
         Some(Danger::Dangerous) => 4,

@@ -73,6 +73,8 @@ pub struct LocalView {
     )>,
     /// Roaming raider bands (drawn when in this system).
     bands: Vec<game_core::navigation::RaiderBand>,
+    /// The game's landing rules, for a surface's ore yield on the info card.
+    landing: game_core::movement::LandingRules,
     /// The Raider Haven and chartered ports (see `campaign`).
     campaign: CampaignMarks,
     trade_options: Vec<crate::session::TradeOption>,
@@ -97,6 +99,7 @@ impl LocalView {
             trade_ready: Vec::new(),
             contacts: Vec::new(),
             bands: Vec::new(),
+            landing: game_core::movement::LandingRules::default(),
             campaign: CampaignMarks::default(),
             headings: Vec::new(),
             trade_options: Vec::new(),
@@ -111,6 +114,10 @@ impl LocalView {
 
     pub fn set_bands(&mut self, bands: Vec<game_core::navigation::RaiderBand>) {
         self.bands = bands;
+    }
+
+    pub fn set_landing(&mut self, landing: game_core::movement::LandingRules) {
+        self.landing = landing;
     }
 
     pub fn set_preview_route(&mut self, route: Vec<LocalPosition>) {

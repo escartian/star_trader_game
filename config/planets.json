@@ -21,5 +21,11 @@
      "price_percent":[130,125,95,90,105,55]},
     {"kind":"GasGiant","profile":{"economy":"extraction","specialization":"medicine","biome":"gas","danger":"dangerous"},"market_template":1,"starting_credits":450000,"ship_stock":[1,1,1,1],
      "price_percent":[145,105,65,125,115,95]}
+  ],
+  "surfaces": [
+    {"kind":"Moon","profile":{"biome":"barren","danger":"safe","ore_percent":200}},
+    {"kind":"Moon","profile":{"biome":"frozen","danger":"very_safe","ore_percent":100}},
+    {"kind":"Asteroid","profile":{"biome":"barren","danger":"moderate","ore_percent":100}},
+    {"kind":"Asteroid","profile":{"biome":"metallic","danger":"dangerous","ore_percent":200}}
   ]
 }

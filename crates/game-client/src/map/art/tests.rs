@@ -30,6 +30,7 @@ fn rocky_planets_use_biome_artwork() {
         name: "Test".into(),
         kind: game_core::BodyKind::RockyPlanet,
         orbit: None,
+        surface: None,
         position: game_core::LocalPosition {
             x_km: 0,
             y_km: 0,
@@ -66,10 +67,21 @@ fn rocky_planets_use_biome_artwork() {
         assert_eq!(ArtKind::for_body(&body), art);
     }
     body.planet = None;
+    let surface = |biome| {
+        Some(game_core::planet::SurfaceProfile {
+            biome,
+            danger: game_core::planet::Danger::Safe,
+            ore_percent: 100,
+        })
+    };
     body.kind = game_core::BodyKind::Moon;
-    body.name = "A".into();
+    assert_eq!(ArtKind::for_body(&body), ArtKind::Moon, "no surface");
+    body.surface = surface(Biome::Frozen);
     assert_eq!(ArtKind::for_body(&body), ArtKind::IceMoon);
+    body.surface = surface(Biome::Barren);
+    assert_eq!(ArtKind::for_body(&body), ArtKind::Moon);
     body.kind = game_core::BodyKind::Asteroid;
-    body.id = game_core::BodyId(3);
+    assert_eq!(ArtKind::for_body(&body), ArtKind::Asteroid);
+    body.surface = surface(Biome::Metallic);
     assert_eq!(ArtKind::for_body(&body), ArtKind::MetallicAsteroid);
 }

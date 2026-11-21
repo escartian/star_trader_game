@@ -76,6 +76,28 @@ pub struct LocalBody {
     /// Circular orbit; `None` keeps the body fixed (older saves).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub orbit: Option<orbits::Orbit>,
+    /// A moon's or asteroid's surface: biome, danger and ore richness, with
+    /// no market (see `planet::SurfaceProfile`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub surface: Option<planet::SurfaceProfile>,
+}
+
+impl LocalBody {
+    /// The body's biome, from its planet or surface profile.
+    pub fn biome(&self) -> Option<planet::Biome> {
+        self.planet
+            .as_ref()
+            .map(|profile| profile.biome)
+            .or(self.surface.as_ref().map(|surface| surface.biome))
+    }
+
+    /// The body's danger rating, from its planet or surface profile.
+    pub fn danger(&self) -> Option<planet::Danger> {
+        self.planet
+            .as_ref()
+            .map(|profile| profile.danger)
+            .or(self.surface.as_ref().map(|surface| surface.danger))
+    }
 }
 
 /// Display classification; rendering sizes are symbolic, not physical scale.
@@ -203,6 +225,7 @@ fn demo_bodies(names: [&str; 5]) -> Vec<LocalBody> {
     .map(|(id, name, kind, x_km, y_km, z_km)| LocalBody {
         planet: None,
         orbit: None,
+        surface: None,
         id,
         name: name.into(),
         kind,

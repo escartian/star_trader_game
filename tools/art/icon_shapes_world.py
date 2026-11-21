@@ -88,6 +88,47 @@ def b_gas(p):
         p.path([(-8, y), (-4, y - 2), (0, y), (4, y + 2), (8, y)])
 
 
+def b_ocean(p):
+    # A droplet riding over two swells.
+    p.closed([(0, -8), (3.5, -2.5), (2.5, 0.5), (0, 1.5), (-2.5, 0.5), (-3.5, -2.5)])
+    p.path([(-8, 4), (-5, 2.5), (-2, 4), (1, 5.5), (4, 4), (8, 2.5)])
+    p.path([(-8, 7.5), (-5, 6), (-2, 7.5), (1, 9), (4, 7.5), (8, 6)])
+
+
+def b_jungle(p):
+    # A palm: a curved trunk under drooping fronds.
+    p.path([(1, 8), (0.5, 3), (-0.5, -1), (0, -4)])
+    for tip in ((-8, -1), (-6, -7), (6, -7), (8, -1)):
+        mid = ((tip[0]) * 0.5, -6.5 if abs(tip[0]) < 7 else -5)
+        p.path([(0, -4), mid, tip])
+    p.line((-7, 8), (7, 8))
+
+
+def b_volcanic(p):
+    # A cone with a smoking crater.
+    p.closed([(-8, 7), (-2.5, -2), (2.5, -2), (8, 7)])
+    p.path([(-2.5, -2), (-1, -0.5), (1, -0.5), (2.5, -2)])
+    p.path([(0, -3.5), (-1.5, -5.5), (0.5, -7), (-0.5, -9)])
+    p.path([(3, -3.5), (4.5, -5.5), (3.5, -7.5)])
+
+
+def b_barren(p):
+    # A cratered disc.
+    p.circle((0, 0), 7.5)
+    p.circle((-2.5, -2), 2.2)
+    p.circle((3, 2.5), 1.5)
+    p.circle((-1.5, 4), 0.9)
+
+
+def b_metallic(p):
+    # A faceted ore crystal with a bright seam.
+    p.closed([(-6, 1), (-3, -6), (4, -7), (7, -1), (4, 6), (-3, 7)])
+    p.path([(-3, -6), (0, -1), (4, -7)])
+    p.path([(-6, 1), (0, -1), (7, -1)])
+    p.path([(0, -1), (-3, 7)])
+    p.path([(0, -1), (4, 6)])
+
+
 def c_hull(p):
     # Hull plating: a ship outline crossed by a structural rib.
     p.closed([(0, -8), (6, -2), (6, 7), (-6, 7), (-6, -2)])
@@ -126,7 +167,8 @@ WORLD_ICONS = {
     "economy-agricultural": e_agricultural, "economy-extraction": e_extraction,
     "economy-industrial": e_industrial,
     "biome-temperate": b_temperate, "biome-arid": sun, "biome-frozen": b_frozen,
-    "biome-gas": b_gas,
+    "biome-gas": b_gas, "biome-ocean": b_ocean, "biome-jungle": b_jungle,
+    "biome-volcanic": b_volcanic, "biome-barren": b_barren, "biome-metallic": b_metallic,
     "combat-hull": c_hull, "combat-shield": c_shield, "combat-armor": c_armor,
     "combat-engine": c_engine, "combat-weapon": c_weapon,
 }

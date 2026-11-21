@@ -19,6 +19,14 @@ impl SaveData {
             expected.insert(id);
             stations.insert(id);
             for body in &system.bodies {
+                let surfaced = matches!(body.kind, BodyKind::Moon | BodyKind::Asteroid);
+                if body.surface.is_some() && !surfaced
+                    || body.surface.as_ref().is_some_and(|surface| {
+                        surface.biome == Biome::Gas || !(10..=1000).contains(&surface.ore_percent)
+                    })
+                {
+                    return Err("Invalid body surface".into());
+                }
                 match (&body.planet, body.kind) {
                     (Some(profile), BodyKind::RockyPlanet | BodyKind::GasGiant) => {
                         if (body.kind == BodyKind::GasGiant) != (profile.biome == Biome::Gas) {

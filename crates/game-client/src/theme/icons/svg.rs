@@ -85,8 +85,11 @@ pub fn name(icon: Icon) -> &'static str {
             Biome::Arid => "biome-arid",
             Biome::Frozen => "biome-frozen",
             Biome::Gas => "biome-gas",
-            Biome::Ocean | Biome::Jungle => "biome-temperate",
-            Biome::Volcanic | Biome::Barren => "biome-arid",
+            Biome::Ocean => "biome-ocean",
+            Biome::Jungle => "biome-jungle",
+            Biome::Volcanic => "biome-volcanic",
+            Biome::Barren => "biome-barren",
+            Biome::Metallic => "biome-metallic",
         },
     }
 }

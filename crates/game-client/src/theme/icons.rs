@@ -261,6 +261,27 @@ pub fn danger(ui: &mut Ui, danger: Danger) -> Response {
     response.on_hover_text(tooltip)
 }
 
+/// A moon's or asteroid's biome, danger and ore yield per landed ship and run.
+pub fn surface_traits(ui: &mut Ui, surface: &game_core::planet::SurfaceProfile, ore: u32) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 6.0;
+        glyph(
+            ui,
+            Icon::Biome(surface.biome),
+            super::CYAN,
+            &format!("Surface: {}", surface.biome.label()),
+        );
+        danger(ui, surface.danger);
+        stat(
+            ui,
+            Icon::Good(game_core::economy::Commodity::Ore),
+            goods::commodity_color(game_core::economy::Commodity::Ore),
+            &format!("{ore}"),
+            "Ore each landed ship mines per run",
+        );
+    });
+}
+
 /// Economy, specialization, biome and danger as one compact row.
 pub fn planet_traits(ui: &mut Ui, profile: &PlanetProfile) {
     ui.horizontal(|ui| {

@@ -43,6 +43,7 @@ fn body(
         position,
         planet: None,
         orbit: None,
+        surface: None,
     }
 }
 

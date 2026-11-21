@@ -160,7 +160,14 @@ fn a_waiting_fleet_on_an_asteroid_mines_ore_until_its_holds_are_full() {
     }
     let ore = session.state.ships[0].cargo[Commodity::Ore.index()];
     assert_eq!(ore, capacity, "mined until the hold was full");
-    assert_eq!(mined[0], 2, "asteroid: 2 ore per ship per run");
+    // Asteroids mine 2 ore per ship per run, scaled by their surface.
+    let surface = session.systems[0]
+        .bodies
+        .iter()
+        .find(|body| body.id == ASTEROID)
+        .and_then(|body| body.surface.clone())
+        .expect("asteroids have a surface");
+    assert_eq!(mined[0], surface.ore_per_ship(2));
     assert_eq!(*mined.last().unwrap(), 0, "full holds mine nothing");
     reload(&session);
 }
@@ -177,4 +184,66 @@ fn landing_waits_for_courses_and_contacts() {
         },
     );
     rejected(land(&mut session), NavigationError::FleetHasCourse);
+}
+
+#[test]
+fn richer_surfaces_mine_more_ore_and_older_saves_get_surfaces_on_load() {
+    use game_core::planet::{Biome, SurfaceProfile};
+    let mut session = orbiting(ASTEROID);
+    let asteroid = session.systems[0]
+        .bodies
+        .iter_mut()
+        .find(|body| body.id == ASTEROID)
+        .unwrap();
+    asteroid.surface = Some(SurfaceProfile {
+        biome: Biome::Metallic,
+        danger: game_core::planet::Danger::Dangerous,
+        ore_percent: 200,
+    });
+    land(&mut session);
+    let revision = session.state.revision;
+    succeed(
+        &mut session,
+        ClientCommand::HoldFleet {
+            fleet: FleetId(1),
+            expected_revision: revision,
+        },
+    );
+    run(&mut session);
+    assert_eq!(session.state.ships[0].cargo[Commodity::Ore.index()], 4);
+    // A save from before surfaces: every moon and asteroid gets one on load.
+    let expected = Session::default().systems.clone();
+    let mut value: serde_json::Value =
+        serde_json::from_str(&Session::default().export_json().unwrap()).unwrap();
+    for system in value["systems"].as_array_mut().unwrap() {
+        for body in system["bodies"].as_array_mut().unwrap() {
+            body.as_object_mut().unwrap().remove("surface");
+        }
+    }
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("old.json");
+    std::fs::write(&path, value.to_string()).unwrap();
+    let (loaded, _) = Session::load(&path).unwrap();
+    for (system, original) in loaded.systems.iter().zip(&expected) {
+        for (body, before) in system.bodies.iter().zip(&original.bodies) {
+            assert_eq!(body.surface, before.surface, "{}", body.name);
+        }
+    }
+}
+
+#[test]
+fn surfaces_sit_only_on_moons_and_asteroids_in_saves() {
+    let session = Session::default();
+    let mut forged = session.clone();
+    let surface = forged.systems[0]
+        .bodies
+        .iter()
+        .find_map(|body| body.surface.clone());
+    let planet = forged.systems[0]
+        .bodies
+        .iter_mut()
+        .find(|body| body.id == INNER_WORLD)
+        .unwrap();
+    planet.surface = surface;
+    assert!(forged.export_json().is_err());
 }

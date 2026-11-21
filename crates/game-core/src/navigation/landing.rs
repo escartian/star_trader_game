@@ -4,7 +4,7 @@
 //! once per run for every waiting fleet on a moon or asteroid.
 use super::{NavigationError, NavigationEvent};
 use crate::{
-    BodyId, BodyKind, StarSystem, SystemId,
+    BodyId, StarSystem, SystemId,
     economy::Commodity,
     fleet::{FleetError, FleetId, FleetMovementError},
     movement::{MovementError, lift_off_fuel},
@@ -23,7 +23,7 @@ impl TravelState {
         else {
             return Err(NavigationError::NotInOrbit.into());
         };
-        let kind = body_kind(systems, system, body)?;
+        let kind = landed_body(systems, system, body)?.kind;
         let fuel = self
             .movement_rules
             .landing
@@ -110,10 +110,13 @@ impl TravelState {
             let Location::Landed { system, body } = self.ship(*first)?.location.clone() else {
                 continue;
             };
-            let per_ship = self
-                .movement_rules
-                .landing
-                .ore_per_ship(body_kind(systems, system, body)?);
+            let place = landed_body(systems, system, body)?;
+            let base = self.movement_rules.landing.ore_per_ship(place.kind);
+            // A surface's richness scales the kind's yield.
+            let per_ship = place
+                .surface
+                .as_ref()
+                .map_or(base, |surface| surface.ore_per_ship(base));
             if per_ship == 0 {
                 continue;
             }
@@ -135,15 +138,14 @@ impl TravelState {
     }
 }
 
-fn body_kind(
+fn landed_body(
     systems: &[StarSystem],
     system: SystemId,
     body: BodyId,
-) -> Result<BodyKind, MovementError> {
+) -> Result<&crate::LocalBody, MovementError> {
     systems
         .iter()
         .find(|known| known.id == system)
         .and_then(|known| known.bodies.iter().find(|known| known.id == body))
-        .map(|body| body.kind)
         .ok_or(MovementError::UnknownBody)
 }

@@ -68,8 +68,9 @@ light-years. Travel and docking use authoritative session commands.
 Local stars and destinations use shared preloaded Blender-baked surfaces:
 nine star classes, seven rocky biomes, three gas giant looks, two moon looks,
 two asteroid looks and the trade port. Generated worlds vary the star class and
-planet biome, including different rocky biomes within one generated system;
-stable moon and asteroid variants add visual variety. Blue stars
+planet biome, including different rocky biomes within one generated system.
+Moon and asteroid looks follow their surface profile: frozen moons are ice
+moons, metallic asteroids are metallic (see [planet economy](PLANET_ECONOMY.md)). Blue stars
 have no cross-shaped marker. Procedural halos and selection remain overlaid;
 galaxy markers retain their small geometric
 symbols. These are static billboards with symbolic sizes, not live 3D models or

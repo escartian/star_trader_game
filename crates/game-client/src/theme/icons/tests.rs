@@ -69,7 +69,20 @@ fn all_icons() -> Vec<Icon> {
         ]
         .map(Icon::Economy),
     );
-    icons.extend([Biome::Temperate, Biome::Arid, Biome::Frozen, Biome::Gas].map(Icon::Biome));
+    icons.extend(
+        [
+            Biome::Temperate,
+            Biome::Arid,
+            Biome::Frozen,
+            Biome::Gas,
+            Biome::Ocean,
+            Biome::Jungle,
+            Biome::Volcanic,
+            Biome::Barren,
+            Biome::Metallic,
+        ]
+        .map(Icon::Biome),
+    );
     icons
 }
 

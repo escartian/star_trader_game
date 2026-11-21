@@ -89,10 +89,13 @@ impl ArtKind {
             {
                 Self::MethaneGiant
             }
-            (BodyKind::Moon, _) if body.name.bytes().fold(0_u8, u8::wrapping_add) % 2 == 1 => {
+            // Moons and asteroids follow their surface (`planet::SurfaceProfile`).
+            (BodyKind::Moon, _) if body.biome() == Some(game_core::planet::Biome::Frozen) => {
                 Self::IceMoon
             }
-            (BodyKind::Asteroid, _) if body.id.0.is_multiple_of(3) => Self::MetallicAsteroid,
+            (BodyKind::Asteroid, _) if body.biome() == Some(game_core::planet::Biome::Metallic) => {
+                Self::MetallicAsteroid
+            }
             (kind, _) => Self::from(kind),
         }
     }

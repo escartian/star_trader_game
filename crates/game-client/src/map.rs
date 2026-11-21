@@ -308,6 +308,7 @@ impl Map {
         local.set_trade_ready(self.session.trade_ready_ships());
         local.set_contacts(self.session.contact_fleets());
         local.set_bands(self.session.raider_bands().to_vec());
+        local.set_landing(self.session.landing_rules().clone());
         local.set_campaign_marks(self.session.campaign_marks());
         local.set_headings(self.session.fleet_headings(&self.session_systems));
         local.set_trade_options(self.session.trade_options(local.system().id));

@@ -168,6 +168,20 @@ fn advance_keeps_mining_until_the_holds_fill_then_stops() {
         "{:?}",
         host.log
     );
-    assert_eq!(u64::from(ship.cargo_capacity / 2), runs, "2 ore per run");
+    // Asteroids mine 2 ore per ship per run, scaled by their surface.
+    let asteroid = host
+        .authority
+        .systems()
+        .iter()
+        .flat_map(|system| &system.bodies)
+        .find(|body| body.kind == game_core::BodyKind::Asteroid && body.id == BodyId(5))
+        .and_then(|body| body.surface.clone())
+        .expect("asteroids have a surface");
+    let per_run = asteroid.ore_per_ship(2);
+    assert_eq!(
+        u64::from(ship.cargo_capacity.div_ceil(per_run)),
+        runs,
+        "{per_run} ore per run"
+    );
     assert!(host.notice.contains("holds full"), "{}", host.notice);
 }

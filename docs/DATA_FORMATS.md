@@ -155,7 +155,10 @@ resolved from the saved system's first Station body; Docked retains its system I
 
 ## Planet catalog and finite-market allocations
 
-`config/planets.json` schema 1 defines rocky/gas profiles: `economy`, `biome`,
+`config/planets.json` schema 1 defines rocky/gas profiles (and, optionally,
+`surfaces` for moons and asteroids: `kind` `Moon` or `Asteroid` and a `profile`
+of `biome`, `danger` and `ore_percent` 10–1000; bodies save it as `surface`, never
+on other kinds; biomes add `metallic`). Rocky/gas profiles hold `economy`, `biome`,
 `danger`, `specialization`, market-template index, `starting_credits` (hundredths)
 and `ship_stock` in freighter/scout/patrol/prospector order. An optional `price_percent`
 (six values in commodity order, 20–300; default 100) scales the template's base

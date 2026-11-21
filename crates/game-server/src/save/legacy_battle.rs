@@ -1,7 +1,8 @@
-//! Battles saved on the 3D grid (schema 7). A 3D cell has no fair hex
-//! equivalent, so an open one is rebuilt on a fresh hex board, keeping each
-//! ship's damage, shields, withdrawal and shot record, and then auto-resolved
-//! as soon as the save loads. The loader reports this to the player.
+//! Battles saved on the 3D grid (schema 7) or the banded hex board (schema 8).
+//! Neither position has a fair equivalent on today's board, so an open one is
+//! rebuilt on a fresh board, keeping each ship's damage, shields, withdrawal
+//! and shot record, and then auto-resolved as soon as the save loads. The
+//! loader reports this to the player.
 use super::SaveData;
 use game_core::{
     combat::{
@@ -50,7 +51,7 @@ struct GridUnit {
 }
 
 pub(super) const NOTICE: &str =
-    "A battle saved on the old 3D grid was auto-resolved on load. See the combat report.";
+    "A battle saved on an older battle board was auto-resolved on load. See the combat report.";
 
 /// Rebuilds `saved` on the hex board and fights it out with the AI.
 pub(super) fn resolve(data: &mut SaveData, saved: Value) -> Result<(), String> {

@@ -1,5 +1,5 @@
 //! Structural checks for a battle loaded from a save.
-use super::{Battle, CEASEFIRE_ROUNDS, MAX_ROUNDS, move_points};
+use super::{Battle, CEASEFIRE_ROUNDS, MAX_ROUNDS, move_points, terrain};
 use crate::combat::{
     CombatCatalog,
     engagement::{MAX_COMBATANTS, Side},
@@ -9,8 +9,9 @@ use std::collections::HashSet;
 
 impl Battle {
     /// Rejects battles no sequence of legal actions could produce: bad indices,
-    /// impossible damage, two ships on one hex, more movement left than the
-    /// acting ship has, or a finished battle left open.
+    /// impossible damage, two ships on one hex, a ship on an asteroid, terrain
+    /// other than the seed gives, more movement left than the acting ship has,
+    /// or a finished battle left open.
     pub fn validate(&self, weapons: &CombatCatalog) -> Result<(), String> {
         let count = self.units.len();
         let mut order: Vec<usize> = self.order.iter().map(|&index| usize::from(index)).collect();
@@ -26,6 +27,7 @@ impl Battle {
             || self.rounds.len() != self.round as usize
             || !self.board.valid_for(count)
             || self.quiet_rounds >= CEASEFIRE_ROUNDS
+            || self.terrain != terrain::generate(self.board, self.seed)
             || self.finished()
         {
             return Err("Invalid battle turn state".into());
@@ -44,9 +46,10 @@ impl Battle {
                 || unit.damage > unit.profile.hull
                 || unit.shields > unit.profile.shields
                 || unit.hits > unit.shots
-                || !self.board.contains(unit.at.hex)
+                || !self.board.contains(unit.at)
+                || self.blocked(unit.at)
                 || (unit.side == Side::Hostile) == unit.ship.is_some()
-                || (unit.active() && !hexes.insert(unit.at.hex))
+                || (unit.active() && !hexes.insert(unit.at))
             {
                 return Err(format!("Invalid battle state for {}", unit.name));
             }

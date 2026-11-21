@@ -236,14 +236,9 @@ pub fn ship_card(ui: &mut Ui, battle: &Battle, me: usize, artwork: &Artwork) {
             ui.horizontal(|ui| {
                 icons::glyph(ui, Icon::Engine, AMBER, "Engine");
                 ui.label(
-                    RichText::new(format!(
-                        "{} of {points} moves left · {} band",
-                        battle.moves_left,
-                        unit.at.band.label()
-                    ))
-                    .small(),
+                    RichText::new(format!("{} of {points} moves left", battle.moves_left)).small(),
                 )
-                .on_hover_text("Each hex step, climb or dive costs one move.");
+                .on_hover_text("Each hex step costs one move; asteroids must be flown around.");
             });
         });
 }
@@ -269,7 +264,7 @@ pub fn weapon_list(
     target: Option<usize>,
     catalog: &CombatCatalog,
 ) {
-    let distance = target.map(|index| battle.units[me].at.range(battle.units[index].at));
+    let distance = target.map(|index| battle.units[me].at.distance(battle.units[index].at));
     ui.horizontal(|ui| {
         ui.label(RichText::new("WEAPONS").small().color(Color32::GRAY));
         if let (Some(index), Some(distance)) = (target, distance) {
@@ -321,7 +316,7 @@ fn range_pips(ui: &mut Ui, range: u32) {
         };
         ui.painter().circle_filled(centre, 2.5, color);
     }
-    response.on_hover_text(format!("Range {range}: hexes plus bands crossed"));
+    response.on_hover_text(format!("Range {range} hexes"));
 }
 
 /// The latest shots, newest last, tagged with their round.

@@ -349,10 +349,9 @@ impl LocalSession {
         self.capture_raiders(true)
     }
 
-    /// The battle after the acting ship climbs a band and aims at the nearest
-    /// raider (when one is in reach), centred on it and zoomed in.
+    /// The battle after the acting ship steps toward the raiders and aims at
+    /// the nearest one in sight (when one is), centred on it and zoomed in.
     pub fn capture_battle_close(&mut self) -> Result<(), String> {
-        use game_core::combat::tactical::Position;
         use game_core::navigation::BattleAction;
         self.capture_raiders(true)?;
         let battle = &self
@@ -363,9 +362,18 @@ impl LocalSession {
             .ok_or("No battle")?
             .battle;
         let me = battle.active().ok_or("No acting ship")?;
-        let at = battle.units[me].at;
-        if let Some(band) = at.band.above() {
-            self.battle_command(BattleAction::Move(Position::new(at.hex, band)));
+        let toward = battle
+            .units
+            .iter()
+            .find(|unit| unit.side != battle.units[me].side);
+        let step = toward.and_then(|enemy| {
+            battle
+                .reachable()
+                .into_iter()
+                .min_by_key(|hex| (hex.distance(enemy.at), hex.q, hex.r))
+        });
+        if let Some(step) = step {
+            self.battle_command(BattleAction::Move(step));
         }
         self.battle_close_up(2.0);
         let battle = &self

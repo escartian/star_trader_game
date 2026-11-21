@@ -1,10 +1,10 @@
 //! Display-only animation that makes each battle update readable: ships glide
-//! to their new hexes and bands, then each new shot flies as a beam and flashes on its
+//! to their new hexes, then each new shot flies as a beam and flashes on its
 //! target. The rules never wait for these; captures switch them off.
 use super::{camera::ScenePoint, canvas::Canvas, scene::side_color};
 use crate::theme::{AMBER, CYAN};
 use egui::{Color32, Stroke};
-use game_core::combat::tactical::{Battle, Position};
+use game_core::combat::tactical::{Battle, Hex};
 use glam::{Vec2, Vec3};
 
 /// Seconds a ship takes to glide to its new position.
@@ -18,7 +18,7 @@ const SHOT_GAP: f64 = 0.16;
 
 struct Glide {
     unit: usize,
-    from: Position,
+    from: Hex,
     start: f64,
 }
 
@@ -37,7 +37,7 @@ struct Beam {
 pub struct Effects {
     /// The battle the state below describes; a different seed starts afresh.
     seed: Option<u64>,
-    cells: Vec<Position>,
+    cells: Vec<Hex>,
     shots: usize,
     glides: Vec<Glide>,
     beams: Vec<Beam>,
@@ -48,7 +48,7 @@ impl Effects {
     /// changed. With `animate` off, the new state is adopted without effects.
     pub fn observe(&mut self, battle: &Battle, now: f64, animate: bool) {
         let shots: usize = battle.rounds.iter().map(Vec::len).sum();
-        let cells: Vec<Position> = battle.units.iter().map(|unit| unit.at).collect();
+        let cells: Vec<Hex> = battle.units.iter().map(|unit| unit.at).collect();
         let fresh = self.seed != Some(battle.seed) || cells.len() != self.cells.len();
         if fresh || shots < self.shots || !animate {
             *self = Self {
@@ -105,7 +105,7 @@ impl Effects {
     }
 
     /// Where to draw `unit`, standing at `at`, at time `now`.
-    pub fn position(&self, unit: usize, at: Position, now: f64) -> ScenePoint {
+    pub fn position(&self, unit: usize, at: Hex, now: f64) -> ScenePoint {
         let to = ScenePoint::of(at);
         let Some(glide) = self.glides.iter().rev().find(|glide| glide.unit == unit) else {
             return to;
@@ -115,9 +115,9 @@ impl Effects {
         ScenePoint(ScenePoint::of(glide.from).0.lerp(to.0, eased))
     }
 
-    /// Horizontal heading while a ship glides; a vertical move keeps its
+    /// Heading while a ship glides; otherwise it keeps its
     /// existing side-facing pose. This is presentation state, not a battle rule.
-    pub fn heading(&self, unit: usize, at: Position, now: f64) -> Option<Vec2> {
+    pub fn heading(&self, unit: usize, at: Hex, now: f64) -> Option<Vec2> {
         let glide = self.glides.iter().rev().find(|glide| {
             glide.unit == unit && (glide.start..glide.start + GLIDE_SECONDS).contains(&now)
         })?;

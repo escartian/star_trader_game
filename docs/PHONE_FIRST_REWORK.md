@@ -11,7 +11,7 @@ Where it conflicts with [map design](MAP_DESIGN.md) (3D map on a 2D screen) or
 | --- | --- |
 | Target screen | Phone portrait first (reference 390 × 844 pt); desktop gets the same layout with more room, not a separate design. |
 | Space | **Flat play.** The galaxy and every system are planes. 3D is for looks (tilted camera, 3D ship models), never for decisions. |
-| Battles | **Hex board with three altitude bands** (Low, Level, High), replacing the free 3D grid. |
+| Battles | **Hex board** replacing the free 3D grid; first with three altitude bands, now a single layer with terrain (see [combat](COMBAT.md)). |
 | Story | **Several roads to victory** (Trader, Soldier, Diplomat/Spy, Pirate) in one frontier setting. The debt opening hook is **paused**. |
 | Feature surface | Systems unlock as play progresses instead of all being visible from the first minute. |
 
@@ -97,6 +97,10 @@ hover, no right-drag) depth is the first thing to hurt.
   required).
 
 ## Hex battles with altitude bands
+
+> Superseded in part: schema 9 removed the altitude bands in favour of a
+> single-layer board with asteroids and debris ([combat](COMBAT.md)). This
+> section records the phase-4 design as built.
 
 **Board.** A hexagonal board in axial coordinates. Radius 4 (61 hexes) for up to
 three ships, one more ring per four more ships, at most radius 6 (127 hexes).

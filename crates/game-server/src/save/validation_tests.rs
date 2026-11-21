@@ -20,11 +20,16 @@ fn saves_from_before_flat_maps_are_rejected_with_a_clear_message() {
     let session = Session::default();
     let mut value: serde_json::Value =
         serde_json::from_str(&session.export_json().unwrap()).unwrap();
-    assert_eq!(value["schema_version"], 8);
+    assert_eq!(value["schema_version"], 9);
     assert!(load_value(&value).is_ok());
-    value["schema_version"] = 7.into();
-    let (_, notice) = load_value(&value).unwrap();
-    assert!(notice.is_none(), "schema 7 without a battle loads as is");
+    for older in [7, 8] {
+        value["schema_version"] = older.into();
+        let (_, notice) = load_value(&value).unwrap();
+        assert!(
+            notice.is_none(),
+            "schema {older} without a battle loads as is"
+        );
+    }
     for old in [1, 5, 6] {
         value["schema_version"] = old.into();
         let error = load_value(&value).map(|_| ()).unwrap_err();

@@ -1,5 +1,5 @@
-//! The battle board: hexes in axial coordinates, three altitude bands, ranges,
-//! move costs and deployment. Each battle carries its own [`Board`], which
+//! The battle board: hexes in axial coordinates, ranges, move costs and
+//! deployment. Terrain lives in `terrain`. Each battle carries its own [`Board`], which
 //! grows with the fleets.
 //!
 //! Axial coordinates (q, r), with the implied third coordinate s = −q − r.
@@ -45,79 +45,6 @@ impl Hex {
         2 * i16::from(self.r) + i16::from(self.q)
     }
 }
-
-/// Altitude band. One ship per hex whatever its band, so bands never block a
-/// hex; they change ranges and hit chances.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Band {
-    Low,
-    Level,
-    High,
-}
-
-impl Band {
-    pub const ALL: [Band; 3] = [Band::Low, Band::Level, Band::High];
-
-    /// 0 (Low) to 2 (High).
-    pub fn height(self) -> u8 {
-        self as u8
-    }
-
-    /// Bands between this one and `other`.
-    pub fn difference(self, other: Band) -> u32 {
-        u32::from(self.height().abs_diff(other.height()))
-    }
-
-    pub fn above(self) -> Option<Band> {
-        Self::ALL.get(usize::from(self.height()) + 1).copied()
-    }
-
-    pub fn below(self) -> Option<Band> {
-        self.height()
-            .checked_sub(1)
-            .map(|height| Self::ALL[usize::from(height)])
-    }
-
-    pub fn label(self) -> &'static str {
-        match self {
-            Band::Low => "Low",
-            Band::Level => "Level",
-            Band::High => "High",
-        }
-    }
-}
-
-/// Where a ship stands: a hex and a band.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Position {
-    pub hex: Hex,
-    pub band: Band,
-}
-
-impl Position {
-    pub const fn new(hex: Hex, band: Band) -> Self {
-        Self { hex, band }
-    }
-
-    /// Weapon range and move cost alike: hex steps plus bands crossed.
-    pub fn range(self, other: Position) -> u32 {
-        self.hex.distance(other.hex) + self.band.difference(other.band)
-    }
-}
-
-/// Hit-chance modifier, in percentage points, for firing from `from` at a ship
-/// in `to`: +10 at a lower band, −10 at a higher one, 0 on the same band.
-pub fn high_ground_percent(from: Band, to: Band) -> i32 {
-    match from.cmp(&to) {
-        std::cmp::Ordering::Greater => HIGH_GROUND_PERCENT,
-        std::cmp::Ordering::Less => -HIGH_GROUND_PERCENT,
-        std::cmp::Ordering::Equal => 0,
-    }
-}
-
-/// Hit-chance bonus for firing down a band (and penalty for firing up).
-pub const HIGH_GROUND_PERCENT: i32 = 10;
 
 /// A hexagonal board of `radius` rings around the centre hex
 /// (3r² + 3r + 1 hexes: 61 at radius 4, 127 at radius 6).
@@ -166,10 +93,10 @@ impl Board {
 
     /// Deployment: a side's ships fill the column one in from its edge (so a
     /// damaged ship can step back and withdraw), middle row first, then
-    /// alternating outward, all on the Level band. A side never has more ships
+    /// alternating outward. A side never has more ships
     /// than that column holds (radius + 2 hexes, see the tests); should it,
     /// further ships take the next nearest columns.
-    pub(super) fn deployment(self, side: Side, rank: usize) -> Position {
+    pub(super) fn deployment(self, side: Side, rank: usize) -> Hex {
         let column = match side {
             Side::Player => -self.radius + 1,
             Side::Hostile => self.radius - 1,
@@ -186,7 +113,7 @@ impl Board {
                 hex.q,
             )
         });
-        Position::new(hexes[rank % hexes.len()], Band::Level)
+        hexes[rank % hexes.len()]
     }
 
     /// Whether a saved battle with `ships` ships may use this board.
@@ -196,7 +123,7 @@ impl Board {
 }
 
 /// Movement points per turn: 1 + engine / 3 (engine 3 → 2, engine 8 → 3). A
-/// hex step costs one point, and so does a climb or dive of one band.
+/// hex step costs one point.
 pub fn move_points(engine: u32) -> u32 {
     1 + engine / 3
 }
@@ -216,19 +143,11 @@ mod tests {
     }
 
     #[test]
-    fn distances_count_hex_steps_and_bands() {
+    fn distances_count_hex_steps() {
         let origin = Hex::new(0, 0);
         assert_eq!(origin.distance(Hex::new(3, -1)), 3);
         assert_eq!(origin.distance(Hex::new(-2, 2)), 2);
         assert_eq!(Hex::new(-4, 0).distance(Hex::new(4, 0)), 8);
-        let low = Position::new(origin, Band::Low);
-        assert_eq!(low.range(Position::new(Hex::new(2, 0), Band::High)), 4);
-        assert_eq!(Band::Level.above(), Some(Band::High));
-        assert_eq!(Band::High.above(), None);
-        assert_eq!(Band::Low.below(), None);
-        assert_eq!(high_ground_percent(Band::High, Band::Low), 10);
-        assert_eq!(high_ground_percent(Band::Low, Band::Level), -10);
-        assert_eq!(high_ground_percent(Band::Level, Band::Level), 0);
     }
 
     #[test]
@@ -241,18 +160,17 @@ mod tests {
                 let placed: Vec<_> = (0..side_size)
                     .map(|rank| board.deployment(side, rank))
                     .collect();
-                let unique: std::collections::HashSet<_> = placed.iter().map(|at| at.hex).collect();
+                let unique: std::collections::HashSet<_> = placed.iter().collect();
                 assert_eq!(unique.len(), side_size);
                 for at in &placed {
-                    assert!(board.contains(at.hex));
-                    assert_eq!((at.hex.q - board.home_column(side)).abs(), 1);
-                    assert_eq!(at.band, Band::Level);
+                    assert!(board.contains(*at));
+                    assert_eq!((at.q - board.home_column(side)).abs(), 1);
                 }
             }
         }
         let board = Board::for_ships(2);
-        let player = board.deployment(Side::Player, 0).hex;
-        let raider = board.deployment(Side::Hostile, 0).hex;
+        let player = board.deployment(Side::Player, 0);
+        let raider = board.deployment(Side::Hostile, 0);
         assert_eq!(player.distance(raider), 6, "a duel opens six hexes apart");
     }
 }

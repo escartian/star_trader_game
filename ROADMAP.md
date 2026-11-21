@@ -192,11 +192,12 @@ Combat is the original README's first prioritized expansion.
   fire, withdrawal from your own edge, raider AI and Auto-resolve.
 - [x] Play battles turn by turn: saved battles in progress, move/fire/withdraw/
   auto-resolve commands. Battles run to a finish (no round limit).
-- [x] Hex board with Low/Level/High altitude bands (phone-first phase 4): boards
-  of radius 4–6 by fleet size, movement points spent on steps, climbs and dives,
-  range as hexes plus bands, ±10% high ground, an AI that takes free height,
-  a fixed-tilt board view, tap-to-aim then Fire, and a stacked phone layout.
-  Schema-7 saves auto-resolve an open 3D-grid battle on load.
+- [x] Hex board (phone-first phase 4): boards of radius 4–6 by fleet size,
+  movement points spent on steps, a fixed-tilt 3D board view, tap-to-aim then
+  Fire, and a stacked phone layout. Schema 9 flattened it to one layer (the
+  Low/Level/High bands are gone) and added seeded, mirrored terrain: asteroids
+  that block movement and fire, debris that gives cover. Schema-7 and -8 saves
+  auto-resolve an open battle on load.
 - [x] Every hull drawn from a Blender glTF export (the scout decimated to 1,600
   triangles); animated moves and weapon beams; side strength, portraits, hover
   cards and move-range previews.

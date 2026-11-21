@@ -31,8 +31,8 @@ fn pointing_at_a_ship_or_a_lit_hex_picks_it_and_unlit_hexes_are_ignored() {
     let camera = BoardCamera::default();
     let artwork = Artwork::preload(&egui::Context::default());
     let here = battle.units[0].at;
-    let step = Hex::new(here.hex.q + 1, here.hex.r);
-    let unlit = Hex::new(here.hex.q + 2, here.hex.r - 1);
+    let step = Hex::new(here.q + 1, here.r);
+    let unlit = Hex::new(here.q + 2, here.r - 1);
     let reachable = [step];
     let input = SceneInput {
         battle: &battle,

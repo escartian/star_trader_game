@@ -1,19 +1,19 @@
 //! Fixed-tilt camera over the hex board.
 //!
 //! Coordinate spaces:
-//! - `Hex` / `Position` (game-core): axial hexes and altitude bands.
+//! - `Hex` (game-core): axial hexes on a single-layer board.
 //! - [`ScenePoint`]: world units, z up, the board's centre hex at the origin
 //!   on the board plane (z = 0). Hex centres are 1.0 apart: a hex sits at
 //!   x = (√3 / 2) q, y = r + q / 2, so +x points from the player's edge toward
-//!   the raiders'. Bands stand above the board at [`band_height`].
+//!   the raiders'. Ships hover just above their hex at [`SHIP_HEIGHT`].
 //! - Screen: egui points inside the view rect.
 //!
 //! The camera looks at the board from the player's side at a fixed tilt; it
 //! only zooms and pans (flat play: no orbit). At zoom 1 it stands back just
-//! far enough for the whole board, and ships on the High band, to fit the
+//! far enough for the whole board, and the ships over it, to fit the
 //! view rect, whatever its shape.
 use egui::{Pos2, Rect, Vec2};
-use game_core::combat::tactical::{Band, Board, Hex, Position};
+use game_core::combat::tactical::{Board, Hex};
 use glam::{Mat4, Vec3};
 
 /// Vertical field of view in radians.
@@ -28,14 +28,8 @@ const MAX_ZOOM: f32 = 4.0;
 const COLUMN: f32 = 0.866_025_4;
 /// A hex's circumradius in world units (centres are 1.0 apart).
 pub const HEX_RADIUS: f32 = 0.577_350_3;
-/// Height of the Low band above the board, and the gap between bands.
-const LOW_HEIGHT: f32 = 0.45;
-const BAND_GAP: f32 = 0.75;
-
-/// Height above the board plane of a band, in world units.
-pub fn band_height(band: Band) -> f32 {
-    LOW_HEIGHT + BAND_GAP * f32::from(band.height())
-}
+/// Height a ship hovers above the board plane, in world units.
+pub const SHIP_HEIGHT: f32 = 0.35;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ScenePoint(pub Vec3);
@@ -47,10 +41,10 @@ impl ScenePoint {
         Self(Vec3::new(COLUMN * q, r + q / 2.0, 0.0))
     }
 
-    /// Where a ship at `position` floats: over its hex, at its band's height.
-    pub fn of(position: Position) -> Self {
-        let mut point = Self::of_hex(position.hex).0;
-        point.z = band_height(position.band);
+    /// Where a ship on `hex` hovers.
+    pub fn of(hex: Hex) -> Self {
+        let mut point = Self::of_hex(hex).0;
+        point.z = SHIP_HEIGHT;
         Self(point)
     }
 
@@ -67,7 +61,7 @@ fn half_extent(board: Board) -> glam::Vec2 {
 }
 
 /// The board's outline for framing: the corners of its six corner hexes, on
-/// the board and at the High band (a ship's centre there).
+/// the board and at ship height.
 fn outline(board: Board) -> Vec<Vec3> {
     let radius = board.radius;
     let corner_hexes = [
@@ -78,7 +72,7 @@ fn outline(board: Board) -> Vec<Vec3> {
         (-radius, radius),
         (0, radius),
     ];
-    let top = band_height(Band::High);
+    let top = SHIP_HEIGHT;
     corner_hexes
         .into_iter()
         .flat_map(|(q, r)| {
@@ -98,7 +92,7 @@ fn outline(board: Board) -> Vec<Vec3> {
 fn fit_distance(rect: Rect, board: Board) -> f32 {
     let points = outline(board);
     let inner = Rect::from_center_size(rect.center(), rect.size() * FILL);
-    let centre = Vec3::new(0.0, 0.0, band_height(Band::Level));
+    let centre = Vec3::new(0.0, 0.0, SHIP_HEIGHT);
     let fits = |distance| {
         let projector = look(centre, distance, rect);
         points.iter().all(|point| {
@@ -188,9 +182,9 @@ impl Default for BoardCamera {
 }
 
 impl BoardCamera {
-    /// The point the camera looks at: the pan offset, at Level band height.
+    /// The point the camera looks at: the pan offset, at ship height.
     pub fn focus(&self) -> Vec3 {
-        self.pan.extend(band_height(Band::Level))
+        self.pan.extend(SHIP_HEIGHT)
     }
 
     /// World units from the focus to the eye (see [`fit_distance`]).
@@ -256,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    fn every_board_fits_wide_and_phone_views_with_the_player_left_and_high_bands_higher() {
+    fn every_board_fits_wide_and_phone_views_with_the_player_left() {
         let camera = BoardCamera::default();
         for rect in screens() {
             for ships in [2, 4, 16] {
@@ -266,17 +260,17 @@ mod tests {
                 let raider = Hex::new(board.home_column(Side::Hostile), 0);
                 assert!(at(ScenePoint::of_hex(player)).x < at(ScenePoint::of_hex(raider)).x);
                 let centre = Hex::new(0, 0);
-                let high = at(ScenePoint::of(Position::new(centre, Band::High)));
-                let low = at(ScenePoint::of(Position::new(centre, Band::Low)));
-                assert!(high.y < low.y, "higher bands stand higher on screen");
-                // Every hex, and a High ship on it, stays on screen.
+                let ship = at(ScenePoint::of(centre));
+                let hex = at(ScenePoint::of_hex(centre));
+                assert!(ship.y < hex.y, "ships hover above their hex");
+                // Every hex, and a ship on it, stays on screen.
                 for hex in board.hexes() {
                     assert!(
                         rect.contains(at(ScenePoint::of_hex(hex))),
                         "{ships}: {hex:?}"
                     );
-                    let ship = ScenePoint::of(Position::new(hex, Band::High));
-                    assert!(rect.contains(at(ship)), "{ships}: high {hex:?}");
+                    let ship = ScenePoint::of(hex);
+                    assert!(rect.contains(at(ship)), "{ships}: ship {hex:?}");
                 }
             }
         }
@@ -287,7 +281,7 @@ mod tests {
         let board = Board::for_ships(14);
         let rect = screens()[0];
         let mut camera = BoardCamera::default();
-        let corner = ScenePoint::of(Position::new(Hex::new(-6, 0), Band::Level));
+        let corner = ScenePoint::of(Hex::new(-6, 0));
         camera.look_at(corner, board);
         let at = camera.project(rect, board, corner).unwrap().pos;
         assert!(

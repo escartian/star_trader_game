@@ -1,16 +1,16 @@
 //! Paints the hex board and finds what the pointer is over. Ships are 3D
-//! models (or sprites) floating at their band's height over their hex, with a
-//! shadow and a stalk down to the board, so the band reads at a glance.
+//! models (or sprites) hovering just over their hex with a shadow beneath;
+//! asteroids rise from the board and are depth-sorted with the ships.
 use super::camera::{BoardCamera, Projector, ScenePoint};
 use super::canvas::Canvas;
 use super::effects::Effects;
-use super::{backdrop, model};
+use super::{backdrop, model, terrain};
 use crate::map::art::{ArtKind, Artwork};
 use crate::theme::{AMBER, CYAN, GREEN};
 use egui::{Color32, FontId, Pos2, Rect, Stroke, Vec2};
 use game_core::combat::{
     CombatCatalog, HullSize, Side,
-    tactical::{Band, Battle, Hex, Position, Unit},
+    tactical::{Battle, Hex, Terrain, Unit},
 };
 use game_core::fleet::ShipKind;
 
@@ -26,21 +26,13 @@ pub enum Pick {
 pub struct SceneInput<'a> {
     pub battle: &'a Battle,
     pub weapons: &'a CombatCatalog,
-    /// Hexes the acting ship may still move to on its own band.
+    /// Hexes the acting ship may still move to.
     pub reachable: &'a [Hex],
     /// Enemies the acting ship can fire on now.
     pub targets: &'a [usize],
     /// The enemy picked for the next volley, waiting for Fire.
     pub aimed: Option<usize>,
     pub artwork: &'a Artwork,
-}
-
-impl SceneInput<'_> {
-    /// Where the acting ship would stand on `hex`, keeping its band.
-    fn on_my_band(&self, hex: Hex) -> Option<Position> {
-        let me = self.battle.active()?;
-        Some(Position::new(hex, self.battle.units[me].at.band))
-    }
 }
 
 pub fn side_color(side: Side) -> Color32 {
@@ -120,6 +112,7 @@ pub fn paint(painter: &egui::Painter, frame: &Frame, input: &SceneInput) {
     };
     backdrop::sky(&painter, frame.rect, -frame.camera.pan.x * 6.0);
     backdrop::board(&canvas, input.battle.board);
+    terrain::paint_debris(&canvas, &input.battle.terrain);
     for hex in input.reachable {
         let lit = frame.hovered == Some(Pick::Hex(*hex));
         let fill = GREEN.gamma_multiply(if lit { 0.45 } else { 0.16 });
@@ -155,17 +148,18 @@ pub fn paint(painter: &egui::Painter, frame: &Frame, input: &SceneInput) {
 }
 
 /// The path to a hovered move hex, and which enemies would be in reach from it.
-fn move_preview(canvas: &Canvas, input: &SceneInput, me: usize, hex: Hex) {
-    let Some(target) = input.on_my_band(hex) else {
-        return;
-    };
+fn move_preview(canvas: &Canvas, input: &SceneInput, me: usize, target: Hex) {
     let from = ScenePoint::of(input.battle.units[me].at);
     let to = ScenePoint::of(target);
     canvas.line(from, to, Stroke::new(2.0_f32, GREEN.gamma_multiply(0.85)));
     canvas.ring(to, RING, Stroke::new(1.5_f32, GREEN.gamma_multiply(0.7)));
     let reach = input.battle.max_range(me, input.weapons);
     for unit in &input.battle.units {
-        if unit.side == Side::Hostile && unit.active() && target.range(unit.at) <= reach {
+        if unit.side == Side::Hostile
+            && unit.active()
+            && target.distance(unit.at) <= reach
+            && input.battle.line_of_fire(target, unit.at)
+        {
             let enemy = ScenePoint::of(unit.at);
             canvas.dashed(
                 to,
@@ -177,9 +171,16 @@ fn move_preview(canvas: &Canvas, input: &SceneInput, me: usize, hex: Hex) {
     }
 }
 
-/// Ships far to near: shadow and stalk, ring, model or sprite, status bars.
+/// Something standing on the board, drawn in depth order.
+enum Standing {
+    Ship(usize),
+    Rock(Hex),
+}
+
+/// Ships and asteroids far to near; a ship is shadow, ring, model or sprite
+/// and status bars.
 fn ships(canvas: &Canvas, frame: &Frame, input: &SceneInput, active: Option<usize>) {
-    let mut ships: Vec<_> = input
+    let ships = input
         .battle
         .units
         .iter()
@@ -187,21 +188,41 @@ fn ships(canvas: &Canvas, frame: &Frame, input: &SceneInput, active: Option<usiz
         .filter(|(_, unit)| unit.active())
         .filter_map(|(index, unit)| {
             let point = frame.effects.position(index, unit.at, frame.now);
-            let at = canvas.projector.project(point)?;
-            Some((index, unit, point, at))
-        })
-        .collect();
-    ships.sort_by(|a, b| b.3.depth.total_cmp(&a.3.depth));
-    for (index, unit, point, at) in ships {
+            Some((
+                canvas.projector.project(point)?.depth,
+                Standing::Ship(index),
+            ))
+        });
+    let rocks = input
+        .battle
+        .terrain
+        .iter()
+        .filter(|cell| cell.kind == Terrain::Asteroid)
+        .filter_map(|cell| {
+            let depth = canvas
+                .projector
+                .project(terrain::rock_anchor(cell.hex))?
+                .depth;
+            Some((depth, Standing::Rock(cell.hex)))
+        });
+    let mut standing: Vec<_> = ships.chain(rocks).collect();
+    standing.sort_by(|a, b| b.0.total_cmp(&a.0));
+    for (_, item) in standing {
+        let index = match item {
+            Standing::Rock(hex) => {
+                terrain::paint_rock(canvas, hex);
+                continue;
+            }
+            Standing::Ship(index) => index,
+        };
+        let unit = &input.battle.units[index];
+        let point = frame.effects.position(index, unit.at, frame.now);
+        let Some(at) = canvas.projector.project(point) else {
+            continue;
+        };
         let color = side_color(unit.side);
         let length = ship_length(unit.profile.size, unit.kind);
         shadow(canvas, point.on_board(), length);
-        canvas.dashed(
-            point,
-            point.on_board(),
-            0.12,
-            Stroke::new(1.0_f32, color.gamma_multiply(0.55)),
-        );
         let ring = if Some(index) == active {
             Some((GREEN, 2.5_f32))
         } else if input.targets.contains(&index) {
@@ -256,15 +277,6 @@ fn shadow(canvas: &Canvas, on_board: ScenePoint, ship_length: f32) {
     }
 }
 
-/// A short band tag over the status bars: "HIGH" or "LOW" (Level is unmarked).
-fn band_tag(band: Band) -> Option<&'static str> {
-    match band {
-        Band::High => Some("HIGH"),
-        Band::Low => Some("LOW"),
-        Band::Level => None,
-    }
-}
-
 fn bars(painter: &egui::Painter, unit: &Unit, centre: Pos2, scale: f32) {
     let width = (scale * 0.8).clamp(22.0, 60.0);
     let left = centre.x - width / 2.0;
@@ -280,15 +292,6 @@ fn bars(painter: &egui::Painter, unit: &Unit, centre: Pos2, scale: f32) {
     bar(0.0, hull, hull_color(hull));
     if unit.profile.shields > 0 {
         bar(5.0, unit.shields as f32 / unit.profile.shields as f32, CYAN);
-    }
-    if let Some(tag) = band_tag(unit.at.band) {
-        painter.text(
-            Pos2::new(centre.x, top - 3.0),
-            egui::Align2::CENTER_BOTTOM,
-            tag,
-            FontId::proportional(10.0),
-            side_color(unit.side).gamma_multiply(0.9),
-        );
     }
 }
 
@@ -325,16 +328,21 @@ fn hover_card(painter: &egui::Painter, projector: &Projector, input: &SceneInput
             ),
             Color32::from_gray(200),
         ),
-        (
-            format!("{} band", unit.at.band.label()),
-            Color32::from_gray(170),
-        ),
     ];
+    if battle.cover(unit.at) {
+        lines.push((
+            format!(
+                "In debris: −{}% to be hit",
+                game_core::combat::tactical::COVER_PERCENT
+            ),
+            Color32::from_gray(170),
+        ));
+    }
     if let Some(me) = battle
         .active()
         .filter(|me| battle.units[*me].side != unit.side)
     {
-        let distance = battle.units[me].at.range(unit.at);
+        let distance = battle.units[me].at.distance(unit.at);
         let chances: Vec<String> = battle.units[me]
             .profile
             .loadout

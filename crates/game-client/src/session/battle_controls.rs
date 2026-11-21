@@ -1,7 +1,8 @@
 //! The acting ship's controls and board interaction. Tapping a lit hex moves
-//! there on the ship's band; Climb and Dive change band; tapping a ringed
-//! enemy aims at it and **Fire** confirms, so a stray tap never fires.
-//! Keys: Q dives, E climbs, Enter fires at the aimed enemy, Space ends the turn.
+//! there (around asteroids); tapping a ringed enemy aims at it and **Fire**
+//! confirms, so a stray tap never fires. Asteroids block the line of fire, so
+//! only enemies in sight are ringed.
+//! Keys: Enter fires at the aimed enemy, Space ends the turn.
 use super::LocalSession;
 use super::battle::SIDE_WIDTH;
 use super::battle_cards::{ship_card, weapon_list};
@@ -12,7 +13,7 @@ use crate::theme::icons::{self, Icon};
 use egui::{Color32, RichText, Vec2};
 use game_core::combat::{
     Side,
-    tactical::{Battle, Position},
+    tactical::{Battle, COVER_PERCENT},
 };
 use game_core::navigation::BattleAction;
 
@@ -29,13 +30,7 @@ impl LocalSession {
     ) {
         let weapons = &self.economy.rules.combat_catalog;
         let me = battle.active();
-        let band = me.map(|me| battle.units[me].at.band);
-        let reachable: Vec<_> = battle
-            .reachable()
-            .into_iter()
-            .filter(|to| Some(to.band) == band)
-            .map(|to| to.hex)
-            .collect();
+        let reachable = battle.reachable();
         let targets = me
             .filter(|_| !battle.fired)
             .map(|me| battle.targets(me, weapons))
@@ -55,15 +50,15 @@ impl LocalSession {
         };
         let (hovered, clicked) = view.show(ui, size, &input);
         self.battle.hovered = hovered;
-        match (clicked, band) {
-            (Some(Pick::Hex(hex)), Some(band)) => {
-                self.battle_command(BattleAction::Move(Position::new(hex, band)));
+        match clicked {
+            Some(Pick::Hex(hex)) if me.is_some() => {
+                self.battle_command(BattleAction::Move(hex));
             }
-            (Some(Pick::Unit(target)), _) if targets.contains(&target) => {
+            Some(Pick::Unit(target)) if targets.contains(&target) => {
                 self.battle.view.aimed = Some(target);
             }
-            (Some(_), _) => self.battle.view.aimed = None,
-            (None, _) => {}
+            Some(_) => self.battle.view.aimed = None,
+            None => {}
         }
     }
 
@@ -94,7 +89,8 @@ impl LocalSession {
         ui.add_space(6.0);
         ui.label(RichText::new(turn_hint(battle, aimed, narrow)).small());
         ui.add_space(6.0);
-        let mut action = self.band_row(ui, battle, me);
+        cover_note(ui, battle, me);
+        let mut action = None;
         ui.add_space(8.0);
         let keys = !ui.ctx().wants_keyboard_input();
         let (enter, space) = ui.input(|i| {
@@ -164,52 +160,17 @@ impl LocalSession {
             self.battle_command(action);
         }
     }
+}
 
-    /// The ship's band with Climb and Dive (one movement point each).
-    fn band_row(&self, ui: &mut egui::Ui, battle: &Battle, me: usize) -> Option<BattleAction> {
-        let at = battle.units[me].at;
-        let keys = !ui.ctx().wants_keyboard_input();
-        let (dive_key, climb_key) = ui.input(|i| {
-            (
-                keys && i.key_pressed(egui::Key::Q),
-                keys && i.key_pressed(egui::Key::E),
-            )
-        });
-        let mut action = None;
-        ui.horizontal(|ui| {
-            ui.label(RichText::new("BAND").small().color(Color32::GRAY))
-                .on_hover_text(
-                    "Low, Level or High. Firing down a band hits 10% more often, \
-                     firing up 10% less; each band crossed adds one to the range.",
-                );
-            ui.label(RichText::new(at.band.label().to_uppercase()).color(GREEN));
-            let spare = battle.moves_left > 0;
-            for (label, band, key, tip) in [
-                ("CLIMB", at.band.above(), climb_key, "Climb one band (E)"),
-                ("DIVE", at.band.below(), dive_key, "Dive one band (Q)"),
-            ] {
-                let enabled = spare && band.is_some();
-                let button = ui
-                    .add_enabled(
-                        enabled,
-                        egui::Button::new(RichText::new(label).strong())
-                            .min_size(Vec2::new(72.0, 36.0)),
-                    )
-                    .on_hover_text(tip)
-                    .on_disabled_hover_text(if spare {
-                        "No band beyond this one."
-                    } else {
-                        "No movement left this turn."
-                    });
-                if let Some(band) = band
-                    && enabled
-                    && (button.clicked() || key)
-                {
-                    action = Some(BattleAction::Move(Position::new(at.hex, band)));
-                }
-            }
-        });
-        action
+/// Whether the acting ship stands in debris, and what that buys it.
+fn cover_note(ui: &mut egui::Ui, battle: &Battle, me: usize) {
+    if battle.cover(battle.units[me].at) {
+        ui.label(
+            RichText::new(format!("IN COVER · debris: −{COVER_PERCENT}% to be hit"))
+                .small()
+                .color(GREEN),
+        )
+        .on_hover_text("Ships in a debris field are harder to hit.");
     }
 }
 

@@ -6,7 +6,7 @@ use super::{Encounter, EncounterKind, NavigationError, NavigationEvent};
 use crate::{
     combat::{
         CombatOutcome, CombatReport, Side,
-        tactical::{self, Battle, Position},
+        tactical::{self, Battle, Hex},
     },
     economy::EconomyRules,
     fleet::{Fleet, FleetError, FleetId, FleetMovementError},
@@ -27,9 +27,9 @@ pub struct ActiveBattle {
 /// What the acting player ship does next.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BattleAction {
-    /// Move to a hex and band within the remaining movement points; the same
-    /// hex on another band climbs or dives.
-    Move(Position),
+    /// Move to a free hex within the remaining movement points (along the
+    /// shortest path around asteroids).
+    Move(Hex),
     /// Fire every weapon that reaches this unit (an index into `Battle::units`).
     Fire {
         target: u8,

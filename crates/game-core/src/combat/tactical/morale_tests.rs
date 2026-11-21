@@ -1,5 +1,5 @@
 use super::{
-    Band, Battle, Board, Hex, Position,
+    Battle, Board, Hex,
     morale::{BREAK_MORALE, morale, retreating},
     play_turn,
     tests::reorder,
@@ -31,11 +31,12 @@ fn duel(player: ShipKind, hostile: ShipKind) -> Battle {
 }
 
 #[test]
-fn battles_open_on_a_board_sized_for_the_fleets_with_ships_on_the_level_band() {
+fn battles_open_on_a_board_sized_for_the_fleets_off_the_asteroids() {
     let battle = duel(ShipKind::Freighter, ShipKind::Scout);
     assert_eq!(battle.board, Board::for_ships(2));
-    assert_eq!(battle.units[1].at.hex.q, 3, "raiders deploy one column in");
-    assert!(battle.units.iter().all(|unit| unit.at.band == Band::Level));
+    assert_eq!(battle.units[1].at.q, 3, "raiders deploy one column in");
+    assert!(battle.units.iter().all(|unit| !battle.blocked(unit.at)));
+    assert!(!battle.terrain.is_empty());
     // The board is part of the saved battle.
     let mut json = serde_json::to_value(&battle).unwrap();
     json.as_object_mut().unwrap().remove("board");
@@ -113,8 +114,8 @@ fn a_broken_side_routs_even_healthy_ships() {
     let before = battle.units[3].at;
     play_turn(&mut battle, &catalog).unwrap();
     let edge = battle.board.home_column(Side::Hostile);
-    assert!(battle.units[3].withdrawn || battle.units[3].at.hex.q > before.hex.q);
-    assert!(battle.units[3].at.hex.q <= edge);
+    assert!(battle.units[3].withdrawn || battle.units[3].at.q > before.q);
+    assert!(battle.units[3].at.q <= edge);
 }
 
 #[test]
@@ -122,7 +123,7 @@ fn the_player_escaping_is_not_a_defeat_and_movement_holds_off_the_ceasefire() {
     let mut battle = duel(ShipKind::Scout, ShipKind::Scout);
     reorder(&mut battle, vec![0, 1]);
     let here = battle.units[0].at;
-    let edge = Position::new(Hex::new(here.hex.q - 1, here.hex.r), here.band);
+    let edge = Hex::new(here.q - 1, here.r);
     battle.move_to(edge).unwrap();
     battle.withdraw().unwrap();
     assert_eq!(battle.outcome(), Some(None));
@@ -132,12 +133,9 @@ fn the_player_escaping_is_not_a_defeat_and_movement_holds_off_the_ceasefire() {
         for _ in 0..2 {
             let me = battle.active().unwrap();
             let here = battle.units[me].at;
-            let band = if round % 2 == 0 {
-                Band::High
-            } else {
-                Band::Level
-            };
-            battle.move_to(Position::new(here.hex, band)).unwrap();
+            // Up and down the deployment column, which terrain keeps clear.
+            let shift = if round % 2 == 0 { -1 } else { 1 };
+            battle.move_to(Hex::new(here.q, here.r + shift)).unwrap();
             battle.end_turn().unwrap();
         }
     }

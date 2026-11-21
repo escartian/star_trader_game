@@ -1,7 +1,8 @@
-//! What the acting ship can do: move and change band within its movement
-//! points, fire one volley, withdraw from its own edge, or (for the player)
-//! surrender. Each action validates first and changes nothing when rejected.
-use super::{Band, Battle, BattleError, Hex, Position, high_ground_percent};
+//! What the acting ship can do: move within its movement points (around
+//! asteroids), fire one volley along a clear line of fire, withdraw from its
+//! own edge, or (for the player) surrender. Each action validates first and
+//! changes nothing when rejected.
+use super::{Battle, BattleError, COVER_PERCENT, Hex};
 use crate::combat::{
     CombatCatalog, WeaponSpec,
     engagement::{ShotRecord, Side, adjusted_hit_chance, apply_hit},
@@ -9,30 +10,32 @@ use crate::combat::{
 };
 
 impl Battle {
-    /// Whether an active ship other than `except` stands on `hex` (any band).
+    /// Whether an active ship other than `except` stands on `hex`.
     fn occupied(&self, hex: Hex, except: usize) -> bool {
         self.units
             .iter()
             .enumerate()
-            .any(|(index, unit)| index != except && unit.active() && unit.at.hex == hex)
+            .any(|(index, unit)| index != except && unit.active() && unit.at == hex)
     }
 
-    /// Positions the acting ship can still reach this turn: free hexes (or its
-    /// own hex on another band) within its remaining movement points.
-    pub fn reachable(&self) -> Vec<Position> {
+    /// Hexes the acting ship can still reach this turn: free hexes within its
+    /// remaining movement points along a path around asteroids, sorted.
+    pub fn reachable(&self) -> Vec<Hex> {
         let Some(me) = self.active().filter(|_| self.moves_left > 0) else {
             return Vec::new();
         };
         let from = self.units[me].at;
-        self.board
-            .hexes()
-            .filter(|hex| hex.distance(from.hex) <= self.moves_left && !self.occupied(*hex, me))
-            .flat_map(|hex| Band::ALL.map(|band| Position::new(hex, band)))
-            .filter(|to| *to != from && to.range(from) <= self.moves_left)
-            .collect()
+        let mut hexes: Vec<Hex> = self
+            .steps_from(from, self.moves_left)
+            .into_keys()
+            .filter(|hex| *hex != from && !self.occupied(*hex, me))
+            .collect();
+        hexes.sort_by_key(|hex| (hex.q, hex.r));
+        hexes
     }
 
-    /// Enemies `unit` could fire on from where it stands.
+    /// Enemies `unit` could fire on from where it stands: in reach of a weapon
+    /// and in a clear line of fire.
     pub fn targets(&self, unit: usize, weapons: &CombatCatalog) -> Vec<usize> {
         let reach = self.max_range(unit, weapons);
         (0..self.units.len())
@@ -40,7 +43,8 @@ impl Battle {
                 let target = &self.units[other];
                 target.side != self.units[unit].side
                     && target.active()
-                    && target.at.range(self.units[unit].at) <= reach
+                    && target.at.distance(self.units[unit].at) <= reach
+                    && self.line_of_fire(self.units[unit].at, target.at)
             })
             .collect()
     }
@@ -58,32 +62,29 @@ impl Battle {
     }
 
     /// Percent chance for one shot of `weapon` from `attacker` to hit `target`
-    /// where they stand now, high ground included.
+    /// where they stand now, cover included.
     pub fn shot_chance(&self, attacker: usize, target: usize, weapon: &WeaponSpec) -> u32 {
         let (from, to) = (&self.units[attacker], &self.units[target]);
-        adjusted_hit_chance(
-            weapon,
-            to.profile.engine,
-            from.at.range(to.at),
-            high_ground_percent(from.at.band, to.at.band),
-        )
+        let cover = if self.cover(to.at) { -COVER_PERCENT } else { 0 };
+        adjusted_hit_chance(weapon, to.profile.engine, from.at.distance(to.at), cover)
     }
 
-    /// Moves the acting ship to `to`, paying one point per hex step and per
-    /// band crossed. The rest of its movement stays available this turn.
-    pub fn move_to(&mut self, to: Position) -> Result<(), BattleError> {
+    /// Moves the acting ship to `to`, paying one point per hex step along the
+    /// shortest path around asteroids. The rest of its movement stays
+    /// available this turn.
+    pub fn move_to(&mut self, to: Hex) -> Result<(), BattleError> {
         let me = self.active().ok_or(BattleError::Finished)?;
         if self.moves_left == 0 {
             return Err(BattleError::AlreadyMoved);
         }
         let from = self.units[me].at;
-        if to == from || !self.board.contains(to.hex) || self.occupied(to.hex, me) {
+        if to == from || !self.board.contains(to) || self.blocked(to) || self.occupied(to, me) {
             return Err(BattleError::Blocked);
         }
-        let cost = from.range(to);
-        if cost > self.moves_left {
-            return Err(BattleError::TooFar);
-        }
+        let cost = *self
+            .steps_from(from, self.moves_left)
+            .get(&to)
+            .ok_or(BattleError::TooFar)?;
         self.units[me].at = to;
         self.moves_left -= cost;
         self.acted = true;
@@ -104,7 +105,11 @@ impl Battle {
         {
             return Err(BattleError::InvalidTarget);
         }
-        let distance = self.units[me].at.range(self.units[target].at);
+        let (from, to) = (self.units[me].at, self.units[target].at);
+        if !self.line_of_fire(from, to) {
+            return Err(BattleError::NoLineOfFire);
+        }
+        let distance = from.distance(to);
         let volley: Vec<_> = self.units[me]
             .profile
             .loadout
@@ -167,7 +172,7 @@ impl Battle {
     pub fn can_withdraw(&self) -> bool {
         self.active().is_some_and(|me| {
             let unit = &self.units[me];
-            self.board.at_home_edge(unit.side, unit.at.hex)
+            self.board.at_home_edge(unit.side, unit.at)
         })
     }
 

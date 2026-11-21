@@ -1,19 +1,20 @@
-//! Turn-based tactical battles on a hex board with three altitude bands, with
-//! HoMM-style ship initiative. Pure and deterministic: the same seed and the
-//! same actions replay a battle.
+//! Turn-based tactical battles on a single-layer hex board, with HoMM-style
+//! ship initiative. Pure and deterministic: the same seed and the same actions
+//! replay a battle.
 //!
 //! - The board is a hexagon of hexes ([`Board`]) that grows with the fleets
-//!   (radius 4 for a duel). Each ship stands on one hex in one [`Band`]: Low,
-//!   Level or High. One ship per hex, whatever its band.
-//! - Range is hex steps plus bands crossed ([`Position::range`]).
+//!   (radius 4 for a duel), scattered with asteroids and debris ([`terrain`]).
+//!   One ship per hex.
+//! - Range is hex steps ([`Hex::distance`]).
 //! - Each round, every active ship acts once in initiative order: engine rating,
 //!   high first, ties broken by a seeded roll drawn once per battle.
-//! - A turn: spend up to [`move_points`] on hex steps and climbs/dives (one
-//!   point each) to free hexes, fire once at one chosen enemy with every fitted
-//!   weapon that reaches it, then end the turn. A ship on its own side's edge
-//!   may withdraw instead, leaving the battle with its damage so far.
-//! - Hits and damage follow `engagement::{adjusted_hit_chance, apply_hit}`;
-//!   firing down a band gets +10% to hit, firing up one −10% ([`high_ground_percent`]).
+//! - A turn: spend up to [`move_points`] on hex steps (one point each, around
+//!   asteroids) to a free hex, fire once at one chosen enemy in a clear line of
+//!   fire with every fitted weapon that reaches it, then end the turn. A ship
+//!   on its own side's edge may withdraw instead, leaving the battle with its
+//!   damage so far.
+//! - Hits and damage follow `engagement::{adjusted_hit_chance, apply_hit}`; a
+//!   target in debris has [`COVER_PERCENT`] less chance to be hit.
 //! - The battle is fought to a finish: it ends when a side has no active ships.
 //!   It also ends, disengaged, after [`CEASEFIRE_ROUNDS`] whole rounds in which
 //!   nobody fired or moved, and [`MAX_ROUNDS`] is a safety backstop normal play
@@ -26,15 +27,14 @@ mod board;
 pub mod morale;
 #[cfg(test)]
 mod morale_tests;
+pub mod terrain;
 #[cfg(test)]
 mod tests;
 mod validation;
 
 pub use ai::{auto_resolve, finish, play_turn};
-pub use board::{
-    Band, Board, HIGH_GROUND_PERCENT, Hex, MAX_RADIUS, MIN_RADIUS, Position, high_ground_percent,
-    move_points,
-};
+pub use board::{Board, Hex, MAX_RADIUS, MIN_RADIUS, move_points};
+pub use terrain::{COVER_PERCENT, Terrain, TerrainHex};
 
 use super::{
     CombatCatalog, CombatProfile,
@@ -62,7 +62,7 @@ pub struct Unit {
     /// Hull points lost so far; the ship is destroyed when this reaches its hull.
     pub damage: u32,
     pub shields: u32,
-    pub at: Position,
+    pub at: Hex,
     pub withdrawn: bool,
     pub hits: u32,
     pub shots: u32,
@@ -95,6 +95,8 @@ pub enum BattleError {
     TooFar,
     InvalidTarget,
     OutOfRange,
+    /// An asteroid stands between the ship and its target.
+    NoLineOfFire,
     NotAtEdge,
     /// Only the player side surrenders, on one of its own turns.
     NotYourTurn,
@@ -110,6 +112,7 @@ impl std::fmt::Display for BattleError {
             Self::TooFar => "That is beyond this ship's remaining movement.",
             Self::InvalidTarget => "Pick an enemy ship that is still fighting.",
             Self::OutOfRange => "No fitted weapon reaches that target.",
+            Self::NoLineOfFire => "An asteroid blocks the line of fire.",
             Self::NotAtEdge => "Ships withdraw from their own edge of the battle.",
             Self::NotYourTurn => "You can surrender only on one of your ships' turns.",
         })
@@ -123,6 +126,8 @@ pub struct Battle {
     pub seed: u64,
     rng: u64,
     pub board: Board,
+    /// Asteroids and debris, from `terrain::generate(board, seed)`.
+    pub terrain: Vec<TerrainHex>,
     pub units: Vec<Unit>,
     /// Initiative order: indices into `units`.
     pub order: Vec<u8>,
@@ -202,6 +207,7 @@ impl Battle {
             seed,
             rng: rng.state(),
             board,
+            terrain: terrain::generate(board, seed),
             units,
             order,
             round: 1,

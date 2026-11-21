@@ -1,7 +1,7 @@
 # Combat
 
-Status: **turn-based battles you command on a hex board with three altitude
-bands.** Hulls and weapons are data-driven. Raider contacts resolve
+Status: **turn-based battles you command on a single-layer hex board with
+asteroids and debris.** Hulls and weapons are data-driven. Raider contacts resolve
 deterministic battles, damage persists, destroyed ships leave their fleet,
 wrecks yield salvage and markets sell hull repairs. A readable combat
 report opens after each fight and survives saves.
@@ -14,7 +14,8 @@ report opens after each fight and survives saves.
   so they are not saved. A ship whose damage reaches its hull is destroyed;
   saves reject ships at or beyond that value.
 - Battles: `game-core/src/combat/tactical.rs`, `tactical/board.rs` (hexes,
-  bands, ranges), `tactical/actions.rs` and `tactical/ai.rs`; shared damage
+  ranges, deployment), `tactical/terrain.rs` (asteroids, debris, paths, lines
+  of fire), `tactical/actions.rs` and `tactical/ai.rs`; shared damage
   rules: `combat/engagement.rs` (all pure); raider contacts and applying results:
   `game-core/src/navigation/hostile.rs`; battles in progress:
   `game-core/src/navigation/battle.rs`; the battle window:
@@ -51,22 +52,32 @@ between the two sides; each side deploys on the column one in from its own
 edge, middle row first, and withdraws from its edge column. That column holds
 `radius + 2` ships, always enough for a side. A duel opens six hexes apart.
 
-**Altitude bands.** Every ship flies in one of three bands: Low, Level or High.
-Ships deploy on Level. One ship per hex whatever its band, so every ship is one
-tap target. **Range** is hex steps plus bands crossed.
+**One layer.** One ship per hex, so every ship is one tap target. **Range** is
+hex steps. (Schema-8 saves had Low/Level/High altitude bands; schema 9 dropped
+them for terrain.)
+
+**Terrain.** Each battle's terrain comes from its seed: `radius / 2` asteroid
+hexes and as many debris hexes on each half of the board (2 + 2 on a duel board,
+3 + 3 at radius 6), mirrored through the centre so both sides face the same
+field. Edge and deployment columns stay clear.
+
+- **Asteroids** are impassable: ships move around them (ships themselves can be
+  passed), and they block the **line of fire**, traced hex by hex between the
+  two ships' centres.
+- **Debris** is open ground that gives **cover**: shots at a ship standing in
+  it have 20% less chance to hit.
 
 **Turns (HoMM-style initiative).** Each round every active ship acts once, by
 engine rating (high first); ties break by a seeded roll drawn once per battle.
 On its turn a ship may:
 
 1. **Move** with `1 + engine / 3` movement points (freighter 2, patrol 2, scout
-   3): each hex step costs 1, and so does each **Climb** or **Dive** of one band.
-   Points may be spent in several moves (a step, then a climb) to free hexes on
-   the board.
-2. **Fire** once: every fitted weapon whose `range` reaches the chosen enemy fires
-   its `shots`. Hit chance = `accuracy − 3 × target engine − 4 × (range − 1)`,
-   **+10%** when firing at a lower band and **−10%** at a higher one (a flat
-   modifier, not per band), at least 5% and at most 100%. A target destroyed
+   3): each hex step costs 1, along the shortest path around asteroids. Points
+   may be spent in several moves to free hexes on the board.
+2. **Fire** once at an enemy in a clear line of fire: every fitted weapon whose
+   `range` reaches it fires its `shots`. Hit chance = `accuracy − 3 × target
+   engine − 4 × (range − 1)`, **−20%** when the target is in debris, at least 5%
+   and at most 100%. A target destroyed
    mid-volley takes no further shots.
 3. **Withdraw** instead, if it stands on its own edge: it leaves the battle with
    the damage taken so far.
@@ -105,31 +116,30 @@ least 1 point. Ships that were already damaged fight with their saved
 Below 50 the side **breaks**. The header shows both sides' morale.
 
 **AI and Auto-resolve.** Raiders, and both sides under Auto-resolve, focus the
-active enemy with the least hull + shields and close in until even their
-shortest-ranged weapon reaches it (on ties, the higher band). Before firing on
-the weakest enemy in range they climb one band when that costs nothing: a
-movement point is spare, the target is not below them, and no weapon would lose
-its reach. A ship with 30%
+active enemy with the least hull + shields and head for a hex with a clear line
+of fire from which even their shortest-ranged weapon reaches it, preferring one
+in debris; until one is in reach they close in along the shortest path around
+asteroids. They then fire on the weakest enemy in sight. A ship with 30%
 of its hull or less retreats, and so does every ship of a broken side (a rout):
 it fires a parting shot at the weakest enemy in reach, moves toward its own edge
 (away from enemies on ties) and withdraws as soon as it is there. Ships you
 command yourself never retreat on their own.
 
-With Auto-resolve over 400 seeds on the hex board:
+With Auto-resolve over 400 seeds on the single-layer board with terrain:
 
 | Matchup | You win | You lose | You escape | Avg rounds (max) | Ships lost / killed |
 | --- | --- | --- | --- | --- | --- |
-| Freighter v scout | 400 | 0 | 0 | 6.0 (10) | 0 / 0.8 |
-| Scout v scout | 204 | 48 | 148 | 4.5 (7) | 0.1 / 0.2 |
-| Patrol v patrol | 183 | 158 | 59 | 5.0 (8) | 0.4 / 0.3 |
-| 7 v 7 fleet-battle scenario | 243 | 9 | 148 | 10.1 (14) | 5.1 / 6.0 |
-| 8 patrols v 8 patrols | 168 | 33 | 199 | 10.3 (14) | 6.1 / 5.9 |
+| Freighter v scout | 397 | 0 | 3 | 8.2 (19) | 0 / 0.7 |
+| Scout v scout | 204 | 50 | 146 | 5.5 (10) | 0.1 / 0.2 |
+| Patrol v patrol | 190 | 94 | 116 | 5.8 (11) | 0.2 / 0.3 |
+| 7 v 7 fleet-battle scenario | 245 | 3 | 152 | 10.9 (17) | 4.8 / 6.0 |
+| 8 patrols v 8 patrols | 185 | 24 | 191 | 10.8 (17) | 5.8 / 5.9 |
 
 Mirrors stay even: each side is driven from the field about half the time.
-The board is smaller than the old 3D grid, so fights start sooner and end in
-fewer rounds, and a retreating patrol (two moves) is caught more often than it
-was: patrol duels end in a loss about 40% of the time, against 15% on the grid.
-Retreat and board balance are open playtest questions.
+Asteroids and cover make fights about a round longer than on the banded board,
+and a retreating patrol gets away more often: patrol duels end in a loss about
+24% of the time, against 40% with bands. Terrain density and cover strength are
+open playtest questions.
 
 ## Playing a battle
 
@@ -143,24 +153,25 @@ player action, so a saved battle is always waiting on one of your ships.
 - The header shows the round and each side's remaining hull and ships.
 - The view is a flat hex board under a fixed tilted camera: your edge is the
   cyan column on the left, the raiders' edge the red column on the right. Ships
-  float over their hex at their band's height, with a shadow and a dashed
-  stalk down to the board; a HIGH or LOW tag marks bands other than Level, and
-  bars show hull and shields.
+  hover just over their hex with a shadow beneath, and bars show hull and
+  shields. Asteroids rise from the board as rocks (drawn in depth order with
+  the ships); debris hexes are tinted and strewn with wreckage.
 - **Camera:** drag to pan; scroll or pinch to zoom (from fitting the whole board
   up to four times closer); arrow keys slide the view. **F** (or the crosshair
   button) centres on the acting ship, **R** (or the reset button) restores the
   fitted view. There is no orbit and no layer control. While a battle is open
   it owns these keys, so F and Escape do not reach the map behind it.
 - **Move:** the acting ship is already selected, and green hexes are the free
-  hexes it can still reach on its own band. Hovering one draws the path and
-  dashed lines to every raider your weapons would reach from there; tap it to
-  move. **Climb** (E) and **Dive** (Q) change band for one movement point. The
-  ship card counts the moves left this turn.
-- **Fire:** raiders your weapons reach have a red ring. Tap one to **aim** (a
-  bold line of fire and the weapon list's hit chances, high ground included),
+  hexes it can still reach around asteroids. Hovering one draws the move and
+  dashed lines to every raider your weapons would reach, in a clear line of
+  fire, from there; tap it to move. The ship card counts the moves left this
+  turn and notes when the ship is in cover.
+- **Fire:** raiders your weapons reach in a clear line of fire have a red ring.
+  Tap one to **aim** (a bold line of fire and the weapon list's hit chances,
+  cover included),
   then tap **Fire at …** (or Enter) to shoot. The two steps prevent misfires on
-  a phone. Hovering any ship shows a card with its band, condition and, for a
-  raider, its range and each weapon's hit chance.
+  a phone. Hovering any ship shows a card with its condition, whether it is in
+  cover and, for a raider, its range and each weapon's hit chance.
 - **End turn** (the large button beside Fire, or Space), **Withdraw** from your
   edge column, or **Auto-resolve** to let the AI fight every remaining turn on
   both sides.

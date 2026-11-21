@@ -9,6 +9,7 @@ pub mod model;
 pub mod scene;
 #[cfg(test)]
 mod scene_tests;
+mod terrain;
 #[cfg(test)]
 mod view_tests;
 

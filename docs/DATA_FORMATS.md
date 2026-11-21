@@ -25,7 +25,7 @@ unbounded prices/rates, and invalid stocks/capacities. New games load the projec
 file when available or an explicitly supplied `--economy PATH`; packaged builds
 can use the embedded validated defaults. No per-trade filesystem reads occur.
 
-## Session save (schema 8)
+## Session save (schema 9)
 
 Each `data/slot-N.json` stores:
 
@@ -54,8 +54,8 @@ Loading checks size, schema, IDs, references, coordinates, ownership, balances,
 capacity, stock/rates, route validity and journey timing before returning a session.
 A failed load leaves the live session unchanged. Since schema 7 every galaxy
 system, local body, orbit and fleet position lies on the map plane (`y = 0`);
-schema 8 moved battles to the hex board, and a schema-7 save is upgraded on
-load. Earlier schemas are rejected with a clear message; start a new session. Do not
+schema 8 moved battles to the hex board and schema 9 flattened that board;
+schema-7 and -8 saves are upgraded on load. Earlier schemas are rejected with a clear message; start a new session. Do not
 hand-edit a live session's file and expect its in-memory state to change.
 Normal desktop launch shows a game chooser for three slots and the last-used
 custom path. An incompatible save stays on disk until the player explicitly
@@ -174,15 +174,16 @@ Holds, encounter IDs and counter bounds are checked before replacing a session.
 Raider contacts store `hostiles` (required exactly on raider contacts, at
 most 3) and an optional `last_combat` report whose damage, indices and encounter
 reference must be consistent. An open `battle` records its `board` (`radius`),
-each ship's position `at` (`hex` with axial `q`/`r`, and `band`: `low`, `level`
-or `high`), the acting ship's `moves_left` and the ceasefire state (`acted`,
-`quiet_rounds`). It must use the board its ship count gives, belong to a pending
-raider contact, field exactly that fleet's ships and the contact's raiders with
+its `terrain` (a list of `hex` with axial `q`/`r` and `kind`: `asteroid` or
+`debris`), each ship's hex `at` (axial `q`/`r`), the acting ship's `moves_left`
+and the ceasefire state (`acted`, `quiet_rounds`). It must use the board its
+ship count gives, carry exactly the terrain its seed generates, keep ships off
+asteroids, belong to a pending raider (or hailed trader) contact, field exactly that fleet's ships and the contact's raiders with
 their catalog profiles and saved damage, keep active ships on distinct hexes on
 the board, give the acting ship no more movement than its engine allows, and
 wait on a player ship; anything else rejects the save. Schema 8 introduced the
-hex board; a schema-7 save loads with any open 3D-grid battle auto-resolved
-(see [combat](COMBAT.md)).
+hex board and schema 9 removed its altitude bands; a schema-7 or -8 save loads
+with any open battle auto-resolved (see [combat](COMBAT.md)).
 A hailed trader's contact (`kind` `Trader`) stores `trader` (`id`, `name`,
 `hull_damage`) and the trader's hull as its one `hostiles` entry; both must match
 the saved NPC trader, which cannot be refitting. A combat report from an attack
@@ -190,7 +191,7 @@ on a trader names it in `trader` and records `plunder` (cargo units taken).
 `navigation.piracies` counts demands and attacks. A raider band may record
 `stalking` (an NPC trader's ID, which must exist; never together with
 `hunting`), and its `cooldown` may reach 12 after striking a trader. These fields are additive and
-omitted when empty, so schema 8 is unchanged.
+omitted when empty.
 Movement settings add `ticks_per_navigation_run` (default 4, 1–100) and
 `encounter_chance_percent` (default 12, 0–100), with defaults for older definitions.
 

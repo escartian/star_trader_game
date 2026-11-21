@@ -4,12 +4,23 @@ use crate::{
     economy::{Commodity, Economy, EconomyError, TradeSide},
     fleet::FleetMovementError,
     planet::Danger,
+    travel::TravelState,
 };
 
 impl Economy {
     /// Only called once per committed global run. Each trader gets one independent
     /// wallet; all payments still reach the same finite public market treasuries.
     pub fn advance_traders(&mut self, systems: &[StarSystem]) -> Result<(), FleetMovementError> {
+        self.advance_traders_hunted(systems, None)
+    }
+
+    /// [`Self::advance_traders`], with the player's raider bands (`hunters`)
+    /// striking the traders they stalk (see `band_raids`).
+    pub fn advance_traders_hunted(
+        &mut self,
+        systems: &[StarSystem],
+        mut hunters: Option<&mut TravelState>,
+    ) -> Result<(), FleetMovementError> {
         let mut traders = self.traders.clone();
         traders.sort_by_key(|trader| trader.id);
         for trader in &mut traders {
@@ -33,6 +44,11 @@ impl Economy {
             }
             if trader.state.navigation.orders.is_empty() && trader.state.ships[0].cargo_used() > 0 {
                 trader.last_action = "Arrived with cargo; preparing local sale".into();
+            }
+            if let Some(hunters) = hunters.as_deref_mut()
+                && self.band_raid(trader, hunters, systems)?
+            {
+                continue;
             }
             if underway {
                 self.raid(trader, systems)?;

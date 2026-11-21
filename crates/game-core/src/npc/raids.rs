@@ -30,6 +30,24 @@ impl Economy {
         if roll % 100 >= u64::from(self.rules.npc_raid_chance_percent) {
             return Ok(());
         }
+        let raiders = if (roll >> 32).is_multiple_of(3) { 2 } else { 1 };
+        let seed = trader.state.navigation.rolls();
+        let hulls = vec![ShipKind::Scout; raiders];
+        self.fight_raiders(trader, &hulls, seed, "raiders", systems)?;
+        Ok(())
+    }
+
+    /// Auto-resolves `trader` against raider hulls `raiders` (`foe` names them
+    /// in the trader's news) and applies the outcome. Returns the raider hulls
+    /// destroyed.
+    pub(super) fn fight_raiders(
+        &mut self,
+        trader: &mut Trader,
+        raiders: &[ShipKind],
+        seed: u64,
+        foe: &str,
+        systems: &[StarSystem],
+    ) -> Result<Vec<ShipKind>, FleetMovementError> {
         let ship = trader.state.ships[0].clone();
         let profile = |kind| {
             self.rules
@@ -37,15 +55,6 @@ impl Economy {
                 .spec(kind)
                 .map(|spec| spec.combat.clone())
                 .ok_or(FleetError::UnknownClass)
-        };
-        let raiders = if (roll >> 32).is_multiple_of(3) { 2 } else { 1 };
-        let raider = CombatantSetup {
-            name: "Raider Scout".into(),
-            side: Side::Hostile,
-            ship: None,
-            kind: ShipKind::Scout,
-            profile: profile(ShipKind::Scout)?,
-            hull_damage: 0,
         };
         let mut setups = vec![CombatantSetup {
             name: trader.name.clone(),
@@ -55,30 +64,44 @@ impl Economy {
             profile: profile(ship.kind)?,
             hull_damage: ship.hull_damage,
         }];
-        setups.extend(std::iter::repeat_n(raider, raiders));
-        let seed = trader.state.navigation.rolls();
+        for kind in raiders {
+            setups.push(CombatantSetup {
+                name: format!("Raider {}", kind.label()),
+                side: Side::Hostile,
+                ship: None,
+                kind: *kind,
+                profile: profile(*kind)?,
+                hull_damage: 0,
+            });
+        }
         let result = tactical::auto_resolve(&setups, &self.rules.combat_catalog, seed)
             .map_err(|_| FleetError::InvalidSelection)?;
+        let destroyed = result
+            .combatants
+            .iter()
+            .filter(|unit| unit.side == Side::Hostile && unit.destroyed)
+            .map(|unit| unit.kind)
+            .collect();
         let me = &result.combatants[0];
         if me.destroyed {
             let lost = ship.cargo.iter().sum::<u32>();
             let port = self.refit(trader, systems);
             trader.last_action = format!(
-                "Destroyed by raiders; {lost} cargo lost. Refitting at {port} for {REFIT_RUNS} runs"
+                "Destroyed by {foe}; {lost} cargo lost. Refitting at {port} for {REFIT_RUNS} runs"
             );
-            return Ok(());
+            return Ok(destroyed);
         }
         trader.state.ships[0].hull_damage = me.final_damage;
         let hull = format!("hull {}/{}", me.hull - me.final_damage, me.hull);
         trader.last_action = match result.winner {
-            Some(Side::Player) => format!("Fought off raiders ({hull})"),
+            Some(Side::Player) => format!("Fought off {foe} ({hull})"),
             _ => {
                 let dumped = ship.cargo.iter().sum::<u32>();
                 trader.state.ships[0].cargo = [0; 6];
-                format!("Escaped raiders by dumping {dumped} cargo ({hull})")
+                format!("Escaped {foe} by dumping {dumped} cargo ({hull})")
             }
         };
-        Ok(())
+        Ok(destroyed)
     }
 
     /// Replaces a destroyed trader's ship at its home port: empty hold, full

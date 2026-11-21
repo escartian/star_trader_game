@@ -4,12 +4,16 @@
 //!   ship leading a scout one time in three. Bands never leave their system.
 //! - Every run, after fleets move, each band hunts the nearest exposed player
 //!   fleet within [`DETECTION_KM`] (fleets docked at a station or landed on a
-//!   surface are safe), or patrols near a body, preferring dangerous planets.
+//!   surface are safe), or stalks a nearer NPC trader in the open ([`Prey`],
+//!   where traders stood before the run), or patrols near a body, preferring
+//!   dangerous planets.
 //!   It moves up to [`BAND_KM_PER_RUN`], around planets rather than through.
 //! - Within [`STRIKE_KM`] of its quarry it strikes: a raider contact with the
-//!   band's real ships (Fight, Auto-resolve or Evade).
+//!   band's real ships (Fight, Auto-resolve or Evade). A stalked trader is
+//!   struck once traders have moved, if it is still that close and in the open
+//!   (`npc::band_raids`).
 //! - Destroyed raiders leave the band; afterwards it backs off for
-//!   [`COOLDOWN_RUNS`]. A band wiped out returns after [`RESPAWN_RUNS`], but
+//!   [`COOLDOWN_RUNS`] ([`LOOT_COOLDOWN_RUNS`] after striking a trader). A band wiped out returns after [`RESPAWN_RUNS`], but
 //!   only while the Raider Haven stands (`haven`).
 //! - Fleets on a chartered shipping lane (`economy::charters`) are never hunted.
 //!
@@ -34,6 +38,8 @@ pub const DETECTION_KM: i64 = 150_000_000;
 pub const STRIKE_KM: i64 = 5_000_000;
 /// Runs a band backs off after a fight or an escape.
 pub const COOLDOWN_RUNS: u32 = 3;
+/// Runs a band lies low after striking an NPC trader, fencing the loot.
+pub const LOOT_COOLDOWN_RUNS: u32 = 12;
 /// Runs before a wiped-out band's system gets a new band.
 pub const RESPAWN_RUNS: u64 = 20;
 
@@ -49,6 +55,9 @@ pub struct RaiderBand {
     /// The player fleet it is chasing.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hunting: Option<FleetId>,
+    /// The NPC trader it is chasing (`npc::Trader::id`); never with `hunting`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stalking: Option<u64>,
     /// Runs left backing off (no hunting) after a fight or an escape.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub cooldown: u32,
@@ -56,6 +65,20 @@ pub struct RaiderBand {
 
 fn is_zero(value: &u32) -> bool {
     *value == 0
+}
+
+/// An NPC trader out in the open, where it stood before the run.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Prey {
+    pub trader: u64,
+    pub position: SpacePosition,
+}
+
+/// What a band chases this run.
+#[derive(Clone, Copy)]
+enum Quarry {
+    Fleet(FleetId),
+    Trader(u64),
 }
 
 impl TravelState {
@@ -89,6 +112,7 @@ impl TravelState {
             heading: position,
             ships,
             hunting: None,
+            stalking: None,
             cooldown: 0,
         });
     }
@@ -156,6 +180,7 @@ impl TravelState {
         run: u64,
         systems: &[StarSystem],
         on_lane: &[FleetId],
+        prey: &[Prey],
     ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
         // Bands come from the Raider Haven: once it falls, none return.
         if self
@@ -186,25 +211,39 @@ impl TravelState {
                 continue;
             };
             let quarry = if band.cooldown == 0 {
-                self.nearest_exposed(player, &band, world, systems, on_lane)
+                let fleet = self.nearest_exposed(player, &band, world, systems, on_lane);
+                let half = self.movement_rules.system_half_extent_km;
+                let trader = nearest_prey(&band, world, prey, half);
+                // Your fleets win ties: the band was hunting you first.
+                match (fleet, trader) {
+                    (Some((gap, fleet, at)), Some((other, _, _))) if gap <= other => {
+                        Some((Quarry::Fleet(fleet), at))
+                    }
+                    (_, Some((_, trader, at))) => Some((Quarry::Trader(trader), at)),
+                    (Some((_, fleet, at)), None) => Some((Quarry::Fleet(fleet), at)),
+                    (None, None) => None,
+                }
             } else {
                 None
             };
+            let chasing = band.hunting.is_some() || band.stalking.is_some();
             let heading = match quarry {
                 Some((_, position)) => position,
-                None if band.hunting.is_some() || near(band.position, band.heading) => {
-                    self.patrol_point(world)
-                }
+                None if chasing || near(band.position, band.heading) => self.patrol_point(world),
                 None => band.heading,
             };
             let position = step_toward(&self.movement_rules, world, band.position, heading);
             let record = &mut self.navigation.bands[index];
             record.cooldown = record.cooldown.saturating_sub(1);
-            record.hunting = quarry.map(|(fleet, _)| fleet);
+            (record.hunting, record.stalking) = match quarry {
+                Some((Quarry::Fleet(fleet), _)) => (Some(fleet), None),
+                Some((Quarry::Trader(trader), _)) => (None, Some(trader)),
+                None => (None, None),
+            };
             record.heading = heading;
             record.position = position;
             let peaceful = self.movement_rules.encounter_chance_percent == 0;
-            if let Some((fleet, target)) = quarry
+            if let Some((Quarry::Fleet(fleet), target)) = quarry
                 && !peaceful
                 && distance(position, target) <= STRIKE_KM
             {
@@ -223,7 +262,7 @@ impl TravelState {
         world: &StarSystem,
         systems: &[StarSystem],
         on_lane: &[FleetId],
-    ) -> Option<(FleetId, LocalPosition)> {
+    ) -> Option<(i64, FleetId, LocalPosition)> {
         let centre = SpacePosition::from_galaxy(world.position).ok()?;
         let half = self.movement_rules.system_half_extent_km;
         self.fleets
@@ -254,7 +293,6 @@ impl TravelState {
                 (inside && gap <= DETECTION_KM).then_some((gap, fleet.id, local))
             })
             .min_by_key(|(gap, fleet, _)| (*gap, fleet.0))
-            .map(|(_, fleet, local)| (fleet, local))
     }
 
     fn strike(
@@ -285,7 +323,17 @@ impl TravelState {
 
     /// After a band's contact ends (battle or escape): its destroyed raiders
     /// leave it, and it backs off, or it is gone and will return later.
-    pub(super) fn band_after_contact(&mut self, band: u64, destroyed: &[ShipKind]) {
+    pub(crate) fn band_after_contact(&mut self, band: u64, destroyed: &[ShipKind]) {
+        self.band_after_fight(band, destroyed, COOLDOWN_RUNS);
+    }
+
+    /// After a band strikes an NPC trader: as [`Self::band_after_contact`],
+    /// but it lies low for [`LOOT_COOLDOWN_RUNS`].
+    pub(crate) fn band_after_raid(&mut self, band: u64, destroyed: &[ShipKind]) {
+        self.band_after_fight(band, destroyed, LOOT_COOLDOWN_RUNS);
+    }
+
+    fn band_after_fight(&mut self, band: u64, destroyed: &[ShipKind], cooldown: u32) {
         let Some(index) = self
             .navigation
             .bands
@@ -300,8 +348,9 @@ impl TravelState {
                 record.ships.remove(slot);
             }
         }
-        record.cooldown = COOLDOWN_RUNS;
+        record.cooldown = cooldown;
         record.hunting = None;
+        record.stalking = None;
         if record.ships.is_empty() {
             let system = record.system;
             self.navigation.bands.remove(index);
@@ -311,7 +360,44 @@ impl TravelState {
     }
 }
 
-fn distance(a: LocalPosition, b: LocalPosition) -> i64 {
+/// The nearest trader within detection range inside the band's system:
+/// (distance in km, trader, its position relative to the star).
+fn nearest_prey(
+    band: &RaiderBand,
+    world: &StarSystem,
+    prey: &[Prey],
+    half_extent_km: i64,
+) -> Option<(i64, u64, LocalPosition)> {
+    prey.iter()
+        .filter_map(|target| {
+            let local = local_in(world, target.position, half_extent_km)?;
+            let gap = distance(band.position, local);
+            (gap <= DETECTION_KM).then_some((gap, target.trader, local))
+        })
+        .min_by_key(|(gap, trader, _)| (*gap, *trader))
+}
+
+/// `at` relative to `world`'s star, if it lies inside the system (within
+/// `half_extent_km` on every axis).
+pub(crate) fn local_in(
+    world: &StarSystem,
+    at: SpacePosition,
+    half_extent_km: i64,
+) -> Option<LocalPosition> {
+    let centre = SpacePosition::from_galaxy(world.position).ok()?;
+    Some(LocalPosition {
+        x_km: at.x_km.checked_sub(centre.x_km)?,
+        y_km: at.y_km.checked_sub(centre.y_km)?,
+        z_km: at.z_km.checked_sub(centre.z_km)?,
+    })
+    .filter(|local| {
+        [local.x_km, local.y_km, local.z_km]
+            .iter()
+            .all(|value| value.abs() <= half_extent_km)
+    })
+}
+
+pub(crate) fn distance(a: LocalPosition, b: LocalPosition) -> i64 {
     let squares: i128 = [(a.x_km, b.x_km), (a.y_km, b.y_km), (a.z_km, b.z_km)]
         .iter()
         .map(|(a, b)| (i128::from(*a) - i128::from(*b)).pow(2))

@@ -219,10 +219,14 @@ impl TravelState {
                 || !inside(band.heading)
                 || band.ships.is_empty()
                 || band.ships.len() > super::hostile::MAX_SAVED_RAIDERS
-                || band.cooldown > super::raiders::COOLDOWN_RUNS
+                || band.cooldown > super::raiders::LOOT_COOLDOWN_RUNS
                 || band
                     .hunting
                     .is_some_and(|fleet| !self.fleets.iter().any(|known| known.id == fleet))
+                || (band.hunting.is_some() && band.stalking.is_some())
+                || band
+                    .stalking
+                    .is_some_and(|trader| !(1..=16).contains(&trader))
             {
                 return Err("Invalid raider band".into());
             }

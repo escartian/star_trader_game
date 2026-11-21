@@ -268,3 +268,6 @@ mod trade_route_tests;
 
 #[cfg(test)]
 mod piracy_tests;
+
+#[cfg(test)]
+mod band_trader_tests;

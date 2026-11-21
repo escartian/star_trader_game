@@ -23,8 +23,20 @@ impl TravelState {
         systems: &[StarSystem],
         on_lane: &[FleetId],
     ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
+        self.execute_navigation_run_hunting(player, systems, on_lane, &[])
+    }
+
+    /// [`Self::execute_navigation_run_with`], with `prey` naming NPC traders
+    /// out in the open that raider bands may stalk (see `raiders`).
+    pub fn execute_navigation_run_hunting(
+        &mut self,
+        player: PlayerId,
+        systems: &[StarSystem],
+        on_lane: &[FleetId],
+        prey: &[super::Prey],
+    ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
         let mut candidate = self.clone();
-        let events = candidate.resolve_run(player, systems, on_lane)?;
+        let events = candidate.resolve_run(player, systems, on_lane, prey)?;
         *self = candidate;
         Ok(events)
     }
@@ -34,6 +46,7 @@ impl TravelState {
         player: PlayerId,
         systems: &[StarSystem],
         on_lane: &[FleetId],
+        prey: &[super::Prey],
     ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
         if let Some(encounter) = self.navigation.encounters.first() {
             return Err(NavigationError::EncounterPending(encounter.fleet).into());
@@ -174,7 +187,7 @@ impl TravelState {
                 self.navigation.orders.push(order);
             }
         }
-        events.extend(self.move_bands(player, run, systems, on_lane)?);
+        events.extend(self.move_bands(player, run, systems, on_lane, prey)?);
         events.extend(self.mine(systems)?);
         events.push(NavigationEvent::RunExecuted(run));
         Ok(events)

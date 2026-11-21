@@ -121,6 +121,13 @@ impl SaveData {
         self.economy
             .validate_traders(&self.systems, self.player.navigation.run)?;
         game_core::piracy::validate_contacts(&self.player, &self.economy)?;
+        let traders = &self.economy.traders;
+        if self.player.navigation.bands.iter().any(|band| {
+            band.stalking
+                .is_some_and(|id| !traders.iter().any(|trader| trader.id == id))
+        }) {
+            return Err("A raider band stalks an unknown trader".into());
+        }
         Ok(())
     }
 }

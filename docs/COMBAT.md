@@ -240,6 +240,15 @@ Raiders also roam as persistent bands you can see coming
   (Fight, Auto-resolve or Evade).
 - Destroyed raiders leave the band; after any fight or escape it backs off for 3
   runs. A band wiped out returns to its system 20 runs later.
+- Bands prey on NPC traders too (`game-core/src/npc/band_raids.rs`): a band with
+  no nearer fleet of yours in range stalks the nearest laden trader out in the
+  open (not docked at a station or being refitted) and strikes once it reaches
+  where the trader stood, or the trader comes within 5 million km. A trader it
+  outguns as you would need to for a demand (150% of a cautious trader's
+  strength, 300% of an opportunist's) hands over half its cargo without a fight;
+  otherwise they fight it out (auto-resolved, as below). Afterwards the band
+  lies low for 12 runs. Stalking bands show a dashed line and "STALKING TRADER"
+  on the system map.
 - With `encounter_chance_percent` at 0 bands still roam but never strike.
 - The system map shows bands as red diamonds tagged with their ships ("HUNTING"
   while chasing), with a dashed line toward their heading; the galaxy map marks
@@ -262,9 +271,10 @@ sides, so retreats apply:
 
 Damage sticks until the trader next stops at a market, where it repairs from its
 own wallet into the market's treasury. Results show in the traffic panel (raid
-news in amber). Over 400 runs the two starting traders met about 18 raids;
-a few cost them their cargo, and a single freighter is very rarely destroyed
-because it withdraws when badly damaged.
+news in amber). On top of these random raids, roaming bands strike the traders
+they stalk (see above). Over 400 runs on four seeds the two starting traders met
+15–32 random raids and 22–42 band strikes, and none was destroyed: bands that
+could win easily take cargo instead, and scout pairs rarely beat a freighter.
 
 ## Hailing and robbing NPC traders
 
@@ -312,6 +322,6 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 ## Not yet implemented
 
 A GPU renderer with a depth buffer, morale effects on accuracy, faction
-hostility rules, raider bands crossing between systems or striking NPC traders,
-legal consequences of piracy, loadout changes and partial repairs. See the
+hostility rules, raider bands crossing between systems, legal consequences of
+piracy, loadout changes and partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

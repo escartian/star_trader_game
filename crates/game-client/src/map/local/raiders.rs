@@ -1,6 +1,6 @@
 //! Roaming raider bands on the system map: a red diamond tagged with the band's
-//! ships, and, only while it hunts one of your fleets, a dashed line toward its
-//! quarry. Positions are true kilometres, like fleets in flight.
+//! ships, and, only while it hunts one of your fleets or stalks an NPC trader,
+//! a dashed line toward its quarry. Positions are true kilometres, like fleets in flight.
 use super::{KM_PER_VIEW_UNIT, LocalView, kilometers};
 use egui::{Color32, Painter, Pos2, Rect, Stroke, Vec2};
 use game_core::fleet::ShipKind;
@@ -23,7 +23,8 @@ impl LocalView {
             if !rect.expand(40.0).contains(at) {
                 continue;
             }
-            if band.hunting.is_some() && at.distance(towards) > 6.0 {
+            let stalking = band.stalking.is_some();
+            if (band.hunting.is_some() || stalking) && at.distance(towards) > 6.0 {
                 dash(
                     painter,
                     at,
@@ -34,10 +35,10 @@ impl LocalView {
             diamond(painter, at, 9.0);
             let label = format!(
                 "{}RAIDERS · {}",
-                if band.hunting.is_some() {
-                    "HUNTING · "
-                } else {
-                    ""
+                match (band.hunting.is_some(), stalking) {
+                    (true, _) => "HUNTING · ",
+                    (false, true) => "STALKING TRADER · ",
+                    _ => "",
                 },
                 crew(&band.ships)
             );

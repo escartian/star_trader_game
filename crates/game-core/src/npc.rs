@@ -1,4 +1,5 @@
 //! NPC commerce uses the same routes, hulls, cargo and finite-money rules as players.
+mod band_raids;
 mod decisions;
 mod raids;
 use crate::{

@@ -187,7 +187,9 @@ A hailed trader's contact (`kind` `Trader`) stores `trader` (`id`, `name`,
 `hull_damage`) and the trader's hull as its one `hostiles` entry; both must match
 the saved NPC trader, which cannot be refitting. A combat report from an attack
 on a trader names it in `trader` and records `plunder` (cargo units taken).
-`navigation.piracies` counts demands and attacks. These fields are additive and
+`navigation.piracies` counts demands and attacks. A raider band may record
+`stalking` (an NPC trader's ID, which must exist; never together with
+`hunting`), and its `cooldown` may reach 12 after striking a trader. These fields are additive and
 omitted when empty, so schema 8 is unchanged.
 Movement settings add `ticks_per_navigation_run` (default 4, 1–100) and
 `encounter_chance_percent` (default 12, 0–100), with defaults for older definitions.

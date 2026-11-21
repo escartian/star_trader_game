@@ -170,17 +170,23 @@ impl Session {
             }
             ClientCommand::ExecuteNavigationRun { .. } => {
                 let on_lane = candidate.lane_fleets(player);
-                let mut events = candidate.state.execute_navigation_run_with(
+                // Bands stalk traders where they stand before the run.
+                let prey = candidate.economy.prey(&candidate.systems);
+                let mut events = candidate.state.execute_navigation_run_hunting(
                     player,
                     &candidate.systems,
                     &on_lane,
+                    &prey,
                 )?;
                 // The run moved the clock: bodies move on along their orbits.
                 game_core::orbits::place(&mut candidate.systems, candidate.state.tick);
                 candidate
                     .economy
                     .advance(candidate.state.movement_rules.ticks_per_navigation_run);
-                candidate.economy.advance_traders(&candidate.systems)?;
+                // Traders move; bands strike the ones they stalk and caught.
+                candidate
+                    .economy
+                    .advance_traders_hunted(&candidate.systems, Some(&mut candidate.state))?;
                 // Route fleets that reached a stop trade there and set off again.
                 events.extend(routes::service_routes(
                     &mut candidate.state,

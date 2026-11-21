@@ -212,8 +212,9 @@ Combat is the original README's first prioritized expansion.
 - [x] Hail NPC traders within reach of the flagship: let them go, demand cargo
   from an outgunned trader, or attack and plunder it (no bounty; acts of piracy
   are counted for the future wanted status).
-- [ ] Hostility rules for faction fleets, and bands that cross systems or hunt
-  NPC traders.
+- [x] Raider bands stalk laden NPC traders in their system: outgunned traders
+  hand over half their cargo, others fight (auto-resolved); bands then lie low.
+- [ ] Hostility rules for faction fleets, and bands that cross systems.
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
 cargo and rewards remain consistent. Raider fights meet this with behavior and

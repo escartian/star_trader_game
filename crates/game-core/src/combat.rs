@@ -1,8 +1,9 @@
 //! Data-driven combat definitions: weapons and per-hull combat profiles.
 //! Units are abstract game points: hull/shield/armor "points", engine is a 1–10
 //! rating used for evasion and initiative. Fights are turn-based battles on a
-//! hex board with altitude bands (`tactical`); `engagement` holds shared result
-//! types and damage rules.
+//! single-layer hex board with terrain (`tactical`); `engagement` holds shared
+//! result types and damage rules. Each weapon may carry a [`WeaponEffect`] that
+//! changes how it behaves in battle.
 pub mod engagement;
 pub mod gear;
 pub mod report;
@@ -46,11 +47,58 @@ pub struct WeaponSpec {
     pub accuracy_percent: u32,
     pub shield_efficiency_percent: u32,
     pub armor_penetration: u32,
-    /// Reach in battle-board steps: hexes plus bands crossed. Older saved catalogs
-    /// without ranges load with [`DEFAULT_WEAPON_RANGE`].
+    /// Reach in hexes. Older saved catalogs without ranges load with
+    /// [`DEFAULT_WEAPON_RANGE`].
     #[serde(default = "default_weapon_range")]
     pub range: u32,
     pub description: String,
+    /// How the weapon behaves in battle beyond its numbers.
+    #[serde(default)]
+    pub effect: WeaponEffect,
+}
+
+/// A weapon's special behavior on the battle board (see `tactical::actions`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WeaponEffect {
+    /// Numbers only.
+    #[default]
+    Plain,
+    /// Ignores debris cover.
+    Piercing,
+    /// Needs no line of fire (it steers around asteroids); point defense
+    /// counts double against it.
+    Guided,
+    /// No accuracy lost to range.
+    Steady,
+    /// Each hit also deals half damage to the target's adjacent allies.
+    Ripple,
+    /// A hit jams the target's engines: one move fewer on its next turn.
+    Disrupt,
+}
+
+impl WeaponEffect {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Plain => "",
+            Self::Piercing => "Piercing",
+            Self::Guided => "Guided",
+            Self::Steady => "Steady",
+            Self::Ripple => "Ripple",
+            Self::Disrupt => "Disrupt",
+        }
+    }
+
+    pub fn summary(self) -> &'static str {
+        match self {
+            Self::Plain => "",
+            Self::Piercing => "ignores debris cover",
+            Self::Guided => "fires around asteroids; point defense counts double against it",
+            Self::Steady => "no accuracy lost at range",
+            Self::Ripple => "each hit also deals half damage to enemies next to the target",
+            Self::Disrupt => "a hit costs the target one move on its next turn",
+        }
+    }
 }
 
 pub const DEFAULT_WEAPON_RANGE: u32 = 4;

@@ -153,12 +153,13 @@ fn move_preview(canvas: &Canvas, input: &SceneInput, me: usize, target: Hex) {
     let to = ScenePoint::of(target);
     canvas.line(from, to, Stroke::new(2.0_f32, GREEN.gamma_multiply(0.85)));
     canvas.ring(to, RING, Stroke::new(1.5_f32, GREEN.gamma_multiply(0.7)));
-    let reach = input.battle.max_range(me, input.weapons);
     for unit in &input.battle.units {
         if unit.side == Side::Hostile
             && unit.active()
-            && target.distance(unit.at) <= reach
-            && input.battle.line_of_fire(target, unit.at)
+            && !input
+                .battle
+                .volley_from(me, target, unit.at, input.weapons)
+                .is_empty()
         {
             let enemy = ScenePoint::of(unit.at);
             canvas.dashed(
@@ -329,6 +330,9 @@ fn hover_card(painter: &egui::Painter, projector: &Projector, input: &SceneInput
             Color32::from_gray(200),
         ),
     ];
+    if unit.jammed {
+        lines.push(("Engines jammed: one move fewer next turn".into(), AMBER));
+    }
     if battle.cover(unit.at) {
         lines.push((
             format!(

@@ -173,7 +173,7 @@ fn asteroids_block_the_line_of_fire_and_debris_gives_cover() {
     let catalog = CombatCatalog::default();
     let mut battle = battle(
         &[
-            ship(ShipKind::Patrol, Side::Player),
+            ship(ShipKind::Freighter, Side::Player),
             ship(ShipKind::Scout, Side::Hostile),
         ],
         5,
@@ -182,7 +182,7 @@ fn asteroids_block_the_line_of_fire_and_debris_gives_cover() {
     battle.units[1].profile.hull = 1_000;
     battle.units[0].at = Hex::new(-1, 0);
     battle.units[1].at = Hex::new(2, 0);
-    let beam = catalog.weapon("photon_singularity_beam").unwrap();
+    let beam = catalog.weapon("neutron_beam").unwrap();
     let open = battle.shot_chance(0, 1, beam);
     rock(&mut battle, Hex::new(2, 0), Terrain::Debris);
     assert_eq!(
@@ -205,7 +205,7 @@ fn the_ai_finds_a_clear_line_of_fire_around_an_asteroid() {
     let mut battle = battle(
         &[
             ship(ShipKind::Scout, Side::Player),
-            ship(ShipKind::Patrol, Side::Hostile),
+            ship(ShipKind::Freighter, Side::Hostile),
         ],
         2,
     );
@@ -217,6 +217,105 @@ fn the_ai_finds_a_clear_line_of_fire_around_an_asteroid() {
     play_turn(&mut battle, &catalog).unwrap();
     assert_ne!(battle.units[1].at, Hex::new(1, 0), "it moved");
     assert!(battle.units[1].shots > 0, "and fired");
+}
+
+#[test]
+fn piercing_beams_ignore_cover_and_steady_beams_ignore_range() {
+    let catalog = CombatCatalog::default();
+    let mut battle = battle(
+        &[
+            ship(ShipKind::Patrol, Side::Player),
+            ship(ShipKind::Scout, Side::Hostile),
+        ],
+        5,
+    );
+    battle.units[0].at = Hex::new(-1, 0);
+    battle.units[1].at = Hex::new(2, 0);
+    let lance = catalog.weapon("photon_singularity_beam").unwrap();
+    let open = battle.shot_chance(0, 1, lance);
+    rock(&mut battle, Hex::new(2, 0), Terrain::Debris);
+    assert_eq!(battle.shot_chance(0, 1, lance), open, "piercing");
+    battle.terrain.clear();
+    let steady = catalog.weapon("neutron_beam").unwrap();
+    let far = battle.shot_chance(0, 1, steady);
+    battle.units[1].at = Hex::new(0, 0);
+    assert_eq!(battle.shot_chance(0, 1, steady), far, "no range falloff");
+}
+
+#[test]
+fn guided_torpedoes_fly_around_asteroids_and_point_defense_counts_double() {
+    use crate::combat::gear::{Gear, POINT_DEFENSE_PERCENT};
+    let catalog = CombatCatalog::default();
+    let mut battle = battle(
+        &[
+            ship(ShipKind::Patrol, Side::Player),
+            ship(ShipKind::Scout, Side::Hostile),
+        ],
+        5,
+    );
+    reorder(&mut battle, vec![0, 1]);
+    battle.units[1].profile.hull = 1_000;
+    battle.units[0].at = Hex::new(-1, 0);
+    battle.units[1].at = Hex::new(1, 0);
+    rock(&mut battle, Hex::new(0, 0), Terrain::Asteroid);
+    let (from, to) = (battle.units[0].at, battle.units[1].at);
+    let volley = battle.volley_from(0, from, to, &catalog);
+    assert_eq!(volley.len(), 1);
+    assert_eq!(volley[0].id, "quantum_entanglement_torpedo");
+    battle.fire(1, &catalog).unwrap();
+    assert!(
+        battle.rounds[0]
+            .iter()
+            .all(|shot| shot.weapon == "quantum_entanglement_torpedo")
+    );
+    let torpedo = catalog.weapon("quantum_entanglement_torpedo").unwrap();
+    let open = battle.shot_chance(0, 1, torpedo);
+    battle.units[1].gear = vec![Gear::PointDefense];
+    let expected = open.saturating_sub(2 * POINT_DEFENSE_PERCENT as u32).max(5);
+    assert_eq!(battle.shot_chance(0, 1, torpedo), expected);
+}
+
+#[test]
+fn ripples_splash_packed_enemies_and_disruptors_jam_engines() {
+    let catalog = CombatCatalog::default();
+    let mut setups = vec![ship(ShipKind::Scout, Side::Player)];
+    setups.extend((0..3).map(|_| ship(ShipKind::Freighter, Side::Hostile)));
+    let mut battle = battle(&setups, 5);
+    reorder(&mut battle, vec![0, 1, 2, 3]);
+    battle.units[0].at = Hex::new(-1, 0);
+    battle.units[1].at = Hex::new(1, 0);
+    battle.units[2].at = Hex::new(1, 1);
+    battle.units[3].at = Hex::new(3, -2);
+    // Every pulse hits: the neighbour takes ripples, the far ship nothing.
+    battle.units[0].profile.loadout = vec!["graviton_pulse".into()];
+    let mut sure = catalog.clone();
+    sure.weapons
+        .iter_mut()
+        .for_each(|weapon| weapon.accuracy_percent = 100);
+    battle.fire(1, &sure).unwrap();
+    let shots = &battle.rounds[0];
+    assert!(shots.iter().any(|shot| shot.target == 2 && shot.hit));
+    assert!(shots.iter().all(|shot| shot.target != 3));
+    assert!(battle.units[2].shields < battle.units[2].profile.shields);
+    // A disruptor hit costs the target a move on its next turn, then wears off.
+    let mut battle = self::battle(
+        &[
+            ship(ShipKind::Patrol, Side::Player),
+            ship(ShipKind::Scout, Side::Hostile),
+        ],
+        5,
+    );
+    reorder(&mut battle, vec![0, 1]);
+    battle.units[1].profile.hull = 1_000;
+    battle.units[0].at = Hex::new(-1, 0);
+    battle.units[1].at = Hex::new(1, 0);
+    battle.units[0].profile.loadout = vec!["magnetic_resonance_disruptor".into()];
+    battle.fire(1, &sure).unwrap();
+    assert!(battle.units[1].jammed);
+    battle.end_turn().unwrap();
+    assert_eq!(battle.moves_left, battle.units[1].move_points() - 1);
+    battle.end_turn().unwrap();
+    assert!(!battle.units[1].jammed, "one turn only");
 }
 
 #[test]

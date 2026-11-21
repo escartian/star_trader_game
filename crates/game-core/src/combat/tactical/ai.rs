@@ -5,7 +5,7 @@
 //! ties break by hex.
 use super::{Battle, BattleError, Hex, morale};
 use crate::combat::{
-    CombatCatalog,
+    CombatCatalog, WeaponEffect,
     engagement::{CombatantSetup, Engagement},
 };
 use std::cmp::Reverse;
@@ -25,9 +25,16 @@ pub fn play_turn(battle: &mut Battle, weapons: &CombatCatalog) -> Result<(), Bat
     {
         let goal = battle.units[target].at;
         let shortest = min_range(battle, me, weapons);
-        // A good hex sees the target and puts every weapon in reach, so the
-        // whole volley fires rather than long-range weapons alone.
-        let good = |at: Hex| at.distance(goal) <= shortest && battle.line_of_fire(at, goal);
+        // A good hex puts every weapon in reach, with a clear line of fire
+        // unless every weapon is guided, so the whole volley fires.
+        let sighted = battle.units[me]
+            .profile
+            .loadout
+            .iter()
+            .filter_map(|id| weapons.weapon(id))
+            .any(|weapon| weapon.effect != WeaponEffect::Guided);
+        let good =
+            |at: Hex| at.distance(goal) <= shortest && (!sighted || battle.line_of_fire(at, goal));
         // Path steps toward the target, around asteroids.
         let toward = battle.steps_from(goal, PATH_LIMIT);
         let steps = |at: Hex| toward.get(&at).copied().unwrap_or(u32::MAX);

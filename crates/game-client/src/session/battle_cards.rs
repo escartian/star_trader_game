@@ -236,7 +236,15 @@ pub fn ship_card(ui: &mut Ui, battle: &Battle, me: usize, artwork: &Artwork) {
             ui.horizontal(|ui| {
                 icons::glyph(ui, Icon::Engine, AMBER, "Engine");
                 ui.label(
-                    RichText::new(format!("{} of {points} moves left", battle.moves_left)).small(),
+                    RichText::new(if unit.jammed {
+                        format!(
+                            "{} of {points} moves left · ENGINES JAMMED",
+                            battle.moves_left
+                        )
+                    } else {
+                        format!("{} of {points} moves left", battle.moves_left)
+                    })
+                    .small(),
                 )
                 .on_hover_text("Each hex step costs one move; asteroids must be flown around.");
             });
@@ -285,14 +293,33 @@ pub fn weapon_list(
         ui.horizontal(|ui| {
             icons::glyph(ui, Icon::Weapon, AMBER, &weapon.description);
             ui.label(RichText::new(&weapon.name).small());
+            let effect = weapon.effect;
+            if !effect.label().is_empty() {
+                ui.label(
+                    RichText::new(effect.label().to_uppercase())
+                        .small()
+                        .color(CYAN),
+                )
+                .on_hover_text(effect.summary());
+            }
             ui.with_layout(
                 egui::Layout::right_to_left(egui::Align::Center),
                 |ui| match (target, distance) {
                     (Some(index), Some(distance)) if distance <= weapon.range => {
-                        let chance = battle.shot_chance(me, index, weapon);
-                        ui.label(
-                            RichText::new(format!("{chance}% ×{}", weapon.shots)).color(GREEN),
-                        );
+                        let (from, to) = (battle.units[me].at, battle.units[index].at);
+                        let fires = battle
+                            .volley_from(me, from, to, catalog)
+                            .iter()
+                            .any(|ready| ready.id == weapon.id);
+                        if fires {
+                            let chance = battle.shot_chance(me, index, weapon);
+                            ui.label(
+                                RichText::new(format!("{chance}% ×{}", weapon.shots)).color(GREEN),
+                            );
+                        } else {
+                            ui.label(RichText::new("blocked").small().color(Color32::GRAY))
+                                .on_hover_text("An asteroid blocks the line of fire.");
+                        }
                     }
                     (Some(_), Some(_)) => {
                         ui.label(RichText::new("out of range").small().color(Color32::GRAY));

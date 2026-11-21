@@ -29,15 +29,32 @@ Units are abstract points. Engine is a 1–10 rating for evasion and initiative.
 | Scout | small | 30 | 15 | 1 | 8 | 1 | Graviton Pulse |
 | Patrol ship | medium | 90 | 30 | 6 | 5 | 3 | Photon Singularity Beam, Quantum Entanglement Torpedo, Magnetic Resonance Disruptor |
 
-| Weapon | Damage × shots | Accuracy | vs shields | Armor pierce | Range | Role |
-| --- | --- | --- | --- | --- | --- | --- |
-| Photon Singularity Beam | 14 × 1 | 90% | 120% | 3 | 5 | accurate heavy all-rounder |
-| Quantum Entanglement Torpedo | 30 × 1 | 65% | 50% | 8 | 6 | unreliable armor breaker; shields blunt it |
-| Neutron Beam | 7 × 2 | 85% | 100% | 2 | 4 | reliable civilian weapon |
-| Graviton Pulse | 5 × 3 | 92% | 150% | 0 | 3 | rapid shield stripper |
-| Magnetic Resonance Disruptor | 4 × 2 | 90% | 250% | 0 | 3 | dedicated shield breaker |
+| Weapon | Damage × shots | Accuracy | vs shields | Armor pierce | Range | Effect | Role |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Photon Singularity Beam | 14 × 1 | 90% | 120% | 3 | 5 | Piercing | accurate heavy lance |
+| Quantum Entanglement Torpedo | 30 × 1 | 65% | 50% | 8 | 6 | Guided | armor breaker that reaches behind rocks |
+| Neutron Beam | 7 × 2 | 85% | 100% | 2 | 4 | Steady | reliable civilian weapon at any range |
+| Graviton Pulse | 5 × 3 | 92% | 150% | 0 | 3 | Ripple | shield stripper that punishes bunching |
+| Magnetic Resonance Disruptor | 4 × 2 | 90% | 250% | 0 | 3 | Disrupt | shield breaker that pins ships down |
 
-These numbers are first-pass balance. Expect them to change once the resolver exists.
+**Weapon effects** (the `effect` field in `config/combat.json`, applied in
+`tactical/actions.rs`):
+
+- **Piercing:** ignores debris cover.
+- **Guided:** needs no line of fire: it steers around asteroids. Point defense
+  counts double against it (−30 points instead of −15).
+- **Steady:** loses no accuracy to range (hit chance as if adjacent).
+- **Ripple:** each hit also deals half its damage (at least 1, before shields
+  and armor as usual) to every active enemy on a hex next to the target.
+  Ripples cannot miss and do not spread further. Keep your ships apart against
+  scouts.
+- **Disrupt:** a hit jams the target's engines: one movement point fewer on its
+  next turn (it wears off when that turn ends). The ship card and hover card
+  say "ENGINES JAMMED".
+
+The battle's weapon list tags each weapon with its effect and shows when an
+asteroid blocks a weapon that is in range. The AI weighs line of fire only for
+weapons that need it. These numbers are first-pass balance.
 
 ## Resolution rules
 
@@ -129,17 +146,18 @@ With Auto-resolve over 400 seeds on the single-layer board with terrain:
 
 | Matchup | You win | You lose | You escape | Avg rounds (max) | Ships lost / killed |
 | --- | --- | --- | --- | --- | --- |
-| Freighter v scout | 397 | 0 | 3 | 8.2 (19) | 0 / 0.7 |
+| Freighter v scout | 400 | 0 | 0 | 7.3 (19) | 0 / 0.8 |
 | Scout v scout | 204 | 50 | 146 | 5.5 (10) | 0.1 / 0.2 |
-| Patrol v patrol | 190 | 94 | 116 | 5.8 (11) | 0.2 / 0.3 |
-| 7 v 7 fleet-battle scenario | 245 | 3 | 152 | 10.9 (17) | 4.8 / 6.0 |
-| 8 patrols v 8 patrols | 185 | 24 | 191 | 10.8 (17) | 5.8 / 5.9 |
+| Patrol v patrol | 198 | 153 | 49 | 5.8 (10) | 0.4 / 0.4 |
+| 7 v 7 fleet-battle scenario | 220 | 31 | 149 | 10.3 (16) | 5.2 / 6.2 |
+| 8 patrols v 8 patrols | 186 | 67 | 147 | 10.8 (16) | 6.0 / 6.0 |
 
 Mirrors stay even: each side is driven from the field about half the time.
-Asteroids and cover make fights about a round longer than on the banded board,
-and a retreating patrol gets away more often: patrol duels end in a loss about
-24% of the time, against 40% with bands. Terrain density and cover strength are
-open playtest questions.
+Weapon effects made patrol fights deadlier: torpedoes reach ships sheltering
+behind asteroids and disruptors jam a retreating ship, so patrol duels end in a
+loss about 38% of the time (24% before effects) and far fewer patrols escape.
+The steady neutron beam wins every freighter–scout duel. Terrain density, cover
+strength and effect strengths are open playtest questions.
 
 ## Playing a battle
 
@@ -358,7 +376,8 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 
 ## Not yet implemented
 
-A GPU renderer with a depth buffer, morale effects on accuracy, faction
+A GPU renderer with a depth buffer, per-effect visuals (beams are drawn alike),
+morale effects on accuracy, faction
 hostility rules, raider bands crossing between systems, legal consequences of
 piracy, weapon loadout changes and partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

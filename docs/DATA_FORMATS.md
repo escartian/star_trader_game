@@ -113,9 +113,11 @@ capacity still comes from the economy definition. Ships record `hull_damage`
 
 `config/combat.json` lists weapons by stable snake_case `id`, each with `name`,
 `damage` (1–10,000), `shots` (1–20), `accuracy_percent` (1–100),
-`shield_efficiency_percent` (0–1000), `armor_penetration`, `range` (battle-board
-steps: hexes plus altitude bands crossed, 1–12; 4 when absent, so older saved
-catalogs load) and `description`.
+`shield_efficiency_percent` (0–1000), `armor_penetration`, `range` (hexes,
+1–12; 4 when absent, so older saved catalogs load), `description` and an
+optional `effect` (`plain` when absent, `piercing`, `guided`, `steady`,
+`ripple` or `disrupt`; see [combat](COMBAT.md)). A battle unit may record
+`jammed` (true while a disruptor hit costs it a move).
 It ships the original five: Photon Singularity Beam, Quantum Entanglement
 Torpedo, Neutron Beam, Graviton Pulse and Magnetic Resonance Disruptor. New games
 load the project file when present; saves preserve the active catalog. See

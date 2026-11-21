@@ -33,7 +33,7 @@ impl Battle {
             return Err("Invalid battle turn state".into());
         }
         let acting = &self.units[usize::from(self.order[self.turn])];
-        if !acting.active() || self.moves_left > acting.move_points() {
+        if !acting.active() || self.moves_left > acting.allowance() {
             return Err("Invalid battle turn state".into());
         }
         let mut hexes = HashSet::new();

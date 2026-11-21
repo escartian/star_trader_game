@@ -15,6 +15,9 @@
 //!   damage so far.
 //! - Hits and damage follow `engagement::{adjusted_hit_chance, apply_hit}`; a
 //!   target in debris has [`COVER_PERCENT`] less chance to be hit.
+//! - Weapon effects (`WeaponEffect`) change this per weapon: piercing shots
+//!   ignore cover, guided ones need no line of fire, steady ones lose nothing
+//!   to range, ripples splash adjacent enemies, disruptors jam engines.
 //! - The battle is fought to a finish: it ends when a side has no active ships.
 //!   It also ends, disengaged, after [`CEASEFIRE_ROUNDS`] whole rounds in which
 //!   nobody fired or moved, and [`MAX_ROUNDS`] is a safety backstop normal play
@@ -67,6 +70,10 @@ pub struct Unit {
     /// Fitted anti-piracy gear (`combat::gear`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub gear: Vec<Gear>,
+    /// Engines jammed by a disruptor hit: one move fewer this (or the next)
+    /// turn; cleared when that turn ends.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub jammed: bool,
     pub withdrawn: bool,
     pub hits: u32,
     pub shots: u32,
@@ -91,6 +98,12 @@ impl Unit {
             } else {
                 0
             }
+    }
+
+    /// Movement points for the unit's turn: [`Self::move_points`], one fewer
+    /// while jammed.
+    pub fn allowance(&self) -> u32 {
+        self.move_points().saturating_sub(u32::from(self.jammed))
     }
 
     pub fn has(&self, gear: Gear) -> bool {
@@ -204,6 +217,7 @@ impl Battle {
                     shields: setup.profile.shields,
                     at,
                     gear: setup.gear.clone(),
+                    jammed: false,
                     withdrawn: false,
                     hits: 0,
                     shots: 0,
@@ -296,11 +310,14 @@ impl Battle {
     /// Whether the acting ship has spent any movement this turn.
     pub fn moved(&self) -> bool {
         self.active()
-            .is_some_and(|me| self.moves_left < self.units[me].move_points())
+            .is_some_and(|me| self.moves_left < self.units[me].allowance())
     }
 
     fn advance(&mut self) {
         self.fired = false;
+        // A jam lasts for one turn of the jammed ship.
+        let ending = usize::from(self.order[self.turn]);
+        self.units[ending].jammed = false;
         loop {
             self.turn += 1;
             if self.turn == self.order.len() {
@@ -314,7 +331,7 @@ impl Battle {
                 self.rounds.push(Vec::new());
             }
             let next = &self.units[usize::from(self.order[self.turn])];
-            let (active, points) = (next.active(), next.move_points());
+            let (active, points) = (next.active(), next.allowance());
             if active {
                 self.moves_left = points;
             }

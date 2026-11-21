@@ -7,7 +7,7 @@ strudel.cc and press play. The game embeds the exported Ogg Vorbis loops in
 
 | Source | Runtime file | Plays |
 | --- | --- | --- |
-| `main-theme.strudel.js` (“Long Haul”, 96 BPM, 32 bars) | `main-theme.ogg` (80 s loop) | Main menu, and in game when Settings allow |
+| `main-theme.strudel.js` (“Long Haul”, 48 bars, 60-120-60 BPM) | `main-theme.ogg` (134.4 s loop) | Main menu, and in game when Settings allow |
 
 Every piece is an original composition made with Strudel's built-in
 synthesizers, FM and noise only (no samples), so the export needs no downloads.
@@ -26,10 +26,16 @@ node tools/music/render.mjs SOURCE.strudel.js OUTPUT.ogg --bars 16
 
 Set `CHROME=/path/to/chrome` when Chrome is not in the macOS default location.
 The script renders offline in headless Chrome (`renderPatternAudio`, an
-OfflineAudioContext, so no audio device and faster than real time). It renders
-two extra bars with no new notes and folds their reverb and delay tails back onto
-the start, so the loop point has no click or dry gap. It then peak-normalizes to
--1 dBFS and encodes with libvorbis, or ffmpeg's built-in Vorbis encoder at
-192 kbit/s when libvorbis is missing. Vorbis keeps the loop sample-exact; MP3
-would pad it. `--bars` must match the piece's length in cycles. The tempo comes
-from the source's `setcps(...)` line.
+OfflineAudioContext, so no audio device and faster than real time), one bar at
+a time. Each bar renders at its own tempo: from the source's
+`window.tempoMap` (BPM for every bar, which strudel.cc ignores: there it plays
+at the `setcps` tempo), or else `--bars` bars at the `setcps` tempo. Each bar's
+notes ring out for 7 s, and the bars are added at their start times; what rings
+past the loop's end is folded back onto the start, so the loop point has no
+click or dry gap. Every bar gets a fresh page, because Strudel keeps audio
+nodes from one offline render to the next and later renders in the same page
+lose sounds. A bar that renders silent is reported (`DEBUG_BARS=1` prints
+every bar's peak and all of Strudel's console output). The mix is then
+peak-normalized to -1 dBFS and encoded with libvorbis, or ffmpeg's built-in
+Vorbis encoder at 192 kbit/s when libvorbis is missing. Vorbis keeps the loop
+sample-exact; MP3 would pad it.

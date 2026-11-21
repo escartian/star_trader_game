@@ -8,7 +8,7 @@
 
 /// The original main menu theme, exported from
 /// `assets/source/music/main-theme.strudel.js` by `tools/music/render.mjs`. It
-/// is a seamless loop of 32 bars at 96 BPM (80 s).
+/// is a seamless 134.4 s loop of 48 bars whose tempo arches 60-120-60 BPM.
 #[cfg(not(target_arch = "wasm32"))]
 const MAIN_THEME: &[u8] = include_bytes!("../../../assets/music/main-theme.ogg");
 
@@ -171,14 +171,17 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn the_embedded_theme_decodes_as_a_32_bar_stereo_loop() {
+    fn the_embedded_theme_decodes_as_the_48_bar_tempo_arch() {
         use rodio::Source;
         let theme = rodio::Decoder::new(std::io::Cursor::new(MAIN_THEME)).unwrap();
         assert_eq!((theme.channels(), theme.sample_rate()), (2, 48_000));
         let samples = theme.count();
         let seconds = samples as f64 / 2.0 / 48_000.0;
-        // 32 bars of 4 beats at 96 BPM.
-        let expected = 32.0 * 4.0 * 60.0 / 96.0;
+        // Six 8-bar sections of 4 beats at 60, 80, 100, 120, 100 and 80 BPM.
+        let expected: f64 = [60.0, 80.0, 100.0, 120.0, 100.0, 80.0]
+            .iter()
+            .map(|bpm| 8.0 * 4.0 * 60.0 / bpm)
+            .sum();
         assert!((seconds - expected).abs() < 0.05, "{seconds} s");
     }
 

@@ -4,10 +4,12 @@
 //   node tools/music/render.mjs [source.strudel.js] [output.ogg] [--bars N]
 //
 // Strudel renders offline in headless Chrome (OfflineAudioContext, faster than
-// real time, no audio device). Two extra bars are rendered past the loop so the
-// reverb and delay tails can be folded back onto the start: the loop point then
-// has no click and no dry gap. The result is peak-normalized to -1 dBFS and
-// encoded with ffmpeg.
+// real time, no audio device). It renders one bar at a time, each at its own
+// tempo: from the source's `window.tempoMap` (BPM for every bar), or else N
+// bars at its `setcps` tempo. Each bar's notes ring out for `TAIL_SECONDS`, and
+// the bars are added together at their start times. What rings past the loop's
+// end is folded back onto the start, so the loop point has no click and no dry
+// gap. The result is peak-normalized to -1 dBFS and encoded with ffmpeg.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -28,7 +30,8 @@ const flag = (name, fallback) => {
 const loopBars = Number(flag('--bars', '32'));
 const source = resolve(args[0] ?? join(root, 'assets/source/music/main-theme.strudel.js'));
 const output = resolve(args[1] ?? join(root, 'assets/music/main-theme.ogg'));
-const tailBars = 2;
+/// Seconds each bar's reverb and delay are allowed to ring after it.
+const TAIL_SECONDS = 7;
 const sampleRate = 48_000;
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
@@ -45,12 +48,19 @@ import { initStrudel, evaluate, renderPatternAudio } from '/strudel/index.mjs';
 // renderPatternAudio "downloads" its WAV through an object URL; keep the blob.
 const createObjectURL = URL.createObjectURL;
 URL.createObjectURL = (blob) => { window.renderedWav = blob; return createObjectURL(blob); };
-window.render = async (code, cps, loopBars, tailBars, sampleRate) => {
+// Evaluates the piece once; returns its tempo map (BPM per bar) if it has one.
+window.load = async (code) => {
   await initStrudel();
-  // The tail bars only let notes from the loop ring out: no new onsets.
-  const pattern = (await evaluate(code, false))
-    .filterHaps((hap) => hap.whole.begin.valueOf() < loopBars);
-  await renderPatternAudio(pattern, cps, 0, loopBars + tailBars, sampleRate, 256, false, 'render');
+  window.piece = await evaluate(code, false);
+  return window.tempoMap ?? null;
+};
+// Renders the notes that start in \`bar\`, at \`cps\`, ringing \`tailCycles\` longer.
+window.renderBar = async (bar, cps, tailCycles, sampleRate) => {
+  const pattern = window.piece.filterHaps((hap) => {
+    const begin = hap.whole.begin.valueOf();
+    return begin >= bar && begin < bar + 1;
+  });
+  await renderPatternAudio(pattern, cps, bar, bar + 1 + tailCycles, sampleRate, 256, false, 'render');
   const bytes = new Uint8Array(await window.renderedWav.arrayBuffer());
   let binary = '';
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
@@ -82,37 +92,67 @@ const browser = await puppeteer.launch({
   headless: true,
   args: ['--autoplay-policy=no-user-gesture-required'],
 });
-let wav;
+let mix;
+let loopFrames;
 try {
   const tab = await browser.newPage();
   tab.on('pageerror', (error) => console.error('page error:', error.message));
   // Strudel reports unknown sounds and bad values through the console.
   tab.on('console', (message) => {
-    if (['error', 'warn', 'warning'].includes(message.type())) console.warn(`strudel ${message.type()}:`, message.text());
+    const loud = ['error', 'warn', 'warning'].includes(message.type());
+    if (loud || process.env.DEBUG_BARS) console.warn(`strudel ${message.type()}:`, message.text());
   });
-  await tab.goto(`http://127.0.0.1:${server.address().port}/`);
-  await tab.waitForFunction('window.ready === true');
-  console.log(`Rendering ${loopBars}+${tailBars} bars at ${(cps * 240).toFixed(1)} BPM…`);
-  const base64 = await tab.evaluate((...a) => window.render(...a), code, cps, loopBars, tailBars, sampleRate);
-  wav = Buffer.from(base64, 'base64');
+  // Strudel keeps audio nodes from one offline render to the next, which
+  // breaks later renders in the same page, so each bar gets a fresh page.
+  const fresh = async () => {
+    await tab.goto(`http://127.0.0.1:${server.address().port}/`);
+    await tab.waitForFunction('window.ready === true');
+    return tab.evaluate((piece) => window.load(piece), code);
+  };
+  const tempoMap = await fresh();
+  const bpms = tempoMap ?? Array(loopBars).fill(cps * 240);
+  if (!bpms.length || bpms.some((bpm) => !(bpm > 0))) throw new Error('Bad tempoMap');
+  const starts = bpms.map((_, bar) => bpms.slice(0, bar).reduce((sum, bpm) => sum + 240 / bpm, 0));
+  const seconds = starts[bpms.length - 1] + 240 / bpms[bpms.length - 1];
+  loopFrames = Math.round(seconds * sampleRate);
+  mix = new Float32Array(loopFrames * 2);
+  const range = `${Math.min(...bpms)}-${Math.max(...bpms)}`;
+  console.log(`Rendering ${bpms.length} bars at ${range} BPM, ${seconds.toFixed(1)} s…`);
+  for (let bar = 0; bar < bpms.length; bar += 1) {
+    if (bar > 0) await fresh();
+    const barCps = bpms[bar] / 240;
+    const base64 = await tab.evaluate(
+      (...a) => window.renderBar(...a), bar, barCps, TAIL_SECONDS * barCps, sampleRate,
+    );
+    const peak = addBar(mix, Buffer.from(base64, 'base64'), Math.round(starts[bar] * sampleRate), loopFrames);
+    if (process.env.DEBUG_BARS) console.log(`  bar ${bar + 1}: peak ${peak.toFixed(3)}`);
+    if (peak < 1e-3) console.warn(`  bar ${bar + 1} rendered silent`);
+    if ((bar + 1) % 8 === 0) console.log(`  ${bar + 1}/${bpms.length} bars`);
+  }
 } finally {
   await browser.close();
   server.close();
 }
 
-// 16-bit stereo PCM from Strudel's WAV writer: fold the tail onto the head.
-const channels = wav.readUInt16LE(22);
-const dataStart = wav.indexOf('data', 36) + 8;
-const frames = (wav.length - dataStart) / 2 / channels;
-const loopFrames = Math.round((loopBars / cps) * sampleRate);
-if (channels !== 2 || frames < loopFrames) throw new Error('Unexpected render format');
-const mix = new Float32Array(loopFrames * 2);
-for (let frame = 0; frame < frames; frame += 1) {
-  const target = (frame % loopFrames) * 2;
-  for (let channel = 0; channel < 2; channel += 1) {
-    mix[target + channel] += wav.readInt16LE(dataStart + (frame * 2 + channel) * 2) / 32768;
+/** Adds a bar's 16-bit stereo WAV into `mix` from frame `offset`, wrapping
+ *  past the loop's end onto its start. Returns the bar's peak level. */
+function addBar(mix, wav, offset, loopFrames) {
+  const channels = wav.readUInt16LE(22);
+  const dataStart = wav.indexOf('data', 36) + 8;
+  if (channels !== 2) throw new Error('Unexpected render format');
+  const frames = (wav.length - dataStart) / 4;
+  let peak = 0;
+  for (let frame = 0; frame < frames; frame += 1) {
+    const target = ((offset + frame) % loopFrames) * 2;
+    const left = wav.readInt16LE(dataStart + frame * 4) / 32768;
+    const right = wav.readInt16LE(dataStart + frame * 4 + 2) / 32768;
+    mix[target] += left;
+    mix[target + 1] += right;
+    peak = Math.max(peak, Math.abs(left), Math.abs(right));
   }
+  return peak;
 }
+
 const peak = mix.reduce((max, sample) => Math.max(max, Math.abs(sample)), 0);
 if (peak === 0) throw new Error('Render is silent');
 const scale = 10 ** (-1 / 20) / peak;

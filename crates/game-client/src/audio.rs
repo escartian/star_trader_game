@@ -8,7 +8,7 @@
 
 /// The original main menu theme, exported from
 /// `assets/source/music/main-theme.strudel.js` by `tools/music/render.mjs`. It
-/// is a seamless loop of 32 bars at 84 BPM (about 91.4 s).
+/// is a seamless loop of 32 bars at 96 BPM (80 s).
 #[cfg(not(target_arch = "wasm32"))]
 const MAIN_THEME: &[u8] = include_bytes!("../../../assets/music/main-theme.ogg");
 
@@ -177,8 +177,8 @@ mod tests {
         assert_eq!((theme.channels(), theme.sample_rate()), (2, 48_000));
         let samples = theme.count();
         let seconds = samples as f64 / 2.0 / 48_000.0;
-        // 32 bars of 4 beats at 84 BPM.
-        let expected = 32.0 * 4.0 * 60.0 / 84.0;
+        // 32 bars of 4 beats at 96 BPM.
+        let expected = 32.0 * 4.0 * 60.0 / 96.0;
         assert!((seconds - expected).abs() < 0.05, "{seconds} s");
     }
 

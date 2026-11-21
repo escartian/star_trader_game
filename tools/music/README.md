@@ -30,18 +30,16 @@ OfflineAudioContext, so no audio device and faster than real time), one bar at
 a time. Each bar renders at its own tempo: from the source's
 `window.tempoMap` (BPM for every bar, which strudel.cc ignores: there it plays
 at the `setcps` tempo), or else `--bars` bars at the `setcps` tempo. Each bar's
-notes ring out for 10 s, and the bars are added at their start times; what rings
+notes ring out for 9 s (keep `size` at 5 or less: Strudel's impulse
+response lasts 1.5 times it), and the bars are added at their start times; what rings
 past the loop's end is folded back onto the start, so the loop point has no
 click or dry gap. Every bar gets a fresh page, because Strudel keeps audio
 nodes from one offline render to the next and later renders in the same page
 lose sounds. A bar that renders silent is reported (`DEBUG_BARS=1` prints
-every bar's peak and all of Strudel's console output). Strudel's reverb (`room`, `size`) does nothing in offline renders, so the
-export adds it itself (`reverb.mjs`): every bar is rendered a second time as a
-reverb send, each note scaled by its `room` amount, and the send runs through
-one shared hall, a convolution with a generated stereo impulse whose decay
-follows the source's `const hall = N` room size (8: about 3.6 s), thinned
-below 180 Hz and darkened above 5 kHz. The send is convolved as two copies of
-the loop back to back, so the reverb at the loop's end rings into its start.
+every bar's peak and all of Strudel's console output). Strudel builds each reverb's impulse response asynchronously, which an offline
+render would otherwise start without (no reverb at all), so the export makes
+every render wait until its reverbs are ready. The reverb is Strudel's own,
+as set in the source (`room`, `size`, `roomlp`, ...), and matches strudel.cc.
 The mix is then
 peak-normalized to -1 dBFS and encoded with libvorbis, or ffmpeg's built-in
 Vorbis encoder at 192 kbit/s when libvorbis is missing. Vorbis keeps the loop

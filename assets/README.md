@@ -193,7 +193,7 @@ strudel.cc to play or edit). It is synthesizer-only (pads, arpeggio, lead, synth
 bell and star chirps). Its tempo eases through 60, 80, 100, 110, 100 and 80 BPM
 over 48 bars (4 bars held, 4 bars ramping per section): the pad and chirps
 thin as it speeds up while a countermelody and chord stabs join, and it loops
-seamlessly every 135.1 s, in a shared hall reverb added by the export. `tools/music/README.md` explains the export (`node tools/music/render.mjs`).
+seamlessly every 135.1 s. All layers share Strudel's reverb (a 4 s hall). `tools/music/README.md` explains the export (`node tools/music/render.mjs`).
 
 ## Trade station model
 

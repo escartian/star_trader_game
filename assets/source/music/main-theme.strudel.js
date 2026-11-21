@@ -37,9 +37,10 @@ const bars = (values) => '<' + values.join(' ') + '>'
 // A dotted eighth (three sixteenths) in seconds at each bar's tempo.
 const echo = bars(window.tempoMap.map((bpm) => (45 / bpm).toFixed(4)))
 // One octave up: "a4" -> "a5", "bb4" -> "bb5".
-// Every layer shares one reverb (one room size, `hall`); layers differ only
-// in how much they send to it.
-const hall = 8
+// Every layer shares one reverb (Strudel keeps one per orbit, rebuilt
+// whenever its settings change), so all use one room size, `hall`: the decay
+// in seconds. Layers differ only in how much they send to it (`room`).
+const hall = 4
 const octaveUp = (notes) => notes.replace(/([a-g]b?)(\d)/g, (_, name, octave) => name + (Number(octave) + 1))
 
 // D minor: i - VI - III - VII, then i - VI - iv - V (sus, resolving on the loop).

@@ -18,6 +18,7 @@ mod market;
 mod market_table;
 mod motion;
 mod navigation;
+mod outfitting;
 mod panel;
 mod routes;
 mod runs;
@@ -316,6 +317,13 @@ impl LocalSession {
                         SessionEvent::Repaired { ship, cost } => {
                             format!("Repaired ship {} for {cost} cr.", ship.0)
                         }
+                        SessionEvent::GearFitted { gear, cost, .. } => {
+                            format!("{} fitted for {cost} cr.", gear.label())
+                        }
+                        SessionEvent::EscortHired { cost } => format!(
+                            "Escort hired for {cost} cr: it joins this fleet's battles for {} runs.",
+                            game_core::combat::gear::ESCORT_RUNS
+                        ),
                         SessionEvent::HoldUpgraded => {
                             "Cargo hold upgraded. First earnings goal completed!".into()
                         }

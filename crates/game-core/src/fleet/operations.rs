@@ -147,6 +147,7 @@ impl TravelState {
             cargo_capacity: spec.cargo_capacity,
             base_cargo_capacity: spec.cargo_capacity,
             upgraded: false,
+            gear: Vec::new(),
             fuel: spec.fuel_capacity,
             fuel_capacity: spec.fuel_capacity,
             range_ly: spec.range_ly,

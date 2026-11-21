@@ -36,6 +36,11 @@ impl LocalSession {
             ui.horizontal(|ui| {
                 ui.strong(&trader.name)
                     .on_hover_text(trader.personality.label());
+                let armed = defences(trader);
+                if !armed.is_empty() {
+                    ui.small(armed)
+                        .on_hover_text("Anti-piracy gear and hired escort");
+                }
                 if reach.contains(&trader.id)
                     && icons::button(ui, Icon::Contact, "Hail")
                         .on_hover_text("Stop this trader: let it go, demand cargo or attack it.")
@@ -104,6 +109,10 @@ impl LocalSession {
             ship.kind.label().to_lowercase(),
             hull.saturating_sub(ship.hull_damage),
         ));
+        let armed = defences(npc);
+        if !armed.is_empty() {
+            ui.small(format!("Defences: {armed}."));
+        }
         let threshold = piracy::yield_percent(npc.personality);
         let yields = piracy::would_yield(&self.state, &self.economy, encounter);
         ui.small(match (yields, npc.personality) {
@@ -158,4 +167,17 @@ impl LocalSession {
             .as_ref()
             .map(|trader| trader.name.clone())
     }
+}
+
+/// A trader's anti-piracy gear and escort, as a short list ("" when none).
+fn defences(trader: &game_core::npc::Trader) -> String {
+    let mut parts: Vec<String> = trader.state.ships[0]
+        .gear
+        .iter()
+        .map(|gear| gear.label().to_lowercase())
+        .collect();
+    if trader.escort_runs > 0 {
+        parts.push(format!("escort ({} runs)", trader.escort_runs));
+    }
+    parts.join(", ")
 }

@@ -39,6 +39,7 @@ pub use terrain::{COVER_PERCENT, Terrain, TerrainHex};
 use super::{
     CombatCatalog, CombatProfile,
     engagement::{CombatantResult, CombatantSetup, Engagement, MAX_COMBATANTS, ShotRecord, Side},
+    gear::{AFTERBURNER_MOVES, Gear},
     rng::CombatRng,
 };
 use crate::{fleet::ShipKind, travel::ShipId};
@@ -63,6 +64,9 @@ pub struct Unit {
     pub damage: u32,
     pub shields: u32,
     pub at: Hex,
+    /// Fitted anti-piracy gear (`combat::gear`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub gear: Vec<Gear>,
     pub withdrawn: bool,
     pub hits: u32,
     pub shots: u32,
@@ -77,6 +81,20 @@ impl Unit {
     /// Still fighting: alive and not withdrawn.
     pub fn active(&self) -> bool {
         self.alive() && !self.withdrawn
+    }
+
+    /// Movement points per turn: the engine's, plus afterburners.
+    pub fn move_points(&self) -> u32 {
+        move_points(self.profile.engine)
+            + if self.has(Gear::Afterburners) {
+                AFTERBURNER_MOVES
+            } else {
+                0
+            }
+    }
+
+    pub fn has(&self, gear: Gear) -> bool {
+        self.gear.contains(&gear)
     }
 
     fn durability(&self) -> u32 {
@@ -185,6 +203,7 @@ impl Battle {
                     damage: setup.hull_damage,
                     shields: setup.profile.shields,
                     at,
+                    gear: setup.gear.clone(),
                     withdrawn: false,
                     hits: 0,
                     shots: 0,
@@ -202,7 +221,7 @@ impl Battle {
                 index,
             )
         });
-        let moves_left = move_points(units[usize::from(order[0])].profile.engine);
+        let moves_left = units[usize::from(order[0])].move_points();
         Ok(Self {
             seed,
             rng: rng.state(),
@@ -277,7 +296,7 @@ impl Battle {
     /// Whether the acting ship has spent any movement this turn.
     pub fn moved(&self) -> bool {
         self.active()
-            .is_some_and(|me| self.moves_left < move_points(self.units[me].profile.engine))
+            .is_some_and(|me| self.moves_left < self.units[me].move_points())
     }
 
     fn advance(&mut self) {
@@ -295,9 +314,9 @@ impl Battle {
                 self.rounds.push(Vec::new());
             }
             let next = &self.units[usize::from(self.order[self.turn])];
-            let (active, engine) = (next.active(), next.profile.engine);
+            let (active, points) = (next.active(), next.move_points());
             if active {
-                self.moves_left = move_points(engine);
+                self.moves_left = points;
             }
             if self.finished() || active {
                 return;

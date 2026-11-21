@@ -13,6 +13,7 @@
 use super::Trader;
 use crate::{
     StarSystem,
+    combat::gear::ESCORT_KIND,
     economy::Economy,
     fleet::FleetMovementError,
     navigation::{Prey, STRIKE_KM, distance, local_in},
@@ -74,7 +75,11 @@ impl Economy {
         };
         let catalog = &self.rules.ship_catalog;
         let ours = piracy::strength(band.ships.iter().map(|kind| (*kind, 0)), catalog);
-        let theirs = piracy::strength([(ship.kind, ship.hull_damage)], catalog);
+        let escort = (trader.escort_runs > 0).then_some((ESCORT_KIND, 0));
+        let theirs = piracy::strength(
+            std::iter::once((ship.kind, ship.hull_damage)).chain(escort),
+            catalog,
+        );
         let threshold = piracy::yield_percent(trader.personality);
         if u128::from(ours) * 100 >= u128::from(theirs) * u128::from(threshold) {
             let cargo = &mut trader.state.ships[0].cargo;

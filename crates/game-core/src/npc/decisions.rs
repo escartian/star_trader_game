@@ -34,6 +34,7 @@ impl Economy {
             }
             let underway = !trader.state.navigation.orders.is_empty();
             trader.state.execute_navigation_run(player, systems)?;
+            trader.escort_runs = trader.escort_runs.saturating_sub(1);
             if refitting {
                 trader.refit_runs -= 1;
                 trader.last_action = match trader.refit_runs {
@@ -100,6 +101,8 @@ impl Economy {
                 return Ok(());
             }
         }
+        // Profits beyond a trading reserve buy gear and escorts.
+        let outfitted = self.outfit(trader);
         let Some((market, good, quantity)) = self.best_route(trader, systems) else {
             trader.last_action = "Holding: no profitable route".into();
             return Ok(());
@@ -129,6 +132,9 @@ impl Economy {
                 |body| body.name.clone(),
             );
         trader.last_action = format!("Hauling {quantity} {} to {destination}", good.label());
+        if let Some(news) = outfitted {
+            trader.last_action = format!("{news}. {}", trader.last_action);
+        }
         Ok(())
     }
 

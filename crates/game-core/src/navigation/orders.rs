@@ -190,6 +190,9 @@ impl TravelState {
         self.navigation
             .patrols
             .retain(|patrol| exists(patrol.fleet));
+        self.navigation
+            .escorts
+            .retain(|escort| exists(escort.fleet));
         if self.navigation.flagship.is_some_and(|id| !exists(id)) {
             self.navigation.flagship = None;
         }

@@ -220,6 +220,7 @@ mod tests {
                 .combat
                 .clone(),
             hull_damage: 0,
+            gear: Vec::new(),
         };
         Battle::new(
             &[setup(Side::Player), setup(Side::Hostile)],

@@ -36,6 +36,8 @@ pub struct CombatantSetup {
     pub kind: ShipKind,
     pub profile: CombatProfile,
     pub hull_damage: u32,
+    /// Fitted anti-piracy gear (`combat::gear`).
+    pub gear: Vec<super::gear::Gear>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

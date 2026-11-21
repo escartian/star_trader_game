@@ -16,6 +16,7 @@ fn ship(kind: ShipKind, side: Side) -> CombatantSetup {
         kind,
         profile: ShipCatalog::default().spec(kind).unwrap().combat.clone(),
         hull_damage: 0,
+        gear: Vec::new(),
     }
 }
 
@@ -49,7 +50,7 @@ fn rock(battle: &mut Battle, hex: Hex, kind: Terrain) {
 pub(super) fn reorder(battle: &mut Battle, order: Vec<u8>) {
     battle.order = order;
     battle.turn = 0;
-    battle.moves_left = move_points(battle.units[usize::from(battle.order[0])].profile.engine);
+    battle.moves_left = battle.units[usize::from(battle.order[0])].move_points();
 }
 
 #[test]
@@ -358,5 +359,27 @@ fn mirror_matches_are_fair_and_a_lone_trader_survives_a_scout_raider() {
     assert_eq!(
         losses, 0,
         "the starting freighter must not lose to one scout"
+    );
+}
+
+#[test]
+fn afterburners_add_a_move_and_point_defense_turns_shots_aside() {
+    use crate::combat::gear::{Gear, POINT_DEFENSE_PERCENT};
+    let catalog = CombatCatalog::default();
+    let mut fast = ship(ShipKind::Freighter, Side::Player);
+    fast.gear = vec![Gear::Afterburners];
+    let mut armored = ship(ShipKind::Scout, Side::Hostile);
+    armored.gear = vec![Gear::PointDefense];
+    let mut battle = battle(&[fast, armored], 3);
+    reorder(&mut battle, vec![0, 1]);
+    assert_eq!(battle.moves_left, 3, "freighter 2 + afterburners 1");
+    battle.units[0].at = Hex::new(-1, 0);
+    battle.units[1].at = Hex::new(1, 0);
+    let beam = catalog.weapon("neutron_beam").unwrap();
+    let guarded = battle.shot_chance(0, 1, beam);
+    battle.units[1].gear.clear();
+    assert_eq!(
+        battle.shot_chance(0, 1, beam),
+        guarded + POINT_DEFENSE_PERCENT as u32
     );
 }

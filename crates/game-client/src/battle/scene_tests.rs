@@ -17,6 +17,7 @@ fn battle() -> Battle {
         kind,
         profile: ShipCatalog::default().spec(kind).unwrap().combat.clone(),
         hull_damage: 0,
+        gear: Vec::new(),
     };
     let setups = [
         setup(ShipKind::Freighter, Side::Player),

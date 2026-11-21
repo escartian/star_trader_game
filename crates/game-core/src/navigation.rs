@@ -13,6 +13,7 @@ mod orders;
 mod position;
 pub use battle::{ActiveBattle, BattleAction};
 pub use haven::{GARRISON, RaiderHaven, haven_site};
+pub(crate) use hostile::escort_setup;
 pub use hostile::evade_chance_percent;
 pub use position::space_position;
 mod resolution;
@@ -115,6 +116,21 @@ pub struct TraderContact {
     pub name: String,
     /// The trader's hull damage when hailed, in hull points.
     pub hull_damage: u32,
+    /// The trader's fitted gear when hailed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub gear: Vec<crate::combat::gear::Gear>,
+    /// The trader had a hired escort, which fights beside it (`hostiles[1]`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub escort: bool,
+}
+
+/// A hired escort contract for one of the player's fleets (`combat::gear`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Escort {
+    pub fleet: FleetId,
+    /// Navigation runs left on the contract (1 to `ESCORT_RUNS`).
+    pub runs_left: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -189,6 +205,9 @@ pub struct NavigationState {
     /// wanted status and pirate road read it.
     #[serde(default, skip_serializing_if = "is_zero_count")]
     pub piracies: u64,
+    /// Hired escorts, at most one per fleet.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub escorts: Vec<Escort>,
 }
 
 fn is_zero_count(value: &u64) -> bool {
@@ -224,6 +243,7 @@ impl Default for NavigationState {
             flagship: None,
             patrols: Vec::new(),
             piracies: 0,
+            escorts: Vec::new(),
         }
     }
 }
@@ -231,6 +251,14 @@ impl NavigationState {
     pub fn order(&self, fleet: FleetId) -> Option<&NavigationOrder> {
         self.orders.iter().find(|order| order.plan.fleet == fleet)
     }
+    /// Runs left on `fleet`'s escort contract (0: none).
+    pub fn escort_runs(&self, fleet: FleetId) -> u32 {
+        self.escorts
+            .iter()
+            .find(|escort| escort.fleet == fleet)
+            .map_or(0, |escort| escort.runs_left)
+    }
+
     pub fn rolls(&mut self) -> u64 {
         self.rng_state = self.rng_state.wrapping_add(0x9e3779b97f4a7c15);
         let mut value = self.rng_state;

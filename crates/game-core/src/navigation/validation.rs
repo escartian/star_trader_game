@@ -146,6 +146,20 @@ impl TravelState {
                 return Err("Invalid fleet encounter".into());
             }
         }
+        let mut escorted = HashSet::new();
+        for escort in &self.navigation.escorts {
+            if !escorted.insert(escort.fleet)
+                || !(1..=crate::combat::gear::ESCORT_RUNS).contains(&escort.runs_left)
+                || !self.fleets.iter().any(|fleet| fleet.id == escort.fleet)
+            {
+                return Err("Invalid escort contract".into());
+            }
+        }
+        for ship in &self.ships {
+            if !crate::combat::gear::valid_fit(&ship.gear) {
+                return Err("Invalid fitted gear".into());
+            }
+        }
         self.validate_bands(systems)?;
         self.validate_haven(systems)?;
         self.validate_patrols(systems)?;
@@ -167,11 +181,12 @@ impl TravelState {
     /// catch a waiting fleet, but its band must still exist in that system;
     /// the player may hail a trader from anywhere it is in reach.
     fn encounter_source_valid(&self, encounter: &super::Encounter) -> bool {
-        // A hailed trader: one hull, checked against the trader by the host.
+        // A hailed trader: its hull (and escort), checked against the trader
+        // by the host.
         if let Some(trader) = &encounter.trader {
             return !encounter.haven
                 && encounter.band.is_none()
-                && encounter.hostiles.len() == 1
+                && encounter.hostiles.len() == 1 + usize::from(trader.escort)
                 && !trader.name.is_empty()
                 && trader.name.len() <= 128;
         }

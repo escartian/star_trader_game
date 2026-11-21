@@ -8,7 +8,7 @@ use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{
     StarSystem,
     economy::Commodity,
-    navigation::{EncounterChoice, EncounterKind, NavigationEvent, evade_chance_percent},
+    navigation::{EncounterChoice, EncounterKind, NavigationEvent},
 };
 use game_protocol::ClientCommand;
 
@@ -327,17 +327,11 @@ impl LocalSession {
         fleet: &game_core::fleet::Fleet,
         encounter: &game_core::navigation::Encounter,
     ) {
-        let catalog = &self.economy.rules.ship_catalog;
-        let engine = |kind| catalog.spec(kind).map_or(1, |spec| spec.combat.engine);
-        let slowest = fleet
-            .ships
-            .iter()
-            .filter_map(|id| self.state.ship(*id).ok())
-            .map(|ship| engine(ship.kind))
-            .min()
-            .unwrap_or(1);
-        let fastest = encounter.hostiles.iter().map(|kind| engine(*kind)).max();
-        let chance = evade_chance_percent(slowest, fastest.unwrap_or(1));
+        // Afterburners on every ship raise the odds.
+        let chance = self
+            .state
+            .evade_chance(fleet, &encounter.hostiles, &self.economy.rules)
+            .unwrap_or(0);
         let names: Vec<_> = encounter.hostiles.iter().map(|kind| kind.label()).collect();
         if self
             .state

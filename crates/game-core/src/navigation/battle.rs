@@ -6,6 +6,7 @@ use super::{Encounter, EncounterKind, NavigationError, NavigationEvent};
 use crate::{
     combat::{
         CombatOutcome, CombatReport, Side,
+        gear::ESCORT_KIND,
         tactical::{self, Battle, Hex},
     },
     economy::EconomyRules,
@@ -229,6 +230,15 @@ impl TravelState {
         if let Some(band) = encounter.band {
             self.band_after_contact(band, &destroyed);
         }
+        // A destroyed escort ends its contract.
+        if report
+            .side(Side::Player)
+            .any(|unit| unit.ship.is_none() && unit.destroyed)
+        {
+            self.navigation
+                .escorts
+                .retain(|escort| escort.fleet != fleet.id);
+        }
         if encounter.haven {
             self.haven_after_contact(&destroyed);
         }
@@ -290,19 +300,40 @@ impl TravelState {
         if ships != expected || raiders != contact {
             return Err(invalid());
         }
-        for unit in units {
+        let escorted = self.navigation.escort_runs(fleet.id) > 0;
+        let escorts = units
+            .iter()
+            .filter(|unit| unit.side == Side::Player && unit.ship.is_none())
+            .count();
+        if escorts > usize::from(escorted) {
+            return Err(invalid());
+        }
+        // The first hostile of a hail is the trader; anything else unowned
+        // (raiders, escorts) starts undamaged and without gear.
+        let trader_unit = encounter
+            .trader
+            .as_ref()
+            .and_then(|_| units.iter().position(|unit| unit.side == Side::Hostile));
+        for (index, unit) in units.iter().enumerate() {
             let spec = rules.ship_catalog.spec(unit.kind).ok_or_else(invalid)?;
-            let owned = match unit.ship {
-                Some(id) => {
+            let fits = match (unit.ship, &encounter.trader) {
+                (Some(id), _) => {
                     let ship = self.ship(id).map_err(|_| invalid())?;
-                    ship.kind == unit.kind && ship.hull_damage == unit.starting_damage
+                    ship.kind == unit.kind
+                        && ship.hull_damage == unit.starting_damage
+                        && ship.gear == unit.gear
                 }
-                None => {
-                    let hailed = encounter.trader.as_ref();
-                    unit.starting_damage == hailed.map_or(0, |trader| trader.hull_damage)
+                (None, Some(trader)) if Some(index) == trader_unit => {
+                    unit.starting_damage == trader.hull_damage && unit.gear == trader.gear
+                }
+                (None, _) => {
+                    let escort = unit.side == Side::Player;
+                    unit.starting_damage == 0
+                        && unit.gear.is_empty()
+                        && (!escort || unit.kind == ESCORT_KIND)
                 }
             };
-            if spec.combat != unit.profile || !owned {
+            if spec.combat != unit.profile || !fits {
                 return Err(invalid());
             }
         }

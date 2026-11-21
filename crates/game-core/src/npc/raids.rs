@@ -9,9 +9,10 @@
 //!
 //! Damage sticks until the trader repairs at a market.
 use super::{Trader, market_location};
+use crate::navigation::escort_setup;
 use crate::{
     StarSystem,
-    combat::{CombatantSetup, Side, tactical},
+    combat::{CombatantSetup, Side, gear::ESCORT_KIND, tactical},
     economy::{Economy, MarketId},
     fleet::{FleetError, FleetMovementError, ShipKind},
 };
@@ -63,7 +64,12 @@ impl Economy {
             kind: ship.kind,
             profile: profile(ship.kind)?,
             hull_damage: ship.hull_damage,
+            gear: ship.gear.clone(),
         }];
+        if trader.escort_runs > 0 {
+            let name = format!("{}'s escort", trader.name);
+            setups.push(escort_setup(Side::Player, name, profile(ESCORT_KIND)?));
+        }
         for kind in raiders {
             setups.push(CombatantSetup {
                 name: format!("Raider {}", kind.label()),
@@ -72,6 +78,7 @@ impl Economy {
                 kind: *kind,
                 profile: profile(*kind)?,
                 hull_damage: 0,
+                gear: Vec::new(),
             });
         }
         let result = tactical::auto_resolve(&setups, &self.rules.combat_catalog, seed)
@@ -82,6 +89,14 @@ impl Economy {
             .filter(|unit| unit.side == Side::Hostile && unit.destroyed)
             .map(|unit| unit.kind)
             .collect();
+        // A destroyed escort ends the contract.
+        if result
+            .combatants
+            .iter()
+            .any(|unit| unit.side == Side::Player && unit.ship.is_none() && unit.destroyed)
+        {
+            trader.escort_runs = 0;
+        }
         let me = &result.combatants[0];
         if me.destroyed {
             let lost = ship.cargo.iter().sum::<u32>();
@@ -112,6 +127,7 @@ impl Economy {
         ship.cargo = [0; 6];
         ship.hull_damage = 0;
         ship.fuel = ship.fuel_capacity;
+        trader.escort_runs = 0;
         if let Some(home) = home {
             ship.location = market_location(home, systems);
         }

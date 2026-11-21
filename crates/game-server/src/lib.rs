@@ -180,7 +180,9 @@ impl Session {
             command @ (ClientCommand::Trade { .. }
             | ClientCommand::Refuel { .. }
             | ClientCommand::UpgradeHold { .. }
-            | ClientCommand::RepairShip { .. }) => self.commerce(player, command),
+            | ClientCommand::RepairShip { .. }
+            | ClientCommand::FitGear { .. }
+            | ClientCommand::HireEscort { .. }) => self.commerce(player, command),
             command @ (ClientCommand::BuyCharter { .. }
             | ClientCommand::AssaultHaven { .. }
             | ClientCommand::SetRunLimit { .. }) => self.campaign_command(player, command),
@@ -271,3 +273,6 @@ mod piracy_tests;
 
 #[cfg(test)]
 mod band_trader_tests;
+
+#[cfg(test)]
+mod gear_tests;

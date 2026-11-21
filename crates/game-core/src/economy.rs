@@ -10,6 +10,7 @@ pub use bounties::RaiderBounties;
 pub use charters::{CampaignRules, Charter};
 pub use dynamics::{MarketDynamics, MarketFlow, PRICE_LEVEL_UNIT};
 pub use rules::{EconomyRules, MarketTemplate};
+mod outfitting;
 mod services;
 mod shipyard;
 mod transactions;
@@ -167,6 +168,8 @@ pub enum EconomyError {
     AlreadyUpgraded,
     NoDamage,
     AlreadyChartered,
+    /// That gear is already fitted to this ship.
+    AlreadyFitted,
     ArithmeticOverflow,
 }
 
@@ -188,6 +191,7 @@ impl std::fmt::Display for EconomyError {
             Self::AlreadyUpgraded => "The cargo hold is already upgraded.",
             Self::NoDamage => "This ship has no hull damage to repair.",
             Self::AlreadyChartered => "This port's charter has already been sold.",
+            Self::AlreadyFitted => "This ship already has that gear fitted.",
             Self::ArithmeticOverflow => {
                 "The transaction exceeds supported quantity or credit limits."
             }

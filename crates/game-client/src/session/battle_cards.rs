@@ -7,7 +7,7 @@ use crate::theme::{AMBER, CYAN, GREEN};
 use egui::{Color32, CornerRadius, Rect, RichText, Sense, Stroke, Ui, Vec2};
 use game_core::combat::{
     CombatCatalog, Side,
-    tactical::{Battle, Unit, morale, move_points},
+    tactical::{Battle, Unit, morale},
 };
 
 const CARD: Color32 = Color32::from_rgb(14, 22, 26);
@@ -232,7 +232,7 @@ pub fn ship_card(ui: &mut Ui, battle: &Battle, me: usize, artwork: &Artwork) {
             let shields = unit.shields as f32 / unit.profile.shields.max(1) as f32;
             let shield_text = format!("{}/{}", unit.shields, unit.profile.shields);
             meter(ui, "Shields", shields, CYAN, &shield_text, 120.0);
-            let points = move_points(unit.profile.engine);
+            let points = unit.move_points();
             ui.horizontal(|ui| {
                 icons::glyph(ui, Icon::Engine, AMBER, "Engine");
                 ui.label(

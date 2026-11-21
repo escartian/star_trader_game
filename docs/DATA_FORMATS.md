@@ -188,7 +188,14 @@ A hailed trader's contact (`kind` `Trader`) stores `trader` (`id`, `name`,
 `hull_damage`) and the trader's hull as its one `hostiles` entry; both must match
 the saved NPC trader, which cannot be refitting. A combat report from an attack
 on a trader names it in `trader` and records `plunder` (cargo units taken).
-`navigation.piracies` counts demands and attacks. A raider band may record
+`navigation.piracies` counts demands and attacks. Ships (player and NPC) may
+list fitted `gear` (`afterburners`, `point_defense`, each at most once), and so
+may battle units; `navigation.escorts` holds hired escorts (`fleet`, `runs_left`
+1–10, one per existing fleet), NPC traders `escort_runs` (0–10), and a hailed
+trader's contact its `gear` and `escort` (then `hostiles` adds the escort's
+patrol hull). An open battle may include one unowned player-side escort only
+while that fleet's contract runs. Economy rules add `gear_prices`
+(`afterburners`, `point_defense`, `escort`), with defaults for older files. A raider band may record
 `stalking` (an NPC trader's ID, which must exist; never together with
 `hunting`), and its `cooldown` may reach 12 after striking a trader. These fields are additive and
 omitted when empty.

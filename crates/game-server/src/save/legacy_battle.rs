@@ -70,6 +70,7 @@ pub(super) fn resolve(data: &mut SaveData, saved: Value) -> Result<(), String> {
             kind: unit.kind,
             profile: unit.profile.clone(),
             hull_damage: unit.starting_damage,
+            gear: Vec::new(),
         })
         .collect();
     let mut battle =

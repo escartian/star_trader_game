@@ -52,6 +52,9 @@ pub struct EconomyRules {
     /// Market growth, treasury drift and inflation (defaults for older definitions).
     #[serde(default)]
     pub dynamics: super::MarketDynamics,
+    /// Anti-piracy gear and escort prices (defaults for older definitions).
+    #[serde(default)]
+    pub gear_prices: crate::combat::gear::GearPrices,
 }
 
 /// The player's 12% contact chance × one contact in three being raiders.
@@ -131,6 +134,7 @@ impl EconomyRules {
             || self.npc_raid_chance_percent > 100
             || !self.campaign.valid()
             || !self.dynamics.valid()
+            || !self.gear_prices.valid()
         {
             return Err("Invalid initial credits or service prices".into());
         }

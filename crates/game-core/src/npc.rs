@@ -1,6 +1,7 @@
 //! NPC commerce uses the same routes, hulls, cargo and finite-money rules as players.
 mod band_raids;
 mod decisions;
+mod outfit;
 mod raids;
 use crate::{
     StarSystem,
@@ -39,6 +40,9 @@ pub struct Trader {
     /// Runs left being refitted after raiders destroyed the ship (0 = trading).
     #[serde(default, skip_serializing_if = "is_zero")]
     pub refit_runs: u32,
+    /// Runs left on a hired escort contract (0: none; see `combat::gear`).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub escort_runs: u32,
 }
 
 fn is_zero(value: &u32) -> bool {
@@ -91,6 +95,7 @@ impl Economy {
                 state,
                 last_action: "Awaiting the next navigation run".into(),
                 refit_runs: 0,
+                escort_runs: 0,
             });
         }
     }
@@ -115,6 +120,7 @@ impl Economy {
                 || trader.state.fleets.len() != 1
                 || trader.state.navigation.run != run
                 || trader.refit_runs > REFIT_RUNS
+                || trader.escort_runs > crate::combat::gear::ESCORT_RUNS
             {
                 return Err("Invalid NPC trader".into());
             }
@@ -133,6 +139,7 @@ impl Economy {
                 || !(1..=10_000).contains(&ship.cargo_capacity)
                 || ship.cargo_used() > u64::from(ship.cargo_capacity)
                 || ship.upgraded
+                || !crate::combat::gear::valid_fit(&ship.gear)
                 || ship.cargo_capacity != ship.base_cargo_capacity
                 || !trader.state.navigation.encounters.is_empty()
                 || self

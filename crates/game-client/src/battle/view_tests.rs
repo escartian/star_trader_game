@@ -29,6 +29,7 @@ fn duel() -> Battle {
         kind,
         profile: ShipCatalog::default().spec(kind).unwrap().combat.clone(),
         hull_damage: 0,
+        gear: Vec::new(),
     };
     Battle::new(
         &[

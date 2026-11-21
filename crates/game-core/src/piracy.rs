@@ -13,11 +13,13 @@
 //!   If the trader is destroyed you plunder its hold (what fits), and it is
 //!   refitted at its home port; if it withdraws it escapes with its cargo.
 //!   Bounties are for raiders only. Giving up just breaks the attack off.
+//! - A trader's hired escort fights beside it and counts toward its strength;
+//!   so does yours. Destroying the escort ends the trader's contract.
 //! - Every demand and attack counts in `NavigationState::piracies`. Law
 //!   consequences (wanted status, police) arrive with factions.
 use crate::{
     StarSystem,
-    combat::Side,
+    combat::{Side, gear::ESCORT_KIND},
     economy::Economy,
     fleet::{FleetError, FleetId, FleetMovementError, ShipCatalog, ShipKind},
     navigation::{
@@ -148,18 +150,25 @@ pub fn hail(
         .revision
         .checked_add(1)
         .ok_or(TravelError::TimeOverflow)?;
+    let escort = npc.escort_runs > 0;
+    let mut hostiles = vec![ship.kind];
+    if escort {
+        hostiles.push(ESCORT_KIND);
+    }
     let encounter = Encounter {
         id: navigation.next_encounter_id,
         fleet,
         kind: EncounterKind::Trader,
         run: navigation.run,
-        hostiles: vec![ship.kind],
+        hostiles,
         band: None,
         haven: false,
         trader: Some(TraderContact {
             id: npc.id,
             name: npc.name.clone(),
             hull_damage: ship.hull_damage,
+            gear: ship.gear.clone(),
+            escort,
         }),
     };
     navigation.next_encounter_id = next;
@@ -178,6 +187,9 @@ pub fn would_yield(state: &TravelState, economy: &Economy, encounter: &Encounter
     else {
         return false;
     };
+    // Hired escorts count on both sides.
+    let our_escort =
+        (state.navigation.escort_runs(encounter.fleet) > 0).then_some((ESCORT_KIND, 0));
     let ours = state
         .fleets
         .iter()
@@ -185,9 +197,14 @@ pub fn would_yield(state: &TravelState, economy: &Economy, encounter: &Encounter
         .into_iter()
         .flat_map(|record| &record.ships)
         .filter_map(|id| state.ship(*id).ok())
-        .map(|ship| (ship.kind, ship.hull_damage));
+        .map(|ship| (ship.kind, ship.hull_damage))
+        .chain(our_escort);
     let ship = &npc.state.ships[0];
-    let theirs = strength([(ship.kind, ship.hull_damage)], catalog);
+    let their_escort = (npc.escort_runs > 0).then_some((ESCORT_KIND, 0));
+    let theirs = strength(
+        std::iter::once((ship.kind, ship.hull_damage)).chain(their_escort),
+        catalog,
+    );
     u128::from(strength(ours, catalog)) * 100
         >= u128::from(theirs) * u128::from(yield_percent(npc.personality))
 }
@@ -268,11 +285,19 @@ pub fn settle_battle(
         return Ok(());
     };
     let fleet = report.fleet;
+    // The trader is the first hostile; a second one is its escort.
     let Some(result) = report.side(Side::Hostile).next().cloned() else {
         return Err(FleetError::InvalidSelection.into());
     };
+    let escort_lost = report
+        .side(Side::Hostile)
+        .skip(1)
+        .any(|unit| unit.destroyed);
     let index = position(economy, id)?;
     let mut npc = economy.traders[index].clone();
+    if escort_lost {
+        npc.escort_runs = 0;
+    }
     let hull = format!("hull {}/{}", result.hull - result.final_damage, result.hull);
     let mut plunder = 0;
     if result.destroyed {
@@ -343,9 +368,15 @@ pub fn validate_contacts(state: &TravelState, economy: &Economy) -> Result<(), S
         };
         let npc = find(economy, hailed.id).map_err(|error| error.to_string())?;
         let ship = &npc.state.ships[0];
+        let mut hostiles = vec![ship.kind];
+        if npc.escort_runs > 0 {
+            hostiles.push(ESCORT_KIND);
+        }
         if npc.name != hailed.name
             || npc.refit_runs > 0
-            || encounter.hostiles != [ship.kind]
+            || encounter.hostiles != hostiles
+            || hailed.escort != (npc.escort_runs > 0)
+            || ship.gear != hailed.gear
             || ship.hull_damage != hailed.hull_damage
         {
             return Err("Hailed trader differs from the saved trader".into());

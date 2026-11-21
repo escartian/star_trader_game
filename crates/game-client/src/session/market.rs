@@ -198,6 +198,10 @@ impl LocalSession {
                 });
             }
         });
+        ui.separator();
+        if let Some(command) = self.outfitting_row(ui, &ship) {
+            action = Some(command);
+        }
         self.known_prices(ui, systems);
         if !self.notice.is_empty() {
             ui.horizontal_wrapped(|ui| {

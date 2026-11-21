@@ -287,6 +287,31 @@ they stalk (see above). Over 400 runs on four seeds the two starting traders met
 15–32 random raids and 22–42 band strikes, and none was destroyed: bands that
 could win easily take cargo instead, and scout pairs rarely beat a freighter.
 
+## Anti-piracy gear and escorts
+
+Gear and escorts are bought in the Market window (`game-core/src/combat/gear.rs`,
+prices in the economy rules' `gear_prices`, at today's price level). The payment
+goes to that market's treasury.
+
+| Item | Applies to | Effect | Price |
+| --- | --- | --- | --- |
+| Afterburners | one ship | +1 move each battle turn; +15 points on the Evade chance when every ship in the fleet has them (at most 90%) | 500 cr |
+| Point defense | one ship | shots at the ship have 15 points less chance to hit (stacks with debris cover) | 700 cr |
+| Escort | a fleet | a patrol ship joins every battle the fleet fights, on its side, for 10 runs; you command it like your own ships. If it is destroyed the contract ends. Hiring again renews it to 10 runs | 250 cr |
+
+Each item is fitted once per ship and stays fitted. A battle never grows beyond
+16 ships, so an escort stays out of a battle that is already full.
+
+**NPC traders arm themselves** (`game-core/src/npc/outfit.rs`). At a market,
+after repairs and fuel, a trader whose wallet holds more than twice its starting
+credits plus the price fits afterburners, then point defense (one item per stop).
+With more than three times its starting credits it hires an escort whenever it
+has none. The traffic list and the hail card show a trader's defences. Over 400
+runs on four seeds, traders fitted their first gear between runs 18 and 99 and
+flew with an escort 40–60% of the time afterwards. A trader's escort fights
+beside it against raiders and pirates and counts toward its strength when
+someone demands its cargo.
+
 ## Hailing and robbing NPC traders
 
 Once you have met raiders, the map roster's TRAFFIC list shows **Hail** beside
@@ -302,7 +327,8 @@ Hailing opens a contact that shows the trader's hold and hull. You can:
   half its cargo, rounded up, most valuable goods first, as far as your holds have
   room. The card says whether it will give way.
 - **Attack** or **Auto-resolve:** the usual tactical battle against the trader's
-  ship, which fights under its own name and with its current damage. Destroy it
+  ship, which fights under its own name with its current damage and gear,
+  joined by its escort if it has one (destroying the escort ends its contract). Destroy it
   and you plunder its hold (as much as fits, shown in the combat report), and it
   is refitted at its home port for 8 runs. If it withdraws it escapes with its
   cargo and keeps its damage. Traders pay no bounty. Giving up (**Break off**,
@@ -334,5 +360,5 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 
 A GPU renderer with a depth buffer, morale effects on accuracy, faction
 hostility rules, raider bands crossing between systems, legal consequences of
-piracy, loadout changes and partial repairs. See the
+piracy, weapon loadout changes and partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

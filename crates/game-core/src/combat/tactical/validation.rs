@@ -1,5 +1,5 @@
 //! Structural checks for a battle loaded from a save.
-use super::{Battle, CEASEFIRE_ROUNDS, MAX_ROUNDS, move_points, terrain};
+use super::{Battle, CEASEFIRE_ROUNDS, MAX_ROUNDS, terrain};
 use crate::combat::{
     CombatCatalog,
     engagement::{MAX_COMBATANTS, Side},
@@ -33,7 +33,7 @@ impl Battle {
             return Err("Invalid battle turn state".into());
         }
         let acting = &self.units[usize::from(self.order[self.turn])];
-        if !acting.active() || self.moves_left > move_points(acting.profile.engine) {
+        if !acting.active() || self.moves_left > acting.move_points() {
             return Err("Invalid battle turn state".into());
         }
         let mut hexes = HashSet::new();
@@ -48,7 +48,8 @@ impl Battle {
                 || unit.hits > unit.shots
                 || !self.board.contains(unit.at)
                 || self.blocked(unit.at)
-                || (unit.side == Side::Hostile) == unit.ship.is_some()
+                || (unit.side == Side::Hostile && unit.ship.is_some())
+                || !crate::combat::gear::valid_fit(&unit.gear)
                 || (unit.active() && !hexes.insert(unit.at))
             {
                 return Err(format!("Invalid battle state for {}", unit.name));

@@ -18,6 +18,7 @@ fn ship(kind: ShipKind, side: Side) -> CombatantSetup {
         kind,
         profile: ShipCatalog::default().spec(kind).unwrap().combat.clone(),
         hull_damage: 0,
+        gear: Vec::new(),
     }
 }
 

@@ -61,6 +61,9 @@ pub struct Ship {
     /// Structure points lost in combat; 0 = intact. Max hull comes from the class.
     #[serde(default)]
     pub hull_damage: u32,
+    /// Anti-piracy gear fitted (see `combat::gear`), each item at most once.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub gear: Vec<crate::combat::gear::Gear>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -144,6 +147,7 @@ impl Default for TravelState {
                 cargo_capacity: 20,
                 base_cargo_capacity: 20,
                 upgraded: false,
+                gear: Vec::new(),
                 fuel: 40,
                 fuel_capacity: 40,
                 range_ly: 20,

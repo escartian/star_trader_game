@@ -92,6 +92,17 @@ pub enum ClientCommand {
         ship: ShipId,
         expected_revision: u64,
     },
+    /// Fit anti-piracy gear to `ship` at its current market.
+    FitGear {
+        ship: ShipId,
+        gear: game_core::combat::gear::Gear,
+        expected_revision: u64,
+    },
+    /// Hire (or renew) an escort for the fleet `ship` leads, at its market.
+    HireEscort {
+        ship: ShipId,
+        expected_revision: u64,
+    },
     /// Buy the charter of the port where `ship` is (see `economy::charters`).
     BuyCharter {
         ship: ShipId,
@@ -216,6 +227,14 @@ pub enum SessionEvent {
     HoldUpgraded,
     Repaired {
         ship: ShipId,
+        cost: game_core::economy::Credits,
+    },
+    GearFitted {
+        ship: ShipId,
+        gear: game_core::combat::gear::Gear,
+        cost: game_core::economy::Credits,
+    },
+    EscortHired {
         cost: game_core::economy::Credits,
     },
 }

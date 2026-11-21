@@ -2,7 +2,11 @@
 //! to owned ships. Battles themselves are played in `navigation::battle`. Combat arithmetic itself lives in `combat::engagement`.
 use super::{Encounter, EncounterChoice, NavigationError, NavigationEvent};
 use crate::{
-    combat::{CombatOutcome, CombatReport, CombatantSetup, Side, engagement::MAX_COMBATANTS},
+    combat::{
+        CombatOutcome, CombatProfile, CombatReport, CombatantSetup, Side,
+        engagement::MAX_COMBATANTS,
+        gear::{AFTERBURNER_EVADE_PERCENT, ESCORT_KIND, Gear},
+    },
     economy::{Commodity, EconomyRules},
     fleet::{Fleet, FleetError, FleetId, FleetMovementError, ShipKind},
     travel::{ShipId, TravelError, TravelState},
@@ -16,6 +20,19 @@ pub const MAX_SAVED_RAIDERS: usize = 8;
 /// Ore recovered per destroyed raider hull, if cargo space allows.
 pub const SALVAGE_ORE_PER_RAIDER: u32 = 2;
 
+/// A hired escort's combatant: an undamaged [`ESCORT_KIND`] without gear.
+pub(crate) fn escort_setup(side: Side, name: String, profile: CombatProfile) -> CombatantSetup {
+    CombatantSetup {
+        name,
+        side,
+        ship: None,
+        kind: ESCORT_KIND,
+        profile,
+        hull_damage: 0,
+        gear: Vec::new(),
+    }
+}
+
 /// Escape chance: 35% ± 10 points per engine-rating difference between the
 /// fleet's slowest ship and the fastest raider, clamped to 10–90%.
 pub fn evade_chance_percent(slowest_fleet_engine: u32, fastest_raider_engine: u32) -> u32 {
@@ -24,6 +41,33 @@ pub fn evade_chance_percent(slowest_fleet_engine: u32, fastest_raider_engine: u3
 }
 
 impl TravelState {
+    /// The fleet's chance to evade `hostiles` ([`evade_chance_percent`]),
+    /// plus the afterburner bonus when every ship has afterburners (at most 90%).
+    pub fn evade_chance(
+        &self,
+        fleet: &Fleet,
+        hostiles: &[ShipKind],
+        rules: &EconomyRules,
+    ) -> Result<u32, FleetMovementError> {
+        let catalog = &rules.ship_catalog;
+        let engine = |kind| catalog.spec(kind).map_or(1, |spec| spec.combat.engine);
+        let mut slowest = u32::MAX;
+        let mut boosted = true;
+        for id in &fleet.ships {
+            let ship = self.ship(*id)?;
+            slowest = slowest.min(engine(ship.kind));
+            boosted &= ship.gear.contains(&Gear::Afterburners);
+        }
+        let fastest = hostiles.iter().map(|kind| engine(*kind)).max();
+        let chance = evade_chance_percent(slowest, fastest.unwrap_or(1));
+        let bonus = if boosted {
+            AFTERBURNER_EVADE_PERCENT
+        } else {
+            0
+        };
+        Ok((chance + bonus).min(90))
+    }
+
     /// One raider per two fleet ships (rounded up, at most [`MAX_RAIDERS`]).
     /// Raiders lead with a patrol hull only when the fleet itself fields one,
     /// so an unarmed trader is never met by a warship.
@@ -70,15 +114,7 @@ impl TravelState {
             });
         }
         if evading {
-            let catalog = &rules.ship_catalog;
-            let engine = |kind| catalog.spec(kind).map_or(1, |spec| spec.combat.engine);
-            let slowest = fleet
-                .ships
-                .iter()
-                .map(|id| self.ship(*id).map(|ship| engine(ship.kind)))
-                .try_fold(u32::MAX, |low, value| value.map(|value| low.min(value)))?;
-            let fastest = encounter.hostiles.iter().map(|kind| engine(*kind)).max();
-            let chance = evade_chance_percent(slowest, fastest.unwrap_or(1));
+            let chance = self.evade_chance(fleet, &encounter.hostiles, rules)?;
             if (self.navigation.rolls() % 100) < u64::from(chance) {
                 self.navigation
                     .encounters
@@ -119,22 +155,48 @@ impl TravelState {
                 kind: ship.kind,
                 profile: profile(ship.kind)?,
                 hull_damage: ship.hull_damage,
+                gear: ship.gear.clone(),
             });
         }
+        // A hired escort flies beside the fleet while there is room for it.
+        let escorted = self.navigation.escort_runs(fleet.id) > 0;
+        let room = setups.len() + encounter.hostiles.len() < MAX_COMBATANTS;
+        if escorted && room {
+            setups.push(escort_setup(
+                Side::Player,
+                "Hired escort".into(),
+                profile(ESCORT_KIND)?,
+            ));
+        }
         for (index, kind) in encounter.hostiles.iter().enumerate() {
-            // A hailed trader fights under its own name, with its own damage.
-            let (name, hull_damage) = match &encounter.trader {
-                Some(trader) => (trader.name.clone(), trader.hull_damage),
-                None => (format!("Raider {} {}", kind.label(), index + 1), 0),
+            // A hailed trader fights under its own name, with its own damage
+            // and gear; a second hostile is its hired escort.
+            let setup = match (&encounter.trader, index) {
+                (Some(trader), 0) => CombatantSetup {
+                    name: trader.name.clone(),
+                    side: Side::Hostile,
+                    ship: None,
+                    kind: *kind,
+                    profile: profile(*kind)?,
+                    hull_damage: trader.hull_damage,
+                    gear: trader.gear.clone(),
+                },
+                (Some(trader), _) => escort_setup(
+                    Side::Hostile,
+                    format!("{}'s escort", trader.name),
+                    profile(*kind)?,
+                ),
+                (None, _) => CombatantSetup {
+                    name: format!("Raider {} {}", kind.label(), index + 1),
+                    side: Side::Hostile,
+                    ship: None,
+                    kind: *kind,
+                    profile: profile(*kind)?,
+                    hull_damage: 0,
+                    gear: Vec::new(),
+                },
             };
-            setups.push(CombatantSetup {
-                name,
-                side: Side::Hostile,
-                ship: None,
-                kind: *kind,
-                profile: profile(*kind)?,
-                hull_damage,
-            });
+            setups.push(setup);
         }
         if setups.len() > MAX_COMBATANTS {
             return Err(FleetError::ShipLimit.into());

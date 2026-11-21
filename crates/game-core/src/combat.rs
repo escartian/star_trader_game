@@ -4,6 +4,7 @@
 //! hex board with altitude bands (`tactical`); `engagement` holds shared result
 //! types and damage rules.
 pub mod engagement;
+pub mod gear;
 pub mod report;
 mod rng;
 pub mod tactical;

@@ -3,6 +3,7 @@
 //! own edge, or (for the player) surrender. Each action validates first and
 //! changes nothing when rejected.
 use super::{Battle, BattleError, COVER_PERCENT, Hex};
+use crate::combat::gear::{Gear, POINT_DEFENSE_PERCENT};
 use crate::combat::{
     CombatCatalog, WeaponSpec,
     engagement::{ShotRecord, Side, adjusted_hit_chance, apply_hit},
@@ -62,11 +63,17 @@ impl Battle {
     }
 
     /// Percent chance for one shot of `weapon` from `attacker` to hit `target`
-    /// where they stand now, cover included.
+    /// where they stand now, cover and point defense included.
     pub fn shot_chance(&self, attacker: usize, target: usize, weapon: &WeaponSpec) -> u32 {
         let (from, to) = (&self.units[attacker], &self.units[target]);
         let cover = if self.cover(to.at) { -COVER_PERCENT } else { 0 };
-        adjusted_hit_chance(weapon, to.profile.engine, from.at.distance(to.at), cover)
+        let defense = if to.has(Gear::PointDefense) {
+            -POINT_DEFENSE_PERCENT
+        } else {
+            0
+        };
+        let distance = from.at.distance(to.at);
+        adjusted_hit_chance(weapon, to.profile.engine, distance, cover + defense)
     }
 
     /// Moves the acting ship to `to`, paying one point per hex step along the

@@ -188,6 +188,13 @@ impl TravelState {
             }
         }
         events.extend(self.move_bands(player, run, systems, on_lane, prey)?);
+        // Escort contracts run down by one run each.
+        for escort in &mut self.navigation.escorts {
+            escort.runs_left -= 1;
+        }
+        self.navigation
+            .escorts
+            .retain(|escort| escort.runs_left > 0);
         events.extend(self.mine(systems)?);
         events.push(NavigationEvent::RunExecuted(run));
         Ok(events)

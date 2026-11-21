@@ -26,6 +26,15 @@ impl Session {
             | ClientCommand::RepairShip {
                 ship,
                 expected_revision,
+            }
+            | ClientCommand::FitGear {
+                ship,
+                expected_revision,
+                ..
+            }
+            | ClientCommand::HireEscort {
+                ship,
+                expected_revision,
             } => (ship, expected_revision),
             _ => unreachable!("only commerce commands reach this handler"),
         };
@@ -73,6 +82,28 @@ impl Session {
             ClientCommand::RepairShip { .. } => {
                 let cost = economy.repair(state.ship_mut(ship)?)?;
                 SessionEvent::Repaired { ship, cost }
+            }
+            ClientCommand::FitGear { gear, .. } => {
+                let cost = economy.fit_gear(state.ship_mut(ship)?, gear)?;
+                SessionEvent::GearFitted { ship, gear, cost }
+            }
+            ClientCommand::HireEscort { .. } => {
+                // The fleet's lead ship pays at its market; renewing restores
+                // the full contract.
+                let fleet = state.fleet_for_ship(ship)?.id;
+                let lead = *state
+                    .fleet_for_ship(ship)?
+                    .ships
+                    .first()
+                    .ok_or(TravelError::UnknownShip)?;
+                let cost = economy.hire_escort(state.ship(lead)?)?;
+                let escorts = &mut state.navigation.escorts;
+                escorts.retain(|escort| escort.fleet != fleet);
+                escorts.push(game_core::navigation::Escort {
+                    fleet,
+                    runs_left: game_core::combat::gear::ESCORT_RUNS,
+                });
+                SessionEvent::EscortHired { cost }
             }
             _ => unreachable!("command was validated above"),
         };

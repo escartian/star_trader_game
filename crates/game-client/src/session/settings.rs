@@ -1,7 +1,7 @@
 //! Client preferences: applying and persisting them, and the Settings page
 //! (audio, display, gameplay) shown in game and on the main menu.
 use super::LocalSession;
-use crate::preferences::{ClientOptions, Preferences, UI_SCALE_MAX, UI_SCALE_MIN};
+use crate::preferences::{ClientOptions, Preferences, UI_SCALE_MAX, UI_SCALE_MIN, UI_SCALE_STEP};
 use crate::theme::icons::{self, Icon};
 use crate::theme::{AMBER, CYAN};
 use egui::RichText;
@@ -181,13 +181,30 @@ fn options_controls(ui: &mut egui::Ui, options: &mut ClientOptions) {
     }
     egui::Grid::new("display-scale").show(ui, |ui| {
         ui.label("Interface scale");
-        ui.add(
-            egui::Slider::new(&mut options.ui_scale, UI_SCALE_MIN..=UI_SCALE_MAX)
-                .step_by(5.0)
-                .suffix("%")
-                .trailing_fill(true),
-        );
+        ui_scale_slider(ui, &mut options.ui_scale);
     });
     ui.checkbox(&mut options.animations, "Animations")
         .on_hover_text("Fleet glides and battle moves. Off shows results at once.");
+}
+
+/// Interface scale in 25% steps, applied when the slider is released: rescaling
+/// mid-drag would move the slider under the pointer and make it run away.
+fn ui_scale_slider(ui: &mut egui::Ui, scale: &mut u8) {
+    let id = ui.id().with("ui-scale-draft");
+    let mut draft = ui.data(|data| data.get_temp::<u8>(id)).unwrap_or(*scale);
+    let response = ui.add(
+        egui::Slider::new(&mut draft, UI_SCALE_MIN..=UI_SCALE_MAX)
+            .step_by(f64::from(UI_SCALE_STEP))
+            .suffix("%")
+            .trailing_fill(true),
+    );
+    if response.dragged() {
+        ui.data_mut(|data| data.insert_temp(id, draft));
+        return;
+    }
+    // Released, clicked or changed with the keyboard: apply now.
+    ui.data_mut(|data| data.remove::<u8>(id));
+    if response.drag_stopped() || response.changed() {
+        *scale = draft;
+    }
 }

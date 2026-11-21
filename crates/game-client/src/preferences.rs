@@ -47,6 +47,8 @@ pub struct ClientOptions {
 
 pub const UI_SCALE_MIN: u8 = 75;
 pub const UI_SCALE_MAX: u8 = 200;
+/// The Settings slider moves in these steps; saved values need not match.
+pub const UI_SCALE_STEP: u8 = 25;
 
 impl Default for ClientOptions {
     fn default() -> Self {

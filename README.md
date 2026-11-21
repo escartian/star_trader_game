@@ -34,8 +34,9 @@ browser build compiles the same client to WebAssembly.
   ground, weapon ranges, withdrawal) that you command or auto-resolve, with a
   saved combat report, destroyed ships, salvage, raider bounties and paid hull
   repairs.
-- Roaming raider bands in every system but home that hunt fleets in the open;
-  dock or land to hide, outrun them or fight them for the bounty.
+- Roaming raider bands in every system but home that hunt fleets in the open,
+  chase fleets that flee into the next system and wander between systems;
+  dock or land to hide, outrun them, flee home or fight them for the bounty.
 - Roads to victory (Menu → Victory): win as a Trader (10% of all galaxy wealth
   or three port charters) or a Soldier (destroy the Raider Haven), with a published score,
   an optional campaign length and game over when your last ship is lost. Port

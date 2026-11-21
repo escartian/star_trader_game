@@ -1,4 +1,6 @@
 //! Plot fleet courses, then advance all fleets through one shared navigation run.
+mod band_motion;
+mod band_roaming;
 mod battle;
 mod contacts;
 mod haven;
@@ -6,9 +8,11 @@ mod hostile;
 mod landing;
 mod next_leg;
 mod raiders;
+pub(crate) use band_motion::{distance, local_in};
+pub use band_roaming::{BandTransit, MAX_BANDS_PER_SYSTEM};
+pub use raiders::STRIKE_KM;
 pub use raiders::{COOLDOWN_RUNS, LOOT_COOLDOWN_RUNS};
 pub use raiders::{Prey, RaiderBand};
-pub(crate) use raiders::{STRIKE_KM, distance, local_in};
 mod orders;
 mod position;
 pub use battle::{ActiveBattle, BattleAction};

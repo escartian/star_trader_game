@@ -217,7 +217,9 @@ Combat is the original README's first prioritized expansion.
   hand over half their cargo, others fight (auto-resolved); bands then lie low.
 - [x] Anti-piracy gear and escorts: afterburners and point defense per ship, a
   hired patrol escort per fleet for 10 runs; NPC traders buy them from profits.
-- [ ] Hostility rules for faction fleets, and bands that cross systems.
+- [x] Raider bands cross systems: they chase a fleet that flees into the next
+  system on its course (never home) and roam between systems, two at most per system.
+- [ ] Hostility rules for faction fleets.
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
 cargo and rewards remain consistent. Raider fights meet this with behavior and

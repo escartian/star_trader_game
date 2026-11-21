@@ -1,7 +1,8 @@
 //! Roaming raider bands: persistent hostile fleets the player can see coming.
 //!
 //! - Each system but the home system holds one band: two scouts, or a patrol
-//!   ship leading a scout one time in three. Bands never leave their system.
+//!   ship leading a scout one time in three. Bands may cross to other systems,
+//!   chasing a fleet that fled or roaming (`band_roaming`).
 //! - Every run, after fleets move, each band hunts the nearest exposed player
 //!   fleet within [`DETECTION_KM`] (fleets docked at a station or landed on a
 //!   surface are safe), or stalks a nearer NPC trader in the open ([`Prey`],
@@ -20,11 +21,12 @@
 //! Bands draw from their own random stream, so they never change the outcome
 //! of other contact rolls. With `encounter_chance_percent` at 0 (a peaceful
 //! game, or a quiet test voyage) bands still roam but never strike.
+use super::band_motion::{distance, local_in, near, step_toward};
 use super::{Encounter, EncounterKind, NavigationEvent};
 use crate::{
     BodyKind, LocalPosition, StarSystem, SystemId,
     fleet::{FleetId, FleetMovementError, ShipKind},
-    movement::{SpacePosition, safe_route},
+    movement::SpacePosition,
     planet::Danger,
     travel::{Location, PlayerId, TravelError, TravelState},
 };
@@ -61,6 +63,10 @@ pub struct RaiderBand {
     /// Runs left backing off (no hunting) after a fight or an escape.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub cooldown: u32,
+    /// Set while the band crosses to `system` from another system; it then
+    /// neither hunts nor strikes, and `position` is where it will arrive.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transit: Option<super::BandTransit>,
 }
 
 fn is_zero(value: &u32) -> bool {
@@ -114,10 +120,11 @@ impl TravelState {
             hunting: None,
             stalking: None,
             cooldown: 0,
+            transit: None,
         });
     }
 
-    fn band_roll(&mut self) -> u64 {
+    pub(super) fn band_roll(&mut self) -> u64 {
         self.navigation.band_rng = self.navigation.band_rng.wrapping_add(0x9e37_79b9_7f4a_7c15);
         let mut value = self.navigation.band_rng;
         value = (value ^ (value >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
@@ -200,12 +207,19 @@ impl TravelState {
             .collect();
         self.navigation.band_respawns.retain(|(_, at)| *at > run);
         for system in due {
-            if let Some(world) = systems.iter().find(|known| known.id == system) {
+            if !self.band_room(system) {
+                // Full of roaming bands: try again later.
+                let later = self.navigation.run.saturating_add(RESPAWN_RUNS);
+                self.navigation.band_respawns.push((system, later));
+            } else if let Some(world) = systems.iter().find(|known| known.id == system) {
                 self.spawn_band(world);
             }
         }
         let mut events = Vec::new();
         for index in 0..self.navigation.bands.len() {
+            if self.advance_transit(index) {
+                continue;
+            }
             let band = self.navigation.bands[index].clone();
             let Some(world) = systems.iter().find(|known| known.id == band.system) else {
                 continue;
@@ -226,6 +240,12 @@ impl TravelState {
             } else {
                 None
             };
+            if quarry.is_none()
+                && let Some(destination) = self.crossing(&band, player, systems)
+            {
+                self.send_band(index, destination, systems);
+                continue;
+            }
             let chasing = band.hunting.is_some() || band.stalking.is_some();
             let heading = match quarry {
                 Some((_, position)) => position,
@@ -375,70 +395,4 @@ fn nearest_prey(
             (gap <= DETECTION_KM).then_some((gap, target.trader, local))
         })
         .min_by_key(|(gap, trader, _)| (*gap, *trader))
-}
-
-/// `at` relative to `world`'s star, if it lies inside the system (within
-/// `half_extent_km` on every axis).
-pub(crate) fn local_in(
-    world: &StarSystem,
-    at: SpacePosition,
-    half_extent_km: i64,
-) -> Option<LocalPosition> {
-    let centre = SpacePosition::from_galaxy(world.position).ok()?;
-    Some(LocalPosition {
-        x_km: at.x_km.checked_sub(centre.x_km)?,
-        y_km: at.y_km.checked_sub(centre.y_km)?,
-        z_km: at.z_km.checked_sub(centre.z_km)?,
-    })
-    .filter(|local| {
-        [local.x_km, local.y_km, local.z_km]
-            .iter()
-            .all(|value| value.abs() <= half_extent_km)
-    })
-}
-
-pub(crate) fn distance(a: LocalPosition, b: LocalPosition) -> i64 {
-    let squares: i128 = [(a.x_km, b.x_km), (a.y_km, b.y_km), (a.z_km, b.z_km)]
-        .iter()
-        .map(|(a, b)| (i128::from(*a) - i128::from(*b)).pow(2))
-        .sum();
-    i64::try_from((squares as u128).isqrt()).unwrap_or(i64::MAX)
-}
-
-fn near(a: LocalPosition, b: LocalPosition) -> bool {
-    distance(a, b) <= STRIKE_KM
-}
-
-/// Up to one run's distance toward `goal`, along a route that avoids the star
-/// and every body (a band that cannot find one holds still). On the plane,
-/// orbiting bodies often cross the straight line, so the band follows the
-/// detour's waypoints for as far as one run takes it.
-fn step_toward(
-    rules: &crate::movement::MovementRules,
-    world: &StarSystem,
-    from: LocalPosition,
-    goal: LocalPosition,
-) -> LocalPosition {
-    let Ok(path) = safe_route(rules, world, from, goal) else {
-        return from;
-    };
-    let mut at = from;
-    let mut budget = BAND_KM_PER_RUN;
-    for next in path.into_iter().chain(std::iter::once(goal)) {
-        let gap = distance(at, next);
-        if gap <= budget {
-            budget -= gap;
-            at = next;
-            continue;
-        }
-        let scale = |a: i64, b: i64| {
-            a + i64::try_from(i128::from(b - a) * i128::from(budget) / i128::from(gap)).unwrap_or(0)
-        };
-        return LocalPosition {
-            x_km: scale(at.x_km, next.x_km),
-            y_km: scale(at.y_km, next.y_km),
-            z_km: scale(at.z_km, next.z_km),
-        };
-    }
-    at
 }

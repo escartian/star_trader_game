@@ -1,6 +1,7 @@
 //! What the galaxy map draws besides systems: own fleets as stacked chips (all
 //! fleets in one system share a chip), NPC traders as small 3D ship models, and a
-//! red marker beside each system that holds a raider band.
+//! red marker beside each system that holds a raider band (or, for a band
+//! crossing to another system, on the line between the two).
 use super::{Map, position};
 use super::{
     art::{ArtKind, Artwork},
@@ -101,11 +102,27 @@ impl Map {
             }
         }
         let red = crate::battle::scene::HOSTILE;
+        let find = |id| self.systems.iter().find(|known| known.id == id);
         for band in self.session.raider_bands() {
-            let Some(system) = self.systems.iter().find(|known| known.id == band.system) else {
+            let Some(system) = find(band.system) else {
                 continue;
             };
-            let at = self.camera.project(position(system), rect) + Vec2::new(-15.0, -15.0);
+            let destination = self.camera.project(position(system), rect);
+            let at = match band
+                .transit
+                .and_then(|transit| Some((transit, find(transit.from)?)))
+            {
+                // Crossing: along a faint line from its origin to its destination.
+                Some((transit, origin)) => {
+                    let origin = self.camera.project(position(origin), rect);
+                    painter.line_segment(
+                        [origin, destination],
+                        Stroke::new(1.0_f32, red.gamma_multiply(0.45)),
+                    );
+                    origin.lerp(destination, transit.progress())
+                }
+                None => destination + Vec2::new(-15.0, -15.0),
+            };
             let points = vec![
                 at + Vec2::new(0.0, -5.0),
                 at + Vec2::new(5.0, 0.0),

@@ -12,7 +12,7 @@ impl LocalView {
         for band in self
             .bands
             .iter()
-            .filter(|band| band.system == self.system.id)
+            .filter(|band| band.system == self.system.id && band.transit.is_none())
         {
             let at = self
                 .camera

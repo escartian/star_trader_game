@@ -255,9 +255,9 @@ After the fight:
 Raiders also roam as persistent bands you can see coming
 (`game-core/src/navigation/raiders.rs`):
 
-- Each system except the home system holds one band: two scouts, or a patrol
-  ship leading a scout one time in three. Bands stay in their system and are
-  saved with the world.
+- Each system except the home system starts with one band: two scouts, or a
+  patrol ship leading a scout one time in three. Bands are saved with the world
+  and can cross between systems (see below).
 - After every run, each band hunts the nearest of your fleets in the open within
   150 million km. Fleets docked at a station or landed on a surface are safe;
   fleets in orbit or in flight are not. Without a quarry it patrols near a body,
@@ -282,6 +282,23 @@ Raiders also roam as persistent bands you can see coming
 - The system map shows bands as red diamonds tagged with their ships ("HUNTING"
   while chasing), with a dashed line toward their heading; the galaxy map marks
   systems that hold one; a hunted fleet's card warns "Raiders closing in".
+
+### Bands crossing systems
+
+Bands do not stay put (`game-core/src/navigation/band_roaming.rs`):
+
+- **Pursuit:** a band hunting your fleet when it leaves the system follows it
+  to the next system on its course, if that lies within 40 ly. The fleet's card
+  then reads "Raiders following you". A fleet that pulled out of detection range
+  before leaving, or that leaves without a course into another system, loses it.
+- **Roaming:** a band with nothing to chase and not backing off moves on one run
+  in 40, to a random system within 30 ly.
+- Bands never enter the home system (fleeing home shakes off a pursuit), and a
+  system holds at most two bands, counting bands on their way there. A wiped-out
+  band's system that is full when its replacement is due tries again 20 runs later.
+- A crossing takes one run per 2 ly (half a fleet's deep-space speed), at least
+  one. Meanwhile the band neither hunts nor strikes; it arrives on the
+  destination's cube face toward the system it left and acts from the next run.
 
 Random raider contacts during voyages still happen as before.
 
@@ -378,6 +395,6 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 
 A GPU renderer with a depth buffer, per-effect visuals (beams are drawn alike),
 morale effects on accuracy, faction
-hostility rules, raider bands crossing between systems, legal consequences of
+hostility rules, legal consequences of
 piracy, weapon loadout changes and partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

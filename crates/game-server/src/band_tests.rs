@@ -37,7 +37,7 @@ pub(super) fn near_band(gap: i64) -> Session {
 }
 
 /// Executes a run and returns its navigation events.
-fn run(session: &mut Session) -> Vec<NavigationEvent> {
+pub(super) fn run(session: &mut Session) -> Vec<NavigationEvent> {
     let ServerMessage::SessionSnapshot { events, .. } =
         session.handle(ClientCommand::ExecuteNavigationRun {
             expected_revision: session.state.revision,
@@ -172,41 +172,4 @@ fn a_band_loses_destroyed_raiders_backs_off_and_returns_after_being_wiped_out() 
         }
     }
     reload(&session);
-}
-
-#[test]
-fn bands_move_at_most_one_run_of_distance_and_stay_in_their_system() {
-    let mut session = Session::default();
-    session.state.ships[0].location = Location::Docked(SystemId(1));
-    let half = session.state.movement_rules.system_half_extent_km;
-    let revision = session.state.revision;
-    succeed(
-        &mut session,
-        ClientCommand::HoldFleet {
-            fleet: FleetId(1),
-            expected_revision: revision,
-        },
-    );
-    for _ in 0..30 {
-        let before = session.state.navigation.bands.clone();
-        run(&mut session);
-        for (old, new) in before.iter().zip(&session.state.navigation.bands) {
-            let gap = [
-                (old.position.x_km, new.position.x_km),
-                (old.position.y_km, new.position.y_km),
-                (old.position.z_km, new.position.z_km),
-            ]
-            .iter()
-            .map(|(a, b)| ((b - a) as f64).powi(2))
-            .sum::<f64>()
-            .sqrt();
-            assert!(gap <= 100_000_001.0, "moved {gap} km in one run");
-            assert_eq!(old.system, new.system);
-            assert!(
-                [new.position.x_km, new.position.y_km, new.position.z_km]
-                    .iter()
-                    .all(|value| value.abs() <= half)
-            );
-        }
-    }
 }

@@ -213,16 +213,21 @@ impl LocalSession {
                 if matches!(status_icon, Icon::Warning | Icon::Contact) {
                     ui.colored_label(AMBER, egui::RichText::new(status).small());
                 }
-                if self
+                if let Some(band) = self
                     .state
                     .navigation
                     .bands
                     .iter()
-                    .any(|band| band.hunting == Some(fleet.id))
+                    .find(|band| band.hunting == Some(fleet.id))
                 {
+                    let warning = if band.transit.is_some() {
+                        "Raiders following you. Dock or land to hide."
+                    } else {
+                        "Raiders closing in. Dock or land to hide."
+                    };
                     ui.colored_label(
                         crate::battle::scene::HOSTILE,
-                        egui::RichText::new("Raiders closing in. Dock or land to hide.").small(),
+                        egui::RichText::new(warning).small(),
                     );
                 }
                 if status_icon == Icon::Warning

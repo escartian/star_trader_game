@@ -235,6 +235,8 @@ mod movement_tests;
 mod planet_tests;
 
 #[cfg(test)]
+mod band_crossing_tests;
+#[cfg(test)]
 mod band_tests;
 #[cfg(test)]
 mod battle_tests;

@@ -51,7 +51,8 @@ every fleet.
 or pointed at. NPC traders are small GLB ship models with amber
 outlines and no labels in the galaxy
 view. A raider band's heading line is drawn only while it hunts one of your
-fleets. The orbit ring appears only around the selected fleet's body.
+fleets. A band crossing to another system is drawn on a faint line between
+the two systems in the galaxy view, and is absent from the system view. The orbit ring appears only around the selected fleet's body.
 **System overview** refits the scene; **Focus selected fleet** provides a close
 view. The simulation's system limits have no boundary cube or display toggle.
 

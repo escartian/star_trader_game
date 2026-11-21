@@ -242,6 +242,21 @@ impl TravelState {
                 || band
                     .stalking
                     .is_some_and(|trader| !(1..=16).contains(&trader))
+                || band.transit.is_some_and(|transit| {
+                    transit.from == band.system
+                        || !known_system(transit.from)
+                        || !(1..=super::band_roaming::MAX_TRANSIT_RUNS)
+                            .contains(&transit.total_runs)
+                        || !(1..=transit.total_runs).contains(&transit.runs_left)
+                        || band.stalking.is_some()
+                        || band.cooldown > 0
+                })
+                || navigation
+                    .bands
+                    .iter()
+                    .filter(|other| other.system == band.system)
+                    .count()
+                    > super::MAX_BANDS_PER_SYSTEM
             {
                 return Err("Invalid raider band".into());
             }

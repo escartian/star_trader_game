@@ -1,16 +1,21 @@
 mod app_icon;
 mod battle;
-#[cfg(feature = "dev-tools")]
+#[cfg(all(feature = "dev-tools", not(target_arch = "wasm32")))]
 mod capture;
+#[cfg(not(target_arch = "wasm32"))]
 mod desktop;
 mod map;
+#[cfg(not(target_arch = "wasm32"))]
 mod options;
 mod preferences;
 mod seed;
 mod session;
 mod theme;
 mod units;
+#[cfg(target_arch = "wasm32")]
+mod web;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut options = options::Options::parse()?;
     let settings_path = std::path::PathBuf::from(preferences::DEFAULT_PATH);
@@ -93,6 +98,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     desktop::run(map)
 }
 
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    web::start();
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn fresh_session(
     options: &options::Options,
 ) -> Result<game_server::Session, Box<dyn std::error::Error>> {
@@ -146,6 +157,7 @@ fn fresh_session(
 
 /// Build a named test scenario and save it immediately, so `--continue` can reload it.
 #[cfg(feature = "dev-tools")]
+#[cfg(not(target_arch = "wasm32"))]
 fn dev_scenario(
     name: &str,
     options: &options::Options,
@@ -167,6 +179,7 @@ fn dev_scenario(
 }
 
 #[cfg(not(feature = "dev-tools"))]
+#[cfg(not(target_arch = "wasm32"))]
 fn dev_scenario(
     _: &str,
     _: &options::Options,

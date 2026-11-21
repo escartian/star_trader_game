@@ -1,7 +1,8 @@
-# Star Trader — native Rust
+# Star Trader — Rust
 
 A trading and fleet-management game on a flat space map, presented
-through a readable native map. No game engine, browser, webview or JavaScript.
+through a readable native map. The desktop client is native Rust; an early
+browser build compiles the same client to WebAssembly.
 
 ## Current prototype
 
@@ -78,6 +79,27 @@ cargo run -p game-client -- --new --headless > /tmp/star-trader-save.json
 # Run all engineering checks:
 ./tools/check.sh
 ```
+
+## Browser preview
+
+Install the WebAssembly target and Trunk once:
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install trunk --locked --version 0.22.2
+```
+
+Run the game in a browser with a local development server, or create a static
+HTML/WASM bundle under the ignored root `dist/` directory:
+
+```sh
+cd crates/game-client
+trunk serve
+# Or: trunk build --release
+```
+
+This is an early browser port: it starts a fresh game and does not yet persist
+saves or preferences. See [platform status](docs/PLATFORM_STATUS.md).
 
 The initial path is `data/slot-1.json`. Normal desktop launches open a game
 chooser with three slots and any separately named last-used save. It shows which
@@ -220,7 +242,8 @@ server is required. `cargo run -p game-server` is still a print-and-exit fixture
 it does not accept network connections.
 
 The client uses pinned winit, wgpu, egui integrations and glam. Serde/serde_json
-handle data; PNG decoding handles baked art. Source files are limited to 500
+handle data; PNG decoding handles baked art. The browser build uses Trunk to
+bundle the same Rust client. Source files are limited to 500
 lines by `./tools/check.sh`, alongside rustfmt, strict Clippy and workspace tests.
 See [coding standard](docs/CODING_STANDARD.md), [architecture](docs/ARCHITECTURE.md),
 [map design](docs/MAP_DESIGN.md) and [roadmap](ROADMAP.md).

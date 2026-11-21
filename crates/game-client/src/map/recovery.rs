@@ -53,6 +53,7 @@ pub(super) struct SaveRecovery {
 }
 
 impl SaveRecovery {
+    #[cfg(not(target_arch = "wasm32"))]
     fn new(selected: PathBuf, error: Option<String>) -> Self {
         let directory = selected
             .parent()
@@ -117,6 +118,7 @@ fn backup_path(path: &Path) -> PathBuf {
 
 impl Map {
     /// Present on normal desktop launch. No save is modified until a choice.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn open_save_chooser(&mut self, selected: PathBuf, error: Option<String>) {
         self.save_recovery = Some(SaveRecovery::new(selected, error));
     }

@@ -10,8 +10,10 @@ for decisions and phases; it takes precedence over conflicting older map/battle 
 
 ## Decisions carried forward
 
-- Pure Rust native client and authoritative Rust session/server; no web frontend.
-  Single-player runs both in one process: `cargo run -p game-client`.
+- Desktop-first Rust client and authoritative Rust session/server. The browser
+  preview compiles the same Rust client to WebAssembly; no JavaScript game
+  frontend is introduced. Single-player runs both in one process:
+  `cargo run -p game-client`.
 - Integer Cartesian coordinates and configurable cubic boundaries. Galaxy units
   remain **light-years**; local views use **AU**. Authoritative system positions
   remain integer kilometers, converted explicitly for display/input.
@@ -39,6 +41,7 @@ for decisions and phases; it takes precedence over conflicting older map/battle 
 ## 1. Foundation and native presentation
 
 - [x] Separate core, protocol, server library and native client crates.
+- [x] Initial browser pipeline: Trunk bundles the game client as HTML and WASM.
 - [x] In-process offline session with validated commands, revisions and events.
 - [x] Seeded flat galaxy with reachable starting markets; distinct ly/km types.
   New games offer 4–150 systems, a 20–95 ly radius and 6–15 total objects per

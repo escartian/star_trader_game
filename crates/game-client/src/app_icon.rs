@@ -6,6 +6,7 @@
 
 const PNG: &[u8] = include_bytes!("../../../assets/app-icon/app-icon-256.png");
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn window_icon() -> Option<winit::window::Icon> {
     let rgba = image::load_from_memory(PNG).ok()?.into_rgba8();
     let (width, height) = rgba.dimensions();

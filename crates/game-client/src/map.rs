@@ -163,6 +163,7 @@ impl Map {
         self.session.notify(message);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn autosave(&mut self) -> Result<(), String> {
         if self.save_recovery.is_some() {
             // The temporary fresh session must not replace an incompatible save.

@@ -38,6 +38,11 @@ currently a print-and-exit fixture; a remote adapter is still planned. Revisit c
 
 ## Client and map
 
+The desktop host is in `game-client/src/desktop.rs`; the initial browser host is
+in `game-client/src/web.rs` and uses the same `Map` UI. Platform entry points
+stay separate so browser storage and event-loop differences do not leak into
+simulation/session rules.
+
 The client owns the camera, projections, picking, label placement, panels and
 transient animation. GPU calculations use coordinates relative to the camera or
 focused system; simulation coordinates remain independent of GPU precision.

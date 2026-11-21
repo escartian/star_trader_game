@@ -13,6 +13,20 @@ World state is owned separately. Movement actions alone advance ticks;
 autosave runs at safe close/suspend points. Failed close-saves keep the window open.
 Waiting and UI refreshes do not advance ticks. Travel resolves as an action.
 
+## Browser preview
+
+The initial `wasm32-unknown-unknown` path is configured in
+`crates/game-client/Trunk.toml`. Trunk bundles the shared Rust client and embedded
+art into static HTML/WASM; both `cargo check --manifest-path
+crates/game-client/Cargo.toml --target wasm32-unknown-unknown` and
+`cd crates/game-client && trunk build --release` succeeded. Serve the preview
+with `cd crates/game-client && trunk serve`.
+
+The prototype starts a fresh game. A local Chromium smoke check confirmed the
+canvas renders and the Menu control responds. Browser save/preferences
+persistence, other-browser compatibility and full interactive play checks
+remain open; a successful bundle is not browser/device acceptance.
+
 ## Rendering evidence
 
 The flat-map change has automated projection, picking and phone/desktop egui

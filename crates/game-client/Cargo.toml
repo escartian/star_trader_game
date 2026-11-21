@@ -25,6 +25,14 @@ serde_json.workspace = true
 tempfile = "=3.27.0"
 fastrand = "=2.5.0"
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+egui-wgpu = { version = "=0.31.1", default-features = false, features = ["fragile-send-sync-non-atomic-wasm"] }
+wasm-bindgen = "=0.2.129"
+wasm-bindgen-futures = "=0.4.79"
+web-sys = { version = "=0.3.106", features = ["console", "Document", "HtmlCanvasElement", "Window"] }
+web-time = "=1.1.0"
+wgpu = { version = "=24.0.1", default-features = false, features = ["fragile-send-sync-non-atomic-wasm", "webgl", "webgpu", "wgsl"] }
+
 [features]
 # Capture rendering, test scenes and scenario saves. Off by default so release
 # builds ship without them: `cargo run -p game-client --features dev-tools -- ...`

@@ -110,6 +110,7 @@ impl LocalSession {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn autosave(&mut self) -> Result<(), String> {
         if !self.saves.autosave {
             if let Err(error) = self.persist_preferences() {

@@ -1,4 +1,5 @@
 //! Client preferences are separate from authoritative world/player saves.
+#[cfg(not(target_arch = "wasm32"))]
 mod legacy;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -7,6 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[cfg(not(target_arch = "wasm32"))]
 pub const DEFAULT_PATH: &str = "data/settings.json";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,6 +62,7 @@ impl Preferences {
         Ok(())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load(path: &Path) -> Result<Self, String> {
         let metadata = match fs::metadata(path) {
             Ok(metadata) => metadata,

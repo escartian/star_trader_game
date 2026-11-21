@@ -7,7 +7,7 @@ strudel.cc and press play. The game embeds the exported Ogg Vorbis loops in
 
 | Source | Runtime file | Plays |
 | --- | --- | --- |
-| `main-theme.strudel.js` (“Long Haul”, 48 bars, 60-120-60 BPM) | `main-theme.ogg` (134.4 s loop) | Main menu, and in game when Settings allow |
+| `main-theme.strudel.js` (“Long Haul”, 48 bars easing 60-120-60 BPM) | `main-theme.ogg` (133.6 s loop) | Main menu, and in game when Settings allow |
 
 Every piece is an original composition made with Strudel's built-in
 synthesizers, FM and noise only (no samples), so the export needs no downloads.

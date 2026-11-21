@@ -7,13 +7,16 @@
 // export is self-contained and works offline.
 //
 // Form: one cycle is one 4/4 bar. 48 bars in six 8-bar sections, an arch that
-// speeds up and slows down again, then loops:
+// speeds up and slows down again, then loops. Each section holds its tempo
+// for 4 bars, then eases toward the next over 4 bars (about 4-5 BPM a bar):
 //   bars  1-8   drift    60 BPM  pads, a soft bass pulse and many star chirps
 //   bars  9-16  depart   80 BPM  the arpeggio and hats come in
-//   bars 17-24  cruise  100 BPM  the melody, kick and snare join; fewer chirps
-//   bars 25-32  arrive  120 BPM  the melody climbs an octave; chirps fall silent
+//   bars 17-24  cruise  100 BPM  melody, countermelody, kick and snare; the pad
+//                                thins and the chirps grow sparse
+//   bars 25-32  arrive  120 BPM  the melody climbs an octave over chord stabs;
+//                                the chirps fall silent
 //   bars 33-40  return  100 BPM  back to the cruise, a few chirps return
-//   bars 41-48  wind    80 BPM  melody and drums leave, the chirps come back
+//   bars 41-48  wind    80 BPM  melody and drums leave, pad and chirps return
 // Strudel plays one tempo at a time, so strudel.cc plays it all at `setcps`.
 // The export reads `tempoMap` (BPM for each bar) and renders bar by bar.
 setcps(80 / 60 / 4)
@@ -23,9 +26,16 @@ setcps(80 / 60 / 4)
 // and backtick strings as patterns.
 const sections = (values) => '<' + values.map((value) => value + '!8').join(' ') + '>'
 const tempos = [60, 80, 100, 120, 100, 80]
-window.tempoMap = tempos.flatMap((bpm) => Array(8).fill(bpm))
-// A dotted eighth (three sixteenths) in seconds at each section's tempo.
-const echo = sections(tempos.map((bpm) => (45 / bpm).toFixed(4)))
+// BPM for every bar: 4 bars at the section's tempo, then 4 bars easing toward
+// the next section's (the last eases back to the first, for the loop).
+window.tempoMap = tempos.flatMap((bpm, index) => {
+  const next = tempos[(index + 1) % tempos.length]
+  return [0, 0, 0, 0, 1, 2, 3, 4].map((step) => bpm + ((next - bpm) * step) / 5)
+})
+// Per-bar values as a 48-bar pattern: '<a b c ...>'.
+const bars = (values) => '<' + values.join(' ') + '>'
+// A dotted eighth (three sixteenths) in seconds at each bar's tempo.
+const echo = bars(window.tempoMap.map((bpm) => (45 / bpm).toFixed(4)))
 // One octave up: "a4" -> "a5", "bb4" -> "bb5".
 const octaveUp = (notes) => notes.replace(/([a-g]b?)(\d)/g, (_, name, octave) => name + (Number(octave) + 1))
 
@@ -33,12 +43,13 @@ const octaveUp = (notes) => notes.replace(/([a-g]b?)(\d)/g, (_, name, octave) =>
 const chords = "<Dm9 Bb^7 F^7 C6 Dm9 Bb^7 Gm7 A7sus>"
 const roots = "<d2 bb1 f1 c2 d2 bb1 g1 a1>"
 
+// The pad carries the slow sections and steps back as the tempo rises.
 const pad = chord(chords).voicing()
   .s("sawtooth")
-  .attack(0.9).release(2.2)
+  .attack(0.9).release(sections([2.2, 1.8, 1.0, 0.6, 1.0, 1.8]))
   .lpf(sine.range(600, 1500).slow(16)).lpq(2)
   .room(0.8).size(6)
-  .gain(0.22)
+  .gain(sections([0.22, 0.18, 0.1, 0.06, 0.1, 0.18]))
 
 const bass = note(roots)
   .struct("x ~ x x ~ x ~ x")
@@ -71,6 +82,28 @@ const lead = note('<' + [melody, melody, melody, up, melody, melody].join(' ') +
   .room(0.6).size(5)
   .gain(0.2)
   .mask(sections([0, 0, 1, 1, 1, 0]))
+
+// A countermelody answering the lead in the gaps between its phrases.
+const counter = note("<[~ ~ [f4 e4] [d4 a3]] [~ ~ [d4 f4] a4] [~ ~ [a4 g4] [f4 e4]] [[e4 g4] [a4 c5] [g4 e4] d4] [~ ~ [f4 a4] [c5 a4]] [~ ~ [d5 c5] [bb4 a4]] [~ ~ [g4 bb4] [d5 bb4]] [[a4 g4] [e4 d4] [e4 g4] a4]>")
+  .s("triangle")
+  .decay(0.3).sustain(0.25).release(0.3)
+  .lpf(2600)
+  .delay(0.3).delaytime(echo).delayfeedback(0.3)
+  .pan(0.35)
+  .room(0.5).size(5)
+  .gain(0.16)
+  .mask(sections([0, 0, 1, 1, 1, 0]))
+
+// Off-beat chord stabs that drive the fastest sections.
+const stabs = chord(chords).voicing()
+  .struct("~ x ~ [~ x] ~ x ~ x")
+  .s("square")
+  .decay(0.09).sustain(0)
+  .lpf(sections([0, 0, 0, 2400, 1800, 0]))
+  .pan(0.6)
+  .room(0.3)
+  .gain(sections([0, 0, 0, 0.075, 0.05, 0]))
+  .mask(sections([0, 0, 0, 1, 1, 0]))
 
 const drums = sections([0, 0, 1, 1, 1, 0])
 
@@ -119,4 +152,4 @@ const stars = n(irand(10).segment(16))
   .room(0.6).size(6)
   .gain(0.1)
 
-stack(pad, bass, arp, lead, kick, snare, hats, bells, stars)
+stack(pad, bass, arp, lead, counter, stabs, kick, snare, hats, bells, stars)

@@ -287,6 +287,30 @@ fn plan(random: &mut fastrand::Rng) -> (Flight, f32, f32) {
     (flight, duration, start)
 }
 
+/// `points` with each interior corner replaced by a smooth curve (a quadratic
+/// Bézier through the corner) starting `radius` units before it and ending
+/// `radius` units after it, or less on short legs. Straight runs are kept.
+pub(super) fn rounded(points: &[Vec3], radius: f32) -> Vec<Vec3> {
+    const STEPS: usize = 12;
+    let mut path = vec![points[0]];
+    for corner in 1..points.len().saturating_sub(1) {
+        let (before, at, after) = (points[corner - 1], points[corner], points[corner + 1]);
+        let cut = radius
+            .min(before.distance(at) / 2.0)
+            .min(at.distance(after) / 2.0);
+        let enter = at + (before - at).normalize_or_zero() * cut;
+        let leave = at + (after - at).normalize_or_zero() * cut;
+        for step in 0..=STEPS {
+            let t = step as f32 / STEPS as f32;
+            let point = enter * (1.0 - t).powi(2) + at * 2.0 * t * (1.0 - t) + leave * t * t;
+            path.push(point);
+        }
+    }
+    path.push(points[points.len() - 1]);
+    path.dedup_by(|a, b| a.distance(*b) < 1e-4);
+    path
+}
+
 pub(super) fn between(random: &mut fastrand::Rng, low: f32, high: f32) -> f32 {
     low + random.f32() * (high - low)
 }

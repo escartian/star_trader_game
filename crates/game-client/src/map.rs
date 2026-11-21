@@ -54,6 +54,9 @@ pub struct Map {
     /// Picks the main menu's planet and ship flights; fixed for the whole run
     /// of the game, so they change only on relaunch.
     menu_seed: u64,
+    /// The menu moment (seconds) shown when animations are off: captures set
+    /// it to inspect the animation frame by frame.
+    menu_still_time: f64,
     /// Display options last sent to egui; `None` means egui's defaults.
     applied_options: Option<crate::preferences::ClientOptions>,
 }
@@ -122,6 +125,7 @@ impl Map {
             save_recovery: None,
             music: crate::audio::Music::silent(),
             menu_seed: fastrand::u64(..),
+            menu_still_time: menu_backdrop::STILL_TIME,
             applied_options: None,
         }
     }

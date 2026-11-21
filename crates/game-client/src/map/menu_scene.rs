@@ -38,6 +38,11 @@ fn station_tilt() -> Mat3 {
     Mat3::from_rotation_x(0.5)
 }
 
+/// The station's centre in scene space.
+pub(super) fn station_centre() -> Vec3 {
+    STATION
+}
+
 /// The station's turning axis (its top), pointing out of the dock mouth.
 pub(super) fn station_axis() -> Vec3 {
     station_tilt() * Vec3::Z

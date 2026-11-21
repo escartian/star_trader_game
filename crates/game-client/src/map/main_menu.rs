@@ -36,7 +36,7 @@ impl Map {
             ctx.request_repaint_after(std::time::Duration::from_millis(33));
             ctx.input(|input| input.time)
         } else {
-            super::menu_backdrop::STILL_TIME
+            self.menu_still_time
         };
         let art = super::art::Artwork::preload(ctx);
         if menu.page != MenuPage::Title && ctx.input(|input| input.key_pressed(egui::Key::Escape)) {

@@ -4,9 +4,9 @@
 //! launch, lane and slot. Docking ships slide down the station's axis while
 //! shrinking, and descending ships shrink as they sink below the surface, so
 //! they disappear into the station or planet rather than popping.
-use super::menu_flights::{Flight, Leg, between, pick_ship};
+use super::menu_flights::{Flight, Leg, between, pick_ship, rounded};
 use super::menu_motion::Motion;
-use super::menu_scene::{PLANET_CENTRE, PLANET_RADIUS, dock, station_axis};
+use super::menu_scene::{PLANET_CENTRE, PLANET_RADIUS, dock, station_axis, station_centre};
 use glam::Vec3;
 
 const LANES: u64 = 2;
@@ -15,10 +15,19 @@ const SLOT_SECONDS: f32 = 34.0;
 /// the planet, and the slowest crawl (world units per second).
 const CREEP_SECONDS: f32 = 3.0;
 const MIN_CRAWL: f32 = 0.6;
-/// Length of the descent's straight climb out of the dock before it turns.
-const CORRIDOR: f32 = 14.0;
+/// Length of the descent's climb out of the dock before it turns over.
+const CORRIDOR: f32 = 12.0;
+/// Radius of the curve where a route turns (world units).
+const TURN_RADIUS: f32 = 22.0;
+/// The descent's tighter turn over the top, from climbing out to heading down.
+const DESCENT_TURN_RADIUS: f32 = 8.0;
 /// Distance over which a ship brakes from cruise to a crawl before docking.
 const BRAKE_DISTANCE: f32 = 45.0;
+/// A descent's ramp and brake distances and top speed: the trip from the
+/// station to the planet is short.
+const DESCENT_RAMP: f32 = 8.0;
+const DESCENT_BRAKE: f32 = 14.0;
+const DESCENT_CRUISE: f32 = 9.0;
 /// Distance over which a departing ship speeds up from a crawl.
 const PULL_AWAY_DISTANCE: f32 = 35.0;
 /// Ships near the station fly at this share of their size, so it reads as large.
@@ -26,8 +35,9 @@ const SIZE_SHARE: f32 = 0.65;
 /// How far inside the hull a docking ship slides while shrinking, as a
 /// multiple of its length.
 const SLIDE_IN_HULLS: f32 = 1.4;
-/// Where descents meet the planet: the near face, high on the station's side.
-const ENTRY_DIRECTION: Vec3 = Vec3::new(-0.45, -0.75, 0.48);
+/// Where descents swing past the station, from its centre: to its left (the
+/// screen's centre side), clear of the ring and the turning solar arrays.
+const SWING: Vec3 = Vec3::new(-11.0, -3.0, -4.0);
 /// How deep below the surface a descent ends, as a share of the radius.
 const SINK_SHARE: f32 = 0.45;
 
@@ -69,7 +79,12 @@ fn plan(random: &mut fastrand::Rng) -> Flight {
     );
     let slide = size * SLIDE_IN_HULLS;
     let inside = dock() - station_axis() * slide;
-    let entry_direction = ENTRY_DIRECTION.normalize();
+    let descent = dock() + station_axis() * CORRIDOR;
+    // Descents swing around the station's side, then drop straight onto the
+    // planet from there: the final leg, where they flip and burn, is clear of
+    // the station.
+    let swing = station_centre() + SWING;
+    let entry_direction = (swing - PLANET_CENTRE).normalize();
     let surface = PLANET_CENTRE + entry_direction * PLANET_RADIUS;
     let sunk = PLANET_CENTRE + entry_direction * PLANET_RADIUS * (1.0 - SINK_SHARE);
     // Growing and shrinking span the slide through the hull and a little open
@@ -81,13 +96,23 @@ fn plan(random: &mut fastrand::Rng) -> Flight {
     let corridor = |length: f32| dock() + station_axis() * length;
     let arrival = corridor(BRAKE_DISTANCE + doorway + 6.0);
     let departure = corridor(PULL_AWAY_DISTANCE + doorway);
-    let descent = corridor(CORRIDOR);
     let (points, grow_over, shrink_over) = match leg {
-        Leg::Arrive => (vec![far, arrival, dock(), inside], 0.0, doorway),
-        Leg::Depart => (vec![inside, dock(), departure, far], doorway, 0.0),
+        Leg::Arrive => (
+            rounded(&[far, arrival, dock(), inside], TURN_RADIUS),
+            0.0,
+            doorway,
+        ),
+        Leg::Depart => (
+            rounded(&[inside, dock(), departure, far], TURN_RADIUS),
+            doorway,
+            0.0,
+        ),
         // Shrinking starts a little above the surface and ends deep below it.
         _ => (
-            vec![inside, dock(), descent, surface, sunk],
+            rounded(
+                &[inside, dock(), descent, swing, surface, sunk],
+                DESCENT_TURN_RADIUS,
+            ),
             doorway,
             PLANET_RADIUS * SINK_SHARE + 3.0,
         ),
@@ -123,14 +148,16 @@ fn plan(random: &mut fastrand::Rng) -> Flight {
             ..flight.motion
         },
         // Creep out, cruise down, flip, burn and sink tail-first.
+        // The trip is short, so its ramp and brake are too: it cruises nose-first
+        // for a while before it flips.
         _ => Motion {
             start_speed: creep(doorway),
             creep_out: doorway,
-            ramp: PULL_AWAY_DISTANCE * 0.5,
+            ramp: DESCENT_RAMP,
             end_speed: creep(shrink_over),
-            brake: BRAKE_DISTANCE * 0.6,
+            brake: DESCENT_BRAKE,
             creep_in: shrink_over,
-            ..flight.motion
+            cruise: flight.motion.cruise.min(DESCENT_CRUISE),
         },
     };
     let length = flight.length();

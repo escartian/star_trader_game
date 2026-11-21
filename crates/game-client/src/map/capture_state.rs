@@ -45,6 +45,15 @@ impl Map {
             "factions-map" => self.session.capture_factions(false)?,
             "roster" => self.sheet = crate::session::SheetTab::Fleets,
             "unlock" => self.session.capture_unlock(),
+            // "chooser@SECONDS": the main menu at that moment of its animation.
+            view if view.starts_with("chooser@") => {
+                let seconds = view["chooser@".len()..]
+                    .parse::<f64>()
+                    .map_err(|_| "chooser@SECONDS needs a number of seconds")?;
+                self.menu_seed = 0;
+                self.menu_still_time = seconds.max(0.0);
+                self.open_save_chooser("data/slot-1.json".into(), None);
+            }
             "chooser" => {
                 // A fixed sky (the gas giant) keeps menu previews reproducible.
                 self.menu_seed = 0;

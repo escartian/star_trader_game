@@ -31,7 +31,7 @@ const DESCENT_CRUISE: f32 = 9.0;
 /// Distance over which a departing ship speeds up from a crawl.
 const PULL_AWAY_DISTANCE: f32 = 35.0;
 /// Ships near the station fly at this share of their size, so it reads as large.
-const SIZE_SHARE: f32 = 0.65;
+const SIZE_SHARE: f32 = 0.4;
 /// How far inside the hull a docking ship slides while shrinking, as a
 /// multiple of its length.
 const SLIDE_IN_HULLS: f32 = 1.4;

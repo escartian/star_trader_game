@@ -46,7 +46,13 @@ impl Map {
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
             .show(ctx, |ui| {
-                super::menu_backdrop::paint(ui.painter(), ui.max_rect(), time, &art);
+                super::menu_backdrop::paint(
+                    ui.painter(),
+                    ui.max_rect(),
+                    time,
+                    &art,
+                    self.menu_seed,
+                );
                 let width = (ui.available_width() - 32.0).min(COLUMN_WIDTH);
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let side = ((ui.available_width() - width) / 2.0).max(0.0);

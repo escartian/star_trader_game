@@ -45,8 +45,13 @@ impl Map {
             "factions-map" => self.session.capture_factions(false)?,
             "roster" => self.sheet = crate::session::SheetTab::Fleets,
             "unlock" => self.session.capture_unlock(),
-            "chooser" => self.open_save_chooser("data/slot-1.json".into(), None),
+            "chooser" => {
+                // A fixed sky (the gas giant) keeps menu previews reproducible.
+                self.menu_seed = 0;
+                self.open_save_chooser("data/slot-1.json".into(), None);
+            }
             "menu-new" | "menu-load" | "menu-settings" => {
+                self.menu_seed = 0;
                 self.open_save_chooser("data/slot-1.json".into(), None);
                 if let Some(menu) = &mut self.save_recovery {
                     menu.page = match view {

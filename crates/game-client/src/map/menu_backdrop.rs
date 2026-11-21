@@ -33,7 +33,8 @@ impl Sky {
 }
 
 /// Paints the backdrop into `rect` as it looks at `time` seconds.
-pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork) {
+/// `launch_seed` picks the planet and ships (see `menu_scene`).
+pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork, launch_seed: u64) {
     painter.rect_filled(rect, 0.0, Color32::from_rgb(3, 6, 12));
     let short_side = rect.width().min(rect.height());
     for (x, y, radius, [r, g, b, a]) in NEBULAE {
@@ -61,7 +62,7 @@ pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork) {
         let color = Color32::from_rgba_unmultiplied(tint[0], tint[1], tint[2], alpha);
         painter.circle_filled(position, 0.5 + 1.5 * (depth * depth) as f32, color);
     }
-    super::menu_scene::paint(painter, rect, time, art);
+    super::menu_scene::paint(painter, rect, time, art, launch_seed);
 }
 
 /// A soft radial glow: `color` at the centre fading to transparent at `radius`.

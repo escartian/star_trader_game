@@ -11,6 +11,7 @@ mod interaction;
 pub(crate) mod local;
 mod main_menu;
 mod menu_backdrop;
+mod menu_flights;
 mod menu_scene;
 mod menu_trails;
 mod orbit_view;
@@ -48,6 +49,9 @@ pub struct Map {
     /// The main menu, while it is open (its save slots and page).
     save_recovery: Option<recovery::SaveRecovery>,
     music: crate::audio::Music,
+    /// Picks the main menu's planet and ship flights; fixed for the whole run
+    /// of the game, so they change only on relaunch.
+    menu_seed: u64,
     /// Display options last sent to egui; `None` means egui's defaults.
     applied_options: Option<crate::preferences::ClientOptions>,
 }
@@ -115,6 +119,7 @@ impl Map {
             last_map_rect: Rect::NOTHING,
             save_recovery: None,
             music: crate::audio::Music::silent(),
+            menu_seed: fastrand::u64(..),
             applied_options: None,
         }
     }

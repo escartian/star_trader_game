@@ -47,6 +47,14 @@ impl Map {
                     system.star_kind.label(),
                 );
                 ui.strong(&system.name);
+                if let Some((faction, color, tier)) = self.session.system_holder(system.id) {
+                    ui.label(egui::RichText::new(faction.label()).color(color))
+                        .on_hover_text(format!(
+                            "{} space; your standing: {}",
+                            faction.label(),
+                            tier.label()
+                        ));
+                }
                 stat(
                     ui,
                     Icon::Distance,

@@ -16,7 +16,7 @@ use game_protocol::{ClientCommand, CommandError, ServerMessage};
 
 /// After one quiet run, puts trader `index` (with 10 ore and 6 medicine) and
 /// the player's flagship in orbit at the same planet market.
-fn meet_trader(session: &mut Session, index: usize) -> (FleetId, u64) {
+pub(super) fn meet_trader(session: &mut Session, index: usize) -> (FleetId, u64) {
     execute_quiet_run(session);
     let market = session
         .economy
@@ -56,7 +56,7 @@ fn rejected(message: ServerMessage, expected: NavigationError) {
     }
 }
 
-fn hailed(session: &mut Session, fleet: FleetId, trader: u64) -> u64 {
+pub(super) fn hailed(session: &mut Session, fleet: FleetId, trader: u64) -> u64 {
     let response = hail(session, fleet, trader);
     assert!(
         matches!(response, ServerMessage::SessionSnapshot { .. }),

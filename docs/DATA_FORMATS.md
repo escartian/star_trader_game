@@ -43,8 +43,10 @@ Each `data/slot-N.json` stores:
   `port_share_percent`; an older `net_worth_goal` is read and ignored) and `dynamics`
   (`local_income_percent`, `trade_income_ppm`, `upkeep_ppm_per_tick`,
   `inflation_ppm_per_tick`), the
-  galaxy `price_level_ppm`, and port `charters`
-  (`market`, `owner`; omitted when none). Each market records a composite system/body ID,
+  galaxy `price_level_ppm`, port `charters`
+  (`market`, `owner`; omitted when none) and `factions` (`in_play`,
+  `allegiance`, `territory`, `relations`, `standing`, `sales_cents`; see
+  [factions](FACTIONS.md); absent means no factions). Each market records a composite system/body ID,
   station flag, treasury, recent trade `activity`, hull inventory and commodity
   balances (each good with its `price_level_ppm`). Cargo is keyed by commodity name inside each ship.
 
@@ -126,6 +128,17 @@ load the project file when present; saves preserve the active catalog. See
 (hundredths per destroyed raider, by hull: `freighter`, `scout`, `patrol`) and
 `npc_raid_chance_percent` (0–100, default 4) load with defaults when absent. A
 combat report adds `bounty` (hundredths, default 0).
+
+## Faction catalog (schema 1)
+
+`config/factions.json` lists the four factions in order (`Federation`,
+`Empire`, `Republic`, `Alliance`), each with `id`, `name` (1–64 bytes),
+`description` (up to 256), `color` (sRGB triple), `piracy_penalty` (0–100),
+`raider_kill_standing` (0–100) and `sale_credits_per_point` (hundredths,
+100–100,000,000), plus `classic_relations`: pairs `between` two different
+factions with `relation` `Allied` or `Rival` (unlisted pairs are neutral). It is
+embedded as a fallback, loaded from the project file when present, and saved in
+the economy rules as `faction_catalog`.
 
 ## Movement definition (schema 1)
 

@@ -185,6 +185,11 @@ impl LocalSession {
                 "Roads to victory, score, the Raider Haven and campaign length",
             ),
             (
+                Icon::Info,
+                "Factions",
+                "Territory, relations and your standing with each faction",
+            ),
+            (
                 Icon::Save,
                 "Session & saves",
                 "Save, load, settings, guide and log",
@@ -195,6 +200,7 @@ impl LocalSession {
             self.unlocked(Feature::Fleets),
             true,
             self.unlocked(Feature::Victory),
+            self.factions_active(),
             true,
         ];
         for (index, (icon, label, tip)) in entries.into_iter().enumerate() {
@@ -210,6 +216,7 @@ impl LocalSession {
                     1 => self.fleet_panel.open = true,
                     2 => self.open_navigation(),
                     3 => self.victory.open = true,
+                    4 => self.factions.open = true,
                     _ => self.saves.open = true,
                 }
             }

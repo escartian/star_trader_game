@@ -52,8 +52,9 @@ impl LocalSession {
                         });
                         ui.label(good.stock.to_string());
                         ui.label(ship.cargo[commodity.index()].to_string());
-                        ui.label(good.price(TradeSide::Buy, good.stock).to_string());
-                        ui.label(good.price(TradeSide::Sell, good.stock).to_string());
+                        let [buy, sell] = self.your_prices(ship, good);
+                        ui.label(buy.to_string());
+                        ui.label(sell.to_string());
                         self.margin_cell(ui, market, commodity, systems);
                         ui.horizontal(|ui| {
                             for side in [TradeSide::Buy, TradeSide::Sell] {
@@ -100,11 +101,9 @@ impl LocalSession {
                     ));
                 });
                 ui.horizontal_wrapped(|ui| {
-                    ui.label(format!("Buy {} cr", good.price(TradeSide::Buy, good.stock)));
-                    ui.label(format!(
-                        "Sell {} cr",
-                        good.price(TradeSide::Sell, good.stock)
-                    ));
+                    let [buy, sell] = self.your_prices(ship, good);
+                    ui.label(format!("Buy {buy} cr"));
+                    ui.label(format!("Sell {sell} cr"));
                 });
                 self.margin_cell(ui, market, commodity, systems);
                 ui.horizontal_wrapped(|ui| {
@@ -193,6 +192,15 @@ impl LocalSession {
         };
         (response.clicked() && quantity > 0)
             .then(|| self.trade_order(ship, commodity, quantity, side))
+    }
+
+    /// First-unit buy and sell prices on your terms at this port (`factions`).
+    fn your_prices(&self, ship: &Ship, good: &game_core::economy::MarketGood) -> [Credits; 2] {
+        let terms = self.economy.port_terms(ship);
+        [
+            Credits(terms.buying(good.price(TradeSide::Buy, good.stock).0)),
+            Credits(terms.selling(good.price(TradeSide::Sell, good.stock).0)),
+        ]
     }
 
     /// Best known margin for buying one unit here and selling it at another market.

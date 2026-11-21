@@ -13,6 +13,7 @@ pub use setup::{DangerLevel, GameSetup, InflationLevel, STARTING_CREDITS, WEALTH
 #[cfg(any(test, feature = "dev-tools"))]
 mod scenarios;
 mod shipyard;
+mod standing;
 use game_core::economy::Economy;
 use game_core::{
     StarSystem,
@@ -117,7 +118,9 @@ impl Session {
         self.campaign_gate(&command)?;
         // Every rule reads body positions for the current tick.
         game_core::orbits::place(&mut self.systems, self.state.tick);
+        let watch = self.watch_standing();
         let message = self.dispatch(player, command)?;
+        let message = self.record_standing(watch, message);
         let message = self.record_unlocks(player, message);
         Ok(self.record_campaign_end(player, message))
     }
@@ -248,6 +251,8 @@ mod combat_tests;
 mod contact_tests;
 #[cfg(test)]
 mod encounter_tests;
+#[cfg(test)]
+mod faction_tests;
 #[cfg(test)]
 mod flagship_tests;
 #[cfg(test)]

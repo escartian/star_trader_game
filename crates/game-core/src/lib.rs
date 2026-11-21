@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub mod campaign;
 pub mod combat;
 pub mod economy;
+pub mod factions;
 pub mod fleet;
 pub mod generation;
 pub mod movement;

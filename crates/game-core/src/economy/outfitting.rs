@@ -36,6 +36,7 @@ impl Economy {
     /// Moves `cost` from the wallet to the treasury of the market `ship` is at.
     fn pay_market(&mut self, ship: &Ship, cost: Credits) -> Result<(), EconomyError> {
         let id = self.current_market(ship)?.id;
+        self.require_open_port(ship)?;
         let credits = self
             .credits
             .0

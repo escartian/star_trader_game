@@ -86,6 +86,7 @@ impl Economy {
     /// The price of the charter of the market where `ship` is, if one is for sale.
     pub fn quote_charter(&self, ship: &Ship) -> Result<Credits, EconomyError> {
         let market = self.current_market(ship)?;
+        self.require_open_port(ship)?;
         if self.charter_holder(market.id).is_some() {
             return Err(EconomyError::AlreadyChartered);
         }

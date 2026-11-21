@@ -237,6 +237,13 @@ pub enum SessionEvent {
     EscortHired {
         cost: game_core::economy::Credits,
     },
+    /// Your standing with a faction moved by `change` to `standing`
+    /// (see `game_core::factions`).
+    StandingChanged {
+        faction: game_core::factions::Faction,
+        change: i32,
+        standing: i32,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

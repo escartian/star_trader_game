@@ -251,6 +251,7 @@ impl Map {
         self.session.show_battle(ctx);
         self.session.show_combat_report(ctx);
         self.session.show_victory(ctx, &self.session_systems);
+        self.session.show_factions(ctx, &self.session_systems);
         // Taps on the strip or sheet may ask for another page: show it at once.
         if let Some(tab) = self.session.take_sheet_request() {
             self.sheet = tab;

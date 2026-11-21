@@ -370,8 +370,9 @@ Hailing opens a contact that shows the trader's hold and hull. You can:
   Esc) just ends the attack: a trader seizes nothing.
 
 Every demand and attack counts as an act of piracy (`navigation.piracies` in
-the save). Nothing reads the count yet: wanted status, police response and
-faction hostility arrive with factions (milestone 5). Secondary fleets never
+the save). In a faction's space each act costs standing with it
+([factions](FACTIONS.md)); destroyed raiders earn standing there. Wanted status,
+police response and faction hostility to your fleets come later (milestone 5). Secondary fleets never
 hail; if command passes to another fleet while a hail is pending, that fleet
 lets the trader go.
 

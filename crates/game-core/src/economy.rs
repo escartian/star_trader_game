@@ -137,6 +137,9 @@ pub struct Economy {
     /// Port charters bought so far (see `charters`). Omitted from saves when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub charters: Vec<Charter>,
+    /// Territory, relations and your standing (`factions`); none in play by default.
+    #[serde(default)]
+    pub factions: crate::factions::Factions,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -170,6 +173,8 @@ pub enum EconomyError {
     AlreadyChartered,
     /// That gear is already fitted to this ship.
     AlreadyFitted,
+    /// This port's faction is hostile to you (`factions::Tier::Hostile`).
+    PortClosed,
     ArithmeticOverflow,
 }
 
@@ -192,6 +197,7 @@ impl std::fmt::Display for EconomyError {
             Self::NoDamage => "This ship has no hull damage to repair.",
             Self::AlreadyChartered => "This port's charter has already been sold.",
             Self::AlreadyFitted => "This ship already has that gear fitted.",
+            Self::PortClosed => "This port's faction is hostile to you and refuses your business.",
             Self::ArithmeticOverflow => {
                 "The transaction exceeds supported quantity or credit limits."
             }

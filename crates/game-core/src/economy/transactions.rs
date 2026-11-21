@@ -14,6 +14,10 @@ impl Economy {
             return Err(EconomyError::InvalidQuantity);
         }
         let market = self.current_market(ship)?;
+        let terms = self.port_terms(ship);
+        if terms.closed() {
+            return Err(EconomyError::PortClosed);
+        }
         let good = &market.goods[commodity.index()];
         match side {
             TradeSide::Buy => {
@@ -44,6 +48,12 @@ impl Economy {
                 .checked_add(good.price(side, stock).0)
                 .ok_or(EconomyError::ArithmeticOverflow)
         })?;
+        // Your standing with the port's faction shifts the whole order's price.
+        let adjust = |cents: u64| match side {
+            TradeSide::Buy => terms.buying(cents),
+            TradeSide::Sell => terms.selling(cents),
+        };
+        let total = adjust(total);
         match side {
             TradeSide::Buy if total > self.credits.0 => {
                 return Err(EconomyError::InsufficientCredits);
@@ -70,7 +80,7 @@ impl Economy {
             commodity,
             quantity,
             side,
-            first_unit_price: good.price(side, good.stock),
+            first_unit_price: Credits(adjust(good.price(side, good.stock).0)),
             total: Credits(total),
             revision,
         })
@@ -140,6 +150,12 @@ impl Economy {
         self.credits = Credits(credits);
         ship.cargo[commodity.index()] = cargo;
         self.record_activity(quote.market, quote.total);
+        // Your sales win favour with the port's faction (NPC trades do not).
+        if side == TradeSide::Sell && ship.owner.0 < crate::npc::NPC_ID_BASE {
+            let catalog = &self.rules.faction_catalog;
+            self.factions
+                .record_sale(quote.market.system, quote.total.0, catalog);
+        }
         // The holder's own trades earn the port share here; NPC trades pay it
         // once the holder's wallet is back in place (`npc::decisions`).
         if self.charter_holder(quote.market) == Some(ship.owner) {

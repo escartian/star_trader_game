@@ -23,8 +23,10 @@ pub fn start() {
 
 fn run() -> Result<()> {
     let event_loop = EventLoop::new()?;
-    let mut authority = Session::with_economy(crate::seed::new_seed(), EconomyRules::default())?;
+    let seed = crate::seed::new_seed();
+    let mut authority = Session::with_economy(seed, EconomyRules::default())?;
     authority.begin_progression();
+    authority.set_up_factions(seed, &Default::default())?;
     let ServerMessage::GalaxySnapshot { systems, .. } = authority.handle(ClientCommand::GetGalaxy)
     else {
         return Err("Unable to start browser game session".into());

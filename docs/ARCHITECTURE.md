@@ -146,8 +146,11 @@ charged. Fleet members share a location. Local-body and deep-space positions
 are authoritative. Ships share fleet locations and are illustrated beside their
 body anchors or at deep-space positions. The current primary trade station retains
 its system ID in Docked; planetary Orbiting locations resolve a market by body.
-Ship catalog definitions come from config/ships.json and weapons from
-config/combat.json, both embedded as fallbacks. `game-core::combat` validates them.
+Ship catalog definitions come from config/ships.json, weapons from
+config/combat.json and factions from config/factions.json, all embedded as
+fallbacks. Faction territory and your standing live in `Economy::factions`;
+the host adjusts standing after each command (`game-server/src/standing.rs`)
+and core prices apply its terms (`factions::terms`). `game-core::combat` validates them.
 Older save schemas are rejected during prototyping. Schema 8 is current; a
 schema-7 save differs only in its battle format and is upgraded on load, its
 open 3D-grid battle (if any) auto-resolved.

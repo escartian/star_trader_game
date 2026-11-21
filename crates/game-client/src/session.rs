@@ -7,6 +7,7 @@ mod battle_controls;
 mod capture;
 mod combat_report;
 mod contacts;
+mod factions;
 mod fleets;
 mod victory;
 pub use fleets::TradeOption;
@@ -76,6 +77,7 @@ pub struct LocalSession {
     battle: battle::BattlePanel,
     saves: saves::SavePanel,
     victory: victory::VictoryPanel,
+    factions: factions::FactionsPanel,
     /// Guide cards for features unlocked this session, until dismissed.
     unlock_cards: Vec<game_core::progress::Feature>,
     log: VecDeque<String>,
@@ -113,6 +115,7 @@ impl LocalSession {
             battle: battle::BattlePanel::default(),
             saves: saves::SavePanel::default(),
             victory,
+            factions: factions::FactionsPanel::default(),
             unlock_cards: Vec::new(),
             log: VecDeque::new(),
             loaded_galaxy: None,
@@ -337,6 +340,11 @@ impl LocalSession {
                             "The campaign is open-ended.".into()
                         }
                         SessionEvent::Unlocked { feature } => self.announce_unlock(feature),
+                        SessionEvent::StandingChanged {
+                            faction,
+                            change,
+                            standing,
+                        } => self.standing_message(faction, change, standing),
                     };
                     self.record(message);
                 }

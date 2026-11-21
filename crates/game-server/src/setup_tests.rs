@@ -18,8 +18,24 @@ fn every_setup_choice_becomes_a_session_rule() {
         danger: DangerLevel::Perilous,
         run_limit: Some(400),
         wealth_share_percent: 25,
+        factions: game_core::factions::FactionSetup {
+            in_play: [false, true, true, false],
+            allegiance: Some(game_core::factions::Faction::Empire),
+            coverage: game_core::factions::Coverage::Full,
+            relations: game_core::factions::RelationMode::Random,
+        },
     };
     let session = game(&setup).unwrap();
+    let factions = &session.economy.factions;
+    assert_eq!(
+        factions.allegiance,
+        Some(game_core::factions::Faction::Empire)
+    );
+    assert_eq!(
+        factions.territory.len(),
+        12,
+        "full coverage claims every system"
+    );
     assert_eq!(session.systems.len(), 12);
     assert_eq!(session.economy.credits, Credits(500_000));
     let rules = &session.economy.rules;

@@ -55,6 +55,9 @@ pub struct EconomyRules {
     /// Anti-piracy gear and escort prices (defaults for older definitions).
     #[serde(default)]
     pub gear_prices: crate::combat::gear::GearPrices,
+    /// The four factions' definitions (`config/factions.json`).
+    #[serde(default)]
+    pub faction_catalog: crate::factions::FactionCatalog,
 }
 
 /// The player's 12% contact chance × one contact in three being raiders.
@@ -99,6 +102,7 @@ impl EconomyRules {
             spec.combat.validate(&self.combat_catalog)?;
         }
         self.planet_catalog.validate()?;
+        self.faction_catalog.validate()?;
         if !(1..=90).contains(&self.ship_resale_percent)
             || self.market_starting_credits.0 > 1_000_000_000_000
             || self

@@ -168,7 +168,8 @@ remains separate from GPU captures and egui input regression tests.
 game over, the Raider Haven and port charters are implemented; see
 [campaign](docs/CAMPAIGN.md).
 
-**Next:** explicit hostility/engagement rules for NPC and faction fleets, mid-fight
+**Next:** faction fleets and police (wanted status from piracy), shifting
+territory, explicit hostility/engagement rules for NPC and faction fleets, mid-fight
 retreat and combat balance from playtests ([combat](docs/COMBAT.md)).
 
 ## 4. NPC traders and fleet combat
@@ -227,9 +228,15 @@ save tests. NPC actions will resolve at navigation-run boundaries.
 
 ## 5. Factions and ship management
 
-- [ ] Federation, Empire, Republic and Alliance with influence and relationships.
-- [ ] Influence affects NPC fleets, territory and trade access/opportunities.
-- [ ] Reputation, law/inspections, wanted status and police response.
+- [x] Federation, Empire, Republic and Alliance with territory, influence (share
+  of systems held) and alliances/rivalries, set up at new-game setup: factions
+  in play, allegiance, territory share and classic or random relations
+  ([factions](docs/FACTIONS.md)).
+- [x] Standing per faction (−100 to 100, spreading to allies and rivals): piracy
+  costs it, destroying raiders and selling cargo earn it; tiers set prices and
+  hostile ports refuse trade.
+- [ ] Influence affects NPC fleets and territory over time; faction fleets.
+- [ ] Law/inspections, wanted status and police response.
 - [ ] Repairs (full hull repair at markets exists), maintenance, detailed ship
   statistics, equipment and customization.
 - [ ] Fleet summaries and batch management that remain readable as ownership grows.

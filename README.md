@@ -37,6 +37,9 @@ browser build compiles the same client to WebAssembly.
 - Roaming raider bands in every system but home that hunt fleets in the open,
   chase fleets that flee into the next system and wander between systems;
   dock or land to hide, outrun them, flee home or fight them for the bounty.
+- Four factions (Federation, Empire, Republic, Alliance) chosen at setup, with
+  territory, alliances and rivalries; your standing with each sets prices at
+  its ports, and piracy, raider hunting and trade move it (Menu → Factions).
 - Roads to victory (Menu → Victory): win as a Trader (10% of all galaxy wealth
   or three port charters) or a Soldier (destroy the Raider Haven), with a published score,
   an optional campaign length and game over when your last ship is lost. Port
@@ -277,7 +280,7 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [run review](docs/previews/run-review.png), [advancing](docs/previews/advance.png),
 [trade route](docs/previews/trade-route.png),
 [map command](docs/previews/destination.png),
-[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png) (`battle-close`: stepped forward and aimed), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [phone battle](docs/previews/phone-battle.png), [Raider Haven](docs/previews/haven.png) (`haven`), [phone Victory panel](docs/previews/phone-victory.png) (`victory`), [landed and mining](docs/previews/landed.png), [raider band strikes](docs/previews/raiders.png), [fleet stacks](docs/previews/fleet-stacks.png) (`--scenario multi-fleet --capture-view galaxy`), [phone system view](docs/previews/phone-system.png) and [phone market](docs/previews/phone-market.png) (`--capture-size 390x844`), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `hail` (a hailed NPC trader), `combat`, `battle`, `battle-close`, `landed`, `raiders`, `victory`, `haven`, `roster`, `unlock`, `chooser`. Captures do not test window
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png) (`battle-close`: stepped forward and aimed), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [phone battle](docs/previews/phone-battle.png), [Raider Haven](docs/previews/haven.png) (`haven`), [phone Victory panel](docs/previews/phone-victory.png) (`victory`), [landed and mining](docs/previews/landed.png), [raider band strikes](docs/previews/raiders.png), [fleet stacks](docs/previews/fleet-stacks.png) (`--scenario multi-fleet --capture-view galaxy`), [phone system view](docs/previews/phone-system.png) and [phone market](docs/previews/phone-market.png) (`--capture-size 390x844`), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `hail` (a hailed NPC trader), `combat`, `battle`, `battle-close`, `landed`, `raiders`, `victory`, `factions` (the Factions panel), `factions-map` (territory rings), `haven`, `roster`, `unlock`, `chooser`. Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

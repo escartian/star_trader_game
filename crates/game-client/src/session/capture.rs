@@ -339,6 +339,19 @@ impl LocalSession {
         self.victory.open = true;
     }
 
+    /// Lays out the four factions (sworn to the Federation), opening the
+    /// panel unless only the map's territory rings are wanted.
+    pub fn capture_factions(&mut self, panel: bool) -> Result<(), String> {
+        let setup = game_core::factions::FactionSetup {
+            allegiance: Some(game_core::factions::Faction::Federation),
+            ..Default::default()
+        };
+        self.authority.set_up_factions(0, &setup)?;
+        self.command(ClientCommand::GetSession);
+        self.factions.open = panel;
+        Ok(())
+    }
+
     /// Shuttle between two bodies until the first raider fight, then show its report.
     pub fn capture_combat(&mut self) -> Result<(), String> {
         self.capture_raiders(false)

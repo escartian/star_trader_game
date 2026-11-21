@@ -60,6 +60,13 @@ impl LocalSession {
                 icons::planet_traits(ui, profile);
             }
         });
+        if self.factions_active() {
+            let terms = self.economy.port_terms(&ship);
+            let color = terms
+                .holder
+                .map_or(CYAN, |(_, tier)| super::factions::tier_color(tier));
+            ui.label(egui::RichText::new(terms.summary()).color(color).small());
+        }
         ui.horizontal_wrapped(|ui| {
             stat(ui, Icon::Funds, AMBER, &market.credits.to_string(), "Market funds available to buy your cargo");
             stat(ui, Icon::Credits, AMBER, &self.economy.credits.to_string(), "Your credits");
@@ -117,13 +124,17 @@ impl LocalSession {
                 missing > 0,
                 egui::DragValue::new(&mut self.market.fuel_units).range(1..=missing.max(1)),
             );
-            let cost = u64::from(units) * self.economy.fuel_price().0;
+            let terms = self.economy.port_terms(&ship);
+            let cost = terms.service(u64::from(units) * self.economy.fuel_price().0);
             stat(
                 ui,
                 Icon::Credits,
                 AMBER,
                 &game_core::economy::Credits(cost).to_string(),
-                &format!("{} cr per fuel unit", self.economy.fuel_price()),
+                &format!(
+                    "{} cr per fuel unit at list price",
+                    self.economy.fuel_price()
+                ),
             );
             let blocked = (missing == 0).then(|| "The tanks are full.".to_owned());
             if icons::labeled_action(ui, Icon::Refuel, "Refuel", blocked)
@@ -146,7 +157,8 @@ impl LocalSession {
             };
             let response = icons::labeled_action(ui, Icon::Refuel, "Full", reason);
             if let Ok(units) = full {
-                let cost = u64::from(units).saturating_mul(self.economy.fuel_price().0);
+                let cost =
+                    terms.service(u64::from(units).saturating_mul(self.economy.fuel_price().0));
                 if response
                     .on_hover_text(format!(
                         "Refuel {units} units for {} cr",

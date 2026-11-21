@@ -1,8 +1,11 @@
 //! New-game setup controls, shared by the game chooser and the Session panel:
-//! galaxy size, starting credits, inflation, danger and the campaign's length
-//! and Trader goal. The choices become session rules in `game_server::setup`.
+//! galaxy size, starting credits, inflation, danger, the campaign's length
+//! and Trader goal, and the factions in play. The choices become session rules in `game_server::setup`.
 use egui::{RichText, Ui};
-use game_core::economy::Credits;
+use game_core::{
+    economy::Credits,
+    factions::{Coverage, Faction, RelationMode},
+};
 use game_server::{DangerLevel, GameSetup, InflationLevel, STARTING_CREDITS, WEALTH_SHARES};
 
 /// Campaign lengths offered (0: open-ended).
@@ -59,6 +62,61 @@ pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
         WEALTH_SHARES,
         |share| format!("{share}% of galaxy wealth"),
     );
+    faction_controls(ui, &mut setup.factions);
+}
+
+/// Which factions take part, your allegiance, territory and relations.
+fn faction_controls(ui: &mut Ui, factions: &mut game_core::factions::FactionSetup) {
+    ui.horizontal_wrapped(|ui| {
+        ui.add_sized(
+            [130.0, 18.0],
+            egui::Label::new(RichText::new("FACTIONS").small()),
+        );
+        for faction in Faction::ALL {
+            ui.checkbox(&mut factions.in_play[faction.index()], faction.label());
+        }
+    });
+    // An allegiance to a faction left out of the game lapses.
+    if factions
+        .allegiance
+        .is_some_and(|faction| !factions.in_play[faction.index()])
+    {
+        factions.allegiance = None;
+    }
+    if !factions.in_play.contains(&true) {
+        ui.small("No factions: every system is independent and trades at list prices.");
+        return;
+    }
+    let choices = std::iter::once(None).chain(
+        Faction::ALL
+            .into_iter()
+            .filter(|faction| factions.in_play[faction.index()])
+            .map(Some),
+    );
+    choice_row(
+        ui,
+        "ALLEGIANCE",
+        &mut factions.allegiance,
+        choices,
+        |choice| match choice {
+            None => "None: neutral with everyone".into(),
+            Some(faction) => format!("{}: home is its capital", faction.label()),
+        },
+    );
+    choice_row(
+        ui,
+        "TERRITORY",
+        &mut factions.coverage,
+        Coverage::ALL,
+        |coverage| coverage.label().to_owned(),
+    );
+    choice_row(
+        ui,
+        "RELATIONS",
+        &mut factions.relations,
+        RelationMode::ALL,
+        |mode| mode.label().to_owned(),
+    );
 }
 
 /// A labelled drop-down over a fixed set of choices.
@@ -88,7 +146,7 @@ fn choice_row<T: Copy + PartialEq>(
 pub(crate) fn setup_summary(seed: u64, setup: &GameSetup) -> String {
     format!(
         "New map (seed {seed}, {} systems, {} ly radius, up to {} objects per system; \
-         {} cr to start, {} inflation, {} danger).",
+         {} cr to start, {} inflation, {} danger; {}).",
         setup.galaxy.systems,
         setup.galaxy.radius_ly,
         setup.galaxy.max_objects,
@@ -100,5 +158,15 @@ pub(crate) fn setup_summary(seed: u64, setup: &GameSetup) -> String {
             .next()
             .unwrap_or("standard"),
         format!("{:?}", setup.danger).to_lowercase(),
+        faction_summary(&setup.factions),
     )
+}
+
+fn faction_summary(factions: &game_core::factions::FactionSetup) -> String {
+    let names: Vec<_> = factions.factions().iter().map(|f| f.label()).collect();
+    match (names.is_empty(), factions.allegiance) {
+        (true, _) => "no factions".into(),
+        (false, Some(faction)) => format!("{}; sworn to the {}", names.join(", "), faction.label()),
+        (false, None) => names.join(", "),
+    }
 }

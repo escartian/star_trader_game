@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "factions": [
+    {
+      "id": "Federation",
+      "name": "Concord Federation",
+      "description": "Lawful core worlds. Piracy in their space is punished hardest.",
+      "color": [90, 160, 255],
+      "piracy_penalty": 25,
+      "raider_kill_standing": 2,
+      "sale_credits_per_point": 500000
+    },
+    {
+      "id": "Empire",
+      "name": "Ascendant Empire",
+      "description": "A martial throne that honours every raider you destroy.",
+      "color": [190, 110, 250],
+      "piracy_penalty": 15,
+      "raider_kill_standing": 4,
+      "sale_credits_per_point": 1000000
+    },
+    {
+      "id": "Republic",
+      "name": "Free Trade Republic",
+      "description": "Merchant houses. Selling in their ports wins favour fastest.",
+      "color": [60, 215, 200],
+      "piracy_penalty": 15,
+      "raider_kill_standing": 1,
+      "sale_credits_per_point": 200000
+    },
+    {
+      "id": "Alliance",
+      "name": "Frontier Alliance",
+      "description": "Loose frontier clans, slow to anger and glad of raider hunters.",
+      "color": [235, 195, 80],
+      "piracy_penalty": 8,
+      "raider_kill_standing": 3,
+      "sale_credits_per_point": 500000
+    }
+  ],
+  "classic_relations": [
+    { "between": ["Federation", "Republic"], "relation": "Allied" },
+    { "between": ["Federation", "Empire"], "relation": "Rival" },
+    { "between": ["Empire", "Alliance"], "relation": "Rival" },
+    { "between": ["Republic", "Alliance"], "relation": "Allied" }
+  ]
+}

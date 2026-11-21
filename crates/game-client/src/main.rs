@@ -128,6 +128,11 @@ fn fresh_session(
         )?;
         rules.validate()?;
     }
+    if std::path::Path::new("config/factions.json").is_file() {
+        rules.faction_catalog = game_core::factions::FactionCatalog::from_json(
+            &std::fs::read_to_string("config/factions.json")?,
+        )?;
+    }
     if std::path::Path::new("config/planets.json").is_file() {
         rules.planet_catalog = game_core::planet::PlanetCatalog::from_json(
             &std::fs::read_to_string("config/planets.json")?,
@@ -143,9 +148,11 @@ fn fresh_session(
     } else {
         game_server::Session::with_galaxy(seed, rules, options.galaxy)?
     };
-    // A player's new game starts as a captain; captures keep every control.
+    // A player's new game starts as a captain with the four factions in
+    // play; captures keep every control and an unclaimed galaxy.
     if !options.capturing() {
         authority.begin_progression();
+        authority.set_up_factions(seed, &Default::default())?;
     }
     if std::path::Path::new("config/movement.json").is_file() {
         authority.set_movement_rules(game_core::movement::MovementRules::from_json(

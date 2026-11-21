@@ -1,9 +1,10 @@
-//! New-game setup: galaxy size, starting credits, inflation, danger and the
-//! campaign's length and Trader goal. Every choice becomes session rules at
+//! New-game setup: galaxy size, starting credits, inflation, danger, the
+//! campaign's length and Trader goal, and the factions in play. Every choice becomes session rules at
 //! creation, so the save carries it and the game plays by it throughout.
 use super::Session;
 use game_core::{
     economy::{Credits, EconomyRules},
+    factions::FactionSetup,
     generation::GalaxyConfig,
     movement::MovementRules,
 };
@@ -84,6 +85,8 @@ pub struct GameSetup {
     pub run_limit: Option<u64>,
     /// Share of galaxy wealth that wins the Trader road, in percent.
     pub wealth_share_percent: u32,
+    /// Factions in play, your allegiance, territory and relations.
+    pub factions: FactionSetup,
 }
 
 impl Default for GameSetup {
@@ -95,6 +98,7 @@ impl Default for GameSetup {
             danger: DangerLevel::default(),
             run_limit: None,
             wealth_share_percent: 10,
+            factions: FactionSetup::default(),
         }
     }
 }
@@ -118,6 +122,14 @@ impl GameSetup {
 }
 
 impl Session {
+    /// Lays out territory, relations and opening standing; a world generated
+    /// without a setup (tests, captures) has no factions until this runs.
+    pub fn set_up_factions(&mut self, seed: u64, setup: &FactionSetup) -> Result<(), String> {
+        let catalog = &self.economy.rules.faction_catalog;
+        self.economy.factions = setup.generate(seed, &self.systems, catalog)?;
+        Ok(())
+    }
+
     /// A new game from `setup`, on top of base `rules` and `movement` rules.
     pub fn new_game(
         seed: u64,
@@ -127,6 +139,7 @@ impl Session {
     ) -> Result<Self, String> {
         setup.apply(&mut rules, &mut movement);
         rules.validate()?;
+        setup.factions.validate()?;
         movement.validate().map_err(|error| error.to_string())?;
         if setup
             .run_limit
@@ -137,6 +150,7 @@ impl Session {
         let systems = game_core::generation::generate_galaxy_with(seed, setup.galaxy)?;
         let mut session = Self::from_generated(seed, rules, systems, movement)?;
         session.state.campaign.run_limit = setup.run_limit;
+        session.set_up_factions(seed, &setup.factions)?;
         session.begin_progression();
         Ok(session)
     }

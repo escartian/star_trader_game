@@ -119,6 +119,9 @@ impl SaveData {
         }
         self.validate_markets()?;
         self.economy
+            .factions
+            .validate(&self.systems, &self.economy.rules.faction_catalog)?;
+        self.economy
             .validate_traders(&self.systems, self.player.navigation.run)?;
         game_core::piracy::validate_contacts(&self.player, &self.economy)?;
         let traders = &self.economy.traders;

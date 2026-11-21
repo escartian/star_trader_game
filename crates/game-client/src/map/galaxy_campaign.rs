@@ -1,5 +1,6 @@
-//! Campaign marks on the galaxy map: the Raider Haven's fortress beside its
-//! system, and shipping lanes between systems holding your chartered ports.
+//! Campaign marks on the galaxy map: a ring in its holder's colour around
+//! every claimed system, the Raider Haven's fortress beside its system, and
+//! shipping lanes between systems holding your chartered ports.
 use super::{Map, position};
 use crate::theme::CYAN;
 use egui::{Painter, Rect, Stroke, Vec2};
@@ -13,6 +14,13 @@ impl Map {
                 .find(|known| known.id == id)
                 .map(|system| self.camera.project(position(system), rect))
         };
+        for system in &self.systems {
+            if let Some((_, color, _)) = self.session.system_holder(system.id) {
+                let at = self.camera.project(position(system), rect);
+                painter.circle_filled(at, 13.0, color.gamma_multiply(0.12));
+                painter.circle_stroke(at, 13.0, Stroke::new(1.5_f32, color.gamma_multiply(0.8)));
+            }
+        }
         let mut systems: Vec<_> = marks.chartered.iter().map(|market| market.system).collect();
         systems.sort_by_key(|system| system.0);
         systems.dedup();

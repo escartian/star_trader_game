@@ -8,6 +8,7 @@ use crate::{
 impl Economy {
     pub fn buy_hull(&mut self, ship: &Ship, kind: ShipKind) -> Result<ShipSpec, EconomyError> {
         let market = self.current_market(ship)?;
+        self.require_open_port(ship)?;
         let id = market.id;
         if market.ship_stock[kind.index()] == 0 {
             return Err(EconomyError::ShipOutOfStock);
@@ -43,6 +44,7 @@ impl Economy {
             return Err(EconomyError::NonEmptyHold);
         }
         let market = self.current_market(ship)?;
+        self.require_open_port(ship)?;
         if market.ship_stock[ship.kind.index()] >= 1000 {
             return Err(EconomyError::StockFull);
         }

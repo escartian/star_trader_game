@@ -190,10 +190,10 @@ convenience; the runtime GLB has no Blender dependency.
 `music/main-theme.ogg` is “Long Haul”, the main menu theme: an original Strudel
 composition whose source is `source/music/main-theme.strudel.js` (paste it into
 strudel.cc to play or edit). It is synthesizer-only (pads, arpeggio, lead, synth drums and spacey FM
-bell and star chirps). Its tempo eases through 60, 80, 100, 120, 100 and 80 BPM
+bell and star chirps). Its tempo eases through 60, 80, 100, 110, 100 and 80 BPM
 over 48 bars (4 bars held, 4 bars ramping per section): the pad and chirps
 thin as it speeds up while a countermelody and chord stabs join, and it loops
-seamlessly every 133.6 s. `tools/music/README.md` explains the export (`node tools/music/render.mjs`).
+seamlessly every 135.1 s. `tools/music/README.md` explains the export (`node tools/music/render.mjs`).
 
 ## Trade station model
 

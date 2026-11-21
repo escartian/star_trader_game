@@ -13,7 +13,7 @@
 //   bars  9-16  depart   80 BPM  the arpeggio and hats come in
 //   bars 17-24  cruise  100 BPM  melody, countermelody, kick and snare; the pad
 //                                thins and the chirps grow sparse
-//   bars 25-32  arrive  120 BPM  the melody climbs an octave over chord stabs;
+//   bars 25-32  arrive  110 BPM  the melody climbs an octave over chord stabs;
 //                                the chirps fall silent
 //   bars 33-40  return  100 BPM  back to the cruise, a few chirps return
 //   bars 41-48  wind    80 BPM  melody and drums leave, pad and chirps return
@@ -25,7 +25,7 @@ setcps(80 / 60 / 4)
 // Strings that JavaScript edits use single quotes: Strudel parses double-quoted
 // and backtick strings as patterns.
 const sections = (values) => '<' + values.map((value) => value + '!8').join(' ') + '>'
-const tempos = [60, 80, 100, 120, 100, 80]
+const tempos = [60, 80, 100, 110, 100, 80]
 // BPM for every bar: 4 bars at the section's tempo, then 4 bars easing toward
 // the next section's (the last eases back to the first, for the loop).
 window.tempoMap = tempos.flatMap((bpm, index) => {
@@ -129,12 +129,12 @@ const hats = s("[~ white]*4")
   .mask(sections([0, 1, 1, 1, 1, 1]))
 
 // Spacey chirps, thinning out as the music builds and returning as it calms.
-// FM bells: sparse, high and echoing.
-const bells = n("<[0 ~ ~ ~ 4 ~ ~ ~] [~ ~ 7 ~ ~ ~ 2 ~] [4 ~ ~ ~ ~ 9 ~ ~] [~ 2 ~ ~ 6 ~ ~ ~]>")
+// FM bells: sparse (about one every two bars), high and echoing.
+const bells = n("<[0 ~ ~ ~] ~ [~ ~ 7 ~] ~ [4 ~ ~ ~] ~ [~ ~ ~ 2] ~>")
   .scale("D5:minor")
   .s("sine").fmi(2.2).fmh(3.5)
   .decay(1.2).sustain(0)
-  .delay(0.45).delaytime(echo).delayfeedback(0.5)
+  .delay(0.4).delaytime(echo).delayfeedback(0.35)
   .pan(rand.range(0.15, 0.85))
   .room(0.8).size(8)
   .gain(sections([0.16, 0.13, 0.06, 0, 0.06, 0.13]))

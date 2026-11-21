@@ -8,7 +8,7 @@
 
 /// The original main menu theme, exported from
 /// `assets/source/music/main-theme.strudel.js` by `tools/music/render.mjs`. It
-/// is a seamless 133.6 s loop of 48 bars whose tempo eases 60-120-60 BPM.
+/// is a seamless 135.1 s loop of 48 bars whose tempo eases 60-110-60 BPM.
 #[cfg(not(target_arch = "wasm32"))]
 const MAIN_THEME: &[u8] = include_bytes!("../../../assets/music/main-theme.ogg");
 
@@ -177,9 +177,9 @@ mod tests {
         assert_eq!((theme.channels(), theme.sample_rate()), (2, 48_000));
         let samples = theme.count();
         let seconds = samples as f64 / 2.0 / 48_000.0;
-        // Six 8-bar sections at 60, 80, 100, 120, 100 and 80 BPM: each holds
+        // Six 8-bar sections at 60, 80, 100, 110, 100 and 80 BPM: each holds
         // for 4 bars, then eases toward the next over 4 (the source's tempoMap).
-        let tempos = [60.0, 80.0, 100.0, 120.0, 100.0, 80.0];
+        let tempos = [60.0, 80.0, 100.0, 110.0, 100.0, 80.0];
         let expected: f64 = (0..6)
             .flat_map(|section| {
                 let (bpm, next) = (tempos[section], tempos[(section + 1) % 6]);

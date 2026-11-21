@@ -25,6 +25,10 @@ serde_json.workspace = true
 tempfile = "=3.27.0"
 fastrand = "=2.5.0"
 
+# Desktop music playback (Ogg Vorbis decoding through symphonia, output via cpal).
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rodio = { version = "=0.21.1", default-features = false, features = ["playback", "vorbis"] }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 egui-wgpu = { version = "=0.31.1", default-features = false, features = ["fragile-send-sync-non-atomic-wasm"] }
 wasm-bindgen = "=0.2.129"

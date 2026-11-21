@@ -15,6 +15,13 @@ pub(super) struct SavePanel {
     setup: game_server::GameSetup,
     pub guide: bool,
     pub autosave: bool,
+    /// Audio and display options (see `session::settings`).
+    pub options: crate::preferences::ClientOptions,
+    pub settings_open: bool,
+    /// The player asked to return to the main menu; the map opens it.
+    pub main_menu_requested: bool,
+    /// Autosave is off: "Main menu" asks whether to save first.
+    pub confirm_leave: bool,
 }
 
 impl Default for SavePanel {
@@ -28,6 +35,10 @@ impl Default for SavePanel {
             setup: game_server::GameSetup::default(),
             guide: true,
             autosave: true,
+            options: Default::default(),
+            settings_open: false,
+            main_menu_requested: false,
+            confirm_leave: false,
         }
     }
 }
@@ -175,11 +186,12 @@ impl LocalSession {
         });
         ui.separator();
         ui.horizontal_wrapped(|ui| {
-            icons::glyph(ui, Icon::Settings, CYAN, "Settings are remembered");
-            ui.checkbox(&mut self.saves.guide, "Guide")
-                .on_hover_text("Show the first-delivery guide");
-            ui.checkbox(&mut self.saves.autosave, "Autosave")
-                .on_hover_text("Autosave on close / suspend");
+            if icons::button(ui, Icon::Settings, "Settings")
+                .on_hover_text("Volume, display, guide and autosave")
+                .clicked()
+            {
+                self.saves.settings_open = true;
+            }
             icons::glyph(
                 ui,
                 Icon::Info,

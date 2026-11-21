@@ -147,6 +147,34 @@ pub fn labeled_toggle(ui: &mut Ui, icon: Icon, label: &str, on: bool) -> Respons
     response
 }
 
+/// A full-width menu entry: a larger icon and label on the left.
+pub fn menu_button(ui: &mut Ui, icon: Icon, label: &str, height: f32) -> Response {
+    let text = ui.painter().layout_no_wrap(
+        label.into(),
+        super::fonts::text(17.0),
+        ui.visuals().text_color(),
+    );
+    let size = Vec2::new(ui.available_width(), height);
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), label)
+    });
+    frame(ui, rect, &response, false);
+    paint_sized(
+        ui.painter(),
+        icon,
+        rect.left_center() + Vec2::new(24.0, 0.0),
+        22.0,
+        accent(ui),
+    );
+    ui.painter().galley(
+        rect.left_center() + Vec2::new(46.0, -text.size().y * 0.5),
+        text,
+        ui.visuals().text_color(),
+    );
+    response
+}
+
 /// Square icon-only control; `tooltip` names the action for hover and screen readers.
 pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str) -> Response {
     toggle(ui, icon, tooltip, false)

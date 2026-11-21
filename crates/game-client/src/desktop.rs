@@ -8,7 +8,7 @@ use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
-    window::{Window, WindowId},
+    window::{Fullscreen, Window, WindowId},
 };
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
@@ -70,19 +70,16 @@ impl ApplicationHandler for App {
             g.window.request_redraw();
         }
         match event {
-            WindowEvent::CloseRequested => {
-                if self.map.autosave().is_ok() {
-                    event_loop.exit();
-                } else {
-                    g.window.request_redraw();
-                }
-            }
+            WindowEvent::CloseRequested => self.close(event_loop),
             WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
                 g.resize();
                 g.window.request_redraw();
             }
             WindowEvent::RedrawRequested => match g.draw(&mut self.map) {
-                Ok(delay) => self.next_redraw = Instant::now().checked_add(delay),
+                Ok((delay, commands)) => {
+                    self.next_redraw = Instant::now().checked_add(delay);
+                    self.viewport_commands(event_loop, commands);
+                }
                 Err(wgpu::SurfaceError::OutOfMemory) => {
                     self.error = Some("GPU surface ran out of memory".into());
                     event_loop.exit();
@@ -108,6 +105,37 @@ impl ApplicationHandler for App {
             }
             Some(deadline) => event_loop.set_control_flow(ControlFlow::WaitUntil(deadline)),
             None => event_loop.set_control_flow(ControlFlow::Wait),
+        }
+    }
+}
+
+impl App {
+    /// Closing autosaves first; a failed save keeps the window open to retry.
+    fn close(&mut self, event_loop: &ActiveEventLoop) {
+        if self.map.autosave().is_ok() {
+            event_loop.exit();
+        } else if let Some(g) = &self.graphics {
+            g.window.request_redraw();
+        }
+    }
+
+    /// The window commands the UI sends: fullscreen (Settings) and close (Quit).
+    fn viewport_commands(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        commands: Vec<egui::ViewportCommand>,
+    ) {
+        for command in commands {
+            match command {
+                egui::ViewportCommand::Fullscreen(on) => {
+                    if let Some(g) = &self.graphics {
+                        g.window
+                            .set_fullscreen(on.then_some(Fullscreen::Borderless(None)));
+                    }
+                }
+                egui::ViewportCommand::Close => self.close(event_loop),
+                _ => {}
+            }
         }
     }
 }
@@ -191,10 +219,14 @@ impl Graphics {
         self.surface.configure(&self.device, &self.config);
     }
 
-    fn draw(&mut self, map: &mut Map) -> std::result::Result<Duration, wgpu::SurfaceError> {
+    /// Draws a frame; returns the repaint delay and the UI's window commands.
+    fn draw(
+        &mut self,
+        map: &mut Map,
+    ) -> std::result::Result<(Duration, Vec<egui::ViewportCommand>), wgpu::SurfaceError> {
         let size = self.window.inner_size();
         if size.width == 0 || size.height == 0 {
-            return Ok(Duration::MAX);
+            return Ok((Duration::MAX, Vec::new()));
         }
         let frame = self.surface.get_current_texture()?;
         let output = self
@@ -202,10 +234,12 @@ impl Graphics {
             .run(self.input.take_egui_input(&self.window), |ctx| map.ui(ctx));
         self.input
             .handle_platform_output(&self.window, output.platform_output);
-        let delay = output
+        let (delay, commands) = output
             .viewport_output
             .get(&egui::ViewportId::ROOT)
-            .map_or(Duration::MAX, |viewport| viewport.repaint_delay);
+            .map_or((Duration::MAX, Vec::new()), |viewport| {
+                (viewport.repaint_delay, viewport.commands.clone())
+            });
         let jobs = self
             .context
             .tessellate(output.shapes, output.pixels_per_point);
@@ -244,6 +278,6 @@ impl Graphics {
         for id in &output.textures_delta.free {
             self.renderer.free_texture(id);
         }
-        Ok(delay)
+        Ok((delay, commands))
     }
 }

@@ -25,6 +25,7 @@ impl LegacyPreferences {
             active_ship: game_core::travel::ShipId(1),
             guide: self.guide,
             autosave: self.autosave,
+            options: Default::default(),
         })
     }
 }

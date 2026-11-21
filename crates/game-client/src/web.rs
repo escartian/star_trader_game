@@ -33,6 +33,9 @@ fn run() -> Result<()> {
     };
     let mut map = Map::new(systems, authority);
     map.apply_preferences(Preferences::default(), None)?;
+    // Silent for now: the browser build has no audio output yet.
+    let (music, _) = crate::audio::Music::open();
+    map.set_music(music);
     map.notify("Browser build: saves are not persistent yet.".to_owned());
 
     let app = App {

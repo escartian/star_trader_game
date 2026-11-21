@@ -50,6 +50,14 @@ Draw star markers and route lines, with regular UI panels for markets/fleets.
 No ECS, physics world or general scene framework is required. The client reads
 only the embedded ship GLBs used by battle and NPC traffic.
 
+Music is client I/O in `game-client/src/audio.rs`. The map decides which track
+should play (the main menu theme, or in game when the player enables it) and
+the gain from the Settings sliders; `audio` owns the device through rodio
+(desktop only; the browser build is silent). `main` opens the device and hands
+it to the map, so tests and captures never touch audio hardware. The theme is an
+original Strudel composition kept as source in `assets/source/music/` and
+exported to the embedded Ogg loop by `tools/music/render.mjs`.
+
 Library selection is provisional until the desktop/mobile spike passes. Keep
 versions mutually compatible, pin resolved dependencies in Cargo.lock, and avoid
 adding a second graphics backend or async runtime without a concrete need.

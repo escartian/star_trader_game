@@ -1,0 +1,13 @@
+{
+  "name": "star-trader-music",
+  "private": true,
+  "description": "Exports the Strudel music sources in assets/source/music to runtime audio.",
+  "type": "module",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@strudel/web": "1.3.0",
+    "puppeteer-core": "25.18.1"
+  }
+}

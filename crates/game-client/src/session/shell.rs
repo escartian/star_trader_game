@@ -192,7 +192,12 @@ impl LocalSession {
             (
                 Icon::Save,
                 "Session & saves",
-                "Save, load, settings, guide and log",
+                "Save, load, new game and log",
+            ),
+            (
+                Icon::Settings,
+                "Settings",
+                "Volume, display, guide and autosave",
             ),
         ];
         let shown = [
@@ -201,6 +206,7 @@ impl LocalSession {
             true,
             self.unlocked(Feature::Victory),
             self.factions_active(),
+            true,
             true,
         ];
         for (index, (icon, label, tip)) in entries.into_iter().enumerate() {
@@ -217,9 +223,15 @@ impl LocalSession {
                     2 => self.open_navigation(),
                     3 => self.victory.open = true,
                     4 => self.factions.open = true,
-                    _ => self.saves.open = true,
+                    5 => self.saves.open = true,
+                    _ => self.open_settings(),
                 }
             }
+        }
+        // The browser build has no main menu yet: it starts straight in a game.
+        if !cfg!(target_arch = "wasm32") {
+            ui.separator();
+            self.main_menu_controls(ui);
         }
     }
 }

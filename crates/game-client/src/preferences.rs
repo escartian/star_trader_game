@@ -21,6 +21,59 @@ pub struct Preferences {
     pub active_ship: game_core::travel::ShipId,
     pub guide: bool,
     pub autosave: bool,
+    /// Audio and display options; files from before they existed get defaults.
+    #[serde(default)]
+    pub options: ClientOptions,
+}
+
+/// Audio and display options from the Settings page.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct ClientOptions {
+    /// Percent, 0-100 (see `audio::music_gain` for the loudness curve).
+    pub master_volume: u8,
+    /// Percent, 0-100, applied on top of the master volume.
+    pub music_volume: u8,
+    pub muted: bool,
+    /// Keep the theme playing after leaving the main menu.
+    pub music_in_game: bool,
+    /// Borderless fullscreen on desktop.
+    pub fullscreen: bool,
+    /// Interface scale in percent, `UI_SCALE_MIN..=UI_SCALE_MAX`.
+    pub ui_scale: u8,
+    /// Map glides and battle slides; off shows final positions at once.
+    pub animations: bool,
+}
+
+pub const UI_SCALE_MIN: u8 = 75;
+pub const UI_SCALE_MAX: u8 = 200;
+
+impl Default for ClientOptions {
+    fn default() -> Self {
+        Self {
+            master_volume: 80,
+            music_volume: 70,
+            muted: false,
+            music_in_game: false,
+            fullscreen: false,
+            ui_scale: 100,
+            animations: true,
+        }
+    }
+}
+
+impl ClientOptions {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.master_volume > 100 || self.music_volume > 100 {
+            return Err("Volumes must be 0-100 percent".into());
+        }
+        if !(UI_SCALE_MIN..=UI_SCALE_MAX).contains(&self.ui_scale) {
+            return Err(format!(
+                "Interface scale must be {UI_SCALE_MIN}-{UI_SCALE_MAX} percent"
+            ));
+        }
+        Ok(())
+    }
 }
 
 fn default_active_ship() -> game_core::travel::ShipId {
@@ -36,6 +89,7 @@ impl Default for Preferences {
             active_ship: default_active_ship(),
             guide: true,
             autosave: true,
+            options: ClientOptions::default(),
         }
     }
 }
@@ -59,7 +113,7 @@ impl Preferences {
         {
             return Err("settings.json is reserved for client preferences".into());
         }
-        Ok(())
+        self.options.validate()
     }
 
     #[cfg(not(target_arch = "wasm32"))]

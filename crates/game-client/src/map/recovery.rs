@@ -1,4 +1,6 @@
-//! The startup save chooser keeps every session idle until the player picks a game.
+//! The main menu's save slots: what each holds, and deleting unloadable saves.
+//! The menu keeps every session idle until the player picks a game; its pages
+//! are drawn by `main_menu`.
 use super::Map;
 use std::{
     fs,
@@ -7,21 +9,21 @@ use std::{
 };
 
 #[derive(Clone)]
-struct SaveEntry {
-    path: PathBuf,
-    label: String,
-    status: SaveStatus,
+pub(super) struct SaveEntry {
+    pub path: PathBuf,
+    pub label: String,
+    pub status: SaveStatus,
 }
 
 #[derive(Clone)]
-enum SaveStatus {
+pub(super) enum SaveStatus {
     Empty,
     Ready { run: u64, ships: usize },
     Incompatible(String),
 }
 
 impl SaveStatus {
-    fn inspect(path: &Path) -> Self {
+    pub(super) fn inspect(path: &Path) -> Self {
         let backup = backup_path(path);
         if !path.exists() && !backup.exists() {
             return Self::Empty;
@@ -44,12 +46,16 @@ impl SaveStatus {
 }
 
 pub(super) struct SaveRecovery {
-    selected: PathBuf,
-    startup_error: Option<String>,
-    entries: Vec<SaveEntry>,
-    pending_delete: Option<PathBuf>,
-    message: Option<String>,
-    setup: game_server::GameSetup,
+    /// The last used save: Continue loads it.
+    pub selected: PathBuf,
+    pub startup_error: Option<String>,
+    pub entries: Vec<SaveEntry>,
+    /// A save awaiting "Confirm delete" (unloadable) or "Confirm" overwrite.
+    pub pending_delete: Option<PathBuf>,
+    pub pending_overwrite: Option<PathBuf>,
+    pub message: Option<String>,
+    pub setup: game_server::GameSetup,
+    pub page: super::main_menu::MenuPage,
 }
 
 impl SaveRecovery {
@@ -83,18 +89,20 @@ impl SaveRecovery {
             startup_error: error,
             entries,
             pending_delete: None,
+            pending_overwrite: None,
             message: None,
             setup: game_server::GameSetup::default(),
+            page: Default::default(),
         }
     }
 
-    fn refresh(&mut self) {
+    pub(super) fn refresh(&mut self) {
         for entry in &mut self.entries {
             entry.status = SaveStatus::inspect(&entry.path);
         }
     }
 
-    fn delete(&mut self, path: &Path) -> Result<(), String> {
+    pub(super) fn delete(&mut self, path: &Path) -> Result<(), String> {
         // The confirmation UI names this exact path and its backup. Remove the
         // backup first, so a failure leaves the primary intact when possible.
         for file in [backup_path(path), path.to_path_buf()] {
@@ -121,110 +129,6 @@ impl Map {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn open_save_chooser(&mut self, selected: PathBuf, error: Option<String>) {
         self.save_recovery = Some(SaveRecovery::new(selected, error));
-    }
-
-    pub(super) fn show_save_recovery(&mut self, ctx: &egui::Context) {
-        let mut recovery = self.save_recovery.take().expect("recovery is open");
-        let mut finished = false;
-        egui::CentralPanel::default().show(ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    if let Some(icon) = crate::app_icon::texture(ui.ctx()) {
-                        ui.add(egui::Image::new((icon.id(), egui::vec2(64.0, 64.0))));
-                    }
-                    ui.vertical(|ui| {
-                        ui.label(
-                            egui::RichText::new("STAR TRADER")
-                                .font(crate::theme::fonts::display(ui.ctx(), 22.0))
-                                .color(crate::theme::GREEN),
-                        );
-                        ui.heading("Choose a game");
-                    });
-                });
-                if let Some(error) = &recovery.startup_error {
-                    ui.label("The last used save could not be loaded. Your files are still intact.");
-                    ui.label(error);
-                } else {
-                    ui.label("Load a saved game or start a new one in an empty slot.");
-                }
-                ui.separator();
-                ui.heading("New game setup");
-                crate::session::setup_controls(ui, &mut recovery.setup);
-                ui.separator();
-                for entry in recovery.entries.clone() {
-                    ui.group(|ui| {
-                        ui.strong(&entry.label);
-                        if entry.path == recovery.selected {
-                            ui.label("Last used");
-                        }
-                        ui.small(entry.path.display().to_string());
-                        match &entry.status {
-                            SaveStatus::Ready { run, ships } => {
-                                ui.label(format!("Ready · run {run} · {ships} ships"));
-                                if ui.button("Load game").clicked() {
-                                    match self.session.load_path(&entry.path) {
-                                        Ok(message) => {
-                                            self.notify(message.unwrap_or_else(|| "Saved game loaded.".into()));
-                                            finished = true;
-                                        }
-                                        Err(error) => {
-                                            recovery.message = Some(error);
-                                            recovery.refresh();
-                                        }
-                                    }
-                                }
-                            }
-                            SaveStatus::Empty => {
-                                ui.label("Empty slot");
-                                if ui.button("Start new game here").clicked() {
-                                    if !matches!(SaveStatus::inspect(&entry.path), SaveStatus::Empty) {
-                                        recovery.refresh();
-                                        recovery.message = Some("This slot changed. Choose it again.".into());
-                                    } else {
-                                        let seed = crate::seed::new_seed();
-                                        match self.session.start_new_at(entry.path.clone(), seed, recovery.setup) {
-                                            Ok(()) => {
-                                                self.notify(format!("{} This slot will save on close.", crate::session::setup_summary(seed, &recovery.setup)));
-                                                finished = true;
-                                            }
-                                            Err(error) => recovery.message = Some(error),
-                                        }
-                                    }
-                                }
-                            }
-                            SaveStatus::Incompatible(error) => {
-                                ui.label("Cannot load this save");
-                                ui.small(error);
-                                if recovery.pending_delete.as_deref() == Some(entry.path.as_path()) {
-                                    ui.label("Delete this save and its backup permanently?");
-                                    ui.horizontal(|ui| {
-                                        if ui.button("Confirm delete").clicked() {
-                                            recovery.message = Some(match recovery.delete(&entry.path) {
-                                                Ok(()) => "Save and backup deleted. You can start a new game in this slot.".into(),
-                                                Err(error) => error,
-                                            });
-                                        }
-                                        if ui.button("Cancel").clicked() {
-                                            recovery.pending_delete = None;
-                                        }
-                                    });
-                                } else if ui.button("Delete save and backup…").clicked() {
-                                    recovery.pending_delete = Some(entry.path.clone());
-                                }
-                            }
-                        }
-                    });
-                    ui.add_space(8.0);
-                }
-                if let Some(message) = &recovery.message {
-                    ui.separator();
-                    ui.label(message);
-                }
-            });
-        });
-        if !finished {
-            self.save_recovery = Some(recovery);
-        }
     }
 }
 

@@ -1,4 +1,5 @@
 mod app_icon;
+mod audio;
 mod battle;
 #[cfg(all(feature = "dev-tools", not(target_arch = "wasm32")))]
 mod capture;
@@ -84,6 +85,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
     map.apply_preferences(settings, persist_settings)?;
+    if !options.capturing() {
+        let (music, problem) = audio::Music::open();
+        map.set_music(music);
+        if let Some(message) = problem {
+            eprintln!("{message}");
+        }
+    }
     if !options.new && !options.resume && !options.headless && !options.capturing() {
         map.open_save_chooser(options.save, startup_error);
     }

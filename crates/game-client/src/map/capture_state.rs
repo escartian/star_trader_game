@@ -46,6 +46,17 @@ impl Map {
             "roster" => self.sheet = crate::session::SheetTab::Fleets,
             "unlock" => self.session.capture_unlock(),
             "chooser" => self.open_save_chooser("data/slot-1.json".into(), None),
+            "menu-new" | "menu-load" | "menu-settings" => {
+                self.open_save_chooser("data/slot-1.json".into(), None);
+                if let Some(menu) = &mut self.save_recovery {
+                    menu.page = match view {
+                        "menu-new" => super::main_menu::MenuPage::NewGame,
+                        "menu-load" => super::main_menu::MenuPage::Load,
+                        _ => super::main_menu::MenuPage::Settings,
+                    };
+                }
+            }
+            "settings" => self.session.open_settings(),
             "haven" => {
                 let id = self.session.capture_haven()?;
                 let system = self

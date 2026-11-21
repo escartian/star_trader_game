@@ -2,12 +2,15 @@ pub(crate) mod art;
 mod camera;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture_state;
+mod client_options;
 mod fixtures;
 mod fleets;
 mod galaxy_campaign;
 mod galaxy_fleets;
 mod interaction;
 pub(crate) mod local;
+mod main_menu;
+mod menu_backdrop;
 mod orbit_view;
 mod panels;
 mod recovery;
@@ -40,7 +43,11 @@ pub struct Map {
     sheet: crate::session::SheetTab,
     /// The galaxy map's area last frame (the sheet draws before the map).
     last_map_rect: Rect,
+    /// The main menu, while it is open (its save slots and page).
     save_recovery: Option<recovery::SaveRecovery>,
+    music: crate::audio::Music,
+    /// Display options last sent to egui; `None` means egui's defaults.
+    applied_options: Option<crate::preferences::ClientOptions>,
 }
 
 fn position(system: &StarSystem) -> DVec3 {
@@ -105,6 +112,8 @@ impl Map {
             sheet: crate::session::SheetTab::default(),
             last_map_rect: Rect::NOTHING,
             save_recovery: None,
+            music: crate::audio::Music::silent(),
+            applied_options: None,
         }
     }
 
@@ -202,8 +211,9 @@ impl Map {
 
     pub fn ui(&mut self, ctx: &egui::Context) {
         crate::theme::apply(ctx);
+        self.apply_client_options(ctx);
         if self.save_recovery.is_some() {
-            self.show_save_recovery(ctx);
+            self.show_main_menu(ctx);
             return;
         }
         if let Some(systems) = self.session.take_loaded_galaxy() {
@@ -247,6 +257,7 @@ impl Map {
         self.session.show_market(ctx, &self.session_systems);
         self.session.show_fleets(ctx, &self.session_systems);
         self.session.show_session_controls(ctx);
+        self.session.show_settings(ctx);
         self.session.show_navigation(ctx, &self.session_systems);
         self.session.show_battle(ctx);
         self.session.show_combat_report(ctx);
@@ -255,6 +266,11 @@ impl Map {
         // Taps on the strip or sheet may ask for another page: show it at once.
         if let Some(tab) = self.session.take_sheet_request() {
             self.sheet = tab;
+        }
+        if self.session.take_main_menu_request() {
+            self.sheet = crate::session::SheetTab::default();
+            #[cfg(not(target_arch = "wasm32"))]
+            self.open_save_chooser(self.session.save_path(), None);
         }
     }
 

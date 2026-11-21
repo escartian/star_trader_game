@@ -108,18 +108,27 @@ trunk serve
 This is an early browser port: it starts a fresh game and does not yet persist
 saves or preferences. See [platform status](docs/PLATFORM_STATUS.md).
 
-The initial path is `data/slot-1.json`. Normal desktop launches open a game
-chooser with three slots and any separately named last-used save. It shows which
-games can load, which slots are empty, and which saves need attention. An
-incompatible save remains untouched until you confirm deletion of it and its
-backup; the chooser never autosaves over it. `data/settings.json` remembers the
+The initial path is `data/slot-1.json`. Normal desktop launches open the
+[main menu](docs/previews/main-menu.png): **Continue** (the last used game),
+**New game** (setup, then an empty slot or a confirmed start-over in a used one),
+**Load game** (three slots and any separately named last-used save), **Settings**
+and **Quit**, over a drifting starfield while the original theme “Long Haul”
+plays. Load game shows which games can load, which slots are empty, and which
+saves need attention. An incompatible save remains untouched until you confirm
+deletion of it and its backup; the menu never autosaves over it. In game,
+**Menu → Main menu** saves (or, with autosave off, asks first) and returns there.
+
+[Settings](docs/previews/settings.png) (main menu, or **Menu → Settings** in game)
+hold master and music volume, mute, music during play, fullscreen, interface scale
+(75–200%), animations, the guide and autosave. They are saved immediately with
+the other client preferences. The browser build has no audio yet. `data/settings.json` remembers the
 selected save, and `--save PATH` selects another file. `--continue` loads the
 selected file directly, while `--new` starts a session directly. **Session / saves**
 provides New, Save, Load and slot selection after entering a game. Autosave runs on
 close/suspend and writes to the selected slot. The previous valid file becomes
 its `.bak`; a failed close-save keeps the window open with an error message.
 Save slots live under ignored `data/`, keeping personal progress out of Git.
-New games choose a fresh map seed by default. The startup chooser and
+New games choose a fresh map seed by default. The main menu's New game page and
 **Session / saves** let you choose 4–150 systems, a 20–95 ly maximum radius and
 6–15 total objects per system (the central star counts as one). Defaults are
 60 systems, a 70 ly radius and up to 8 objects. System count and radius set the
@@ -283,7 +292,8 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [trade route](docs/previews/trade-route.png),
 [map command](docs/previews/destination.png),
 [NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png) (`battle-close`: stepped forward and aimed), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [phone battle](docs/previews/phone-battle.png), [Raider Haven](docs/previews/haven.png) (`haven`), [phone Victory panel](docs/previews/phone-victory.png) (`victory`), [landed and mining](docs/previews/landed.png), [raider band strikes](docs/previews/raiders.png), [fleet stacks](docs/previews/fleet-stacks.png) (`--scenario multi-fleet --capture-view galaxy`), [phone system view](docs/previews/phone-system.png) and [phone market](docs/previews/phone-market.png) (`--capture-size 390x844`), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `hail` (a hailed NPC trader), `combat`, `battle`, `battle-close`, `landed`, `raiders`, `victory`, `factions` (the Factions panel), `factions-map` (territory rings), `police` (a
-patrol stopping a wanted fleet), `haven`, `roster`, `unlock`, `chooser`. Captures do not test window
+patrol stopping a wanted fleet), `haven`, `roster`, `unlock`, `chooser` (the main menu), `menu-new`, `menu-load`,
+`menu-settings`, `settings` (the in-game Settings window). Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 
 This is escartian’s native rewrite of their own [original game](https://github.com/escartian/star_trader_game).

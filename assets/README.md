@@ -184,3 +184,10 @@ The same script can be run through Blender Lab's MCP server (registered as the
 (it needs Blender's Preferences → System → Network → Allow Online Access). Exec
 the file with `__file__` set and call `build()`. The MCP bridge is an authoring
 convenience; the runtime GLB has no Blender dependency.
+
+## Music
+
+`music/main-theme.ogg` is “Long Haul”, the main menu theme: an original Strudel
+composition whose source is `source/music/main-theme.strudel.js` (paste it into
+strudel.cc to play or edit). It is synthesizer-only and loops seamlessly every
+80 s. `tools/music/README.md` explains the export (`node tools/music/render.mjs`).

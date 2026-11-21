@@ -61,6 +61,10 @@ window.ready = true;
 
 const dist = join(here, 'node_modules/@strudel/web/dist');
 const server = createServer((request, response) => {
+  if (request.url === '/favicon.ico') {
+    response.writeHead(204).end();
+    return;
+  }
   if (request.url === '/') {
     response.writeHead(200, { 'content-type': 'text/html' }).end(page);
     return;
@@ -82,6 +86,10 @@ let wav;
 try {
   const tab = await browser.newPage();
   tab.on('pageerror', (error) => console.error('page error:', error.message));
+  // Strudel reports unknown sounds and bad values through the console.
+  tab.on('console', (message) => {
+    if (['error', 'warn', 'warning'].includes(message.type())) console.warn(`strudel ${message.type()}:`, message.text());
+  });
   await tab.goto(`http://127.0.0.1:${server.address().port}/`);
   await tab.waitForFunction('window.ready === true');
   console.log(`Rendering ${loopBars}+${tailBars} bars at ${(cps * 240).toFixed(1)} BPM…`);

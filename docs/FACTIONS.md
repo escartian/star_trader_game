@@ -143,7 +143,7 @@ turn. Each run, after fleets, raider bands and NPC traders move:
 3. Otherwise it flies on to its next body.
 
 A patrol backs off for 3 runs after a contact with you. A patrol wiped out is
-replaced after 15 runs while its faction still holds the system. Patrol ships
+replaced after 40 runs (twice a raider band's wait) while its faction still holds the system. Patrol ships
 repair between fights.
 
 **At a Police patrol contact** the card names the faction, why it stopped you,

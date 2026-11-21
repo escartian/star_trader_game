@@ -43,8 +43,9 @@ pub const DETECTION_KM: i64 = 150_000_000;
 pub const COOLDOWN_RUNS: u32 = 3;
 /// Runs a patrol rests after fighting a raider band.
 pub const BAND_FIGHT_COOLDOWN_RUNS: u32 = 6;
-/// Runs before a wiped-out patrol is replaced.
-pub const RESPAWN_RUNS: u64 = 15;
+/// Runs before a wiped-out patrol is replaced: twice a raider band's wait, so
+/// destroying the law buys a real stretch of lawless space.
+pub const RESPAWN_RUNS: u64 = 40;
 /// A patrol's ships when it is placed.
 pub const PATROL_SHIPS: [ShipKind; 2] = [ShipKind::Patrol, ShipKind::Scout];
 

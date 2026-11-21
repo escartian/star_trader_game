@@ -6,6 +6,9 @@ use egui::{Color32, Painter, Pos2, Rect, Stroke, Vec2};
 use game_core::fleet::ShipKind;
 
 const RAIDER: Color32 = Color32::from_rgb(255, 96, 80);
+/// Gap between a band's or patrol's marker and its tag, in points: clear of a
+/// fleet chip (radius 15) drawn on top when the two meet.
+pub(super) const TAG_GAP: f32 = 22.0;
 
 impl LocalView {
     pub(super) fn draw_bands(&self, painter: &Painter, rect: Rect) {
@@ -43,7 +46,7 @@ impl LocalView {
                 crew(&band.ships)
             );
             let galley = painter.layout_no_wrap(label, egui::FontId::proportional(11.0), RAIDER);
-            let origin = at + Vec2::new(12.0, -galley.size().y / 2.0);
+            let origin = at + Vec2::new(TAG_GAP, -galley.size().y / 2.0);
             painter.rect_filled(
                 Rect::from_min_size(origin, galley.size()).expand(2.0),
                 2.0,

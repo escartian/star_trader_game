@@ -2,7 +2,7 @@
 //! colour tagged with its ships, and, while it pursues one of your fleets or
 //! closes on a raider band, a dashed line toward its quarry. Positions are
 //! true kilometres, like raider bands.
-use super::raiders::{crew, dash};
+use super::raiders::{TAG_GAP, crew, dash};
 use super::{KM_PER_VIEW_UNIT, LocalView, kilometers};
 use egui::{Color32, Painter, Pos2, Rect, Stroke, Vec2};
 
@@ -43,7 +43,7 @@ impl LocalView {
                 crew(&patrol.ships)
             );
             let galley = painter.layout_no_wrap(label, egui::FontId::proportional(11.0), *color);
-            let origin = at + Vec2::new(12.0, -galley.size().y / 2.0);
+            let origin = at + Vec2::new(TAG_GAP, -galley.size().y / 2.0);
             painter.rect_filled(
                 Rect::from_min_size(origin, galley.size()).expand(2.0),
                 2.0,

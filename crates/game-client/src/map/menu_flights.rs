@@ -10,6 +10,7 @@
 //! the screen (`REACH` world units each side), so ships enter and leave off
 //! screen whatever the window shape or camera swing. Station traffic is in
 //! `menu_docking`. Scene space is `menu_scene`'s.
+use super::menu_motion::Motion;
 use game_core::fleet::ShipKind;
 use glam::{Mat3, Vec3};
 use std::f32::consts::PI;
@@ -23,6 +24,20 @@ const SLOT_SECONDS: f32 = 36.0;
 const REACH: f32 = 220.0;
 /// Seconds lanes are shifted against each other, so flights interleave.
 const LANE_STAGGER: f32 = 9.1;
+
+/// Seconds a ship takes to turn end over end.
+const FLIP_SECONDS: f32 = 1.8;
+
+/// What a ship's engines are doing at a moment, each 0 (off) to 1 (full).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(super) struct Engines {
+    /// Main engine pushing the ship along its route (the cruise trail).
+    pub main: f32,
+    /// Main engine firing toward the destination while flipped, to brake.
+    pub burn: f32,
+    /// Small thrusters on the nose braking the final approach.
+    pub retro: f32,
+}
 
 /// What a flight does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -54,6 +69,8 @@ pub(super) struct Flight {
     /// the start) and shrinks at the end (0: full size to the end).
     pub grow_over: f32,
     pub shrink_over: f32,
+    /// How fast it flies along the route over time.
+    pub motion: Motion,
 }
 
 /// Smooth 0-to-1 ramp of `x` (clamped).
@@ -63,16 +80,22 @@ fn smooth(x: f32) -> f32 {
 }
 
 impl Flight {
-    /// Distance flown at `progress` (0-1, linear in time): arrivals brake,
-    /// departures accelerate, descents do both.
+    /// Seconds the whole route takes.
+    pub fn duration(&self) -> f32 {
+        self.motion.duration(self.length())
+    }
+
+    /// Distance flown at `progress` (0-1, linear in time), following `motion`.
     fn travelled(&self, progress: f32) -> f32 {
-        let eased = match self.leg {
-            Leg::Cross => progress,
-            Leg::Arrive => 1.0 - (1.0 - progress).powi(2),
-            Leg::Depart => progress.powi(2),
-            Leg::Descend => smooth(progress),
-        };
-        eased.clamp(0.0, 1.0) * self.length()
+        let time = progress.clamp(0.0, 1.0) * self.duration();
+        self.motion.distance_at(time, self.length())
+    }
+
+    /// Current speed as a share of cruise speed (0-1): low while braking or
+    /// pulling away, so the engine trail can shorten.
+    pub fn throttle(&self, progress: f32) -> f32 {
+        let time = progress.clamp(0.0, 1.0) * self.duration();
+        (self.motion.speed_at(time, self.length()) / self.motion.cruise).clamp(0.0, 1.0)
     }
 
     /// Total route length in world units (the arc's extra is small).
@@ -122,11 +145,69 @@ impl Flight {
         self.size * grow * shrink
     }
 
-    /// Model rotation at `progress`: nose along the route, rolled by `bank`.
+    /// Model rotation at `progress`: nose along the route, rolled by `bank`,
+    /// turned end over end while flipped to brake.
     pub fn rotation(&self, progress: f32) -> Mat3 {
         let ahead = self.position((progress + 0.01).min(1.0));
         let behind = self.position((progress - 0.01).max(0.0));
-        orientation(ahead - behind, self.bank)
+        let flip = Mat3::from_rotation_z(PI * smooth(self.flip(progress)));
+        orientation(ahead - behind, self.bank) * flip
+    }
+
+    /// Seconds into the route at `progress`, when braking starts, when the
+    /// final creep starts, and the flip time (shorter for brief brakes).
+    fn timeline(&self, progress: f32) -> (f32, f32, f32, f32) {
+        let time = progress.clamp(0.0, 1.0) * self.duration();
+        let (brake, creep) = self.motion.braking(self.length());
+        (time, brake, creep, FLIP_SECONDS.min((creep - brake) * 0.4))
+    }
+
+    /// How far the ship has turned around to brake: 0 nose-first, 1 tail-first.
+    /// Arrivals and descents flip while coasting just before braking; arrivals
+    /// flip back just before the final creep; descents land tail-first.
+    pub fn flip(&self, progress: f32) -> f32 {
+        if !matches!(self.leg, Leg::Arrive | Leg::Descend) {
+            return 0.0;
+        }
+        let (time, brake, creep, flip) = self.timeline(progress);
+        if flip <= 0.0 {
+            return 0.0;
+        }
+        let turned = ((time - (brake - flip)) / flip).clamp(0.0, 1.0);
+        if self.leg == Leg::Descend {
+            return turned;
+        }
+        turned - ((time - (creep - flip)) / flip).clamp(0.0, 1.0)
+    }
+
+    /// Engine output at `progress`: cruising on the main engine, coasting
+    /// through flips, burning while tail-first, retro thrusters on the final
+    /// creep into the station.
+    pub fn engines(&self, progress: f32) -> Engines {
+        let cruising = Engines {
+            main: self.throttle(progress),
+            ..Engines::default()
+        };
+        if !matches!(self.leg, Leg::Arrive | Leg::Descend) {
+            return cruising;
+        }
+        let (time, brake, creep, flip) = self.timeline(progress);
+        if flip <= 0.0 || time < brake - flip {
+            return cruising;
+        }
+        let turning = self.flip(progress);
+        // Engines are off while the ship turns; they fire once it has settled.
+        let settled = |amount: f32| smooth((amount - 0.85) / 0.15);
+        if self.leg == Leg::Descend || time < creep - flip {
+            return Engines {
+                burn: settled(turning),
+                ..Engines::default()
+            };
+        }
+        Engines {
+            retro: settled(1.0 - turning),
+            ..Engines::default()
+        }
     }
 }
 
@@ -195,8 +276,13 @@ fn plan(random: &mut fastrand::Rng) -> (Flight, f32, f32) {
         phase: between(random, 0.0, 100.0),
         grow_over: 0.0,
         shrink_over: 0.0,
+        motion: Motion::steady(speed),
     };
-    let duration = (flight.length() / speed).min(SLOT_SECONDS - 2.0);
+    let flight = Flight {
+        motion: flight.motion.fitted(flight.length(), SLOT_SECONDS - 2.0),
+        ..flight
+    };
+    let duration = flight.duration();
     let start = between(random, 0.0, SLOT_SECONDS - duration);
     (flight, duration, start)
 }
@@ -271,6 +357,7 @@ mod tests {
             phase: 0.0,
             grow_over: 5.0,
             shrink_over: 5.0,
+            motion: Motion::steady(4.0),
         };
         assert!(flight.position(0.5).abs_diff_eq(Vec3::X * 10.0, 1e-4));
         assert_eq!(flight.size_at(0.0), 0.0);

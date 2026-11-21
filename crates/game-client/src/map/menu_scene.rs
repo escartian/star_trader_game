@@ -133,33 +133,56 @@ pub(super) fn paint(
     let planet = PLANETS[(launch_seed % PLANETS.len() as u64) as usize];
     for (_, item) in items {
         match item {
-            Item::Ship(flight, progress) => {
-                let size = flight.size_at(progress);
-                if size <= 0.05 {
-                    continue;
-                }
-                let trail = menu_trails::Trail {
-                    kind: flight.kind,
-                    size,
-                    progress,
-                    time,
-                    phase: flight.phase,
-                };
-                trail.paint(painter, projector, |progress| flight.position(progress));
-                if let Some(ship) = model::for_kind(flight.kind) {
-                    let at = ScenePoint(flight.position(progress));
-                    ship.paint_oriented(
-                        painter,
-                        projector,
-                        at,
-                        flight.size,
-                        flight.rotation(progress),
-                    );
-                }
-            }
+            Item::Ship(flight, progress) => paint_ship(painter, projector, &flight, progress, time),
             Item::Planet => paint_planet_system(painter, projector, time, art, planet),
             Item::Station => paint_station(painter, projector, time, art),
         }
+    }
+}
+
+/// A ship at `progress` along its flight, at its current (shrinking or
+/// growing) size, with whatever engines are firing: the cruise trail behind,
+/// the main engine burning ahead while flipped to brake, or retro thrusters
+/// at the nose on the final approach.
+fn paint_ship(painter: &Painter, projector: &Projector, flight: &Flight, progress: f32, time: f32) {
+    let size = flight.size_at(progress);
+    if size <= 0.05 {
+        return;
+    }
+    let engines = flight.engines(progress);
+    let trail = menu_trails::Trail {
+        kind: flight.kind,
+        size,
+        progress,
+        time,
+        phase: flight.phase,
+        throttle: engines.main,
+    };
+    trail.paint(painter, projector, |progress| flight.position(progress));
+    let at = flight.position(progress);
+    let rotation = flight.rotation(progress);
+    let (nose, right) = (rotation * Vec3::Y, rotation * Vec3::X);
+    let look = |rgb, width, strength| menu_trails::Look {
+        rgb,
+        width,
+        strength,
+        time,
+        phase: flight.phase,
+    };
+    // Tail-first: the main engine's jet points toward where the ship is going.
+    let burn = look(menu_trails::exhaust(flight.kind), size * 0.05, engines.burn);
+    let stern = at - nose * size * 0.48;
+    menu_trails::plume(painter, projector, stern, -nose, size * 2.2, &burn);
+    // Nose-first and creeping: two small jets angled forward off the nose.
+    let pulse = 0.65 + 0.35 * (time * 13.0 + flight.phase).sin();
+    let retro = look([200, 232, 255], size * 0.03, engines.retro * pulse);
+    for side in [-1.0, 1.0] {
+        let nozzle = at + nose * size * 0.45 + right * size * 0.14 * side;
+        let direction = nose * 0.85 + right * 0.5 * side;
+        menu_trails::plume(painter, projector, nozzle, direction, size * 0.9, &retro);
+    }
+    if let Some(ship) = model::for_kind(flight.kind) {
+        ship.paint_oriented(painter, projector, ScenePoint(at), size, rotation);
     }
 }
 
@@ -291,6 +314,7 @@ fn paint_orbiter(
         progress: 1.0,
         time,
         phase: 42.0,
+        throttle: 1.0,
     };
     trail.paint(painter, projector, route);
     if let Some(ship) = model::for_kind(ShipKind::Prospector) {

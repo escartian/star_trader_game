@@ -20,8 +20,12 @@ use std::f32::consts::TAU;
 const EYE: Vec3 = Vec3::new(0.0, -60.0, 22.0);
 const FOCUS: Vec3 = Vec3::new(0.0, 0.0, 4.0);
 
-const PLANET_CENTRE: Vec3 = Vec3::new(32.0, 20.0, -24.0);
-const PLANET_RADIUS: f32 = 14.0;
+pub(super) const PLANET_CENTRE: Vec3 = Vec3::new(32.0, 20.0, -24.0);
+pub(super) const PLANET_RADIUS: f32 = 14.0;
+/// The trade station's docking bay, high over the planet toward the camera.
+pub(super) const STATION: Vec3 = Vec3::new(21.0, 2.0, 7.0);
+/// Station sprite width in world units.
+const STATION_SIZE: f32 = 18.0;
 /// The planet is one of these, chosen by the launch seed.
 const PLANETS: [ArtKind; 7] = [
     ArtKind::GasGiant,
@@ -62,6 +66,7 @@ enum Item {
     /// A flight and its progress (0-1) along its route.
     Ship(Flight, f32),
     Planet,
+    Station,
 }
 
 /// Draws the scene at `time` seconds; `launch_seed` picks the planet and the
@@ -69,7 +74,11 @@ enum Item {
 pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork, launch_seed: u64) {
     let projector = Projector::looking_at(eye(rect), FOCUS, rect);
     let time = time as f32;
-    let mut items = vec![(depth(&projector, PLANET_CENTRE), Item::Planet)];
+    let mut items = vec![
+        (depth(&projector, PLANET_CENTRE), Item::Planet),
+        // Just behind its bay, so ships docking are drawn over the station.
+        (depth(&projector, STATION) + 0.5, Item::Station),
+    ];
     for (flight, progress) in menu_flights::active(time, launch_seed) {
         let at = flight.position(progress);
         items.push((depth(&projector, at), Item::Ship(flight, progress)));
@@ -79,11 +88,14 @@ pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork, lau
     for (_, item) in items {
         match item {
             Item::Ship(flight, progress) => {
+                let size = flight.size_at(progress);
+                if size <= 0.05 {
+                    continue;
+                }
                 let trail = menu_trails::Trail {
                     kind: flight.kind,
-                    size: flight.size,
+                    size,
                     progress,
-                    route_length: flight.length(),
                     time,
                     phase: flight.phase,
                 };
@@ -100,8 +112,37 @@ pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork, lau
                 }
             }
             Item::Planet => paint_planet_system(painter, &projector, time, art, planet),
+            Item::Station => paint_station(painter, &projector, time, art),
         }
     }
+}
+
+/// The trade station sprite with a slow beacon over its bay.
+fn paint_station(painter: &Painter, projector: &Projector, time: f32, art: &Artwork) {
+    let Some(at) = projector.project(ScenePoint(STATION)) else {
+        return;
+    };
+    let size = at.scale * STATION_SIZE;
+    art.paint_tinted(
+        ArtKind::Station,
+        painter,
+        at.pos,
+        size,
+        Color32::from_gray(205),
+    );
+    // A green docking beacon, blinking once every two seconds.
+    let blink = ((time * TAU / 2.0).sin() * 4.0).clamp(0.0, 1.0);
+    let beacon = at.pos + egui::vec2(0.0, -size * 0.36);
+    painter.circle_filled(
+        beacon,
+        size * 0.03 + 1.0,
+        Color32::from_rgba_unmultiplied(148, 255, 85, (230.0 * blink) as u8),
+    );
+    painter.circle_filled(
+        beacon,
+        size * 0.08 + 2.0,
+        Color32::from_rgba_unmultiplied(148, 255, 85, (50.0 * blink) as u8),
+    );
 }
 
 fn depth(projector: &Projector, point: Vec3) -> f32 {
@@ -193,7 +234,6 @@ fn paint_orbiter(
         kind: ShipKind::Prospector,
         size: 2.4,
         progress: 1.0,
-        route_length: TAU * radius,
         time,
         phase: 42.0,
     };

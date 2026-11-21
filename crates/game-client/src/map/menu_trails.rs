@@ -20,8 +20,6 @@ pub(super) struct Trail {
     /// How far along its route (0-1) the ship is; the trail never reaches back
     /// before 0.
     pub progress: f32,
-    /// Route length in world units, to turn trail length into progress.
-    pub route_length: f32,
     /// Seconds, for the flicker and flow.
     pub time: f32,
     /// Per-ship offset, so trails do not pulse in step.
@@ -37,12 +35,28 @@ fn exhaust(kind: ShipKind) -> [u8; 3] {
 }
 
 impl Trail {
+    /// How far back in progress the trail reaches to cover `length` world
+    /// units of route actually flown. Measured along the route, so eased
+    /// (braking or accelerating) and short station legs get true lengths.
+    fn span_for(&self, length: f32, route: &impl Fn(f32) -> Vec3) -> f32 {
+        const STEP: f32 = 1.0 / 1500.0;
+        let (mut back, mut travelled) = (self.progress, 0.0);
+        let mut previous = route(back);
+        while travelled < length && back > 0.0 {
+            back = (back - STEP).max(0.0);
+            let point = route(back);
+            travelled += point.distance(previous);
+            previous = point;
+        }
+        self.progress - back
+    }
+
     /// Paints the trail of a ship whose position at a given progress is `route`.
     pub fn paint(&self, painter: &Painter, projector: &Projector, route: impl Fn(f32) -> Vec3) {
         let (time, phase) = (self.time, self.phase);
         let flicker = 0.85 + 0.1 * (time * 7.0 + phase).sin() + 0.05 * (time * 23.0 + phase).sin();
         let length = self.size * LENGTH_IN_HULLS * flicker;
-        let span = (length / self.route_length.max(f32::EPSILON)).min(self.progress);
+        let span = self.span_for(length, &route);
         if span <= 0.0 {
             return;
         }

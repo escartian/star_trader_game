@@ -1,93 +1,125 @@
-//! Generated routes for the main menu's ships. Each of `LANES` lanes flies one
-//! flight per `SLOT_SECONDS` slot, drawn from a generator seeded by the launch,
-//! the lane and the slot: the ship type, which way it crosses, the depth and
-//! height at each end (so the angle varies), an arc and a bank.
+//! Routes for the main menu's ships. A flight follows straight legs between
+//! waypoints; its size can shrink over the final stretch (sliding into the
+//! station's hull or below the planet's surface) and grow over the first (out
+//! of the station), so ships never pop in or out.
 //!
-//! Station lanes add traffic to the trade station: ships arriving and slowing
-//! into its bay, leaving it, or descending from it to the planet.
-//!
-//! Crossing routes run sideways far past the screen (`REACH` world units each side of
-//! the scene), so every ship enters and leaves off screen whatever the window
-//! shape, and resizing never moves a route. Scene space is `menu_scene`'s.
-use super::menu_scene::{PLANET_CENTRE, PLANET_RADIUS, dock};
+//! Crossing traffic: each of `LANES` lanes flies one flight per `SLOT_SECONDS`
+//! slot, drawn from a generator seeded by the launch, the lane and the slot:
+//! the ship type, which way it crosses, the depth and height at each end (so
+//! the angle varies), an arc and a bank. Crossing routes run sideways far past
+//! the screen (`REACH` world units each side), so ships enter and leave off
+//! screen whatever the window shape or camera swing. Station traffic is in
+//! `menu_docking`. Scene space is `menu_scene`'s.
 use game_core::fleet::ShipKind;
 use glam::{Mat3, Vec3};
 use std::f32::consts::PI;
 
-const LANES: u64 = 8;
+const LANES: u64 = 4;
 /// Seconds each lane's flight slot lasts; a flight fits inside one slot.
 const SLOT_SECONDS: f32 = 36.0;
 /// Routes start and end this far left or right of the scene centre: past the
 /// screen edge at every depth used, for windows up to about 2.6:1 (portrait
-/// screens pull the camera back, see `menu_scene::eye`).
+/// screens pull the camera back, see `menu_scene::camera`).
 const REACH: f32 = 220.0;
 /// Seconds lanes are shifted against each other, so flights interleave.
-const LANE_STAGGER: f32 = 4.7;
-/// Lanes of station traffic, each flying one trip per `STATION_SLOT_SECONDS`.
-const STATION_LANES: u64 = 3;
-const STATION_SLOT_SECONDS: f32 = 22.0;
-/// Share of an arrival or departure spent passing through the bay doors,
-/// where the ship shrinks into (or grows out of) the station.
-const BAY_SHARE: f32 = 0.12;
-/// Share of a descent spent entering the atmosphere, shrinking to nothing.
-const ENTRY_SHARE: f32 = 0.3;
+const LANE_STAGGER: f32 = 9.1;
 
 /// What a flight does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Leg {
     /// Crosses the whole view at an even speed.
     Cross,
-    /// Comes in from off screen and slows into the station's bay.
+    /// Comes in from off screen, brakes and slides into the station's bay.
     Arrive,
     /// Eases out of the bay and speeds off screen.
     Depart,
-    /// Drops from the station down into the planet's atmosphere.
+    /// Leaves the bay and drops into the planet's atmosphere.
     Descend,
 }
 
+#[derive(Clone)]
 pub(super) struct Flight {
     pub kind: ShipKind,
     pub leg: Leg,
-    from: Vec3,
-    to: Vec3,
-    /// Sideways bow of the route at its middle, world units (horizontal).
-    arc: f32,
-    /// Ship length in world units.
+    /// Waypoints in scene space; at least two.
+    pub points: Vec<Vec3>,
+    /// Sideways bow of a two-point route at its middle, world units.
+    pub arc: f32,
+    /// Full ship length in world units.
     pub size: f32,
     pub bank: f32,
     /// A per-flight number for trail flicker, so trails do not pulse together.
     pub phase: f32,
+    /// World units over which the ship grows at the start (0: full size from
+    /// the start) and shrinks at the end (0: full size to the end).
+    pub grow_over: f32,
+    pub shrink_over: f32,
+}
+
+/// Smooth 0-to-1 ramp of `x` (clamped).
+fn smooth(x: f32) -> f32 {
+    let x = x.clamp(0.0, 1.0);
+    x * x * (3.0 - 2.0 * x)
 }
 
 impl Flight {
-    /// Route position at `progress` (0 at the start, 1 at the end, linear in
-    /// time). Station legs ease: arrivals brake, departures accelerate.
-    pub fn position(&self, progress: f32) -> Vec3 {
-        let travelled = match self.leg {
+    /// Distance flown at `progress` (0-1, linear in time): arrivals brake,
+    /// departures accelerate, descents do both.
+    fn travelled(&self, progress: f32) -> f32 {
+        let eased = match self.leg {
             Leg::Cross => progress,
             Leg::Arrive => 1.0 - (1.0 - progress).powi(2),
             Leg::Depart => progress.powi(2),
-            Leg::Descend => progress * progress * (3.0 - 2.0 * progress),
+            Leg::Descend => smooth(progress),
         };
-        let across = (self.to - self.from).cross(Vec3::Z).normalize_or_zero();
-        self.from.lerp(self.to, travelled) + across * self.arc * (travelled * PI).sin()
+        eased.clamp(0.0, 1.0) * self.length()
     }
 
-    /// Ship length at `progress`, in world units: shrinking into the bay or the
-    /// atmosphere, growing out of the bay.
-    pub fn size_at(&self, progress: f32) -> f32 {
-        let factor = match self.leg {
-            Leg::Cross => 1.0,
-            Leg::Arrive => (1.0 - progress) / BAY_SHARE,
-            Leg::Depart => progress / BAY_SHARE,
-            Leg::Descend => (1.0 - progress) / ENTRY_SHARE,
-        };
-        self.size * factor.clamp(0.0, 1.0)
-    }
-
-    /// Route length in world units (the arc's extra is small).
+    /// Total route length in world units (the arc's extra is small).
     pub fn length(&self) -> f32 {
-        self.from.distance(self.to)
+        self.points
+            .windows(2)
+            .map(|leg| leg[0].distance(leg[1]))
+            .sum()
+    }
+
+    /// Route position at `progress` (0 at the start, 1 at the end).
+    pub fn position(&self, progress: f32) -> Vec3 {
+        let mut left = self.travelled(progress);
+        let mut at = self.points[0];
+        for leg in self.points.windows(2) {
+            let span = leg[0].distance(leg[1]);
+            if left <= span || span == 0.0 {
+                at = leg[0].lerp(leg[1], (left / span.max(f32::EPSILON)).min(1.0));
+                break;
+            }
+            left -= span;
+            at = leg[1];
+        }
+        if self.points.len() == 2 {
+            let (from, to) = (self.points[0], self.points[1]);
+            let across = (to - from).cross(Vec3::Z).normalize_or_zero();
+            let share = self.travelled(progress) / self.length().max(f32::EPSILON);
+            at += across * self.arc * (share * PI).sin();
+        }
+        at
+    }
+
+    /// Ship length at `progress`, in world units.
+    pub fn size_at(&self, progress: f32) -> f32 {
+        let flown = self.travelled(progress);
+        let remaining = self.length() - flown;
+        let grow = if self.grow_over > 0.0 {
+            smooth(flown / self.grow_over)
+        } else {
+            1.0
+        };
+        let shrink = if self.shrink_over > 0.0 {
+            smooth(remaining / self.shrink_over)
+        } else {
+            1.0
+        };
+        self.size * grow * shrink
     }
 
     /// Model rotation at `progress`: nose along the route, rolled by `bank`.
@@ -101,8 +133,8 @@ impl Flight {
 /// Model rotation for a ship flying along `forward`, rolled by `bank` radians.
 /// Model space has the nose along +y and the top along +z.
 pub(super) fn orientation(forward: Vec3, bank: f32) -> Mat3 {
-    let forward = forward.normalize();
-    let right = forward.cross(Vec3::Z).normalize();
+    let forward = forward.normalize_or(Vec3::Y);
+    let right = forward.cross(Vec3::Z).normalize_or(Vec3::X);
     let up = right.cross(forward);
     let roll = Mat3::from_axis_angle(forward, bank);
     Mat3::from_cols(roll * right, forward, roll * up)
@@ -110,7 +142,7 @@ pub(super) fn orientation(forward: Vec3, bank: f32) -> Mat3 {
 
 /// Flights in the air at `time` seconds, each with its progress (0-1).
 pub(super) fn active(time: f32, launch_seed: u64) -> Vec<(Flight, f32)> {
-    let mut flying = station_traffic(time, launch_seed);
+    let mut flying = super::menu_docking::traffic(time, launch_seed);
     for lane in 0..LANES {
         let lane_time = time + lane as f32 * LANE_STAGGER;
         let slot = (lane_time / SLOT_SECONDS).floor().max(0.0) as u64;
@@ -123,13 +155,12 @@ pub(super) fn active(time: f32, launch_seed: u64) -> Vec<(Flight, f32)> {
         }
         // Patrols fly as a pair: the wingman trails behind and to one side.
         if lead.kind == ShipKind::Patrol {
-            let back = (lead.from - lead.to).normalize() * 7.0;
-            let side = Vec3::new(0.0, 5.0, -1.5);
+            let back = (lead.points[0] - lead.points[1]).normalize() * 7.0;
+            let offset = back + Vec3::new(0.0, 5.0, -1.5);
             let wingman = Flight {
-                from: lead.from + back + side,
-                to: lead.to + back + side,
+                points: lead.points.iter().map(|point| *point + offset).collect(),
                 phase: lead.phase + 1.7,
-                ..lead
+                ..lead.clone()
             };
             flying.push((wingman, progress));
         }
@@ -138,8 +169,8 @@ pub(super) fn active(time: f32, launch_seed: u64) -> Vec<(Flight, f32)> {
     flying
 }
 
-/// One flight for a slot: the ship, seconds in the air and seconds into the
-/// slot it starts.
+/// One crossing flight for a slot: the ship, seconds in the air and seconds
+/// into the slot it starts.
 fn plan(random: &mut fastrand::Rng) -> (Flight, f32, f32) {
     let (kind, size, speed) = pick_ship(random);
     let direction = if random.bool() { 1.0 } else { -1.0 };
@@ -157,83 +188,31 @@ fn plan(random: &mut fastrand::Rng) -> (Flight, f32, f32) {
     let flight = Flight {
         kind,
         leg: Leg::Cross,
-        from,
-        to,
+        points: vec![from, to],
         arc: between(random, -30.0, 30.0),
         size,
         bank: between(random, -0.35, 0.35),
         phase: between(random, 0.0, 100.0),
+        grow_over: 0.0,
+        shrink_over: 0.0,
     };
     let duration = (flight.length() / speed).min(SLOT_SECONDS - 2.0);
     let start = between(random, 0.0, SLOT_SECONDS - duration);
     (flight, duration, start)
 }
 
-fn between(random: &mut fastrand::Rng, low: f32, high: f32) -> f32 {
+pub(super) fn between(random: &mut fastrand::Rng, low: f32, high: f32) -> f32 {
     low + random.f32() * (high - low)
 }
 
 /// A ship type with its length and cruise speed (world units, units/second).
-fn pick_ship(random: &mut fastrand::Rng) -> (ShipKind, f32, f32) {
+pub(super) fn pick_ship(random: &mut fastrand::Rng) -> (ShipKind, f32, f32) {
     match random.u8(0..10) {
         0..=3 => (ShipKind::Freighter, 9.0, 11.0),
         4..=6 => (ShipKind::Patrol, 5.0, 18.0),
         7..=8 => (ShipKind::Scout, 3.5, 30.0),
         _ => (ShipKind::Prospector, 3.0, 14.0),
     }
-}
-
-/// Ships arriving at, leaving or descending from the station at `time`.
-fn station_traffic(time: f32, launch_seed: u64) -> Vec<(Flight, f32)> {
-    let mut flying = Vec::new();
-    for lane in 0..STATION_LANES {
-        let lane_time = time + lane as f32 * STATION_SLOT_SECONDS / STATION_LANES as f32;
-        let slot = (lane_time / STATION_SLOT_SECONDS).floor().max(0.0) as u64;
-        let into_slot = lane_time - slot as f32 * STATION_SLOT_SECONDS;
-        let seed = launch_seed.rotate_left(17) ^ (lane << 40) ^ slot ^ 0x57A7_1011;
-        let mut random = fastrand::Rng::with_seed(seed);
-        let (kind, size, speed) = pick_ship(&mut random);
-        // Station traffic flies at half size so the station reads as large.
-        let size = size * 0.5;
-        let leg = match random.u8(0..10) {
-            0..=3 => Leg::Arrive,
-            4..=6 => Leg::Depart,
-            _ => Leg::Descend,
-        };
-        // Off-screen ends come in from either side at varied depth and height.
-        let side = if random.bool() { 1.0 } else { -1.0 };
-        let far = Vec3::new(
-            220.0 * side,
-            between(&mut random, 20.0, 140.0),
-            between(&mut random, -10.0, 34.0),
-        );
-        // Descents aim at the planet's near face, high on the side facing the station.
-        let entry = PLANET_CENTRE + PLANET_RADIUS * Vec3::new(-0.45, -0.75, 0.48).normalize() * 0.9;
-        let (from, to) = match leg {
-            Leg::Arrive => (far, dock()),
-            Leg::Depart => (dock(), far),
-            _ => (dock(), entry),
-        };
-        let flight = Flight {
-            kind,
-            leg,
-            from,
-            to,
-            // Station legs are short: a slight bow, not a loop.
-            arc: between(&mut random, -3.0, 3.0),
-            size,
-            bank: between(&mut random, -0.2, 0.2),
-            phase: between(&mut random, 0.0, 100.0),
-        };
-        // Easing halves the average speed, so allow double the cruise time.
-        let duration = (2.0 * flight.length() / speed).clamp(6.0, STATION_SLOT_SECONDS - 1.0);
-        let start = between(&mut random, 0.0, STATION_SLOT_SECONDS - duration);
-        let progress = (into_slot - start) / duration;
-        if (0.0..=1.0).contains(&progress) {
-            flying.push((flight, progress));
-        }
-    }
-    flying
 }
 
 #[cfg(test)]
@@ -258,53 +237,50 @@ mod tests {
                 }
                 assert!(flight.position(0.0).x.abs() > 200.0);
                 assert!(flight.position(1.0).x.abs() > 200.0);
-                headings.push((flight.to - flight.from).normalize());
+                headings.push((flight.points[1] - flight.points[0]).normalize());
             }
         }
-        assert!(headings.len() > 50, "lanes keep ships in the air");
+        assert!(headings.len() > 30, "lanes keep ships in the air");
         let first = headings[0];
         assert!(
             headings.iter().any(|heading| heading.dot(first) < 0.99),
             "angles vary"
         );
-        let again: Vec<_> = active(123.0, 7)
-            .iter()
-            .map(|(flight, _)| flight.from)
-            .collect();
-        let before: Vec<_> = active(123.0, 7)
-            .iter()
-            .map(|(flight, _)| flight.from)
-            .collect();
-        assert_eq!(again, before, "the same launch replays the same sky");
+        let starts = |time| -> Vec<Vec3> {
+            active(time, 7)
+                .iter()
+                .map(|(flight, _)| flight.points[0])
+                .collect()
+        };
+        assert_eq!(
+            starts(123.0),
+            starts(123.0),
+            "the same launch replays the same sky"
+        );
     }
 
     #[test]
-    fn station_ships_shrink_into_the_bay_and_the_atmosphere() {
-        let mut legs = Vec::new();
-        for second in 0..900 {
-            for (flight, _) in station_traffic(second as f32, 3) {
-                if !legs.contains(&flight.leg) {
-                    legs.push(flight.leg);
-                }
-                match flight.leg {
-                    Leg::Arrive => {
-                        assert!(flight.position(1.0).distance(dock()) < 0.01);
-                        assert_eq!(flight.size_at(1.0), 0.0);
-                        assert_eq!(flight.size_at(0.5), flight.size);
-                    }
-                    Leg::Depart => {
-                        assert!(flight.position(0.0).distance(dock()) < 0.01);
-                        assert_eq!(flight.size_at(0.0), 0.0);
-                    }
-                    Leg::Descend => {
-                        let end = flight.position(1.0);
-                        assert!((end.distance(PLANET_CENTRE) - PLANET_RADIUS * 0.9).abs() < 0.01);
-                        assert_eq!(flight.size_at(1.0), 0.0);
-                    }
-                    Leg::Cross => unreachable!("station lanes never cross"),
-                }
-            }
+    fn a_waypoint_route_passes_its_corners_and_sizes_change_smoothly() {
+        let flight = Flight {
+            kind: ShipKind::Scout,
+            leg: Leg::Cross,
+            points: vec![Vec3::ZERO, Vec3::X * 10.0, Vec3::new(10.0, 10.0, 0.0)],
+            arc: 0.0,
+            size: 4.0,
+            bank: 0.0,
+            phase: 0.0,
+            grow_over: 5.0,
+            shrink_over: 5.0,
+        };
+        assert!(flight.position(0.5).abs_diff_eq(Vec3::X * 10.0, 1e-4));
+        assert_eq!(flight.size_at(0.0), 0.0);
+        assert_eq!(flight.size_at(0.5), 4.0);
+        assert_eq!(flight.size_at(1.0), 0.0);
+        let mut previous = 0.0;
+        for step in 1..=10 {
+            let size = flight.size_at(step as f32 * 0.02);
+            assert!(size >= previous && size - previous < 1.0, "grows gradually");
+            previous = size;
         }
-        assert_eq!(legs.len(), 3, "arrivals, departures and descents all occur");
     }
 }

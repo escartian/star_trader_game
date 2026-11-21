@@ -23,7 +23,7 @@ const FOCUS: Vec3 = Vec3::new(0.0, 0.0, 4.0);
 pub(super) const PLANET_CENTRE: Vec3 = Vec3::new(32.0, 20.0, -24.0);
 pub(super) const PLANET_RADIUS: f32 = 14.0;
 /// The trade station's centre, high over the planet toward the camera.
-const STATION: Vec3 = Vec3::new(21.0, 2.0, 7.0);
+const STATION: Vec3 = Vec3::new(27.0, 2.0, 7.0);
 /// Station length (solar array tip to tip) in world units.
 const STATION_SIZE: f32 = 16.0;
 /// The dock mouth on top of the station's spine, in Blender model space
@@ -36,6 +36,11 @@ const STATION_TURN_SECONDS: f32 = 90.0;
 /// along +y), so the dock mouth and habitat ring face the viewer.
 fn station_tilt() -> Mat3 {
     Mat3::from_rotation_x(0.5)
+}
+
+/// The station's turning axis (its top), pointing out of the dock mouth.
+pub(super) fn station_axis() -> Vec3 {
+    station_tilt() * Vec3::Z
 }
 
 /// Where ships dock: the dock mouth. It sits on the turning axis, so it does
@@ -73,6 +78,24 @@ fn eye(rect: Rect) -> Vec3 {
     FOCUS + (EYE - FOCUS) * (COMPOSED_ASPECT / aspect).max(1.0)
 }
 
+/// Radians the camera swings either way around the scene's focus, and the
+/// seconds for one full swing there and back. Only this moves the stars.
+const CAMERA_SWING: f32 = 0.15;
+const CAMERA_SWING_SECONDS: f32 = 180.0;
+
+/// The menu camera at `time` seconds: a slow orbit around the focus.
+pub(super) fn camera(rect: Rect, time: f32) -> Projector {
+    let yaw = CAMERA_SWING * (time / CAMERA_SWING_SECONDS * TAU).sin();
+    let eye = FOCUS + Mat3::from_rotation_z(yaw) * (eye(rect) - FOCUS);
+    Projector::looking_at(eye, FOCUS, rect)
+}
+
+/// Direction from the camera toward the scene's focus when it is not swung:
+/// the centre of the sky the backdrop fills.
+pub(super) fn view_direction() -> Vec3 {
+    (FOCUS - EYE).normalize()
+}
+
 /// Point on the orbit ring at `angle` radians (0 is nearest the camera's right).
 fn orbit_point(angle: f32, radius: f32) -> Vec3 {
     let across = Vec3::X;
@@ -90,17 +113,21 @@ enum Item {
 
 /// Draws the scene at `time` seconds; `launch_seed` picks the planet and the
 /// flights, so they stay the same until the game restarts.
-pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork, launch_seed: u64) {
-    let projector = Projector::looking_at(eye(rect), FOCUS, rect);
-    let time = time as f32;
+pub(super) fn paint(
+    painter: &Painter,
+    projector: &Projector,
+    time: f32,
+    art: &Artwork,
+    launch_seed: u64,
+) {
     let mut items = vec![
-        (depth(&projector, PLANET_CENTRE), Item::Planet),
+        (depth(projector, PLANET_CENTRE), Item::Planet),
         // Just behind its bay, so ships docking are drawn over the station.
-        (depth(&projector, STATION) + 0.5, Item::Station),
+        (depth(projector, STATION) + 0.5, Item::Station),
     ];
     for (flight, progress) in menu_flights::active(time, launch_seed) {
         let at = flight.position(progress);
-        items.push((depth(&projector, at), Item::Ship(flight, progress)));
+        items.push((depth(projector, at), Item::Ship(flight, progress)));
     }
     items.sort_by(|a, b| b.0.total_cmp(&a.0));
     let planet = PLANETS[(launch_seed % PLANETS.len() as u64) as usize];
@@ -118,20 +145,20 @@ pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork, lau
                     time,
                     phase: flight.phase,
                 };
-                trail.paint(painter, &projector, |progress| flight.position(progress));
+                trail.paint(painter, projector, |progress| flight.position(progress));
                 if let Some(ship) = model::for_kind(flight.kind) {
                     let at = ScenePoint(flight.position(progress));
                     ship.paint_oriented(
                         painter,
-                        &projector,
+                        projector,
                         at,
                         flight.size,
                         flight.rotation(progress),
                     );
                 }
             }
-            Item::Planet => paint_planet_system(painter, &projector, time, art, planet),
-            Item::Station => paint_station(painter, &projector, time, art),
+            Item::Planet => paint_planet_system(painter, projector, time, art, planet),
+            Item::Station => paint_station(painter, projector, time, art),
         }
     }
 }

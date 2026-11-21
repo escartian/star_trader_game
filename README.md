@@ -112,10 +112,10 @@ The initial path is `data/slot-1.json`. Normal desktop launches open the
 [main menu](docs/previews/main-menu.png): **Continue** (the last used game),
 **New game** (setup, then an empty slot or a confirmed start-over in a used one),
 **Load game** (three slots and any separately named last-used save), **Settings**
-and **Quit**, over a drifting starfield where the game's 3D ships cross on
-generated routes with live engine trails, dock at and leave a trade station or
-descend to the planet (picked anew each launch) while a moon and a prospector
-orbit it, while the original theme “Long Haul” plays. Load game shows which games can load, which slots are empty, and which
+and **Quit**, over a slowly orbiting view of the stars where the game's 3D
+ships cross on generated routes with live engine trails, slide into and out of a
+turning trade station or sink into the planet (picked anew each launch) while a
+moon and a prospector orbit it, while the original theme “Long Haul” plays. Load game shows which games can load, which slots are empty, and which
 saves need attention. An incompatible save remains untouched until you confirm
 deletion of it and its backup; the menu never autosaves over it. In game,
 **Menu → Main menu** saves (or, with autosave off, asks first) and returns there.

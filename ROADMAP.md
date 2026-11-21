@@ -209,8 +209,11 @@ Combat is the original README's first prioritized expansion.
 - [x] Roaming raider bands: one per system but home, hunting exposed fleets
   (docked or landed fleets are safe), patrolling dangerous planets, striking
   with their real ships, backing off after fights and returning when wiped out.
-- [ ] Hostility rules for faction fleets, bands that cross systems or hunt NPC
-  traders, and player interactions with NPC traders (piracy, hails).
+- [x] Hail NPC traders within reach of the flagship: let them go, demand cargo
+  from an outgunned trader, or attack and plunder it (no bounty; acts of piracy
+  are counted for the future wanted status).
+- [ ] Hostility rules for faction fleets, and bands that cross systems or hunt
+  NPC traders.
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
 cargo and rewards remain consistent. Raider fights meet this with behavior and

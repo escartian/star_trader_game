@@ -11,6 +11,7 @@ pub mod navigation;
 pub mod npc;
 pub mod orbits;
 pub mod patrols;
+pub mod piracy;
 pub mod planet;
 pub mod progress;
 pub mod routes;

@@ -83,7 +83,7 @@ impl Economy {
 
     /// Replaces a destroyed trader's ship at its home port: empty hold, full
     /// fuel, no damage, no course. Returns the port's name.
-    fn refit(&self, trader: &mut Trader, systems: &[StarSystem]) -> String {
+    pub(crate) fn refit(&self, trader: &mut Trader, systems: &[StarSystem]) -> String {
         let home = self.home_market(trader.id);
         let ship = &mut trader.state.ships[0];
         ship.cargo = [0; 6];

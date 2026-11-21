@@ -40,6 +40,7 @@ pub enum BattleAction {
     /// Let the AI play every remaining turn on both sides.
     AutoResolve,
     /// Give up: the raiders seize all cargo in the fleet and let its ships go.
+    /// Against a hailed trader it just breaks the attack off.
     Surrender,
 }
 
@@ -175,7 +176,11 @@ impl TravelState {
             .cloned()
             .ok_or(FleetError::UnknownFleet)?;
         let result = open.battle.engagement();
-        let bounty = raider_bounty(&result.combatants, rules)?;
+        // Bounties are for raiders; an attacked trader pays none.
+        let bounty = match encounter.trader {
+            Some(_) => crate::economy::Credits(0),
+            None => raider_bounty(&result.combatants, rules)?,
+        };
         let mut report = CombatReport {
             encounter: encounter.id,
             fleet: fleet.id,
@@ -192,10 +197,13 @@ impl TravelState {
             cargo_lost: 0,
             crippled: None,
             bounty,
+            trader: encounter.trader.as_ref().map(|trader| trader.id),
+            plunder: 0,
         };
         self.apply_engagement(&fleet, &mut report)?;
-        if open.battle.surrendered {
-            // The raiders take every cargo unit still aboard the fleet.
+        // Raiders take every cargo unit still aboard a fleet that gives up; a
+        // trader the player attacked just breaks away.
+        if open.battle.surrendered && encounter.trader.is_none() {
             for id in &fleet.ships {
                 if let Ok(ship) = self.ship_mut(*id) {
                     report.cargo_lost += ship.cargo.iter().sum::<u32>();
@@ -234,8 +242,9 @@ impl TravelState {
         })
     }
 
-    /// Save check: an open battle belongs to a pending raider encounter, fields
-    /// exactly that fleet's ships and the contact's raiders with their catalog
+    /// Save check: an open battle belongs to a pending raider (or hailed
+    /// trader) encounter, fields exactly that fleet's ships and the contact's
+    /// hostiles with their catalog
     /// profiles, and is in a state legal play can reach.
     pub fn validate_battle(&self, rules: &EconomyRules) -> Result<(), String> {
         let Some(open) = &self.navigation.battle else {
@@ -248,7 +257,12 @@ impl TravelState {
             .encounters
             .iter()
             .find(|encounter| encounter.id == open.encounter)
-            .filter(|encounter| encounter.kind == EncounterKind::Raiders)
+            .filter(|encounter| {
+                matches!(
+                    encounter.kind,
+                    EncounterKind::Raiders | EncounterKind::Trader
+                )
+            })
             .filter(|encounter| encounter.fleet == open.fleet)
             .ok_or_else(invalid)?;
         let fleet = self
@@ -283,7 +297,10 @@ impl TravelState {
                     let ship = self.ship(id).map_err(|_| invalid())?;
                     ship.kind == unit.kind && ship.hull_damage == unit.starting_damage
                 }
-                None => unit.starting_damage == 0,
+                None => {
+                    let hailed = encounter.trader.as_ref();
+                    unit.starting_damage == hailed.map_or(0, |trader| trader.hull_damage)
+                }
             };
             if spec.combat != unit.profile || !owned {
                 return Err(invalid());

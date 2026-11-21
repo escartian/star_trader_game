@@ -102,6 +102,12 @@ pub enum ClientCommand {
         fleet: FleetId,
         expected_revision: u64,
     },
+    /// Hail the NPC trader `trader` (`npc::Trader::id`) with the flagship `fleet`.
+    HailTrader {
+        fleet: FleetId,
+        trader: u64,
+        expected_revision: u64,
+    },
     /// Take direct command of `fleet`; every other fleet runs standing orders.
     SetFlagship {
         fleet: FleetId,

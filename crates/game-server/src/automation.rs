@@ -32,9 +32,10 @@ impl Session {
         Ok(self.state.fleet_for_ship(ship)?.id)
     }
 
-    /// Pays the bounty of a battle that ended since `paid`, once, at today's
-    /// price level (the report records what was paid).
-    pub(super) fn pay_new_bounty(&mut self, paid: &mut Option<u64>) -> Result<(), CommandError> {
+    /// Settles a battle that ended since `paid`, once: pays its bounty at
+    /// today's price level (the report records what was paid) and, after a
+    /// piracy battle, applies the attacked trader's fate (`piracy`).
+    pub(super) fn settle_new_battle(&mut self, paid: &mut Option<u64>) -> Result<(), CommandError> {
         let level = self.economy.price_level_ppm;
         let Some(report) = self.state.navigation.last_combat.as_mut() else {
             return Ok(());
@@ -52,6 +53,7 @@ impl Session {
             .checked_add(report.bounty.0)
             .map(Credits)
             .ok_or(TravelError::TimeOverflow)?;
+        game_core::piracy::settle_battle(&mut self.state, &mut self.economy, &self.systems)?;
         Ok(())
     }
 
@@ -99,7 +101,7 @@ impl Session {
             let event = self
                 .state
                 .resolve_encounter(player, encounter.id, choice, rules)?;
-            self.pay_new_bounty(paid)?;
+            self.settle_new_battle(paid)?;
             self.settle_payout();
             events.push(event);
         }

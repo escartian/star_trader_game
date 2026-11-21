@@ -2,7 +2,7 @@
 use super::Session;
 use game_core::{
     navigation::NavigationEvent,
-    routes,
+    piracy, routes,
     travel::{PlayerId, TravelError},
 };
 use game_protocol::{ClientCommand, CommandError, ServerMessage, SessionEvent};
@@ -49,6 +49,9 @@ impl Session {
                 expected_revision, ..
             }
             | ClientCommand::SetPatrol {
+                expected_revision, ..
+            }
+            | ClientCommand::HailTrader {
                 expected_revision, ..
             } => *expected_revision,
             _ => unreachable!("only navigation commands reach this handler"),
@@ -100,14 +103,27 @@ impl Session {
                 ordered = Some(fleet);
                 vec![NavigationEvent::CourseCancelled(fleet)]
             }
+            // A hailed trader's contact settles against the trader's hold.
             ClientCommand::ResolveEncounter {
                 encounter, choice, ..
-            } => vec![candidate.state.resolve_encounter(
+            } => vec![piracy::resolve(
+                &mut candidate.state,
+                &mut candidate.economy,
                 player,
                 encounter,
                 choice,
-                &self.economy.rules,
             )?],
+            ClientCommand::HailTrader { fleet, trader, .. } => {
+                candidate.require_flagship(player, fleet)?;
+                vec![piracy::hail(
+                    &mut candidate.state,
+                    &candidate.economy,
+                    player,
+                    fleet,
+                    trader,
+                    &candidate.systems,
+                )?]
+            }
             ClientCommand::SetTradeRoute {
                 fleet, destination, ..
             } => vec![routes::start_route(
@@ -180,7 +196,7 @@ impl Session {
                     &candidate.systems,
                 )?);
                 // Secondary fleets settle their own contacts.
-                candidate.pay_new_bounty(&mut paid)?;
+                candidate.settle_new_battle(&mut paid)?;
                 events.extend(candidate.settle_secondary_contacts(player, &mut paid)?);
                 events
             }
@@ -200,9 +216,10 @@ impl Session {
                 });
             }
         }
-        // A battle that ended with this command pays its raider bounty, once,
-        // and a contact's reward or fee reaches the wallet.
-        candidate.pay_new_bounty(&mut paid)?;
+        // A battle that ended with this command pays its raider bounty (or
+        // settles an attacked trader's fate), once, and a contact's reward or
+        // fee reaches the wallet.
+        candidate.settle_new_battle(&mut paid)?;
         candidate.settle_payout();
         *self = candidate;
         Ok(self.snapshot(events.into_iter().map(SessionEvent::Navigation).collect()))

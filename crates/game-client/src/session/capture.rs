@@ -251,6 +251,57 @@ impl LocalSession {
         }
     }
 
+    /// Chases NPC traders from market to market until the flagship can hail
+    /// one, then hails it, so the trader's contact card shows.
+    pub fn capture_hail(&mut self) -> Result<(), String> {
+        use game_core::travel::Location;
+        let player = game_server::LOCAL_PLAYER;
+        for _ in 0..40 {
+            let systems = self.authority.systems().to_vec();
+            let reach = game_core::piracy::in_reach(&self.state, &self.economy, player, &systems);
+            if let (Some(trader), Some(fleet)) = (reach.first(), self.state.flagship(player)) {
+                self.command(ClientCommand::HailTrader {
+                    fleet,
+                    trader: *trader,
+                    expected_revision: self.state.revision,
+                });
+                let hailed = self.state.navigation.encounters.iter();
+                return match hailed.clone().any(|contact| contact.trader.is_some()) {
+                    true => Ok(()),
+                    false => Err(format!("The hail failed: {}", self.notice)),
+                };
+            }
+            let parked =
+                self.economy
+                    .traders
+                    .iter()
+                    .find_map(|npc| match npc.state.ships[0].location {
+                        Location::Orbiting { system, body } => Some((system, body)),
+                        _ => None,
+                    });
+            let plotted = parked.is_some_and(|(system, body)| {
+                let response = self
+                    .authority
+                    .handle_offline(ClientCommand::PlotDestination {
+                        ship: self.active_ship,
+                        system,
+                        body: Some(body),
+                        expected_revision: self.state.revision,
+                    });
+                let accepted = !matches!(response, ServerMessage::CommandRejected(_));
+                self.accept(response);
+                accepted
+            });
+            if plotted {
+                self.capture_follow_courses()?;
+            } else {
+                self.capture_wait_runs(1);
+            }
+            self.capture_resolve_contacts();
+        }
+        Err("No trader came within hailing range in 40 tries".into())
+    }
+
     /// Flies the active fleet to the Raider Haven's body; returns its system.
     pub fn capture_haven(&mut self) -> Result<game_core::SystemId, String> {
         let haven = self

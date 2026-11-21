@@ -122,13 +122,18 @@ impl TravelState {
             });
         }
         for (index, kind) in encounter.hostiles.iter().enumerate() {
+            // A hailed trader fights under its own name, with its own damage.
+            let (name, hull_damage) = match &encounter.trader {
+                Some(trader) => (trader.name.clone(), trader.hull_damage),
+                None => (format!("Raider {} {}", kind.label(), index + 1), 0),
+            };
             setups.push(CombatantSetup {
-                name: format!("Raider {} {}", kind.label(), index + 1),
+                name,
                 side: Side::Hostile,
                 ship: None,
                 kind: *kind,
                 profile: profile(*kind)?,
-                hull_damage: 0,
+                hull_damage,
             });
         }
         if setups.len() > MAX_COMBATANTS {

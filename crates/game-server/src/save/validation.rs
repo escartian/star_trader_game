@@ -120,6 +120,7 @@ impl SaveData {
         self.validate_markets()?;
         self.economy
             .validate_traders(&self.systems, self.player.navigation.run)?;
+        game_core::piracy::validate_contacts(&self.player, &self.economy)?;
         Ok(())
     }
 }

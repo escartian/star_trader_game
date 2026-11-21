@@ -135,8 +135,11 @@ impl TravelState {
                 || !encounter_fleets.insert(encounter.fleet)
                 || encounter.run == 0
                 || encounter.run > self.navigation.run
-                || (encounter.kind == super::EncounterKind::Raiders)
-                    != !encounter.hostiles.is_empty()
+                || matches!(
+                    encounter.kind,
+                    super::EncounterKind::Raiders | super::EncounterKind::Trader
+                ) == encounter.hostiles.is_empty()
+                || (encounter.kind == super::EncounterKind::Trader) != encounter.trader.is_some()
                 || encounter.hostiles.len() > super::hostile::MAX_SAVED_RAIDERS
                 || !self.encounter_source_valid(encounter)
             {
@@ -161,8 +164,17 @@ impl TravelState {
     }
 
     /// A random contact pauses a fleet under way; a band's strike may also
-    /// catch a waiting fleet, but its band must still exist in that system.
+    /// catch a waiting fleet, but its band must still exist in that system;
+    /// the player may hail a trader from anywhere it is in reach.
     fn encounter_source_valid(&self, encounter: &super::Encounter) -> bool {
+        // A hailed trader: one hull, checked against the trader by the host.
+        if let Some(trader) = &encounter.trader {
+            return !encounter.haven
+                && encounter.band.is_none()
+                && encounter.hostiles.len() == 1
+                && !trader.name.is_empty()
+                && trader.name.len() <= 128;
+        }
         if encounter.haven {
             return encounter.band.is_none()
                 && self

@@ -266,6 +266,33 @@ news in amber). Over 400 runs the two starting traders met about 18 raids;
 a few cost them their cargo, and a single freighter is very rarely destroyed
 because it withdraws when badly damaged.
 
+## Hailing and robbing NPC traders
+
+Once you have met raiders, the map roster's TRAFFIC list shows **Hail** beside
+every NPC trader your flagship can reach (`game-core/src/piracy.rs`): within 20
+million km, with both ships in open space or orbit. Your fleet must not be docked
+or landed; a trader docked at a station, or laid up for a refit, is protected.
+Hailing opens a contact that shows the trader's hold and hull. You can:
+
+- **Let it go:** nothing happens.
+- **Demand cargo:** only when the trader is outgunned. Your fleet's fighting
+  strength (hull left plus shields, times weapons fitted, summed over ships) must
+  reach 150% of a cautious trader's or 300% of an opportunist's. It hands over
+  half its cargo, rounded up, most valuable goods first, as far as your holds have
+  room. The card says whether it will give way.
+- **Attack** or **Auto-resolve:** the usual tactical battle against the trader's
+  ship, which fights under its own name and with its current damage. Destroy it
+  and you plunder its hold (as much as fits, shown in the combat report), and it
+  is refitted at its home port for 8 runs. If it withdraws it escapes with its
+  cargo and keeps its damage. Traders pay no bounty. Giving up (**Break off**,
+  Esc) just ends the attack: a trader seizes nothing.
+
+Every demand and attack counts as an act of piracy (`navigation.piracies` in
+the save). Nothing reads the count yet: wanted status, police response and
+faction hostility arrive with factions (milestone 5). Secondary fleets never
+hail; if command passes to another fleet while a hail is pending, that fleet
+lets the trader go.
+
 ## Repairs
 
 **Repair hull** in the Market window restores all hull points at the current
@@ -286,5 +313,5 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 
 A GPU renderer with a depth buffer, morale effects on accuracy, faction
 hostility rules, raider bands crossing between systems or striking NPC traders,
-attacking or hailing NPC traders, loadout changes and partial repairs. See the
+legal consequences of piracy, loadout changes and partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

@@ -136,6 +136,7 @@ impl TravelState {
                     hostiles,
                     band: None,
                     haven: false,
+                    trader: None,
                 };
                 self.navigation.next_encounter_id = next;
                 self.navigation.encounters.push(encounter.clone());
@@ -216,6 +217,35 @@ impl TravelState {
             let event = self.resolve_raiders(&encounter, &fleet, choice, rules)?;
             self.revision = revision;
             return Ok(event);
+        }
+        if encounter.kind == EncounterKind::Trader {
+            // Demand needs the trader's hold: `piracy::resolve` handles it.
+            let outcome = match choice {
+                EncounterChoice::Fight | EncounterChoice::AutoResolve => {
+                    let auto = choice == EncounterChoice::AutoResolve;
+                    let event = self.start_battle(&encounter, &fleet, false, auto, rules)?;
+                    self.navigation.piracies = self
+                        .navigation
+                        .piracies
+                        .checked_add(1)
+                        .ok_or(TravelError::TimeOverflow)?;
+                    self.revision = revision;
+                    return Ok(event);
+                }
+                EncounterChoice::Bypass => {
+                    let name = encounter.trader.as_ref().map_or("The trader", |t| &t.name);
+                    format!("{name} goes on its way.")
+                }
+                _ => return Err(NavigationError::InvalidChoice.into()),
+            };
+            self.navigation
+                .encounters
+                .retain(|record| record.id != encounter_id);
+            self.revision = revision;
+            return Ok(NavigationEvent::EncounterResolved {
+                fleet: encounter.fleet,
+                outcome,
+            });
         }
         let outcome = self.resolve_contact(&encounter, &fleet, choice, rules)?;
         self.navigation

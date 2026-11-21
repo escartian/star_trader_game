@@ -89,6 +89,15 @@ fn report_ui(ui: &mut egui::Ui, report: &CombatReport) {
                 "Ore salvaged from raider wrecks",
             );
         }
+        if report.plunder > 0 {
+            stat(
+                ui,
+                Icon::Cargo,
+                GREEN,
+                &format!("+{}", report.plunder),
+                "Cargo plundered from the trader's hold",
+            );
+        }
         if report.cargo_lost > 0 {
             stat(
                 ui,

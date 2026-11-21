@@ -60,6 +60,16 @@ pub struct CombatReport {
     /// pays it once, when the battle ends.
     #[serde(default)]
     pub bounty: crate::economy::Credits,
+    /// The NPC trader attacked, for a piracy battle (`npc::Trader::id`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trader: Option<u64>,
+    /// Cargo units taken from a destroyed trader's hold.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub plunder: u32,
+}
+
+fn is_zero(value: &u32) -> bool {
+    *value == 0
 }
 
 /// Generous bound for one saved shot list (8 weapons × 20 shots × 16 ships).

@@ -282,6 +282,10 @@ impl LocalSession {
                 self.raider_ui(ui, &fleet, &encounter);
                 return;
             }
+            if encounter.kind == EncounterKind::Trader {
+                self.trader_ui(ui, &encounter);
+                return;
+            }
             let mut choice = None;
             let carries = |test: &dyn Fn(&game_core::travel::Ship) -> bool| {
                 fleet

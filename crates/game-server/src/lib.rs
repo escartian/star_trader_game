@@ -144,7 +144,8 @@ impl Session {
             | ClientCommand::Land { .. }
             | ClientCommand::LiftOff { .. }
             | ClientCommand::SetFlagship { .. }
-            | ClientCommand::SetPatrol { .. }) => self.navigation_command(player, command),
+            | ClientCommand::SetPatrol { .. }
+            | ClientCommand::HailTrader { .. }) => self.navigation_command(player, command),
             command @ (ClientCommand::BuyShip { .. }
             | ClientCommand::SellShip { .. }
             | ClientCommand::RenameFleet { .. }
@@ -264,3 +265,6 @@ mod route_tests;
 
 #[cfg(test)]
 mod trade_route_tests;
+
+#[cfg(test)]
+mod piracy_tests;

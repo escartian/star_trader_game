@@ -122,6 +122,16 @@ impl LocalSession {
             // Escape opens the surrender question, or backs out of it.
             self.battle.confirm_surrender = !self.battle.confirm_surrender;
         }
+        // An attack on a hailed trader names it, and giving up only breaks off.
+        let trader = self.attacked_trader();
+        let foe = trader
+            .as_ref()
+            .map_or_else(|| "RAIDERS".to_owned(), |name| name.to_uppercase());
+        let give_up = if trader.is_some() {
+            "Break off (Esc)"
+        } else {
+            "Surrender (Esc)"
+        };
         ui.horizontal(|ui| {
             ui.label(
                 RichText::new(format!("BATTLE · ROUND {}", open.battle.round))
@@ -135,16 +145,10 @@ impl LocalSession {
                 ui.add_space(16.0);
                 side_strength(ui, &open.battle, Side::Player, "YOUR FLEET");
                 ui.add_space(8.0);
-                side_strength(ui, &open.battle, Side::Hostile, "RAIDERS");
+                side_strength(ui, &open.battle, Side::Hostile, &foe);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if icons::toggle(
-                    ui,
-                    Icon::Cancel,
-                    "Surrender (Esc)",
-                    self.battle.confirm_surrender,
-                )
-                .clicked()
+                if icons::toggle(ui, Icon::Cancel, give_up, self.battle.confirm_surrender).clicked()
                 {
                     self.battle.confirm_surrender = !self.battle.confirm_surrender;
                 }
@@ -153,7 +157,7 @@ impl LocalSession {
         if narrow {
             ui.horizontal(|ui| {
                 side_strength(ui, &open.battle, Side::Player, "YOU");
-                side_strength(ui, &open.battle, Side::Hostile, "RAIDERS");
+                side_strength(ui, &open.battle, Side::Hostile, &foe);
             });
         }
         if self.battle.confirm_surrender {
@@ -164,6 +168,16 @@ impl LocalSession {
 
     /// A warning row under the header: the cost of surrendering and the choice.
     fn surrender_prompt(&mut self, ui: &mut egui::Ui) {
+        let (question, act) = match self.attacked_trader() {
+            Some(name) => (
+                format!("Break off the attack? {name} gets away; you lose nothing more."),
+                "BREAK OFF",
+            ),
+            None => (
+                "Surrender? The raiders seize all cargo in this fleet and let it go.".to_owned(),
+                "SURRENDER",
+            ),
+        };
         egui::Frame::new()
             .fill(HOSTILE.gamma_multiply(0.12))
             .stroke(egui::Stroke::new(1.0_f32, HOSTILE.gamma_multiply(0.6)))
@@ -172,12 +186,7 @@ impl LocalSession {
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    ui.label(
-                        RichText::new(
-                            "Surrender? The raiders seize all cargo in this fleet and let it go.",
-                        )
-                        .color(AMBER),
-                    );
+                    ui.label(RichText::new(question).color(AMBER));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui
                             .add(egui::Button::new(
@@ -187,9 +196,8 @@ impl LocalSession {
                         {
                             self.battle.confirm_surrender = false;
                         }
-                        let surrender =
-                            egui::Button::new(RichText::new("SURRENDER").color(Color32::BLACK))
-                                .fill(HOSTILE);
+                        let surrender = egui::Button::new(RichText::new(act).color(Color32::BLACK))
+                            .fill(HOSTILE);
                         if ui.add(surrender).clicked() {
                             self.battle.confirm_surrender = false;
                             self.battle_command(BattleAction::Surrender);

@@ -276,6 +276,7 @@ impl TravelState {
             hostiles: band.ships.clone(),
             band: Some(band.id),
             haven: false,
+            trader: None,
         };
         self.navigation.next_encounter_id = next;
         self.navigation.encounters.push(encounter.clone());

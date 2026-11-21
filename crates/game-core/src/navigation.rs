@@ -47,6 +47,9 @@ pub enum EncounterKind {
     Anomaly,
     Comet,
     LostProbe,
+    /// An NPC trader the flagship hailed (see `piracy`): let it go, demand
+    /// cargo or attack it.
+    Trader,
 }
 impl EncounterKind {
     /// Every contact a run can roll besides raiders (see `contacts`).
@@ -76,6 +79,7 @@ impl EncounterKind {
             Self::Anomaly => "Sensor anomaly",
             Self::Comet => "Comet",
             Self::LostProbe => "Lost survey probe",
+            Self::Trader => "Hailed trader",
         }
     }
 }
@@ -95,6 +99,20 @@ pub enum EncounterChoice {
     Comply,
     /// Merchant convoy: sell it cargo.
     Trade,
+    /// Hailed trader: threaten it into handing over part of its cargo.
+    Demand,
+}
+
+/// The NPC trader a `Trader` contact stopped, as it stood when hailed. Its
+/// ship cannot change while the contact is pending: no run executes then.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TraderContact {
+    /// `npc::Trader::id`.
+    pub id: u64,
+    pub name: String,
+    /// The trader's hull damage when hailed, in hull points.
+    pub hull_damage: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -113,6 +131,9 @@ pub struct Encounter {
     /// An assault on the Raider Haven's garrison (see `haven`).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub haven: bool,
+    /// The hailed NPC trader, for a `Trader` contact.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trader: Option<TraderContact>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -162,6 +183,14 @@ pub struct NavigationState {
     /// Secondary fleets guarding a system (see `patrols`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub patrols: Vec<crate::patrols::Patrol>,
+    /// NPC traders the player robbed or attacked (see `piracy`); the future
+    /// wanted status and pirate road read it.
+    #[serde(default, skip_serializing_if = "is_zero_count")]
+    pub piracies: u64,
+}
+
+fn is_zero_count(value: &u64) -> bool {
+    *value == 0
 }
 
 fn is_zero_payout(value: &i64) -> bool {
@@ -192,6 +221,7 @@ impl Default for NavigationState {
             haven: None,
             flagship: None,
             patrols: Vec::new(),
+            piracies: 0,
         }
     }
 }
@@ -307,6 +337,14 @@ pub enum NavigationError {
     FlagshipCommanded,
     /// A run limit must lie beyond the current run.
     InvalidRunLimit,
+    /// No NPC trader has that ID.
+    UnknownTrader,
+    /// The flagship must be close to the trader, in open space or orbit.
+    TraderOutOfReach,
+    /// The trader is docked at a station or being refitted.
+    TraderProtected,
+    /// The hailed trader will not hand over cargo to a fleet this weak.
+    WillNotYield,
     Battle(crate::combat::tactical::BattleError),
 }
 impl std::fmt::Display for NavigationError {
@@ -372,6 +410,17 @@ impl std::fmt::Display for NavigationError {
             Self::NotAtHaven => {
                 f.write_str("Bring the fleet into orbit at the Raider Haven's body to assault it.")
             }
+            Self::UnknownTrader => f.write_str("There is no such trader."),
+            Self::TraderOutOfReach => f.write_str(
+                "Bring your flagship within 20 million km of the trader, in open space or \
+                 orbit, to hail it.",
+            ),
+            Self::TraderProtected => f.write_str(
+                "That trader is docked under a station's protection or laid up for a refit.",
+            ),
+            Self::WillNotYield => f.write_str(
+                "The trader will not hand over cargo to a fleet this weak; attack or let it go.",
+            ),
             Self::Battle(error) => error.fmt(f),
         }
     }

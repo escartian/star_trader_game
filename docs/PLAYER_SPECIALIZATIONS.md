@@ -1,7 +1,9 @@
 # Player specializations and mission routes
 
 The current first-delivery guide is **trader onboarding**, not a generic questline.
-No contract/quest engine, espionage, warfare or piracy system is implemented yet.
+No contract/quest engine, espionage or warfare system is implemented yet. Piracy
+has a first foundation: hailing NPC traders, demanding cargo and attacking them
+(see [combat](COMBAT.md)); legal status and heat are still missing.
 Navigation, travel, refuelling, saving and ship management are shared foundations.
 
 ## Working progression direction

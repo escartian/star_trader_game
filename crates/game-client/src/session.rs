@@ -11,6 +11,7 @@ mod fleets;
 mod victory;
 pub use fleets::TradeOption;
 mod guide;
+mod hails;
 mod landing;
 mod map_controls;
 mod market;

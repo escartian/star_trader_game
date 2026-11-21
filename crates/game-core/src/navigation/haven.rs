@@ -159,6 +159,7 @@ impl TravelState {
             hostiles,
             band: None,
             haven: true,
+            trader: None,
         };
         self.navigation.next_encounter_id = next;
         self.navigation.encounters.push(encounter.clone());

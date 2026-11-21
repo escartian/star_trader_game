@@ -109,7 +109,9 @@ pub(super) fn offer(kind: EncounterKind, aboard: &Aboard) -> Offer {
             None,
             "Bypass",
         ),
-        Kind::Raiders => unreachable!("raider contacts have their own card"),
+        Kind::Raiders | Kind::Trader => {
+            unreachable!("raider and trader contacts have their own cards")
+        }
     };
     Offer {
         text,

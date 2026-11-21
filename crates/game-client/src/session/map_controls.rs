@@ -270,23 +270,7 @@ impl LocalSession {
             });
         }
         ui.separator();
-        ui.horizontal(|ui| {
-            icons::glyph(ui, Icon::Contact, AMBER, "Other traders");
-            ui.colored_label(
-                AMBER,
-                egui::RichText::new("TRAFFIC").font(crate::theme::fonts::display(ui.ctx(), 12.0)),
-            );
-        });
-        for trader in &self.economy.traders {
-            ui.strong(&trader.name)
-                .on_hover_text(trader.personality.label());
-            // Raid news stands out from routine hauling.
-            if trader.last_action.contains("raid") {
-                ui.colored_label(AMBER, egui::RichText::new(&trader.last_action).small());
-            } else {
-                ui.small(&trader.last_action);
-            }
-        }
+        self.traffic_list(ui, systems);
     }
 
     pub fn destination_card(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {

@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
+import { decaySeconds, reverbLoop } from './reverb.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../..');
@@ -31,7 +32,9 @@ const loopBars = Number(flag('--bars', '32'));
 const source = resolve(args[0] ?? join(root, 'assets/source/music/main-theme.strudel.js'));
 const output = resolve(args[1] ?? join(root, 'assets/music/main-theme.ogg'));
 /// Seconds each bar's reverb and delay are allowed to ring after it.
-const TAIL_SECONDS = 7;
+const TAIL_SECONDS = 10;
+/// Level of the reverb return against the dry mix.
+const WET_LEVEL = 0.5;
 const sampleRate = 48_000;
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
@@ -55,11 +58,18 @@ window.load = async (code) => {
   return window.tempoMap ?? null;
 };
 // Renders the notes that start in \`bar\`, at \`cps\`, ringing \`tailCycles\` longer.
-window.renderBar = async (bar, cps, tailCycles, sampleRate) => {
-  const pattern = window.piece.filterHaps((hap) => {
+// With \`send\`, renders only the reverb send instead: each note scaled by its
+// \`room\` amount (Strudel's own reverb does nothing in offline renders).
+window.renderBar = async (bar, cps, tailCycles, sampleRate, send) => {
+  let pattern = window.piece.filterHaps((hap) => {
     const begin = hap.whole.begin.valueOf();
     return begin >= bar && begin < bar + 1;
   });
+  if (send) {
+    pattern = pattern
+      .filterValues((value) => (value.room ?? 0) > 0)
+      .withValue((value) => ({ ...value, gain: (value.gain ?? 1) * value.room, room: 0 }));
+  }
   await renderPatternAudio(pattern, cps, bar, bar + 1 + tailCycles, sampleRate, 256, false, 'render');
   const bytes = new Uint8Array(await window.renderedWav.arrayBuffer());
   let binary = '';
@@ -93,6 +103,7 @@ const browser = await puppeteer.launch({
   args: ['--autoplay-policy=no-user-gesture-required'],
 });
 let mix;
+let send;
 let loopFrames;
 try {
   const tab = await browser.newPage();
@@ -116,6 +127,7 @@ try {
   const seconds = starts[bpms.length - 1] + 240 / bpms[bpms.length - 1];
   loopFrames = Math.round(seconds * sampleRate);
   mix = new Float32Array(loopFrames * 2);
+  send = new Float32Array(loopFrames * 2);
   const range = `${Math.min(...bpms)}-${Math.max(...bpms)}`;
   console.log(`Rendering ${bpms.length} bars at ${range} BPM, ${seconds.toFixed(1)} s…`);
   for (let bar = 0; bar < bpms.length; bar += 1) {
@@ -127,6 +139,11 @@ try {
     const peak = addBar(mix, Buffer.from(base64, 'base64'), Math.round(starts[bar] * sampleRate), loopFrames);
     if (process.env.DEBUG_BARS) console.log(`  bar ${bar + 1}: peak ${peak.toFixed(3)}`);
     if (peak < 1e-3) console.warn(`  bar ${bar + 1} rendered silent`);
+    await fresh();
+    const sendBase64 = await tab.evaluate(
+      (...a) => window.renderBar(...a), bar, barCps, TAIL_SECONDS * barCps, sampleRate, true,
+    );
+    addBar(send, Buffer.from(sendBase64, 'base64'), Math.round(starts[bar] * sampleRate), loopFrames);
     if ((bar + 1) % 8 === 0) console.log(`  ${bar + 1}/${bpms.length} bars`);
   }
 } finally {
@@ -153,6 +170,17 @@ function addBar(mix, wav, offset, loopFrames) {
   return peak;
 }
 
+// The shared hall: room size from the source's `const hall = N` (default 8).
+const hall = Number(code.match(/^const hall = ([\d.]+)/m)?.[1] ?? 8);
+const reverbScratch = mkdtempSync(join(tmpdir(), 'star-trader-reverb-'));
+try {
+  const wet = reverbLoop(send, loopFrames, sampleRate, decaySeconds(hall), reverbScratch);
+  wet.forEach((value, index) => {
+    mix[index] += value * WET_LEVEL;
+  });
+} finally {
+  rmSync(reverbScratch, { recursive: true, force: true });
+}
 const peak = mix.reduce((max, sample) => Math.max(max, Math.abs(sample)), 0);
 if (peak === 0) throw new Error('Render is silent');
 const scale = 10 ** (-1 / 20) / peak;

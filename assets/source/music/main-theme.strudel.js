@@ -37,6 +37,9 @@ const bars = (values) => '<' + values.join(' ') + '>'
 // A dotted eighth (three sixteenths) in seconds at each bar's tempo.
 const echo = bars(window.tempoMap.map((bpm) => (45 / bpm).toFixed(4)))
 // One octave up: "a4" -> "a5", "bb4" -> "bb5".
+// Every layer shares one reverb (one room size, `hall`); layers differ only
+// in how much they send to it.
+const hall = 8
 const octaveUp = (notes) => notes.replace(/([a-g]b?)(\d)/g, (_, name, octave) => name + (Number(octave) + 1))
 
 // D minor: i - VI - III - VII, then i - VI - iv - V (sus, resolving on the loop).
@@ -48,7 +51,7 @@ const pad = chord(chords).voicing()
   .s("sawtooth")
   .attack(0.9).release(sections([2.2, 1.8, 1.0, 0.6, 1.0, 1.8]))
   .lpf(sine.range(600, 1500).slow(16)).lpq(2)
-  .room(0.8).size(6)
+  .room(0.9).size(hall)
   .gain(sections([0.22, 0.18, 0.1, 0.06, 0.1, 0.18]))
 
 const bass = note(roots)
@@ -56,6 +59,7 @@ const bass = note(roots)
   .s("sawtooth")
   .decay(0.22).sustain(0.35).release(0.1)
   .lpf(380).lpenv(2.5).lpdecay(0.12)
+  .room(0.2).size(hall)
   .gain(0.55)
 
 const arp = n("0 2 4 6 7 6 4 2 1 3 5 7 8 7 5 3")
@@ -65,7 +69,7 @@ const arp = n("0 2 4 6 7 6 4 2 1 3 5 7 8 7 5 3")
   .lpf(sections([1400, 1400, 2200, 3200, 2200, 1400]))
   .delay(0.35).delaytime(echo).delayfeedback(0.42)
   .pan(sine.range(0.3, 0.7).slow(4))
-  .room(0.4)
+  .room(0.6).size(hall)
   .gain(0.13)
   .mask(sections([0, 1, 1, 1, 1, 1]))
 
@@ -79,7 +83,7 @@ const lead = note('<' + [melody, melody, melody, up, melody, melody].join(' ') +
   .lpf(2200).lpq(1)
   .vib(5).vibmod(0.1)
   .delay(0.3).delaytime(echo).delayfeedback(0.35)
-  .room(0.6).size(5)
+  .room(0.75).size(hall)
   .gain(0.2)
   .mask(sections([0, 0, 1, 1, 1, 0]))
 
@@ -90,7 +94,7 @@ const counter = note("<[~ ~ [f4 e4] [d4 a3]] [~ ~ [d4 f4] a4] [~ ~ [a4 g4] [f4 e
   .lpf(2600)
   .delay(0.3).delaytime(echo).delayfeedback(0.3)
   .pan(0.35)
-  .room(0.5).size(5)
+  .room(0.65).size(hall)
   .gain(0.16)
   .mask(sections([0, 0, 1, 1, 1, 0]))
 
@@ -101,7 +105,7 @@ const stabs = chord(chords).voicing()
   .decay(0.09).sustain(0)
   .lpf(sections([0, 0, 0, 2400, 1800, 0]))
   .pan(0.6)
-  .room(0.3)
+  .room(0.5).size(hall)
   .gain(sections([0, 0, 0, 0.075, 0.05, 0]))
   .mask(sections([0, 0, 0, 1, 1, 0]))
 
@@ -111,13 +115,14 @@ const kick = note("g1 ~ ~ ~ g1 ~ ~ ~ g1 ~ ~ ~ g1 ~ ~ [~ g1]")
   .s("sine")
   .decay(0.28).sustain(0)
   .penv(30).pdecay(0.05)
+  .room(0.15).size(hall)
   .gain(0.9)
   .mask(drums)
 
 const snare = s("~ pink ~ pink")
   .decay(0.16).sustain(0)
   .bandf(1700).bandq(0.8)
-  .room(0.3)
+  .room(0.45).size(hall)
   .gain(0.5)
   .mask(drums)
 
@@ -125,6 +130,7 @@ const hats = s("[~ white]*4")
   .decay(0.035).sustain(0)
   .hpf(8500)
   .pan(0.62)
+  .room(0.3).size(hall)
   .gain(0.22)
   .mask(sections([0, 1, 1, 1, 1, 1]))
 
@@ -136,7 +142,7 @@ const bells = n("<[0 ~ ~ ~] ~ [~ ~ 7 ~] ~ [4 ~ ~ ~] ~ [~ ~ ~ 2] ~>")
   .decay(1.2).sustain(0)
   .delay(0.4).delaytime(echo).delayfeedback(0.35)
   .pan(rand.range(0.15, 0.85))
-  .room(0.8).size(8)
+  .room(0.8).size(hall)
   .gain(sections([0.16, 0.13, 0.06, 0, 0.06, 0.13]))
 
 // Twinkling stars: random notes from the scale, some dropped, bouncing in the
@@ -149,7 +155,7 @@ const stars = n(irand(10).segment(16))
   .hpf(900).lpf(2600)
   .delay(0.4).delaytime(echo).delayfeedback(0.45)
   .pan(rand)
-  .room(0.6).size(6)
+  .room(0.7).size(hall)
   .gain(0.1)
 
 stack(pad, bass, arp, lead, counter, stabs, kick, snare, hats, bells, stars)

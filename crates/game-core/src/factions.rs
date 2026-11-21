@@ -12,8 +12,10 @@
 //!   toward zero) to its allies, and the same amount against you to its rivals.
 mod terms;
 mod territory;
+mod wanted;
 pub use terms::{PortTerms, Tier};
 pub use territory::{Coverage, FactionSetup, RelationMode};
+pub use wanted::{MAX_WANTED_RUNS, MIN_FINE_RUNS};
 
 use crate::SystemId;
 use serde::{Deserialize, Serialize};
@@ -74,6 +76,12 @@ pub struct FactionDefinition {
     pub raider_kill_standing: u32,
     /// Sales in its space, in cents, that earn one point of standing.
     pub sale_credits_per_point: u64,
+    /// Runs each crime in its space adds to your wanted status (`wanted`).
+    #[serde(default = "wanted::default_wanted_runs")]
+    pub wanted_runs: u32,
+    /// Fine per wanted run left, in cents at a new game's price level.
+    #[serde(default = "wanted::default_fine_per_run")]
+    pub fine_per_run: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -120,6 +128,8 @@ impl FactionCatalog {
                 && definition.piracy_penalty <= 100
                 && definition.raider_kill_standing <= 100
                 && (100..=100_000_000).contains(&definition.sale_credits_per_point)
+                && (1..=MAX_WANTED_RUNS).contains(&definition.wanted_runs)
+                && definition.fine_per_run <= 10_000_000
         });
         let pairs = self
             .classic_relations
@@ -158,6 +168,10 @@ pub struct Factions {
     /// Sales not yet worth a point of standing, in cents, by faction.
     #[serde(default)]
     pub sales_cents: [u64; 4],
+    /// Runs left on your wanted status with each faction, by
+    /// [`Faction::index`]; 0: not wanted (see `wanted`).
+    #[serde(default)]
+    pub wanted: [u32; 4],
 }
 
 impl Factions {
@@ -265,6 +279,8 @@ impl Factions {
             (MIN_STANDING..=MAX_STANDING).contains(&value)
                 && (self.in_play.contains(faction) || value == 0)
                 && self.sales_cents[faction.index()] < catalog.get(*faction).sale_credits_per_point
+                && self.wanted_runs(*faction) <= MAX_WANTED_RUNS
+                && (self.in_play.contains(faction) || self.wanted_runs(*faction) == 0)
         });
         let allegiance = self
             .allegiance

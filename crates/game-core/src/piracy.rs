@@ -170,6 +170,7 @@ pub fn hail(
             gear: ship.gear.clone(),
             escort,
         }),
+        police: None,
     };
     navigation.next_encounter_id = next;
     navigation.encounters.push(encounter.clone());

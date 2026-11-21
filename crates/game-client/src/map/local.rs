@@ -4,6 +4,7 @@ pub(crate) use campaign::fortress;
 mod framing;
 mod labels;
 mod layout;
+mod police;
 mod raiders;
 mod render;
 use layout::{display_position, moon_parent, short_name};
@@ -73,6 +74,8 @@ pub struct LocalView {
     )>,
     /// Roaming raider bands (drawn when in this system).
     bands: Vec<game_core::navigation::RaiderBand>,
+    /// Faction police patrols with their faction's colour (drawn when in this system).
+    police: Vec<(game_core::police::FactionPatrol, egui::Color32)>,
     /// The game's landing rules, for a surface's ore yield on the info card.
     landing: game_core::movement::LandingRules,
     /// The Raider Haven and chartered ports (see `campaign`).
@@ -99,6 +102,7 @@ impl LocalView {
             trade_ready: Vec::new(),
             contacts: Vec::new(),
             bands: Vec::new(),
+            police: Vec::new(),
             landing: game_core::movement::LandingRules::default(),
             campaign: CampaignMarks::default(),
             headings: Vec::new(),
@@ -114,6 +118,10 @@ impl LocalView {
 
     pub fn set_bands(&mut self, bands: Vec<game_core::navigation::RaiderBand>) {
         self.bands = bands;
+    }
+
+    pub fn set_police(&mut self, police: Vec<(game_core::police::FactionPatrol, egui::Color32)>) {
+        self.police = police;
     }
 
     pub fn set_landing(&mut self, landing: game_core::movement::LandingRules) {

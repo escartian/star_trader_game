@@ -125,6 +125,16 @@ impl Map {
                     .clone();
                 self.local = Some(LocalView::new(system));
             }
+            "police" => {
+                let id = self.session.capture_police()?;
+                let system = self
+                    .session_systems
+                    .iter()
+                    .find(|system| system.id == id)
+                    .ok_or("The policed system is missing")?
+                    .clone();
+                self.local = Some(LocalView::new(system));
+            }
             "market" => self.session.open_market(),
             "fleets" => self.session.open_fleets(),
             "saves" => self.session.open_saves(),

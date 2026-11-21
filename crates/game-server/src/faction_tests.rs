@@ -16,7 +16,7 @@ use game_protocol::{ClientCommand, CommandError, ServerMessage, SessionEvent};
 
 /// The default fixture with all four factions in play (classic relations),
 /// `holders` claiming systems 1, 2 and 3 in turn, and neutral standing.
-fn claimed(holders: [Option<Faction>; 3]) -> Session {
+pub(super) fn claimed(holders: [Option<Faction>; 3]) -> Session {
     let mut session = Session::default();
     let catalog = &session.economy.rules.faction_catalog;
     let mut factions = FactionSetup::default()
@@ -31,7 +31,7 @@ fn claimed(holders: [Option<Faction>; 3]) -> Session {
     session
 }
 
-fn standing_events(message: &ServerMessage) -> Vec<(Faction, i32)> {
+pub(super) fn standing_events(message: &ServerMessage) -> Vec<(Faction, i32)> {
     let ServerMessage::SessionSnapshot { events, .. } = message else {
         return Vec::new();
     };

@@ -371,8 +371,10 @@ Hailing opens a contact that shows the trader's hold and hull. You can:
 
 Every demand and attack counts as an act of piracy (`navigation.piracies` in
 the save). In a faction's space each act costs standing with it
-([factions](FACTIONS.md)); destroyed raiders earn standing there. Wanted status,
-police response and faction hostility to your fleets come later (milestone 5). Secondary fleets never
+([factions](FACTIONS.md)) and makes you wanted there: the faction's police
+patrols then stop your fleets, and fighting them is a battle like a raider
+fight with no bounty ([the law](FACTIONS.md#the-law-wanted-status-and-police)).
+Destroyed raiders earn standing there. Secondary fleets never
 hail; if command passes to another fleet while a hail is pending, that fleet
 lets the trader go.
 
@@ -395,7 +397,6 @@ These are covered by Auto-resolve tests in `combat/tactical/tests.rs` (400 seeds
 ## Not yet implemented
 
 A GPU renderer with a depth buffer, per-effect visuals (beams are drawn alike),
-morale effects on accuracy, faction
-hostility rules, legal consequences of
-piracy, weapon loadout changes and partial repairs. See the
+morale effects on accuracy, faction war fleets, weapon loadout changes and
+partial repairs. See the
 [roadmap](../ROADMAP.md), milestones 4 and 5.

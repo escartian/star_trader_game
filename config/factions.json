@@ -8,7 +8,9 @@
       "color": [90, 160, 255],
       "piracy_penalty": 25,
       "raider_kill_standing": 2,
-      "sale_credits_per_point": 500000
+      "sale_credits_per_point": 500000,
+      "wanted_runs": 40,
+      "fine_per_run": 1500
     },
     {
       "id": "Empire",
@@ -17,7 +19,9 @@
       "color": [190, 110, 250],
       "piracy_penalty": 15,
       "raider_kill_standing": 4,
-      "sale_credits_per_point": 1000000
+      "sale_credits_per_point": 1000000,
+      "wanted_runs": 30,
+      "fine_per_run": 1000
     },
     {
       "id": "Republic",
@@ -26,7 +30,9 @@
       "color": [60, 215, 200],
       "piracy_penalty": 15,
       "raider_kill_standing": 1,
-      "sale_credits_per_point": 200000
+      "sale_credits_per_point": 200000,
+      "wanted_runs": 25,
+      "fine_per_run": 1000
     },
     {
       "id": "Alliance",
@@ -35,7 +41,9 @@
       "color": [235, 195, 80],
       "piracy_penalty": 8,
       "raider_kill_standing": 3,
-      "sale_credits_per_point": 500000
+      "sale_credits_per_point": 500000,
+      "wanted_runs": 20,
+      "fine_per_run": 500
     }
   ],
   "classic_relations": [

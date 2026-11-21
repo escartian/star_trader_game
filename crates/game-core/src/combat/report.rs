@@ -63,6 +63,9 @@ pub struct CombatReport {
     /// The NPC trader attacked, for a piracy battle (`npc::Trader::id`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trader: Option<u64>,
+    /// The faction whose police fought, for a battle against a patrol.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub police: Option<crate::factions::Faction>,
     /// Cargo units taken from a destroyed trader's hold.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub plunder: u32,

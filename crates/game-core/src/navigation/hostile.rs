@@ -122,9 +122,16 @@ impl TravelState {
                 if let Some(band) = encounter.band {
                     self.band_after_contact(band, &[]);
                 }
+                let foe = match encounter.police {
+                    Some(police) => {
+                        self.police_after_contact(police.patrol, &[]);
+                        format!("the {} patrol", police.faction.label())
+                    }
+                    None => "the raiders".into(),
+                };
                 return Ok(NavigationEvent::EncounterResolved {
                     fleet: fleet.id,
-                    outcome: format!("Evaded the raiders ({chance}% chance)."),
+                    outcome: format!("Evaded {foe} ({chance}% chance)."),
                 });
             }
         }
@@ -187,7 +194,12 @@ impl TravelState {
                     profile(*kind)?,
                 ),
                 (None, _) => CombatantSetup {
-                    name: format!("Raider {} {}", kind.label(), index + 1),
+                    name: match encounter.police {
+                        Some(police) => {
+                            format!("{} {} {}", police.faction.label(), kind.label(), index + 1)
+                        }
+                        None => format!("Raider {} {}", kind.label(), index + 1),
+                    },
                     side: Side::Hostile,
                     ship: None,
                     kind: *kind,

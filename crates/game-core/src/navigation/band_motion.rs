@@ -34,7 +34,7 @@ pub(crate) fn distance(a: LocalPosition, b: LocalPosition) -> i64 {
     i64::try_from((squares as u128).isqrt()).unwrap_or(i64::MAX)
 }
 
-pub(super) fn near(a: LocalPosition, b: LocalPosition) -> bool {
+pub(crate) fn near(a: LocalPosition, b: LocalPosition) -> bool {
     distance(a, b) <= STRIKE_KM
 }
 
@@ -42,7 +42,7 @@ pub(super) fn near(a: LocalPosition, b: LocalPosition) -> bool {
 /// and every body (a band that cannot find one holds still). On the plane,
 /// orbiting bodies often cross the straight line, so the band follows the
 /// detour's waypoints for as far as one run takes it.
-pub(super) fn step_toward(
+pub(crate) fn step_toward(
     rules: &crate::movement::MovementRules,
     world: &StarSystem,
     from: LocalPosition,

@@ -63,18 +63,28 @@ impl Tier {
 pub struct PortTerms {
     /// The port's faction and your tier with it; `None` in independent space.
     pub holder: Option<(Faction, Tier)>,
+    /// The holder wants you for your crimes: the port treats you as Hostile
+    /// until you pay your fine (`factions::wanted`).
+    pub wanted: bool,
 }
 
 impl PortTerms {
-    pub const LIST: Self = Self { holder: None };
+    pub const LIST: Self = Self {
+        holder: None,
+        wanted: false,
+    };
 
-    /// Hostile ports refuse trade, hulls, gear, escorts and charters.
+    /// Hostile ports, and ports whose holder wants you, refuse trade, hulls,
+    /// gear, escorts and charters.
     pub fn closed(self) -> bool {
-        matches!(self.holder, Some((_, Tier::Hostile)))
+        self.wanted || matches!(self.holder, Some((_, Tier::Hostile)))
     }
 
     fn favour(self) -> i64 {
-        self.holder.map_or(0, |(_, tier)| tier.favour_percent())
+        match self.holder {
+            Some(_) if self.wanted => Tier::Hostile.favour_percent(),
+            holder => holder.map_or(0, |(_, tier)| tier.favour_percent()),
+        }
     }
 
     /// What you pay for goods listed at `cents` (rounded up).
@@ -96,6 +106,10 @@ impl PortTerms {
     pub fn summary(self) -> String {
         match self.holder {
             None => "Independent port · list prices".into(),
+            Some((faction, _)) if self.wanted => format!(
+                "{} port · Wanted: trade refused until you pay your fine; fuel and repairs cost 50% more",
+                faction.label()
+            ),
             Some((faction, Tier::Hostile)) => format!(
                 "{} port · Hostile: trade refused; fuel and repairs cost 50% more",
                 faction.label()
@@ -145,11 +159,10 @@ impl Economy {
         else {
             return PortTerms::LIST;
         };
+        let holder = self.factions.owner(system);
         PortTerms {
-            holder: self
-                .factions
-                .owner(system)
-                .map(|faction| (faction, self.factions.tier(faction))),
+            holder: holder.map(|faction| (faction, self.factions.tier(faction))),
+            wanted: holder.is_some_and(|faction| self.factions.is_wanted(faction)),
         }
     }
 

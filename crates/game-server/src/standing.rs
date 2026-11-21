@@ -2,20 +2,33 @@
 //!
 //! Around every accepted command the host compares the world before and after:
 //! - each new act of piracy (`NavigationState::piracies`) costs the holder of
-//!   the system where your hailing fleet stood its `piracy_penalty`;
-//! - a newly finished battle against raiders (not a trader you attacked) earns
-//!   the holder of the battle's system `raider_kill_standing` per raider destroyed;
+//!   the system where your hailing fleet stood its `piracy_penalty`, and makes
+//!   you wanted there (`factions::wanted`);
+//! - a newly finished battle against raiders (not a trader you attacked, nor
+//!   the police) earns the holder of the battle's system `raider_kill_standing`
+//!   per raider destroyed;
+//! - a newly finished battle against a faction's police costs that faction
+//!   its `piracy_penalty` per patrol ship destroyed; surrendering to them
+//!   (their cargo impounded) clears your record instead;
 //! - sales already earned their points in `Economy::trade`.
 //!
 //! Then every faction whose standing moved, for any of these reasons, gets a
-//! [`SessionEvent::StandingChanged`]. Independent space wins and loses nothing.
+//! [`SessionEvent::StandingChanged`], and every faction that starts wanting
+//! you, wants you longer or stops wanting you gets a
+//! [`SessionEvent::WantedChanged`]. Independent space wins and loses nothing.
 use super::Session;
-use game_core::{SystemId, combat::Side, fleet::FleetId, navigation::EncounterKind};
+use game_core::{
+    SystemId,
+    combat::{CombatOutcome, Side},
+    fleet::FleetId,
+    navigation::EncounterKind,
+};
 use game_protocol::{ServerMessage, SessionEvent};
 
 /// What standing compares across one command.
 pub(super) struct Watch {
     standing: [i32; 4],
+    wanted: [u32; 4],
     piracies: u64,
     /// The encounter of the last combat report, if any.
     combat: Option<u64>,
@@ -33,6 +46,7 @@ impl Session {
             .and_then(|contact| self.fleet_system(contact.fleet));
         Watch {
             standing: self.economy.factions.standing,
+            wanted: self.economy.factions.wanted,
             piracies: navigation.piracies,
             combat: navigation
                 .last_combat
@@ -60,6 +74,8 @@ impl Session {
             let penalty = i64::from(catalog.get(faction).piracy_penalty) * acts as i64;
             let delta = i32::try_from(-penalty).unwrap_or(i32::MIN);
             self.economy.factions.adjust(faction, delta);
+            let count = u32::try_from(acts).unwrap_or(u32::MAX);
+            self.economy.factions.charge(faction, count, &catalog);
         }
         let finished = navigation
             .last_combat
@@ -70,9 +86,17 @@ impl Session {
                     .side(Side::Hostile)
                     .filter(|ship| ship.destroyed)
                     .count();
-                (report.fleet, destroyed)
+                let surrendered = report.outcome == CombatOutcome::Surrendered;
+                (report.fleet, destroyed, report.police, surrendered)
             });
-        if let Some((fleet, destroyed)) = finished
+        if let Some((_, destroyed, Some(faction), surrendered)) = finished {
+            let penalty = i64::from(catalog.get(faction).piracy_penalty) * destroyed as i64;
+            let delta = i32::try_from(-penalty).unwrap_or(i32::MIN);
+            self.economy.factions.adjust(faction, delta);
+            if surrendered {
+                self.economy.factions.clear_wanted(faction);
+            }
+        } else if let Some((fleet, destroyed, None, _)) = finished
             && let Some(faction) = self
                 .fleet_system(fleet)
                 .and_then(|system| self.economy.factions.owner(system))
@@ -81,13 +105,12 @@ impl Session {
             let gain = i32::try_from(per_raider * destroyed).unwrap_or(i32::MAX);
             self.economy.factions.adjust(faction, gain);
         }
-        let changes: Vec<SessionEvent> = self
-            .economy
-            .factions
+        let factions = &self.economy.factions;
+        let mut changes: Vec<SessionEvent> = factions
             .in_play
             .iter()
             .filter_map(|faction| {
-                let standing = self.economy.factions.standing(*faction);
+                let standing = factions.standing(*faction);
                 let change = standing - watch.standing[faction.index()];
                 (change != 0).then_some(SessionEvent::StandingChanged {
                     faction: *faction,
@@ -96,6 +119,18 @@ impl Session {
                 })
             })
             .collect();
+        // Wanted status running down a run at a time is not news; starting,
+        // growing and ending are.
+        changes.extend(factions.in_play.iter().filter_map(|faction| {
+            let (before, runs) = (
+                watch.wanted[faction.index()],
+                factions.wanted_runs(*faction),
+            );
+            (runs > before || (runs == 0 && before > 0)).then_some(SessionEvent::WantedChanged {
+                faction: *faction,
+                runs,
+            })
+        }));
         if changes.is_empty() {
             return message;
         }

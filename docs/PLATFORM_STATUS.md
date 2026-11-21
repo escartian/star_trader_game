@@ -228,3 +228,11 @@ nine star kinds and every planet, giant, moon and asteroid variant render with
 their own art. The captures showed generated moons drawn across the star (the
 schematic moon spacing pushed them 40 million km from inner planets); fixed so
 inward pushes stay short, checked in the captures and by a galaxy-wide test.
+
+Faction police: offscreen captures of a patrol stopping a wanted fleet
+(`--capture-view police`, 1280 × 800 and 390 × 844) and the Factions panel with
+each faction's record (`factions`) were visually inspected. The market window's
+wanted banner and Pay fine button were not captured; pursuit, fines, resisting
+arrest, police against raider bands and replacement patrols are covered by
+server and core tests. Wanted durations, fine sizes and patrol strength have not
+been playtested.

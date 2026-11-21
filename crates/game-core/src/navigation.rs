@@ -8,7 +8,7 @@ mod hostile;
 mod landing;
 mod next_leg;
 mod raiders;
-pub(crate) use band_motion::{distance, local_in};
+pub(crate) use band_motion::{distance, local_in, near, step_toward};
 pub use band_roaming::{BandTransit, MAX_BANDS_PER_SYSTEM};
 pub use raiders::STRIKE_KM;
 pub use raiders::{COOLDOWN_RUNS, LOOT_COOLDOWN_RUNS};
@@ -57,6 +57,9 @@ pub enum EncounterKind {
     /// An NPC trader the flagship hailed (see `piracy`): let it go, demand
     /// cargo or attack it.
     Trader,
+    /// A faction patrol pursuing you (see `police`): comply and pay the
+    /// fine, fight, or try to outrun it.
+    Police,
 }
 impl EncounterKind {
     /// Every contact a run can roll besides raiders (see `contacts`).
@@ -87,6 +90,7 @@ impl EncounterKind {
             Self::Comet => "Comet",
             Self::LostProbe => "Lost survey probe",
             Self::Trader => "Hailed trader",
+            Self::Police => "Police patrol",
         }
     }
 }
@@ -156,6 +160,9 @@ pub struct Encounter {
     /// The hailed NPC trader, for a `Trader` contact.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trader: Option<TraderContact>,
+    /// The faction patrol that stopped you, for a `Police` contact.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub police: Option<crate::police::PoliceContact>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -212,6 +219,9 @@ pub struct NavigationState {
     /// Hired escorts, at most one per fleet.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub escorts: Vec<Escort>,
+    /// Faction police patrols (see `police`).
+    #[serde(default, skip_serializing_if = "crate::police::PoliceState::is_empty")]
+    pub police: crate::police::PoliceState,
 }
 
 fn is_zero_count(value: &u64) -> bool {
@@ -248,6 +258,7 @@ impl Default for NavigationState {
             patrols: Vec::new(),
             piracies: 0,
             escorts: Vec::new(),
+            police: Default::default(),
         }
     }
 }
@@ -329,6 +340,8 @@ pub enum NavigationEvent {
     },
     /// The player took direct command of a fleet.
     FlagshipChanged(FleetId),
+    /// News of faction police in a system where you have a fleet.
+    PoliceNote(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

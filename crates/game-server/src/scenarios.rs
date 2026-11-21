@@ -1,7 +1,8 @@
 //! Reproducible test scenarios built through ordinary authoritative commands.
 //! The only non-command steps are an explicit, documented test budget grant, the
 //! encounter-chance override that makes contact tests deterministic, and the
-//! fleet-battle fixture's restocked home shipyard and raider group.
+//! fleet-battle fixture's restocked home shipyard and raider group, and the
+//! police capture's staged criminal record.
 use super::Session;
 use game_core::{
     BodyId, BodyKind, SystemId,
@@ -16,6 +17,27 @@ use game_protocol::{ClientCommand, ServerMessage};
 const TEST_BUDGET: Credits = Credits(2_500_000);
 
 impl Session {
+    /// For the police capture: the holder of `system` wants you (one crime's
+    /// worth) and the system's raider bands stand down, so its patrol is
+    /// the first to meet a fleet flying in. Returns the holder.
+    pub fn stage_police_pursuit(
+        &mut self,
+        system: SystemId,
+    ) -> Result<game_core::factions::Faction, String> {
+        let faction = self
+            .economy
+            .factions
+            .owner(system)
+            .ok_or("That system is independent")?;
+        let catalog = self.economy.rules.faction_catalog.clone();
+        self.economy.factions.charge(faction, 1, &catalog);
+        self.state
+            .navigation
+            .bands
+            .retain(|band| band.system != system);
+        Ok(faction)
+    }
+
     /// Four fleets in different states, for testing multi-fleet management:
     /// - "Home Guard": the starting freighter, docked at the home trade port.
     /// - "Scout Wing": a scout in orbit of the first planet with a market.

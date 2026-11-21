@@ -236,7 +236,7 @@ impl LocalSession {
 
 impl LocalSession {
     /// Fight raiders and bypass every other contact so capture courses continue.
-    fn capture_resolve_contacts(&mut self) {
+    pub(super) fn capture_resolve_contacts(&mut self) {
         use game_core::navigation::{EncounterChoice, EncounterKind};
         for encounter in self.state.navigation.encounters.clone() {
             let choice = match encounter.kind {

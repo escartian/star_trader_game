@@ -168,9 +168,9 @@ remains separate from GPU captures and egui input regression tests.
 game over, the Raider Haven and port charters are implemented; see
 [campaign](docs/CAMPAIGN.md).
 
-**Next:** faction fleets and police (wanted status from piracy), shifting
-territory, explicit hostility/engagement rules for NPC and faction fleets, mid-fight
-retreat and combat balance from playtests ([combat](docs/COMBAT.md)).
+**Next:** shifting territory and faction war fleets, NPC trader faction
+affiliations, mid-fight retreat and combat balance from playtests
+([combat](docs/COMBAT.md)).
 
 ## 4. NPC traders and fleet combat
 
@@ -220,7 +220,9 @@ Combat is the original README's first prioritized expansion.
   hired patrol escort per fleet for 10 runs; NPC traders buy them from profits.
 - [x] Raider bands cross systems: they chase a fleet that flees into the next
   system on its course (never home) and roam between systems, two at most per system.
-- [ ] Hostility rules for faction fleets.
+- [x] Hostility rules for faction fleets: police patrols pursue fleets of a
+  captain their faction wants (or holds Hostile) and otherwise engage raider
+  bands hunting in their system ([factions](docs/FACTIONS.md#the-law-wanted-status-and-police)).
 
 **Acceptance:** two fleets resolve combat reproducibly; damaged/destroyed ships,
 cargo and rewards remain consistent. Raider fights meet this with behavior and
@@ -235,8 +237,12 @@ save tests. NPC actions will resolve at navigation-run boundaries.
 - [x] Standing per faction (−100 to 100, spreading to allies and rivals): piracy
   costs it, destroying raiders and selling cargo earn it; tiers set prices and
   hostile ports refuse trade.
-- [ ] Influence affects NPC fleets and territory over time; faction fleets.
-- [ ] Law/inspections, wanted status and police response.
+- [x] Faction police: a patrol in every claimed system that visits its bodies,
+  fights raider bands and is replaced when wiped out.
+- [ ] Influence affects NPC fleets and territory over time; faction war fleets.
+- [x] Wanted status from piracy and resisting arrest, fines (paid at a port or to
+  a patrol), wanted ports refusing trade and police contacts (Comply, Fight, Evade).
+- [ ] Faction inspections for contraband, bribes and bounty hunters.
 - [ ] Repairs (full hull repair at markets exists), maintenance, detailed ship
   statistics, equipment and customization.
 - [ ] Fleet summaries and batch management that remain readable as ownership grows.

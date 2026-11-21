@@ -84,6 +84,18 @@ impl Session {
             .collect();
         let mut events = Vec::new();
         for encounter in pending {
+            // Secondary fleets submit to the law and pay the fine.
+            if encounter.police.is_some() {
+                let event = game_core::police::resolve(
+                    &mut self.state,
+                    &mut self.economy,
+                    player,
+                    encounter.id,
+                    EncounterChoice::Comply,
+                )?;
+                events.push(event);
+                continue;
+            }
             let choice = self.automatic_choice(encounter.fleet, encounter.kind);
             let rules = &self.economy.rules;
             // A choice the fleet cannot make (a full hold, nothing to sell)

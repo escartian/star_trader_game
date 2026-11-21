@@ -45,7 +45,7 @@ Each `data/slot-N.json` stores:
   `inflation_ppm_per_tick`), the
   galaxy `price_level_ppm`, port `charters`
   (`market`, `owner`; omitted when none) and `factions` (`in_play`,
-  `allegiance`, `territory`, `relations`, `standing`, `sales_cents`; see
+  `allegiance`, `territory`, `relations`, `standing`, `sales_cents`, `wanted`; see
   [factions](FACTIONS.md); absent means no factions). Each market records a composite system/body ID,
   station flag, treasury, recent trade `activity`, hull inventory and commodity
   balances (each good with its `price_level_ppm`). Cargo is keyed by commodity name inside each ship.
@@ -134,8 +134,9 @@ combat report adds `bounty` (hundredths, default 0).
 `config/factions.json` lists the four factions in order (`Federation`,
 `Empire`, `Republic`, `Alliance`), each with `id`, `name` (1–64 bytes),
 `description` (up to 256), `color` (sRGB triple), `piracy_penalty` (0–100),
-`raider_kill_standing` (0–100) and `sale_credits_per_point` (hundredths,
-100–100,000,000), plus `classic_relations`: pairs `between` two different
+`raider_kill_standing` (0–100), `sale_credits_per_point` (hundredths,
+100–100,000,000), `wanted_runs` (1–200, default 30) and `fine_per_run`
+(hundredths, at most 10,000,000, default 1,000), plus `classic_relations`: pairs `between` two different
 factions with `relation` `Allied` or `Rival` (unlisted pairs are neutral). It is
 embedded as a fallback, loaded from the project file when present, and saved in
 the economy rules as `faction_catalog`.

@@ -177,10 +177,10 @@ impl TravelState {
             .cloned()
             .ok_or(FleetError::UnknownFleet)?;
         let result = open.battle.engagement();
-        // Bounties are for raiders; an attacked trader pays none.
-        let bounty = match encounter.trader {
-            Some(_) => crate::economy::Credits(0),
-            None => raider_bounty(&result.combatants, rules)?,
+        // Bounties are for raiders; an attacked trader or the police pay none.
+        let bounty = match (&encounter.trader, encounter.police) {
+            (None, None) => raider_bounty(&result.combatants, rules)?,
+            _ => crate::economy::Credits(0),
         };
         let mut report = CombatReport {
             encounter: encounter.id,
@@ -199,11 +199,13 @@ impl TravelState {
             crippled: None,
             bounty,
             trader: encounter.trader.as_ref().map(|trader| trader.id),
+            police: encounter.police.map(|police| police.faction),
             plunder: 0,
         };
         self.apply_engagement(&fleet, &mut report)?;
-        // Raiders take every cargo unit still aboard a fleet that gives up; a
-        // trader the player attacked just breaks away.
+        // Raiders (or the police, impounding it) take every cargo unit still
+        // aboard a fleet that gives up; a trader the player attacked just
+        // breaks away.
         if open.battle.surrendered && encounter.trader.is_none() {
             for id in &fleet.ships {
                 if let Ok(ship) = self.ship_mut(*id) {
@@ -229,6 +231,9 @@ impl TravelState {
             .collect();
         if let Some(band) = encounter.band {
             self.band_after_contact(band, &destroyed);
+        }
+        if let Some(police) = encounter.police {
+            self.police_after_contact(police.patrol, &destroyed);
         }
         // A destroyed escort ends its contract.
         if report
@@ -270,7 +275,7 @@ impl TravelState {
             .filter(|encounter| {
                 matches!(
                     encounter.kind,
-                    EncounterKind::Raiders | EncounterKind::Trader
+                    EncounterKind::Raiders | EncounterKind::Trader | EncounterKind::Police
                 )
             })
             .filter(|encounter| encounter.fleet == open.fleet)

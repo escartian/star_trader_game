@@ -137,7 +137,9 @@ impl TravelState {
                 || encounter.run > self.navigation.run
                 || matches!(
                     encounter.kind,
-                    super::EncounterKind::Raiders | super::EncounterKind::Trader
+                    super::EncounterKind::Raiders
+                        | super::EncounterKind::Trader
+                        | super::EncounterKind::Police
                 ) == encounter.hostiles.is_empty()
                 || (encounter.kind == super::EncounterKind::Trader) != encounter.trader.is_some()
                 || encounter.hostiles.len() > super::hostile::MAX_SAVED_RAIDERS
@@ -163,6 +165,7 @@ impl TravelState {
         self.validate_bands(systems)?;
         self.validate_haven(systems)?;
         self.validate_patrols(systems)?;
+        self.validate_police(systems)?;
         if self.navigation.payout != 0 {
             return Err("Unsettled contact payout".into());
         }
@@ -183,6 +186,11 @@ impl TravelState {
     fn encounter_source_valid(&self, encounter: &super::Encounter) -> bool {
         // A hailed trader: its hull (and escort), checked against the trader
         // by the host.
+        // A police patrol may stop any exposed fleet; `validate_police`
+        // checks the patrol itself.
+        if encounter.police.is_some() {
+            return encounter.trader.is_none() && encounter.band.is_none() && !encounter.haven;
+        }
         if let Some(trader) = &encounter.trader {
             return !encounter.haven
                 && encounter.band.is_none()

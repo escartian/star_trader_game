@@ -66,6 +66,7 @@ impl LocalSession {
                 .holder
                 .map_or(CYAN, |(_, tier)| super::factions::tier_color(tier));
             ui.label(egui::RichText::new(terms.summary()).color(color).small());
+            self.wanted_banner(ui, &ship);
         }
         ui.horizontal_wrapped(|ui| {
             stat(ui, Icon::Funds, AMBER, &market.credits.to_string(), "Market funds available to buy your cargo");

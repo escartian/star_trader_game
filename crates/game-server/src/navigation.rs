@@ -103,16 +103,30 @@ impl Session {
                 ordered = Some(fleet);
                 vec![NavigationEvent::CourseCancelled(fleet)]
             }
-            // A hailed trader's contact settles against the trader's hold.
+            // A hailed trader's contact settles against the trader's hold, a
+            // police contact against the wallet and your record.
             ClientCommand::ResolveEncounter {
                 encounter, choice, ..
-            } => vec![piracy::resolve(
-                &mut candidate.state,
-                &mut candidate.economy,
-                player,
-                encounter,
-                choice,
-            )?],
+            } => {
+                let police = candidate
+                    .state
+                    .navigation
+                    .encounters
+                    .iter()
+                    .any(|known| known.id == encounter && known.police.is_some());
+                let resolve = if police {
+                    game_core::police::resolve
+                } else {
+                    piracy::resolve
+                };
+                vec![resolve(
+                    &mut candidate.state,
+                    &mut candidate.economy,
+                    player,
+                    encounter,
+                    choice,
+                )?]
+            }
             ClientCommand::HailTrader { fleet, trader, .. } => {
                 candidate.require_flagship(player, fleet)?;
                 vec![piracy::hail(
@@ -196,6 +210,13 @@ impl Session {
                 )?);
                 // Patrol fleets set off for their next body.
                 events.extend(game_core::patrols::service_patrols(
+                    &mut candidate.state,
+                    &mut candidate.economy,
+                    player,
+                    &candidate.systems,
+                )?);
+                // Wanted status runs down; faction police hunt and patrol.
+                events.extend(game_core::police::patrol_run(
                     &mut candidate.state,
                     &mut candidate.economy,
                     player,

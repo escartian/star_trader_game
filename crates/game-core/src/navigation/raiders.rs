@@ -124,7 +124,7 @@ impl TravelState {
         });
     }
 
-    pub(super) fn band_roll(&mut self) -> u64 {
+    pub(crate) fn band_roll(&mut self) -> u64 {
         self.navigation.band_rng = self.navigation.band_rng.wrapping_add(0x9e37_79b9_7f4a_7c15);
         let mut value = self.navigation.band_rng;
         value = (value ^ (value >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
@@ -335,6 +335,7 @@ impl TravelState {
             band: Some(band.id),
             haven: false,
             trader: None,
+            police: None,
         };
         self.navigation.next_encounter_id = next;
         self.navigation.encounters.push(encounter.clone());

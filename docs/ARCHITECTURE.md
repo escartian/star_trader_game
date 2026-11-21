@@ -149,8 +149,11 @@ its system ID in Docked; planetary Orbiting locations resolve a market by body.
 Ship catalog definitions come from config/ships.json, weapons from
 config/combat.json and factions from config/factions.json, all embedded as
 fallbacks. Faction territory and your standing live in `Economy::factions`;
-the host adjusts standing after each command (`game-server/src/standing.rs`)
-and core prices apply its terms (`factions::terms`). `game-core::combat` validates them.
+the host adjusts standing and wanted status after each command
+(`game-server/src/standing.rs`) and core prices apply its terms
+(`factions::terms`). Police patrols live in `NavigationState::police`; the host
+runs `game-core::police::patrol_run` once per navigation run, after NPC traders,
+routes and patrols, because pursuit reads `Economy::factions`. `game-core::combat` validates them.
 Older save schemas are rejected during prototyping. Schema 8 is current; a
 schema-7 save differs only in its battle format and is upgraded on load, its
 open 3D-grid battle (if any) auto-resolved.

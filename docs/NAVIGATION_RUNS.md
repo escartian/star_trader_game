@@ -153,7 +153,8 @@ Otherwise one of ten peaceful contacts, equally likely; each can be passed by:
 | Lost survey probe | Recover | 120 cr reward |
 
 Credits are at a new game's prices and scale with inflation; a fine never takes
-the wallet below zero. Faction reputation from law contacts arrives with factions.
+the wallet below zero. These random law contacts do not touch faction standing;
+faction police contacts do (see [the law](FACTIONS.md#the-law-wanted-status-and-police)).
 
 Random state is seeded and saved. Rolls use stable fleet-ID order, not the order
 in which you plotted courses. Reloading the same planning state and executing the

@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 13;
+pub const PROTOCOL_VERSION: u32 = 14;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -100,6 +100,12 @@ pub enum ClientCommand {
     },
     /// Hire (or renew) an escort for the fleet `ship` leads, at its market.
     HireEscort {
+        ship: ShipId,
+        expected_revision: u64,
+    },
+    /// Pay your fine to the faction that holds the port where `ship` is
+    /// (see `game_core::police`), clearing your wanted status there.
+    PayFine {
         ship: ShipId,
         expected_revision: u64,
     },
@@ -243,6 +249,17 @@ pub enum SessionEvent {
         faction: game_core::factions::Faction,
         change: i32,
         standing: i32,
+    },
+    /// A faction now wants you for `runs` runs, or (0) no longer does
+    /// (see `game_core::factions::wanted`).
+    WantedChanged {
+        faction: game_core::factions::Faction,
+        runs: u32,
+    },
+    /// You paid your fine at a faction's port.
+    FinePaid {
+        faction: game_core::factions::Faction,
+        cost: game_core::economy::Credits,
     },
 }
 

@@ -145,6 +145,7 @@ fn sales_earn_standing_with_the_ports_holder_point_by_point() {
 fn terms_scale_prices_by_tier_and_close_hostile_ports() {
     let at = |tier| PortTerms {
         holder: Some((Faction::Empire, tier)),
+        wanted: false,
     };
     assert_eq!(PortTerms::LIST.buying(1000), 1000);
     assert_eq!(at(Tier::Honored).buying(1000), 900);
@@ -161,8 +162,47 @@ fn terms_scale_prices_by_tier_and_close_hostile_ports() {
     );
     assert_eq!(at(Tier::Hostile).service(1000), 1500);
     assert!(at(Tier::Hostile).closed() && !at(Tier::Unfriendly).closed());
+    let wanted = PortTerms {
+        wanted: true,
+        ..at(Tier::Honored)
+    };
+    assert!(
+        wanted.closed(),
+        "a wanted captain is refused like a hostile one"
+    );
+    assert_eq!(wanted.service(1000), 1500);
     assert_eq!(Tier::of(-50), Tier::Hostile);
     assert_eq!(Tier::of(-15), Tier::Unfriendly);
     assert_eq!(Tier::of(14), Tier::Neutral);
     assert_eq!(Tier::of(50), Tier::Honored);
+}
+
+#[test]
+fn crimes_make_you_wanted_for_a_while_and_fines_have_a_floor() {
+    let catalog = FactionCatalog::default();
+    let systems = galaxy(7);
+    let mut factions = FactionSetup::default()
+        .generate(7, &systems, &catalog)
+        .unwrap();
+    assert!(!factions.pursues_you(Faction::Empire));
+    factions.charge(Faction::Empire, 2, &catalog);
+    assert_eq!(factions.wanted_runs(Faction::Empire), 60);
+    assert!(factions.pursues_you(Faction::Empire));
+    assert_eq!(factions.fine_cents(Faction::Empire, &catalog), 60 * 1_000);
+    factions.charge(Faction::Empire, 100, &catalog);
+    assert_eq!(factions.wanted_runs(Faction::Empire), MAX_WANTED_RUNS);
+    factions.validate(&systems, &catalog).unwrap();
+    factions.wanted[Faction::Empire.index()] = 1;
+    factions.pass_run();
+    assert!(!factions.is_wanted(Faction::Empire));
+    assert_eq!(
+        factions.fine_cents(Faction::Empire, &catalog),
+        u64::from(MIN_FINE_RUNS) * 1_000,
+        "the smallest fine"
+    );
+    // Hostile standing alone sets the police on you.
+    factions.standing[Faction::Empire.index()] = -60;
+    assert!(factions.pursues_you(Faction::Empire));
+    factions.wanted[Faction::Empire.index()] = MAX_WANTED_RUNS + 1;
+    assert!(factions.validate(&systems, &catalog).is_err());
 }

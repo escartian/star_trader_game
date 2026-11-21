@@ -185,7 +185,8 @@ impl Session {
             | ClientCommand::UpgradeHold { .. }
             | ClientCommand::RepairShip { .. }
             | ClientCommand::FitGear { .. }
-            | ClientCommand::HireEscort { .. }) => self.commerce(player, command),
+            | ClientCommand::HireEscort { .. }
+            | ClientCommand::PayFine { .. }) => self.commerce(player, command),
             command @ (ClientCommand::BuyCharter { .. }
             | ClientCommand::AssaultHaven { .. }
             | ClientCommand::SetRunLimit { .. }) => self.campaign_command(player, command),
@@ -277,6 +278,8 @@ mod trade_route_tests;
 
 #[cfg(test)]
 mod piracy_tests;
+#[cfg(test)]
+mod police_tests;
 
 #[cfg(test)]
 mod band_trader_tests;

@@ -60,6 +60,7 @@ pub(super) fn event_label(event: NavigationEvent) -> String {
         }
         NavigationEvent::RouteEnded { fleet, reason } => format!("Fleet {}: {reason}", fleet.0),
         NavigationEvent::PatrolNote { fleet, note } => format!("Fleet {} patrol · {note}", fleet.0),
+        NavigationEvent::PoliceNote(note) => note,
         NavigationEvent::FlagshipChanged(fleet) => format!(
             "Fleet {} is now your flagship. Your other fleets follow their standing orders.",
             fleet.0
@@ -284,6 +285,10 @@ impl LocalSession {
             }
             if encounter.kind == EncounterKind::Trader {
                 self.trader_ui(ui, &encounter);
+                return;
+            }
+            if encounter.kind == EncounterKind::Police {
+                self.police_ui(ui, &fleet, &encounter);
                 return;
             }
             let mut choice = None;

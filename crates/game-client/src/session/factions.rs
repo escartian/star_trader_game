@@ -83,9 +83,9 @@ impl LocalSession {
             None => "You declared for no one: you start neutral with every faction.".into(),
         });
         ui.small(
-            "Standing runs from −100 to 100. Piracy in a faction's space costs standing; \
-             destroying raiders and selling cargo there earns it. Half of every change \
-             spreads to its allies, and against you to its rivals.",
+            "Standing runs from −100 to 100. Piracy in a faction's space costs standing \
+             and makes you wanted there; destroying raiders and selling cargo there earns \
+             it. Half of every change spreads to its allies, and against you to its rivals.",
         );
         ui.add_space(6.0);
         let catalog = &self.economy.rules.faction_catalog;
@@ -125,8 +125,10 @@ impl LocalSession {
                 });
                 let terms = game_core::factions::PortTerms {
                     holder: Some((*faction, tier)),
+                    wanted: factions.is_wanted(*faction),
                 };
                 ui.small(terms.summary());
+                self.wanted_line(ui, *faction);
                 ui.small(format!(
                     "Piracy here −{} · each raider destroyed +{} · +1 per {} sold",
                     definition.piracy_penalty,

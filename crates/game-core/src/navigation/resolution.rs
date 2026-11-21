@@ -150,6 +150,7 @@ impl TravelState {
                     band: None,
                     haven: false,
                     trader: None,
+                    police: None,
                 };
                 self.navigation.next_encounter_id = next;
                 self.navigation.encounters.push(encounter.clone());
@@ -227,7 +228,12 @@ impl TravelState {
             .revision
             .checked_add(1)
             .ok_or(TravelError::TimeOverflow)?;
-        if encounter.kind == EncounterKind::Raiders {
+        // A police patrol is fought or evaded like raiders; complying needs
+        // the wallet, so `police::resolve` handles it.
+        if matches!(
+            encounter.kind,
+            EncounterKind::Raiders | EncounterKind::Police
+        ) {
             if !matches!(
                 choice,
                 EncounterChoice::Fight | EncounterChoice::Evade | EncounterChoice::AutoResolve

@@ -122,11 +122,14 @@ impl GameSetup {
 }
 
 impl Session {
-    /// Lays out territory, relations and opening standing; a world generated
-    /// without a setup (tests, captures) has no factions until this runs.
+    /// Lays out territory, relations and opening standing, and places a police
+    /// patrol in every claimed system; a world generated without a setup
+    /// (tests, captures) has no factions until this runs.
     pub fn set_up_factions(&mut self, seed: u64, setup: &FactionSetup) -> Result<(), String> {
         let catalog = &self.economy.rules.faction_catalog;
         self.economy.factions = setup.generate(seed, &self.systems, catalog)?;
+        self.state
+            .spawn_police(&self.economy.factions, &self.systems);
         Ok(())
     }
 

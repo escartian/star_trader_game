@@ -175,6 +175,8 @@ pub enum EconomyError {
     AlreadyFitted,
     /// This port's faction is hostile to you (`factions::Tier::Hostile`).
     PortClosed,
+    /// The port's faction does not want you: there is no fine to pay.
+    NotWanted,
     ArithmeticOverflow,
 }
 
@@ -197,7 +199,10 @@ impl std::fmt::Display for EconomyError {
             Self::NoDamage => "This ship has no hull damage to repair.",
             Self::AlreadyChartered => "This port's charter has already been sold.",
             Self::AlreadyFitted => "This ship already has that gear fitted.",
-            Self::PortClosed => "This port's faction is hostile to you and refuses your business.",
+            Self::PortClosed => {
+                "This port's faction is hostile to you, or wants you for your crimes, and refuses your business."
+            }
+            Self::NotWanted => "This port's faction does not want you; there is no fine to pay.",
             Self::ArithmeticOverflow => {
                 "The transaction exceeds supported quantity or credit limits."
             }

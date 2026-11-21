@@ -5,6 +5,8 @@ mod battle_cards;
 mod battle_controls;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture;
+#[cfg(any(test, feature = "dev-tools"))]
+mod capture_police;
 mod combat_report;
 mod contacts;
 mod factions;
@@ -21,6 +23,7 @@ mod motion;
 mod navigation;
 mod outfitting;
 mod panel;
+mod police;
 mod routes;
 mod runs;
 mod saves;
@@ -345,6 +348,12 @@ impl LocalSession {
                             change,
                             standing,
                         } => self.standing_message(faction, change, standing),
+                        SessionEvent::WantedChanged { faction, runs } => {
+                            self.wanted_message(faction, runs)
+                        }
+                        SessionEvent::FinePaid { faction, cost } => {
+                            format!("Paid the {} fine of {cost}.", faction.label())
+                        }
                     };
                     self.record(message);
                 }

@@ -35,6 +35,10 @@ impl Session {
             | ClientCommand::HireEscort {
                 ship,
                 expected_revision,
+            }
+            | ClientCommand::PayFine {
+                ship,
+                expected_revision,
             } => (ship, expected_revision),
             _ => unreachable!("only commerce commands reach this handler"),
         };
@@ -104,6 +108,11 @@ impl Session {
                     runs_left: game_core::combat::gear::ESCORT_RUNS,
                 });
                 SessionEvent::EscortHired { cost }
+            }
+            ClientCommand::PayFine { .. } => {
+                let (faction, cost) =
+                    game_core::police::pay_fine_at_port(&mut economy, state.ship(ship)?)?;
+                SessionEvent::FinePaid { faction, cost }
             }
             _ => unreachable!("command was validated above"),
         };

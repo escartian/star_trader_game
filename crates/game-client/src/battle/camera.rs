@@ -116,14 +116,8 @@ fn fit_distance(rect: Rect, board: Board) -> f32 {
 /// A projection looking at `focus` from `distance` away, from the player's
 /// side at the fixed tilt.
 fn look(focus: Vec3, distance: f32, rect: Rect) -> Projector {
-    let aspect = (rect.width() / rect.height().max(1.0)).max(0.1);
     let eye = focus + Vec3::new(0.0, -PITCH.cos(), PITCH.sin()) * distance;
-    Projector {
-        matrix: Mat4::perspective_rh(FOV, aspect, 0.1, 400.0)
-            * Mat4::look_at_rh(eye, focus, Vec3::Z),
-        rect,
-        eye,
-    }
+    Projector::looking_at(eye, focus, rect)
 }
 
 /// Scene-to-screen mapping for one view rect and camera pose.
@@ -135,6 +129,18 @@ pub struct Projector {
 }
 
 impl Projector {
+    /// A perspective camera at `eye` looking at `focus`, z up, drawing into
+    /// `rect`. Scene points farther than 400 units are clipped.
+    pub fn looking_at(eye: Vec3, focus: Vec3, rect: Rect) -> Self {
+        let aspect = (rect.width() / rect.height().max(1.0)).max(0.1);
+        Self {
+            matrix: Mat4::perspective_rh(FOV, aspect, 0.1, 400.0)
+                * Mat4::look_at_rh(eye, focus, Vec3::Z),
+            rect,
+            eye,
+        }
+    }
+
     /// `None` for points behind the camera.
     pub fn project(&self, point: ScenePoint) -> Option<Projected> {
         let clip = self.matrix * point.0.extend(1.0);

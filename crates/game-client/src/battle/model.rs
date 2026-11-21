@@ -102,7 +102,19 @@ impl ShipModel {
         heading: Vec2,
     ) {
         let turn = -heading.x.atan2(heading.y);
-        let rotation = Mat3::from_rotation_z(turn);
+        self.paint_oriented(painter, projector, at, size, Mat3::from_rotation_z(turn));
+    }
+
+    /// Like [`Self::paint`] with any orientation: `rotation` turns model space
+    /// (nose +Y, up +Z) into scene space, so ships can climb and bank.
+    pub fn paint_oriented(
+        &self,
+        painter: &Painter,
+        projector: &Projector,
+        at: ScenePoint,
+        size: f32,
+        rotation: Mat3,
+    ) {
         let scale = size / self.length;
         let light = LIGHT.normalize();
         let mut faces = Vec::with_capacity(self.triangles.len());

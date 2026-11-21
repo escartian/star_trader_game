@@ -296,6 +296,18 @@ impl Artwork {
 
     /// Returns false when a procedural fallback should be drawn.
     pub fn paint(&self, kind: ArtKind, painter: &Painter, center: Pos2, size: f32) -> bool {
+        self.paint_tinted(kind, painter, center, size, Color32::WHITE)
+    }
+
+    /// Like `paint`, multiplied by `tint` (premultiplied: dims and fades).
+    pub fn paint_tinted(
+        &self,
+        kind: ArtKind,
+        painter: &Painter,
+        center: Pos2,
+        size: f32,
+        tint: Color32,
+    ) -> bool {
         let Some(texture) = self.textures.get(&kind) else {
             return false;
         };
@@ -303,7 +315,7 @@ impl Artwork {
             texture.id(),
             Rect::from_center_size(center, Vec2::splat(size)),
             Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-            Color32::WHITE,
+            tint,
         );
         true
     }

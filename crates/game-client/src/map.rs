@@ -11,6 +11,8 @@ mod interaction;
 pub(crate) mod local;
 mod main_menu;
 mod menu_backdrop;
+mod menu_scene;
+mod menu_trails;
 mod orbit_view;
 mod panels;
 mod recovery;

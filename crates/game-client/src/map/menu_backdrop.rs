@@ -1,17 +1,14 @@
-//! The main menu's backdrop: parallax stars drifting left, faint nebula glows,
-//! a gas giant and a freighter crossing. Decorative only. Star placement is a
+//! The main menu's backdrop: parallax stars drifting left and faint nebula
+//! glows behind the 3D ships and planet of `menu_scene`. Decorative only. Star placement is a
 //! fixed pseudo-random pattern, so every launch shows the same sky.
-use super::art::{ArtKind, Artwork};
+use super::art::Artwork;
 use egui::{Color32, Painter, Pos2, Rect, Vec2};
 use std::f64::consts::TAU;
 
 const STARS: usize = 260;
 /// Seconds for the nearest stars to drift across the screen once.
 const CROSSING_SECONDS: f64 = 180.0;
-/// Seconds for the freighter to cross, including time off screen.
-const FREIGHTER_SECONDS: f64 = 75.0;
-/// The moment shown when animations are off: the freighter in view, left of
-/// the menu column.
+/// The moment shown when animations are off (ships in view).
 pub(super) const STILL_TIME: f64 = 15.0;
 
 /// Nebula glows: centre as a fraction of the screen, radius as a fraction of
@@ -64,19 +61,7 @@ pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork) {
         let color = Color32::from_rgba_unmultiplied(tint[0], tint[1], tint[2], alpha);
         painter.circle_filled(position, 0.5 + 1.5 * (depth * depth) as f32, color);
     }
-    let planet = short_side * 0.6;
-    let planet_center = rect.right_bottom() - Vec2::new(planet * 0.12, planet * 0.08);
-    if art.paint(ArtKind::GasGiant, painter, planet_center, planet) {
-        // Shade it into the background so the menu stays the focus.
-        painter.circle_filled(planet_center, planet * 0.47, Color32::from_black_alpha(110));
-    }
-    let progress = (time / FREIGHTER_SECONDS).fract() as f32;
-    let bob = (time * 0.7).sin() as f32 * 4.0;
-    let freighter = Pos2::new(
-        rect.left() - 90.0 + (rect.width() + 180.0) * progress,
-        rect.top() + rect.height() * 0.14 + bob,
-    );
-    art.paint_facing(ArtKind::Freighter, painter, freighter, 64.0, false);
+    super::menu_scene::paint(painter, rect, time, art);
 }
 
 /// A soft radial glow: `color` at the centre fading to transparent at `radius`.

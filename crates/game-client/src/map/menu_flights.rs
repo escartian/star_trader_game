@@ -9,7 +9,7 @@
 //! Crossing routes run sideways far past the screen (`REACH` world units each side of
 //! the scene), so every ship enters and leaves off screen whatever the window
 //! shape, and resizing never moves a route. Scene space is `menu_scene`'s.
-use super::menu_scene::{PLANET_CENTRE, PLANET_RADIUS, STATION};
+use super::menu_scene::{PLANET_CENTRE, PLANET_RADIUS, dock};
 use game_core::fleet::ShipKind;
 use glam::{Mat3, Vec3};
 use std::f32::consts::PI;
@@ -193,6 +193,8 @@ fn station_traffic(time: f32, launch_seed: u64) -> Vec<(Flight, f32)> {
         let seed = launch_seed.rotate_left(17) ^ (lane << 40) ^ slot ^ 0x57A7_1011;
         let mut random = fastrand::Rng::with_seed(seed);
         let (kind, size, speed) = pick_ship(&mut random);
+        // Station traffic flies at half size so the station reads as large.
+        let size = size * 0.5;
         let leg = match random.u8(0..10) {
             0..=3 => Leg::Arrive,
             4..=6 => Leg::Depart,
@@ -208,9 +210,9 @@ fn station_traffic(time: f32, launch_seed: u64) -> Vec<(Flight, f32)> {
         // Descents aim at the planet's near face, high on the side facing the station.
         let entry = PLANET_CENTRE + PLANET_RADIUS * Vec3::new(-0.45, -0.75, 0.48).normalize() * 0.9;
         let (from, to) = match leg {
-            Leg::Arrive => (far, STATION),
-            Leg::Depart => (STATION, far),
-            _ => (STATION, entry),
+            Leg::Arrive => (far, dock()),
+            Leg::Depart => (dock(), far),
+            _ => (dock(), entry),
         };
         let flight = Flight {
             kind,
@@ -286,12 +288,12 @@ mod tests {
                 }
                 match flight.leg {
                     Leg::Arrive => {
-                        assert!(flight.position(1.0).distance(STATION) < 0.01);
+                        assert!(flight.position(1.0).distance(dock()) < 0.01);
                         assert_eq!(flight.size_at(1.0), 0.0);
                         assert_eq!(flight.size_at(0.5), flight.size);
                     }
                     Leg::Depart => {
-                        assert!(flight.position(0.0).distance(STATION) < 0.01);
+                        assert!(flight.position(0.0).distance(dock()) < 0.01);
                         assert_eq!(flight.size_at(0.0), 0.0);
                     }
                     Leg::Descend => {

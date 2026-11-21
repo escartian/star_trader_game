@@ -9,7 +9,7 @@ exception is the interface fonts in `fonts/` (SIL Open Font License, see below).
 | yellow/red dwarfs, blue/red giants, white dwarf | Local star surfaces; procedural halos layered behind | 256 × 256 |
 | rocky (temperate), arid and frozen planets, gas giant | Planet surfaces; rocky planets show their biome | 256 × 256 |
 | moon, asteroid | Cratered satellite and irregular prospecting destination | 256 × 256 |
-| trade port | Habitat ring, cargo bays, solar arrays and docking guidance | 512 × 512 |
+| trade port | Habitat ring and modules, counter-ring, reactor and radiators, docking arms, antenna, solar arrays, navigation and docking lights | 512 × 512 |
 
 Regenerate from the repository root:
 
@@ -191,3 +191,13 @@ convenience; the runtime GLB has no Blender dependency.
 composition whose source is `source/music/main-theme.strudel.js` (paste it into
 strudel.cc to play or edit). It is synthesizer-only (pads, arpeggio, lead, synth drums and spacey FM
 bell and star chirps) and loops seamlessly every 80 s. `tools/music/README.md` explains the export (`node tools/music/render.mjs`).
+
+## Trade station model
+
+`models/station.glb` is the trade port in 3D (about 11,000 triangles) for the
+main menu, where it turns slowly and ships dock at the mouth on top of its spine.
+It and the map sprite come from the same scene: `tools/art/build_trade_port.py`
+builds `source/trade-port.blend` and renders `sprites/trade-port.png`, then
+`tools/art/export_battle_models.py -- station` exports the GLB. Solar panel
+frames are open bars, not slabs, because the menu sorts triangles back to front
+and a slab just under the cells would show through them.

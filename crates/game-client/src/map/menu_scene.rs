@@ -13,7 +13,7 @@ use crate::battle::camera::{Projector, ScenePoint};
 use crate::battle::model;
 use egui::{Color32, Painter, Rect, Stroke};
 use game_core::fleet::ShipKind;
-use glam::Vec3;
+use glam::{Mat3, Vec3};
 use std::f32::consts::TAU;
 
 /// Slightly above the scene, looking a little down so ships show their tops.
@@ -22,10 +22,29 @@ const FOCUS: Vec3 = Vec3::new(0.0, 0.0, 4.0);
 
 pub(super) const PLANET_CENTRE: Vec3 = Vec3::new(32.0, 20.0, -24.0);
 pub(super) const PLANET_RADIUS: f32 = 14.0;
-/// The trade station's docking bay, high over the planet toward the camera.
-pub(super) const STATION: Vec3 = Vec3::new(21.0, 2.0, 7.0);
-/// Station sprite width in world units.
-const STATION_SIZE: f32 = 18.0;
+/// The trade station's centre, high over the planet toward the camera.
+const STATION: Vec3 = Vec3::new(21.0, 2.0, 7.0);
+/// Station length (solar array tip to tip) in world units.
+const STATION_SIZE: f32 = 16.0;
+/// The dock mouth on top of the station's spine, in Blender model space
+/// (`tools/art/build_trade_port.py`: "Dock mouth").
+const DOCK_MOUTH: Vec3 = Vec3::new(0.0, 0.0, 1.24);
+/// Seconds for the station to turn once on its axis.
+const STATION_TURN_SECONDS: f32 = 90.0;
+
+/// The station's fixed tilt: its top tipped toward the camera (which looks
+/// along +y), so the dock mouth and habitat ring face the viewer.
+fn station_tilt() -> Mat3 {
+    Mat3::from_rotation_x(0.5)
+}
+
+/// Where ships dock: the dock mouth. It sits on the turning axis, so it does
+/// not move as the station turns. The centre if the model failed to load.
+pub(super) fn dock() -> Vec3 {
+    model::station().map_or(STATION, |station| {
+        STATION + station_tilt() * station.offset_of(DOCK_MOUTH, STATION_SIZE)
+    })
+}
 /// The planet is one of these, chosen by the launch seed.
 const PLANETS: [ArtKind; 7] = [
     ArtKind::GasGiant,
@@ -117,32 +136,41 @@ pub(super) fn paint(painter: &Painter, rect: Rect, time: f64, art: &Artwork, lau
     }
 }
 
-/// The trade station sprite with a slow beacon over its bay.
+/// The trade station: the 3D model turning slowly on its tilted axis (the
+/// baked sprite if the model failed to load), and a beacon over its dock.
 fn paint_station(painter: &Painter, projector: &Projector, time: f32, art: &Artwork) {
     let Some(at) = projector.project(ScenePoint(STATION)) else {
         return;
     };
-    let size = at.scale * STATION_SIZE;
-    art.paint_tinted(
-        ArtKind::Station,
-        painter,
-        at.pos,
-        size,
-        Color32::from_gray(205),
-    );
-    // A green docking beacon, blinking once every two seconds.
+    if let Some(station) = model::station() {
+        let turn = Mat3::from_rotation_z(time / STATION_TURN_SECONDS * TAU);
+        let rotation = station_tilt() * turn;
+        station.paint_oriented(
+            painter,
+            projector,
+            ScenePoint(STATION),
+            STATION_SIZE,
+            rotation,
+        );
+    } else {
+        let size = at.scale * STATION_SIZE * 1.1;
+        art.paint_tinted(
+            ArtKind::Station,
+            painter,
+            at.pos,
+            size,
+            Color32::from_gray(205),
+        );
+    }
+    // A green docking beacon over the dock mouth, blinking every two seconds.
+    let Some(beacon) = projector.project(ScenePoint(dock())) else {
+        return;
+    };
     let blink = ((time * TAU / 2.0).sin() * 4.0).clamp(0.0, 1.0);
-    let beacon = at.pos + egui::vec2(0.0, -size * 0.36);
-    painter.circle_filled(
-        beacon,
-        size * 0.03 + 1.0,
-        Color32::from_rgba_unmultiplied(148, 255, 85, (230.0 * blink) as u8),
-    );
-    painter.circle_filled(
-        beacon,
-        size * 0.08 + 2.0,
-        Color32::from_rgba_unmultiplied(148, 255, 85, (50.0 * blink) as u8),
-    );
+    let glow = |alpha: f32| Color32::from_rgba_unmultiplied(148, 255, 85, (alpha * blink) as u8);
+    let size = beacon.scale * STATION_SIZE;
+    painter.circle_filled(beacon.pos, size * 0.012 + 1.0, glow(230.0));
+    painter.circle_filled(beacon.pos, size * 0.04 + 2.0, glow(50.0));
 }
 
 fn depth(projector: &Projector, point: Vec3) -> f32 {
@@ -248,6 +276,19 @@ fn paint_orbiter(
 mod tests {
     use super::*;
     use egui::Pos2;
+
+    #[test]
+    fn the_station_model_loads_and_ships_dock_on_its_top() {
+        let station = model::station().expect("embedded station.glb loads");
+        let top = station.offset_of(DOCK_MOUTH, STATION_SIZE);
+        assert!(
+            top.z > 0.5 && top.x.abs() < 0.01,
+            "dock mouth is up the axis: {top}"
+        );
+        // Tipped toward the camera (which looks along +y): up and nearer.
+        let dock = dock() - STATION;
+        assert!(dock.z > 0.0 && dock.y < 0.0, "{dock}");
+    }
 
     #[test]
     fn the_planet_and_its_orbit_sit_in_front_of_the_camera() {

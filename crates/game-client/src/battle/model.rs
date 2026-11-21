@@ -28,6 +28,19 @@ pub struct ShipModel {
     triangles: Vec<Triangle>,
     /// Longest bounding-box edge in model units.
     length: f32,
+    /// Bounding-box centre in the source (Blender) model space; loading
+    /// recentres the triangles on it.
+    centre: Vec3,
+}
+
+/// The trade station (`tools/art/build_trade_port.py`), drawn behind the main menu.
+pub fn station() -> Option<&'static ShipModel> {
+    static STATION: OnceLock<Option<ShipModel>> = OnceLock::new();
+    STATION
+        .get_or_init(|| {
+            ShipModel::load(include_bytes!("../../../../assets/models/station.glb")).ok()
+        })
+        .as_ref()
 }
 
 /// The embedded model for a hull, if it has one that loaded.
@@ -88,7 +101,14 @@ impl ShipModel {
         Ok(Self {
             triangles,
             length: (high - low).max_element().max(f32::EPSILON),
+            centre,
         })
+    }
+
+    /// Where a point given in Blender model space lands, relative to the drawn
+    /// centre, for a model drawn `size` world units long (before rotation).
+    pub fn offset_of(&self, model_point: Vec3, size: f32) -> Vec3 {
+        (model_point - self.centre) * size / self.length
     }
 
     /// Draws the model centred on `at`, `size` world units long, with its nose

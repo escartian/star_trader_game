@@ -1,4 +1,4 @@
-"""Export ship .blend sources as runtime glTF models for the battle view.
+"""Export scanned ship and station .blend sources as runtime glTF models.
 
 Blender is authoring-only: the game reads the exported .glb files. Models keep
 Blender's axes (+Z up, nose along +Y) and their material or per-vertex colours;
@@ -9,7 +9,9 @@ the .blend source itself is never modified. Run from the repository root:
     /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
       --python tools/art/export_battle_models.py
 
-Append `-- scout` (any names) to export only those ships.
+Append `-- scout` (any names) to export only those models. The trade station
+(`station`, from tools/art/build_trade_port.py) is drawn in 3D behind the main
+menu; the system map keeps its baked sprite.
 """
 from pathlib import Path
 import sys
@@ -25,6 +27,9 @@ ROOT = Path(__file__).resolve().parents[2]
 # models may use up to 7,000 triangles each.
 SHIPS = {
     "scout": ("ai-courier.blend", 6000),
+    # About 11,000 triangles with modifiers applied: kept whole for the menu,
+    # where it is the one large model on screen (drawn on the CPU each frame).
+    "station": ("trade-port.blend", 12000),
 }
 
 

@@ -93,7 +93,14 @@ const PARTS: &[Part] = &[
         section: "Cruise",
         title: "Guitar Solo",
         tempo: "100 BPM",
-        detail: "Bent notes over a quiet groove",
+        detail: "Strummed chords, bends and one run",
+    },
+    Part {
+        id: "solo_b",
+        section: "Cruise",
+        title: "Guitar Solo II",
+        tempo: "100 BPM",
+        detail: "Higher chords, two runs and more bends",
     },
     Part {
         id: "rise_110",
@@ -122,6 +129,13 @@ const PARTS: &[Part] = &[
         title: "Arrive B",
         tempo: "120 BPM",
         detail: "Alternate melody with woodwind replies",
+    },
+    Part {
+        id: "fanfare",
+        section: "Arrival",
+        title: "Orbital Fanfare",
+        tempo: "120 BPM",
+        detail: "Brass theme, fast strings and light percussion",
     },
     Part {
         id: "fall_110",

@@ -5,7 +5,7 @@
     "drift_a": {
       "file": "drift_a.ogg",
       "frames": 1536000,
-      "rms": 0.0524263332702251,
+      "rms": 0.06004658633547366,
       "from_bpm": 60,
       "to_bpm": 60,
       "next": {
@@ -17,7 +17,7 @@
     "drift_b": {
       "file": "drift_b.ogg",
       "frames": 1536000,
-      "rms": 0.05160612290986759,
+      "rms": 0.05911086262558248,
       "from_bpm": 60,
       "to_bpm": 60,
       "next": {
@@ -29,7 +29,7 @@
     "space": {
       "file": "space.ogg",
       "frames": 1536000,
-      "rms": 0.050690306669864925,
+      "rms": 0.0579673735327473,
       "from_bpm": 60,
       "to_bpm": 60,
       "next": {
@@ -40,7 +40,7 @@
     "rise_70": {
       "file": "rise_70.ogg",
       "frames": 1434455,
-      "rms": 0.05209144422064584,
+      "rms": 0.059762865103426266,
       "from_bpm": 60,
       "to_bpm": 70,
       "next": {
@@ -50,7 +50,7 @@
     "rise_80": {
       "file": "rise_80.ogg",
       "frames": 1240968,
-      "rms": 0.052436563766624894,
+      "rms": 0.0600610321377998,
       "from_bpm": 70,
       "to_bpm": 80,
       "next": {
@@ -61,7 +61,7 @@
     "depart_a": {
       "file": "depart_a.ogg",
       "frames": 1152000,
-      "rms": 0.05291554990125377,
+      "rms": 0.06071039656630018,
       "from_bpm": 80,
       "to_bpm": 80,
       "next": {
@@ -72,7 +72,7 @@
     "depart_b": {
       "file": "depart_b.ogg",
       "frames": 1152000,
-      "rms": 0.05273541078261102,
+      "rms": 0.06053656200155523,
       "from_bpm": 80,
       "to_bpm": 80,
       "next": {
@@ -83,7 +83,7 @@
     "rise_90": {
       "file": "rise_90.ogg",
       "frames": 1093528,
-      "rms": 0.05300387393727932,
+      "rms": 0.06065844445171759,
       "from_bpm": 80,
       "to_bpm": 90,
       "next": {
@@ -93,7 +93,7 @@
     "rise_100": {
       "file": "rise_100.ogg",
       "frames": 977431,
-      "rms": 0.054822262498709834,
+      "rms": 0.06283713424957187,
       "from_bpm": 90,
       "to_bpm": 100,
       "next": {
@@ -104,7 +104,7 @@
     "cruise_a": {
       "file": "cruise_a.ogg",
       "frames": 921600,
-      "rms": 0.05711887702773068,
+      "rms": 0.06538790169878336,
       "from_bpm": 100,
       "to_bpm": 100,
       "next": {
@@ -116,7 +116,7 @@
     "cruise_b": {
       "file": "cruise_b.ogg",
       "frames": 921600,
-      "rms": 0.05715666894882887,
+      "rms": 0.06550098106491896,
       "from_bpm": 100,
       "to_bpm": 100,
       "next": {
@@ -128,7 +128,17 @@
     "solo": {
       "file": "solo.ogg",
       "frames": 921600,
-      "rms": 0.056299255451696215,
+      "rms": 0.06537907139193302,
+      "from_bpm": 100,
+      "to_bpm": 100,
+      "next": {
+        "solo_b": 1
+      }
+    },
+    "solo_b": {
+      "file": "solo_b.ogg",
+      "frames": 921600,
+      "rms": 0.06652952498254891,
       "from_bpm": 100,
       "to_bpm": 100,
       "next": {
@@ -140,7 +150,7 @@
     "rise_110": {
       "file": "rise_110.ogg",
       "frames": 883636,
-      "rms": 0.057328238717110756,
+      "rms": 0.06565890007392106,
       "from_bpm": 100,
       "to_bpm": 110,
       "next": {
@@ -150,40 +160,55 @@
     "rise_120": {
       "file": "rise_120.ogg",
       "frames": 806276,
-      "rms": 0.057806070319315415,
+      "rms": 0.06625281374183134,
       "from_bpm": 110,
       "to_bpm": 120,
       "next": {
         "arrive_a": 1,
-        "arrive_b": 1
+        "arrive_b": 1,
+        "fanfare": 1
       }
     },
     "arrive_a": {
       "file": "arrive_a.ogg",
       "frames": 768000,
-      "rms": 0.05816858278336342,
+      "rms": 0.0666358204365085,
       "from_bpm": 120,
       "to_bpm": 120,
       "next": {
         "arrive_b": 2,
+        "fanfare": 1,
         "fall_110": 2
       }
     },
     "arrive_b": {
       "file": "arrive_b.ogg",
       "frames": 768000,
-      "rms": 0.058046834238918606,
+      "rms": 0.06660653513598119,
       "from_bpm": 120,
       "to_bpm": 120,
       "next": {
         "arrive_a": 1,
+        "fanfare": 1,
+        "fall_110": 2
+      }
+    },
+    "fanfare": {
+      "file": "fanfare.ogg",
+      "frames": 768000,
+      "rms": 0.0664939959352397,
+      "from_bpm": 120,
+      "to_bpm": 120,
+      "next": {
+        "arrive_a": 1,
+        "arrive_b": 1,
         "fall_110": 2
       }
     },
     "fall_110": {
       "file": "fall_110.ogg",
       "frames": 797549,
-      "rms": 0.05765264526240327,
+      "rms": 0.06614720411779895,
       "from_bpm": 120,
       "to_bpm": 110,
       "next": {
@@ -193,7 +218,7 @@
     "fall_100": {
       "file": "fall_100.ogg",
       "frames": 873163,
-      "rms": 0.057301479785675694,
+      "rms": 0.06581448073758599,
       "from_bpm": 110,
       "to_bpm": 100,
       "next": {
@@ -205,7 +230,7 @@
     "fall_90": {
       "file": "fall_90.ogg",
       "frames": 964631,
-      "rms": 0.0551538414902907,
+      "rms": 0.06302098024173812,
       "from_bpm": 100,
       "to_bpm": 90,
       "next": {
@@ -215,7 +240,7 @@
     "fall_80": {
       "file": "fall_80.ogg",
       "frames": 1077528,
-      "rms": 0.05267219328632378,
+      "rms": 0.0603426702386464,
       "from_bpm": 90,
       "to_bpm": 80,
       "next": {
@@ -225,7 +250,7 @@
     "wind": {
       "file": "wind.ogg",
       "frames": 1152000,
-      "rms": 0.05251415782764129,
+      "rms": 0.060206412298523436,
       "from_bpm": 80,
       "to_bpm": 80,
       "next": {
@@ -236,7 +261,7 @@
     "fall_70": {
       "file": "fall_70.ogg",
       "frames": 1220397,
-      "rms": 0.05236865449822589,
+      "rms": 0.05994998162393604,
       "from_bpm": 80,
       "to_bpm": 70,
       "next": {
@@ -246,7 +271,7 @@
     "fall_60": {
       "file": "fall_60.ogg",
       "frames": 1407027,
-      "rms": 0.05205413377178803,
+      "rms": 0.059553188221815496,
       "from_bpm": 70,
       "to_bpm": 60,
       "next": {

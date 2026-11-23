@@ -65,6 +65,10 @@ const AUDIO: &[(&str, &[u8])] = &[
         include_bytes!("../../../../assets/music/long-haul/solo.ogg"),
     ),
     (
+        "solo_b.ogg",
+        include_bytes!("../../../../assets/music/long-haul/solo_b.ogg"),
+    ),
+    (
         "rise_110.ogg",
         include_bytes!("../../../../assets/music/long-haul/rise_110.ogg"),
     ),
@@ -79,6 +83,10 @@ const AUDIO: &[(&str, &[u8])] = &[
     (
         "arrive_b.ogg",
         include_bytes!("../../../../assets/music/long-haul/arrive_b.ogg"),
+    ),
+    (
+        "fanfare.ogg",
+        include_bytes!("../../../../assets/music/long-haul/fanfare.ogg"),
     ),
     (
         "fall_110.ogg",

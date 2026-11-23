@@ -10,13 +10,24 @@ its fixed demo. The game embeds the exported Ogg Vorbis audio in `assets/music/`
 | `main-theme.strudel.js` | `main-theme.ogg` | Earlier 48-bar loop, retained as a source and export |
 
 Long Haul has eight-bar blocks: steady drift, depart, cruise and arrive with
-variations; 10 BPM ramp blocks from 60 to 120 and back; a slow guitar solo and a
-60 BPM space interlude. A dry FM/triangle electric-guitar synth plays short
-answer phrases in depart, cruise and arrival, then takes the solo with pitch
-bends and a little echo. Its recurring phrases have no vibrato or chorus.
+variations; 10 BPM ramp blocks from 60 to 120 and back; a 16-bar guitar solo
+split into two blocks (`solo` always continues into `solo_b`) and a 60 BPM space
+interlude. A dry FM/triangle electric-guitar synth plays short answer phrases
+in depart, cruise and arrival, then strums chords in the solo, alternating
+rhythmic strums with held high chords and rests. Three short note-by-note runs,
+at 1.8 times the eighth-note rate, and seven whole- or half-step bends into held
+chords spread across the two halves. A quiet arpeggio and a rhythm guitar play
+under every solo bar, with off-beat chord stabs beneath the strums and a ringing
+chord plus re-strike beneath each held note, while organ and horns gradually
+join. The solo has less echo and room effect; its recurring phrases have no
+vibrato.
 Organ chords and horn/woodwind-like synth replies enter during departure,
 build through cruise and the tempo ramps, and peak at arrival. All of these
 voices are written in Strudel; no orchestra or instrument samples are used.
+The 120 BPM Orbital Fanfare is a separate eight-bar theme with brass-like calls
+and a clipped string-machine rhythm. Quiet ride and tuned tom voices join the
+arrival blocks and fade in and out with the tempo ramps; the main kick remains
+even and the hats are slightly softer there.
 Short FM keyboard chords replace the sustained pad; the interlude uses spaced
 notes and noise ticks instead of a held low drone.
 Arrival keeps a gentle phaser sweep on the arpeggio. The sequence and arpeggio

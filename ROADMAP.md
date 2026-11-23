@@ -285,8 +285,11 @@ protocol boundary anticipates this; multiplayer itself is not implemented.
   tradeoffs and repetitive fleet management using evidence.
 - [ ] Package Windows/macOS/Linux; add accessibility, inputs, audio and feedback.
   Done so far: main menu, Settings (volume, fullscreen, interface scale,
-  animations) and the desktop menu theme. Still open: sound effects, in-game
-  tracks, browser audio, key rebinding and other accessibility options.
+  animations) and the desktop Long Haul music sequencer (also available in game
+  when enabled), with a main-menu Songbook showing and selecting parts. Kenney CC0
+  effects add UI clicks, battle shots and hit sounds,
+  plus battle hit particles. Still open: broader sound coverage, other in-game tracks, browser audio,
+  key rebinding and other accessibility options.
 - [ ] Complete phone/tablet gestures, safe areas, lifecycle and real-device profiling.
 - [ ] Mobile packaging/signing and full-session offline/connected acceptance.
 

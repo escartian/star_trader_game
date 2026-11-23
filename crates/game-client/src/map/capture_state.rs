@@ -59,6 +59,13 @@ impl Map {
                 self.menu_seed = 0;
                 self.open_save_chooser("data/slot-1.json".into(), None);
             }
+            "menu-songbook" => {
+                self.menu_seed = 0;
+                self.open_save_chooser("data/slot-1.json".into(), None);
+                if let Some(menu) = &mut self.save_recovery {
+                    menu.songbook_open = true;
+                }
+            }
             "menu-new" | "menu-load" | "menu-settings" => {
                 self.menu_seed = 0;
                 self.open_save_chooser("data/slot-1.json".into(), None);
@@ -206,6 +213,7 @@ mod tests {
             "market",
             "fleets",
             "saves",
+            "menu-songbook",
         ] {
             map(1)
                 .prepare_capture(view)

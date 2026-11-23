@@ -1,4 +1,5 @@
-//! The main menu: a title page (Continue, New game, Load game, Settings, Quit)
+//! The main menu: a title page (Continue, New game, Load game, Settings,
+//! Songbook, Quit)
 //! and its sub-pages, over an animated starfield. Save slot state and checks
 //! live in `recovery`; this module only lays out pages and reports choices.
 use super::Map;
@@ -39,6 +40,10 @@ impl Map {
             self.menu_still_time
         };
         let art = super::art::Artwork::preload(ctx);
+        let current_part = self.music.current_block();
+        if current_part.is_some() && menu.page == MenuPage::Title {
+            ctx.request_repaint_after(std::time::Duration::from_millis(250));
+        }
         if menu.page != MenuPage::Title && ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
             menu.page = MenuPage::Title;
         }
@@ -61,7 +66,7 @@ impl Map {
                         ui.vertical(|ui| {
                             ui.set_width(width);
                             choice = match menu.page {
-                                MenuPage::Title => title_page(ui, &mut menu),
+                                MenuPage::Title => title_page(ui, &mut menu, current_part),
                                 MenuPage::NewGame => new_game_page(ui, &mut menu),
                                 MenuPage::Load => load_page(ui, &mut menu),
                                 MenuPage::Settings => {
@@ -79,6 +84,10 @@ impl Map {
                     });
                 });
             });
+        if let Some(part) = super::songbook::show(ctx, &mut menu.songbook_open, current_part) {
+            self.music.select_part(part);
+            ctx.request_repaint_after(std::time::Duration::from_millis(50));
+        }
         if self.carry_out(ctx, &mut menu, choice) {
             return;
         }
@@ -167,7 +176,11 @@ fn describe(entry: &SaveEntry) -> String {
     }
 }
 
-fn title_page(ui: &mut egui::Ui, menu: &mut SaveRecovery) -> Option<Choice> {
+fn title_page(
+    ui: &mut egui::Ui,
+    menu: &mut SaveRecovery,
+    current_part: Option<&str>,
+) -> Option<Choice> {
     let mut choice = None;
     ui.add_space((ui.ctx().screen_rect().height() * 0.12).clamp(16.0, 120.0));
     ui.vertical_centered(|ui| {
@@ -218,6 +231,12 @@ fn title_page(ui: &mut egui::Ui, menu: &mut SaveRecovery) -> Option<Choice> {
                 menu.pending_delete = None;
                 menu.pending_overwrite = None;
             }
+        }
+        if wide_button(ui, Icon::Log, "Songbook · Long Haul").clicked() {
+            menu.songbook_open = true;
+        }
+        if let Some(title) = current_part.and_then(super::songbook::title) {
+            ui.small(format!("Now playing: Long Haul · {title}"));
         }
         if wide_button(ui, Icon::Cancel, "Quit").clicked() {
             choice = Some(Choice::Quit);

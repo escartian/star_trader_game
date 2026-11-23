@@ -6,11 +6,8 @@
 //! slider fraction `f` maps to the linear amplitude gain `f²`: half the slider is
 //! about -12 dB rather than -6 dB, which sounds closer to "half as loud".
 
-/// The original main menu theme, exported from
-/// `assets/source/music/main-theme.strudel.js` by `tools/music/render.mjs`. It
-/// is a seamless 135.1 s loop of 48 bars whose tempo eases 60-110-60 BPM.
 #[cfg(not(target_arch = "wasm32"))]
-const MAIN_THEME: &[u8] = include_bytes!("../../../assets/music/main-theme.ogg");
+mod long_haul;
 
 /// Seconds for music to fade in after starting and out before stopping.
 const FADE_SECONDS: f32 = 1.2;
@@ -18,6 +15,27 @@ const FADE_SECONDS: f32 = 1.2;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Track {
     MainTheme,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Effect {
+    Click,
+    Laser,
+    Shield,
+    Hull,
+    Explosion,
+}
+
+const CLICK_KEY: &str = "ui-click-sound";
+
+/// UI controls mark clicks while painting; the map plays one cue per frame.
+pub fn mark_click(ctx: &egui::Context) {
+    ctx.data_mut(|data| data.insert_temp(egui::Id::new(CLICK_KEY), true));
+}
+
+pub fn take_click(ctx: &egui::Context) -> bool {
+    ctx.data_mut(|data| data.remove_temp::<bool>(egui::Id::new(CLICK_KEY)))
+        .unwrap_or(false)
 }
 
 /// Linear amplitude gain for a master and a music slider, each 0-100 percent.
@@ -37,6 +55,7 @@ pub struct Music {
     /// 0 (silent) to 1 (full target gain); ramps by `FADE_SECONDS`.
     fade: f32,
     gain: f32,
+    effects_gain: f32,
     /// UI clock in seconds at the last update, for fade timing.
     last_time: Option<f64>,
 }
@@ -50,6 +69,7 @@ impl Music {
             playing: None,
             fade: 0.0,
             gain: 0.0,
+            effects_gain: 0.0,
             last_time: None,
         }
     }
@@ -100,17 +120,66 @@ impl Music {
         let settled_level = if self.playing.is_some() { 1.0 } else { 0.0 };
         self.playing != self.wanted || self.fade != settled_level
     }
+
+    pub fn set_effects_gain(&mut self, gain: f32) {
+        self.effects_gain = gain.clamp(0.0, 1.0) * 0.4;
+        if let Some(output) = &mut self.output {
+            output.set_effects_gain(self.effects_gain);
+        }
+    }
+
+    pub fn play_effect(&mut self, effect: Effect) {
+        if self.effects_gain > 0.0
+            && let Some(output) = &mut self.output
+        {
+            output.play_effect(effect, self.effects_gain);
+        }
+    }
+
+    /// The block the audio thread is playing now, if desktop music is active.
+    pub fn current_block(&self) -> Option<&'static str> {
+        self.output.as_ref().and_then(output::Output::current_block)
+    }
+
+    /// Requests an immediate, short crossfade to a Songbook part.
+    pub fn select_part(&self, name: &str) -> bool {
+        self.output
+            .as_ref()
+            .is_some_and(|output| output.select_part(name))
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 mod output {
-    use super::{MAIN_THEME, Track};
+    use super::{
+        Effect, Track,
+        long_haul::{self, LongHaul},
+    };
     use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
     use std::io::Cursor;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    pub(super) fn effect_bytes(effect: Effect) -> &'static [u8] {
+        match effect {
+            Effect::Click => include_bytes!("../../../assets/effects/sounds/click3.ogg"),
+            Effect::Laser => include_bytes!("../../../assets/effects/sounds/laserLarge_000.ogg"),
+            Effect::Shield => include_bytes!("../../../assets/effects/sounds/forceField_000.ogg"),
+            Effect::Hull => include_bytes!("../../../assets/effects/sounds/impactMetal_001.ogg"),
+            Effect::Explosion => {
+                include_bytes!("../../../assets/effects/sounds/explosionCrunch_000.ogg")
+            }
+        }
+    }
 
     pub struct Output {
         // Field order matters: the sink must drop before its stream.
         sink: Option<Sink>,
+        part: Option<Arc<AtomicUsize>>,
+        selection: Option<Arc<AtomicUsize>>,
+        effects: Vec<Sink>,
         stream: OutputStream,
     }
 
@@ -120,22 +189,32 @@ mod output {
                 OutputStreamBuilder::open_default_stream().map_err(|error| error.to_string())?;
             // rodio otherwise prints a notice to stderr when the game exits.
             stream.log_on_drop(false);
-            Ok(Self { sink: None, stream })
+            Ok(Self {
+                sink: None,
+                part: None,
+                selection: None,
+                effects: Vec::new(),
+                stream,
+            })
         }
 
         pub fn play(&mut self, track: Option<Track>) {
             self.sink = None;
+            self.part = None;
+            self.selection = None;
             let Some(Track::MainTheme) = track else {
                 return;
             };
-            match Decoder::new_looped(Cursor::new(MAIN_THEME)) {
+            match LongHaul::new() {
                 Ok(source) => {
+                    self.part = Some(source.part_handle());
+                    self.selection = Some(source.selection_handle());
                     let sink = Sink::connect_new(self.stream.mixer());
                     sink.set_volume(0.0);
                     sink.append(source);
                     self.sink = Some(sink);
                 }
-                Err(error) => eprintln!("Main theme could not be decoded: {error}"),
+                Err(error) => eprintln!("Long Haul could not be started: {error}"),
             }
         }
 
@@ -144,12 +223,47 @@ mod output {
                 sink.set_volume(gain);
             }
         }
+
+        pub fn current_block(&self) -> Option<&'static str> {
+            let index = self.part.as_ref()?.load(Ordering::Acquire);
+            long_haul::part_name(index)
+        }
+
+        pub fn select_part(&self, name: &str) -> bool {
+            let Some(index) = long_haul::part_index(name) else {
+                return false;
+            };
+            let Some(selection) = &self.selection else {
+                return false;
+            };
+            selection.store(index, Ordering::Release);
+            true
+        }
+
+        pub fn set_effects_gain(&mut self, gain: f32) {
+            self.effects.retain(|sink| !sink.empty());
+            for sink in &self.effects {
+                sink.set_volume(gain);
+            }
+        }
+
+        pub fn play_effect(&mut self, effect: Effect, gain: f32) {
+            match Decoder::new(Cursor::new(effect_bytes(effect))) {
+                Ok(source) => {
+                    let sink = Sink::connect_new(self.stream.mixer());
+                    sink.set_volume(gain);
+                    sink.append(source);
+                    self.effects.push(sink);
+                }
+                Err(error) => eprintln!("Effect {effect:?} could not be played: {error}"),
+            }
+        }
     }
 }
 
 #[cfg(target_arch = "wasm32")]
 mod output {
-    use super::Track;
+    use super::{Effect, Track};
 
     /// The browser build has no music yet (see ROADMAP.md).
     pub struct Output;
@@ -162,6 +276,18 @@ mod output {
         pub fn play(&mut self, _: Option<Track>) {}
 
         pub fn set_gain(&self, _: f32) {}
+
+        pub fn current_block(&self) -> Option<&'static str> {
+            None
+        }
+
+        pub fn select_part(&self, _: &str) -> bool {
+            false
+        }
+
+        pub fn set_effects_gain(&mut self, _: f32) {}
+
+        pub fn play_effect(&mut self, _: Effect, _: f32) {}
     }
 }
 
@@ -171,23 +297,17 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn the_embedded_theme_decodes_as_the_48_bar_tempo_arch() {
-        use rodio::Source;
-        let theme = rodio::Decoder::new(std::io::Cursor::new(MAIN_THEME)).unwrap();
-        assert_eq!((theme.channels(), theme.sample_rate()), (2, 48_000));
-        let samples = theme.count();
-        let seconds = samples as f64 / 2.0 / 48_000.0;
-        // Six 8-bar sections at 60, 80, 100, 110, 100 and 80 BPM: each holds
-        // for 4 bars, then eases toward the next over 4 (the source's tempoMap).
-        let tempos = [60.0, 80.0, 100.0, 110.0, 100.0, 80.0];
-        let expected: f64 = (0..6)
-            .flat_map(|section| {
-                let (bpm, next) = (tempos[section], tempos[(section + 1) % 6]);
-                [0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0].map(|step| bpm + (next - bpm) * step / 5.0)
-            })
-            .map(|bpm: f64| 4.0 * 60.0 / bpm)
-            .sum();
-        assert!((seconds - expected).abs() < 0.05, "{seconds} s");
+    fn every_embedded_effect_decodes() {
+        for effect in [
+            Effect::Click,
+            Effect::Laser,
+            Effect::Shield,
+            Effect::Hull,
+            Effect::Explosion,
+        ] {
+            let source = rodio::Decoder::new(std::io::Cursor::new(output::effect_bytes(effect)));
+            assert!(source.is_ok(), "{effect:?}");
+        }
     }
 
     #[test]

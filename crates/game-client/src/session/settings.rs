@@ -168,6 +168,7 @@ fn options_controls(ui: &mut egui::Ui, options: &mut ClientOptions) {
     egui::Grid::new("audio-volumes").show(ui, |ui| {
         percent_slider(ui, &mut options.master_volume, "Master volume", audible);
         percent_slider(ui, &mut options.music_volume, "Music", audible);
+        percent_slider(ui, &mut options.effects_volume, "Effects", audible);
     });
     ui.checkbox(&mut options.muted, "Mute all sound");
     ui.checkbox(&mut options.music_in_game, "Play music during the game")

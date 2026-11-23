@@ -56,6 +56,8 @@ pub(super) struct SaveRecovery {
     pub message: Option<String>,
     pub setup: game_server::GameSetup,
     pub page: super::main_menu::MenuPage,
+    /// A transient card over the title page, never written to settings.
+    pub songbook_open: bool,
 }
 
 impl SaveRecovery {
@@ -93,6 +95,7 @@ impl SaveRecovery {
             message: None,
             setup: game_server::GameSetup::default(),
             page: Default::default(),
+            songbook_open: false,
         }
     }
 

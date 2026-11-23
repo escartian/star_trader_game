@@ -6,6 +6,7 @@ pub mod camera;
 mod canvas;
 pub mod effects;
 pub mod model;
+mod particles;
 pub mod scene;
 #[cfg(test)]
 mod scene_tests;
@@ -29,6 +30,9 @@ pub struct BattleView {
 }
 
 impl BattleView {
+    pub fn take_sounds(&mut self, now: f64) -> Vec<effects::SoundCue> {
+        self.effects.take_sounds(now)
+    }
     /// Drops the aim when a new turn starts or the volley has been fired.
     pub fn sync(&mut self, battle: &Battle) {
         let key = (battle.round, battle.turn, battle.fired);

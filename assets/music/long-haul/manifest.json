@@ -1,0 +1,258 @@
+{
+  "sample_rate": 48000,
+  "start": "drift_a",
+  "blocks": {
+    "drift_a": {
+      "file": "drift_a.ogg",
+      "frames": 1536000,
+      "rms": 0.0524263332702251,
+      "from_bpm": 60,
+      "to_bpm": 60,
+      "next": {
+        "drift_b": 2,
+        "space": 1,
+        "rise_70": 2
+      }
+    },
+    "drift_b": {
+      "file": "drift_b.ogg",
+      "frames": 1536000,
+      "rms": 0.05160612290986759,
+      "from_bpm": 60,
+      "to_bpm": 60,
+      "next": {
+        "drift_a": 1,
+        "space": 1,
+        "rise_70": 3
+      }
+    },
+    "space": {
+      "file": "space.ogg",
+      "frames": 1536000,
+      "rms": 0.050690306669864925,
+      "from_bpm": 60,
+      "to_bpm": 60,
+      "next": {
+        "drift_a": 2,
+        "drift_b": 1
+      }
+    },
+    "rise_70": {
+      "file": "rise_70.ogg",
+      "frames": 1434455,
+      "rms": 0.05209144422064584,
+      "from_bpm": 60,
+      "to_bpm": 70,
+      "next": {
+        "rise_80": 2
+      }
+    },
+    "rise_80": {
+      "file": "rise_80.ogg",
+      "frames": 1240968,
+      "rms": 0.052436563766624894,
+      "from_bpm": 70,
+      "to_bpm": 80,
+      "next": {
+        "depart_a": 1,
+        "depart_b": 1
+      }
+    },
+    "depart_a": {
+      "file": "depart_a.ogg",
+      "frames": 1152000,
+      "rms": 0.05291554990125377,
+      "from_bpm": 80,
+      "to_bpm": 80,
+      "next": {
+        "depart_b": 2,
+        "rise_90": 2
+      }
+    },
+    "depart_b": {
+      "file": "depart_b.ogg",
+      "frames": 1152000,
+      "rms": 0.05273541078261102,
+      "from_bpm": 80,
+      "to_bpm": 80,
+      "next": {
+        "depart_a": 1,
+        "rise_90": 2
+      }
+    },
+    "rise_90": {
+      "file": "rise_90.ogg",
+      "frames": 1093528,
+      "rms": 0.05300387393727932,
+      "from_bpm": 80,
+      "to_bpm": 90,
+      "next": {
+        "rise_100": 2
+      }
+    },
+    "rise_100": {
+      "file": "rise_100.ogg",
+      "frames": 977431,
+      "rms": 0.054822262498709834,
+      "from_bpm": 90,
+      "to_bpm": 100,
+      "next": {
+        "cruise_a": 2,
+        "cruise_b": 1
+      }
+    },
+    "cruise_a": {
+      "file": "cruise_a.ogg",
+      "frames": 921600,
+      "rms": 0.05711887702773068,
+      "from_bpm": 100,
+      "to_bpm": 100,
+      "next": {
+        "cruise_b": 2,
+        "solo": 1,
+        "rise_110": 1
+      }
+    },
+    "cruise_b": {
+      "file": "cruise_b.ogg",
+      "frames": 921600,
+      "rms": 0.05715666894882887,
+      "from_bpm": 100,
+      "to_bpm": 100,
+      "next": {
+        "cruise_a": 1,
+        "solo": 2,
+        "rise_110": 1
+      }
+    },
+    "solo": {
+      "file": "solo.ogg",
+      "frames": 921600,
+      "rms": 0.056299255451696215,
+      "from_bpm": 100,
+      "to_bpm": 100,
+      "next": {
+        "cruise_a": 1,
+        "rise_110": 2,
+        "fall_90": 1
+      }
+    },
+    "rise_110": {
+      "file": "rise_110.ogg",
+      "frames": 883636,
+      "rms": 0.057328238717110756,
+      "from_bpm": 100,
+      "to_bpm": 110,
+      "next": {
+        "rise_120": 1
+      }
+    },
+    "rise_120": {
+      "file": "rise_120.ogg",
+      "frames": 806276,
+      "rms": 0.057806070319315415,
+      "from_bpm": 110,
+      "to_bpm": 120,
+      "next": {
+        "arrive_a": 1,
+        "arrive_b": 1
+      }
+    },
+    "arrive_a": {
+      "file": "arrive_a.ogg",
+      "frames": 768000,
+      "rms": 0.05816858278336342,
+      "from_bpm": 120,
+      "to_bpm": 120,
+      "next": {
+        "arrive_b": 2,
+        "fall_110": 2
+      }
+    },
+    "arrive_b": {
+      "file": "arrive_b.ogg",
+      "frames": 768000,
+      "rms": 0.058046834238918606,
+      "from_bpm": 120,
+      "to_bpm": 120,
+      "next": {
+        "arrive_a": 1,
+        "fall_110": 2
+      }
+    },
+    "fall_110": {
+      "file": "fall_110.ogg",
+      "frames": 797549,
+      "rms": 0.05765264526240327,
+      "from_bpm": 120,
+      "to_bpm": 110,
+      "next": {
+        "fall_100": 1
+      }
+    },
+    "fall_100": {
+      "file": "fall_100.ogg",
+      "frames": 873163,
+      "rms": 0.057301479785675694,
+      "from_bpm": 110,
+      "to_bpm": 100,
+      "next": {
+        "solo": 1,
+        "cruise_a": 1,
+        "fall_90": 2
+      }
+    },
+    "fall_90": {
+      "file": "fall_90.ogg",
+      "frames": 964631,
+      "rms": 0.0551538414902907,
+      "from_bpm": 100,
+      "to_bpm": 90,
+      "next": {
+        "fall_80": 1
+      }
+    },
+    "fall_80": {
+      "file": "fall_80.ogg",
+      "frames": 1077528,
+      "rms": 0.05267219328632378,
+      "from_bpm": 90,
+      "to_bpm": 80,
+      "next": {
+        "wind": 1
+      }
+    },
+    "wind": {
+      "file": "wind.ogg",
+      "frames": 1152000,
+      "rms": 0.05251415782764129,
+      "from_bpm": 80,
+      "to_bpm": 80,
+      "next": {
+        "fall_70": 2,
+        "depart_a": 1
+      }
+    },
+    "fall_70": {
+      "file": "fall_70.ogg",
+      "frames": 1220397,
+      "rms": 0.05236865449822589,
+      "from_bpm": 80,
+      "to_bpm": 70,
+      "next": {
+        "fall_60": 1
+      }
+    },
+    "fall_60": {
+      "file": "fall_60.ogg",
+      "frames": 1407027,
+      "rms": 0.05205413377178803,
+      "from_bpm": 70,
+      "to_bpm": 60,
+      "next": {
+        "drift_a": 1,
+        "space": 1
+      }
+    }
+  }
+}

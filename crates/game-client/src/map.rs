@@ -21,6 +21,7 @@ mod panels;
 mod recovery;
 mod render;
 mod shell;
+mod songbook;
 mod toolbar;
 mod visuals;
 
@@ -227,6 +228,9 @@ impl Map {
         self.apply_client_options(ctx);
         if self.save_recovery.is_some() {
             self.show_main_menu(ctx);
+            if crate::audio::take_click(ctx) {
+                self.music.play_effect(crate::audio::Effect::Click);
+            }
             return;
         }
         if let Some(systems) = self.session.take_loaded_galaxy() {
@@ -273,6 +277,12 @@ impl Map {
         self.session.show_settings(ctx);
         self.session.show_navigation(ctx, &self.session_systems);
         self.session.show_battle(ctx);
+        for cue in self
+            .session
+            .take_battle_sounds(ctx.input(|input| input.time))
+        {
+            self.music.play_effect(cue.into());
+        }
         self.session.show_combat_report(ctx);
         self.session.show_victory(ctx, &self.session_systems);
         self.session.show_factions(ctx, &self.session_systems);
@@ -284,6 +294,9 @@ impl Map {
             self.sheet = crate::session::SheetTab::default();
             #[cfg(not(target_arch = "wasm32"))]
             self.open_save_chooser(self.session.save_path(), None);
+        }
+        if crate::audio::take_click(ctx) {
+            self.music.play_effect(crate::audio::Effect::Click);
         }
     }
 

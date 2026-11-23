@@ -38,6 +38,9 @@ const NARROW_BOARD_SHARE: f32 = 0.5;
 const PROMPT_HEIGHT: f32 = 44.0;
 
 impl LocalSession {
+    pub fn take_battle_sounds(&mut self, now: f64) -> Vec<crate::battle::effects::SoundCue> {
+        self.battle.view.take_sounds(now)
+    }
     #[cfg(test)]
     pub fn surrender_prompt_open(&self) -> bool {
         self.battle.confirm_surrender

@@ -54,9 +54,24 @@ Music is client I/O in `game-client/src/audio.rs`. The map decides which track
 should play (the main menu theme, or in game when the player enables it) and
 the gain from the Settings sliders; `audio` owns the device through rodio
 (desktop only; the browser build is silent). `main` opens the device and hands
-it to the map, so tests and captures never touch audio hardware. The theme is an
-original Strudel composition kept as source in `assets/source/music/` and
-exported to the embedded Ogg loop by `tools/music/render.mjs`.
+it to the map, so tests and captures never touch audio hardware. Long Haul is
+an original Strudel composition kept in `assets/source/music/`. Its exported
+eight-bar Ogg blocks and transition manifest are embedded in the desktop client.
+The audio source chooses a weighted successor at each exact sample-frame boundary
+and mixes the previous block's reverb tail under the new block. The exporter
+balances the blocks' active RMS and records their final relative levels; a
+louder successor eases in over one bar, while a quieter successor keeps its
+exported level beneath the fading tail. It publishes the current block through
+an atomic index; the main-menu Songbook reads that
+index to show the playing part and its place in the track. Selecting a part
+in the Songbook sends an atomic request to the audio source; it switches on a
+stereo frame edge and crossfades for two seconds, then resumes weighted valid
+transitions. Browser audio is still pending.
+Kenney CC0 effects are embedded from `assets/effects/`; the same rodio output
+mixes short UI and battle cues with music. Battle view state schedules each cue
+at the matching beam start or hit time. Kenney particle sprites are loaded once
+per egui context and tinted for shield, hull and destruction flashes. Effects
+and their timing never change combat rules.
 
 Library selection is provisional until the desktop/mobile spike passes. Keep
 versions mutually compatible, pin resolved dependencies in Cargo.lock, and avoid

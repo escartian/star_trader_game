@@ -33,6 +33,11 @@ impl Map {
         let wanted =
             (self.save_recovery.is_some() || options.music_in_game).then_some(Track::MainTheme);
         let gain = music_gain(options.master_volume, options.music_volume, options.muted);
+        self.music.set_effects_gain(music_gain(
+            options.master_volume,
+            options.effects_volume,
+            options.muted,
+        ));
         if self
             .music
             .update(wanted, gain, ctx.input(|input| input.time))

@@ -34,6 +34,8 @@ pub struct ClientOptions {
     pub master_volume: u8,
     /// Percent, 0-100, applied on top of the master volume.
     pub music_volume: u8,
+    /// Percent, 0-100, applied on top of the master volume.
+    pub effects_volume: u8,
     pub muted: bool,
     /// Keep the theme playing after leaving the main menu.
     pub music_in_game: bool,
@@ -55,6 +57,7 @@ impl Default for ClientOptions {
         Self {
             master_volume: 80,
             music_volume: 70,
+            effects_volume: 80,
             muted: false,
             music_in_game: false,
             fullscreen: false,
@@ -66,7 +69,7 @@ impl Default for ClientOptions {
 
 impl ClientOptions {
     pub fn validate(&self) -> Result<(), String> {
-        if self.master_volume > 100 || self.music_volume > 100 {
+        if self.master_volume > 100 || self.music_volume > 100 || self.effects_volume > 100 {
             return Err("Volumes must be 0-100 percent".into());
         }
         if !(UI_SCALE_MIN..=UI_SCALE_MAX).contains(&self.ui_scale) {

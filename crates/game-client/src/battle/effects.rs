@@ -1,7 +1,13 @@
 //! Display-only animation that makes each battle update readable: ships glide
 //! to their new hexes, then each new shot flies as a beam and flashes on its
 //! target. The rules never wait for these; captures switch them off.
-use super::{camera::ScenePoint, canvas::Canvas, scene::side_color};
+use super::{
+    camera::ScenePoint,
+    canvas::Canvas,
+    particles::{Kind, Particles},
+    scene::side_color,
+};
+use crate::audio::Effect;
 use crate::theme::{AMBER, CYAN};
 use egui::{Color32, Stroke};
 use game_core::combat::tactical::{Battle, Hex};
@@ -33,6 +39,30 @@ struct Beam {
     start: f64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SoundCue {
+    Laser,
+    Shield,
+    Hull,
+    Explosion,
+}
+
+impl From<SoundCue> for Effect {
+    fn from(cue: SoundCue) -> Self {
+        match cue {
+            SoundCue::Laser => Self::Laser,
+            SoundCue::Shield => Self::Shield,
+            SoundCue::Hull => Self::Hull,
+            SoundCue::Explosion => Self::Explosion,
+        }
+    }
+}
+
+struct ScheduledSound {
+    at: f64,
+    cue: SoundCue,
+}
+
 #[derive(Default)]
 pub struct Effects {
     /// The battle the state below describes; a different seed starts afresh.
@@ -41,6 +71,7 @@ pub struct Effects {
     shots: usize,
     glides: Vec<Glide>,
     beams: Vec<Beam>,
+    sounds: Vec<ScheduledSound>,
 }
 
 impl Effects {
@@ -75,6 +106,24 @@ impl Effects {
         for (index, shot) in new_shots.enumerate() {
             let attacker = &battle.units[usize::from(shot.attacker)];
             let target = &battle.units[usize::from(shot.target)];
+            let start = first + index as f64 * SHOT_GAP;
+            self.sounds.push(ScheduledSound {
+                at: start,
+                cue: SoundCue::Laser,
+            });
+            if shot.hit {
+                let cue = if shot.destroyed {
+                    SoundCue::Explosion
+                } else if shot.hull_damage > 0 {
+                    SoundCue::Hull
+                } else {
+                    SoundCue::Shield
+                };
+                self.sounds.push(ScheduledSound {
+                    at: start + BEAM_SECONDS,
+                    cue,
+                });
+            }
             self.beams.push(Beam {
                 from: ScenePoint::of(attacker.at),
                 to: ScenePoint::of(target.at),
@@ -82,7 +131,7 @@ impl Effects {
                 hit: shot.hit,
                 hull: shot.hull_damage > 0,
                 destroyed: shot.destroyed,
-                start: first + index as f64 * SHOT_GAP,
+                start,
             });
         }
         self.cells = cells;
@@ -91,6 +140,20 @@ impl Effects {
             .retain(|glide| now < glide.start + GLIDE_SECONDS);
         self.beams
             .retain(|beam| now < beam.start + BEAM_SECONDS + FLASH_SECONDS);
+    }
+
+    /// Returns each sound once, when its matching visual event is due.
+    pub fn take_sounds(&mut self, now: f64) -> Vec<SoundCue> {
+        let mut due = Vec::new();
+        self.sounds.retain(|sound| {
+            if sound.at <= now {
+                due.push(sound.cue);
+                false
+            } else {
+                true
+            }
+        });
+        due
     }
 
     /// Whether anything is still playing (the view keeps repainting).
@@ -179,6 +242,34 @@ fn flash(canvas: &Canvas, beam: &Beam, t: f32) {
         (false, false) => (0.55, CYAN),
     };
     let radius = at.scale * size * (0.3 + 0.7 * t);
+    if let Some(particles) = Particles::preload(canvas.painter.ctx()) {
+        let tint = color.gamma_multiply(0.8 * fade);
+        if beam.destroyed {
+            particles.paint(
+                canvas.painter,
+                Kind::Smoke,
+                at.pos,
+                radius * 3.0,
+                AMBER.gamma_multiply(0.55 * fade),
+            );
+            // Several fragments drift away from the target as the blast expands.
+            for index in 0..5 {
+                let angle = index as f32 * std::f32::consts::TAU / 5.0;
+                let offset = egui::Vec2::new(angle.cos(), angle.sin()) * radius * (0.3 + t);
+                particles.paint(
+                    canvas.painter,
+                    Kind::Spark,
+                    at.pos + offset,
+                    radius * 0.8,
+                    tint,
+                );
+            }
+        } else if beam.hull {
+            particles.paint(canvas.painter, Kind::Spark, at.pos, radius * 2.0, tint);
+        } else {
+            particles.paint(canvas.painter, Kind::Ring, at.pos, radius * 2.6, tint);
+        }
+    }
     canvas
         .painter
         .circle_filled(at.pos, radius * 0.6, color.gamma_multiply(0.45 * fade));
@@ -205,7 +296,10 @@ fn flash(canvas: &Canvas, beam: &Beam, t: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use game_core::combat::{CombatCatalog, Side, engagement::CombatantSetup};
+    use game_core::combat::{
+        CombatCatalog, Side,
+        engagement::{CombatantSetup, ShotRecord},
+    };
     use game_core::fleet::{ShipCatalog, ShipKind};
 
     fn battle() -> Battle {
@@ -271,5 +365,37 @@ mod tests {
         effects.observe(&battle, 1.0, false);
         assert!(!effects.busy(1.0));
         assert_eq!(effects.position(me, to, 1.0), ScenePoint::of(to));
+    }
+
+    #[test]
+    fn shot_cues_follow_beam_timing_once_and_skip_misses() {
+        let mut battle = battle();
+        let mut effects = Effects::default();
+        effects.observe(&battle, 0.0, true);
+        let shot = |hit| ShotRecord {
+            attacker: 0,
+            target: 1,
+            weapon: "test".into(),
+            hit,
+            shield_damage: u32::from(hit),
+            hull_damage: 0,
+            destroyed: false,
+        };
+        battle
+            .rounds
+            .last_mut()
+            .unwrap()
+            .extend([shot(true), shot(false)]);
+        effects.observe(&battle, 1.0, true);
+        assert_eq!(effects.take_sounds(1.0), vec![SoundCue::Laser]);
+        assert!(effects.take_sounds(1.1).is_empty());
+        assert_eq!(effects.take_sounds(1.17), vec![SoundCue::Laser]);
+        assert_eq!(effects.take_sounds(1.21), vec![SoundCue::Shield]);
+        assert!(effects.take_sounds(2.0).is_empty());
+        effects.observe(&battle, 2.0, true);
+        assert!(effects.take_sounds(2.0).is_empty(), "no replay on redraw");
+        battle.rounds.last_mut().unwrap().push(shot(true));
+        effects.observe(&battle, 3.0, false);
+        assert!(effects.take_sounds(4.0).is_empty(), "captures stay silent");
     }
 }

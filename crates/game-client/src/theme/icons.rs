@@ -129,6 +129,9 @@ pub fn labeled_toggle(ui: &mut Ui, icon: Icon, label: &str, on: bool) -> Respons
     );
     let size = Vec2::new(text.size().x + 42.0, 30.0);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    if response.clicked() {
+        crate::audio::mark_click(ui.ctx());
+    }
     response.widget_info(|| {
         egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), on, label)
     });
@@ -156,6 +159,9 @@ pub fn menu_button(ui: &mut Ui, icon: Icon, label: &str, height: f32) -> Respons
     );
     let size = Vec2::new(ui.available_width(), height);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    if response.clicked() {
+        crate::audio::mark_click(ui.ctx());
+    }
     response.widget_info(|| {
         egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), label)
     });
@@ -183,6 +189,9 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str) -> Response {
 /// Icon-only control drawn as selected when `on` is true.
 pub fn toggle(ui: &mut Ui, icon: Icon, tooltip: &str, on: bool) -> Response {
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(30.0), Sense::click());
+    if response.clicked() {
+        crate::audio::mark_click(ui.ctx());
+    }
     response.widget_info(|| {
         egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), on, tooltip)
     });

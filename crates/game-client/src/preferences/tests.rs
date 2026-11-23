@@ -78,6 +78,10 @@ fn settings_from_before_options_load_with_defaults_and_bad_options_are_rejected(
             ..ClientOptions::default()
         },
         ClientOptions {
+            effects_volume: 101,
+            ..ClientOptions::default()
+        },
+        ClientOptions {
             ui_scale: 50,
             ..ClientOptions::default()
         },

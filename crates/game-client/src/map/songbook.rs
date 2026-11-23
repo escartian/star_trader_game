@@ -186,49 +186,49 @@ pub(super) const PARTS: &[Part] = &[
         section: "Space",
         title: "Space Rise to 80",
         tempo: "60–80 BPM",
-        detail: "The rhythm box and sequencer fade in",
+        detail: "The hook gives way to the riff and rhythm box",
     },
     Part {
         id: "space_80",
         section: "Space",
         title: "Space 80",
         tempo: "80 BPM",
-        detail: "The synth hook over a rhythm box and sequencer",
+        detail: "A French-house riff over a rhythm box and disco bass",
     },
     Part {
         id: "space_rise_100",
         section: "Space",
         title: "Space Rise to 100",
         tempo: "80–100 BPM",
-        detail: "Drums and choir join the hook",
+        detail: "Drums, open hats and chopped chords join the riff",
     },
     Part {
         id: "space_100",
         section: "Space",
         title: "Space 100",
         tempo: "100 BPM",
-        detail: "Drums, choir and a doubled hook",
+        detail: "The riff with drums, open hats and chopped chords",
     },
     Part {
         id: "space_rise_120",
         section: "Space",
         title: "Space Rise to 120",
         tempo: "100–120 BPM",
-        detail: "Pumping chords and zaps build to the peak",
+        detail: "The riff hands over to the hook at double time",
     },
     Part {
         id: "space_120",
         section: "Space",
         title: "Space 120",
         tempo: "120 BPM",
-        detail: "The hook at double time, with an echo canon",
+        detail: "The hook at double time, with the full house groove",
     },
     Part {
         id: "space_fall_100",
         section: "Space",
         title: "Space Fall to 100",
         tempo: "120–100 BPM",
-        detail: "The echo canon and zaps fall away",
+        detail: "The hook hands back to the riff",
     },
     Part {
         id: "space_fall_80",
@@ -242,7 +242,7 @@ pub(super) const PARTS: &[Part] = &[
         section: "Space",
         title: "Space Fall to 60",
         tempo: "80–60 BPM",
-        detail: "Back to the halo pad and beeps",
+        detail: "The riff fades into the hook's quiet nod",
     },
 ];
 
@@ -282,44 +282,57 @@ pub(super) fn show(
     next: Option<&'static str>,
 ) -> Option<&'static str> {
     if !*open {
-        let memory = egui::Id::new(songbook_graph::SCROLLED_TO);
-        ctx.data_mut(|data| data.remove_temp::<&'static str>(memory));
         return None;
     }
+    // The map is for desktop screens; phones (full-screen sheets) list parts.
+    let screen = ctx.screen_rect();
+    let wide = screen.width() >= metal::FULL_SCREEN_BELOW;
+    let mut showing = if wide { *view } else { View::List };
     // The map's "up next" ring pulses, so it repaints more often.
-    let repaint = if *view == View::Map { 50 } else { 250 };
+    let repaint = if showing == View::Map { 50 } else { 250 };
     ctx.request_repaint_after(std::time::Duration::from_millis(repaint));
-    let width = if *view == View::Map { 800.0 } else { 440.0 };
+    // The map card fills most of the screen, up to 1200 points wide.
+    let width = if showing == View::Map {
+        (screen.width() - 80.0).clamp(800.0, 1200.0)
+    } else {
+        440.0
+    };
     let mut chosen = None;
     metal::window(ctx, "Songbook · Long Haul", open, width, |ui| {
+        let content_top = ui.cursor().top();
         let panel_width = (ui.available_width() - 24.0).max(0.0);
         metal::frame(ui, 235, |ui| {
             ui.set_width(panel_width);
-            if *view == View::Map {
+            if showing == View::Map {
                 now_playing_line(ui, current, next);
             } else {
                 now_playing(ui, current, next);
             }
         });
-        ui.add_space(8.0);
-        ui.horizontal(|ui| {
-            ui.selectable_value(view, View::List, "List");
-            ui.selectable_value(view, View::Map, "Map");
-        });
+        if wide {
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                ui.selectable_value(&mut showing, View::List, "List");
+                ui.selectable_value(&mut showing, View::Map, "Map");
+            });
+            *view = showing;
+        }
         ui.add_space(4.0);
-        chosen = match view {
+        chosen = match showing {
             View::List => list(ui, current),
-            View::Map => map(ui, current, next),
+            View::Map => map(ui, current, next, width, content_top),
         };
     });
     chosen
 }
 
-/// Scroll areas end above the screen's bottom edge, leaving `below` points
-/// for content under them. A window's own available height is unbounded.
-fn scroll_height(ui: &egui::Ui, below: f32) -> f32 {
-    let screen = ui.ctx().screen_rect();
-    (screen.bottom() - ui.cursor().top() - below - 28.0).max(160.0)
+/// The map's height so the card needs no scrolling: `metal::window` shows a
+/// card's content in a scroll area 70% of the screen tall. Leaves room for
+/// the content above the map (since `content_top`) and `below` points under it.
+fn map_height(ui: &egui::Ui, content_top: f32, below: f32) -> f32 {
+    let budget = ui.ctx().screen_rect().height() * 0.7;
+    let above = ui.cursor().top() - content_top;
+    (budget - above - below).max(songbook_graph::MIN_CANVAS.y)
 }
 
 fn now_playing(ui: &mut egui::Ui, current: Option<&str>, next: Option<&str>) {
@@ -361,14 +374,6 @@ fn now_playing_line(ui: &mut egui::Ui, current: Option<&str>, next: Option<&str>
 }
 
 fn list(ui: &mut egui::Ui, current: Option<&str>) -> Option<&'static str> {
-    egui::ScrollArea::vertical()
-        .auto_shrink([false, true])
-        .max_height(scroll_height(ui, 0.0))
-        .show(ui, |ui| list_parts(ui, current))
-        .inner
-}
-
-fn list_parts(ui: &mut egui::Ui, current: Option<&str>) -> Option<&'static str> {
     ui.label(
         "Select a part to play it now. The track then continues through its possible next parts.",
     );
@@ -400,29 +405,23 @@ fn map(
     ui: &mut egui::Ui,
     current: Option<&'static str>,
     next: Option<&'static str>,
+    width: f32,
+    content_top: f32,
 ) -> Option<&'static str> {
     let time = ui.input(|input| input.time);
-    // Leaves room below the map for its two lines of explanation.
-    let height = scroll_height(ui, 80.0);
-    let mut scroll = egui::ScrollArea::both().max_height(height);
-    // Centres the playing part when the map opens and when the part changes.
-    let memory = egui::Id::new(songbook_graph::SCROLLED_TO);
-    let scrolled_to = ui.ctx().data(|data| data.get_temp::<&'static str>(memory));
-    if let Some(id) = current.filter(|id| scrolled_to != Some(*id)) {
-        let viewport = egui::vec2(ui.available_width(), height);
-        if let Some(offset) = songbook_graph::centring_offset(id, viewport) {
-            scroll = scroll.scroll_offset(offset);
-        }
-        ui.ctx().data_mut(|data| data.insert_temp(memory, id));
-    }
+    // The map fills the card down to its two lines of explanation; on a
+    // screen too small for its minimum size, the card's content scrolls.
+    // Sized from the requested card width and the screen, never from the
+    // space left in the window: egui shrinks that while a window is dragged
+    // towards the screen edge, which would shrink the whole card.
+    // The card's frame pads its content by 12 points on each side.
+    let size = egui::vec2(width - 24.0, map_height(ui, content_top, 56.0));
     let highlights = Highlights {
         current,
         next,
         time,
     };
-    let input = scroll
-        .show(ui, |ui| songbook_graph::show(ui, &highlights))
-        .inner;
+    let input = songbook_graph::show(ui, &highlights, size);
     // Describes the hovered part, else the current one, else the map.
     match input.hovered.or_else(|| current.and_then(part)) {
         Some(part) => ui.label(format!("{} · {} — {}", part.title, part.tempo, part.detail)),

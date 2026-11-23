@@ -8,11 +8,13 @@ use egui::epaint::QuadraticBezierShape;
 use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2};
 use std::sync::OnceLock;
 
-/// The map's size in points. A narrower window scrolls it sideways.
-pub(super) const CANVAS: Vec2 = Vec2::new(760.0, 415.0);
+/// The map's smallest size in points. It stretches to fill a larger window
+/// (spreading the parts out) and scrolls in a smaller one.
+pub(super) const MIN_CANVAS: Vec2 = Vec2::new(760.0, 415.0);
 const NODE_RADIUS: f32 = 10.0;
-/// Canvas margin left and right of the 60 and 120 BPM columns, in points.
-const SIDE_MARGIN: f32 = 44.0;
+/// Canvas margin left and right of the 60 and 120 BPM columns, in points,
+/// leaving room for arrows that bow outward from the edge columns.
+const SIDE_MARGIN: f32 = 90.0;
 
 /// Rows as fractions of the canvas height, from the top.
 const ROW_EXTRA: f32 = 0.11;
@@ -114,11 +116,17 @@ pub(super) fn transitions() -> &'static [Transition] {
     })
 }
 
-/// A part's centre on a canvas whose top-left corner is `origin`.
-fn place(id: &str, origin: Pos2) -> Option<Pos2> {
+/// A part's centre on the map's `canvas`.
+fn place(id: &str, canvas: Rect) -> Option<Pos2> {
     let (_, bpm, row) = PLACES.iter().find(|(place, ..)| *place == id)?;
-    let span = CANVAS.x - 2.0 * SIDE_MARGIN;
-    Some(origin + Vec2::new(SIDE_MARGIN + (bpm - 60.0) / 60.0 * span, row * CANVAS.y))
+    let span = canvas.width() - 2.0 * SIDE_MARGIN;
+    Some(
+        canvas.min
+            + Vec2::new(
+                SIDE_MARGIN + (bpm - 60.0) / 60.0 * span,
+                row * canvas.height(),
+            ),
+    )
 }
 
 /// What the map shows besides the parts themselves.
@@ -135,19 +143,20 @@ pub(super) struct MapInput {
     pub chosen: Option<&'static str>,
 }
 
-/// Paints the map at the cursor and returns the hovered and clicked parts.
-pub(super) fn show(ui: &mut Ui, highlights: &Highlights) -> MapInput {
-    let (response, painter) = ui.allocate_painter(CANVAS, Sense::click());
-    let origin = response.rect.min;
+/// Paints the map at the cursor, `size` points large (at least `MIN_CANVAS`),
+/// and returns the hovered and clicked parts.
+pub(super) fn show(ui: &mut Ui, highlights: &Highlights, size: Vec2) -> MapInput {
+    let (response, painter) = ui.allocate_painter(size.max(MIN_CANVAS), Sense::click());
+    let canvas = response.rect;
     let hovered = response.hover_pos().and_then(|pointer| {
         PARTS.iter().find(|part| {
-            place(part.id, origin).is_some_and(|at| at.distance(pointer) <= NODE_RADIUS + 5.0)
+            place(part.id, canvas).is_some_and(|at| at.distance(pointer) <= NODE_RADIUS + 5.0)
         })
     });
     let focus = hovered.map(|part| part.id).or(highlights.current);
-    paint_sections(&painter, origin);
-    let chances = paint_transitions(&painter, origin, focus);
-    paint_parts(&painter, origin, highlights, hovered.map(|part| part.id));
+    paint_sections(&painter, canvas);
+    let chances = paint_transitions(&painter, canvas, focus);
+    paint_parts(&painter, canvas, highlights, hovered.map(|part| part.id));
     for (at, chance) in chances {
         tag(&painter, at, Align2::CENTER_CENTER, &chance, GREEN);
     }
@@ -162,18 +171,7 @@ pub(super) fn show(ui: &mut Ui, highlights: &Highlights) -> MapInput {
     MapInput { hovered, chosen }
 }
 
-/// Remembers which part the map last scrolled to; cleared when it closes.
-pub(super) const SCROLLED_TO: &str = "songbook-scrolled-to";
-
-/// The scroll offset that centres a part in a `viewport`, for windows too
-/// small for the whole map (phones, short screens).
-pub(super) fn centring_offset(id: &str, viewport: Vec2) -> Option<Vec2> {
-    let at = place(id, Pos2::ZERO)?;
-    let centred = at.to_vec2() - viewport / 2.0;
-    Some(centred.clamp(Vec2::ZERO, (CANVAS - viewport).max(Vec2::ZERO)))
-}
-
-fn paint_sections(painter: &Painter, origin: Pos2) {
+fn paint_sections(painter: &Painter, canvas: Rect) {
     let mut sections: Vec<&str> = Vec::new();
     for part in PARTS {
         if !sections.contains(&part.section) {
@@ -184,7 +182,7 @@ fn paint_sections(painter: &Painter, origin: Pos2) {
         let centres = PARTS
             .iter()
             .filter(|part| part.section == section)
-            .filter_map(|part| place(part.id, origin));
+            .filter_map(|part| place(part.id, canvas));
         let Some(bounds) = centres
             .map(|at| Rect::from_center_size(at, Vec2::ZERO))
             .reduce(Rect::union)
@@ -219,10 +217,10 @@ fn paint_sections(painter: &Painter, origin: Pos2) {
 
 /// Paints every transition; returns the focused part's chance labels and
 /// where they go, for painting above the parts.
-fn paint_transitions(painter: &Painter, origin: Pos2, focus: Option<&str>) -> Vec<(Pos2, String)> {
+fn paint_transitions(painter: &Painter, canvas: Rect, focus: Option<&str>) -> Vec<(Pos2, String)> {
     let mut chances = Vec::new();
     for transition in transitions() {
-        let (Some(from), Some(to)) = (place(transition.from, origin), place(transition.to, origin))
+        let (Some(from), Some(to)) = (place(transition.from, canvas), place(transition.to, canvas))
         else {
             continue;
         };
@@ -286,9 +284,9 @@ fn arrow(painter: &Painter, from: Pos2, to: Pos2, stroke: Stroke, head: f32) -> 
     )
 }
 
-fn paint_parts(painter: &Painter, origin: Pos2, highlights: &Highlights, hovered: Option<&str>) {
+fn paint_parts(painter: &Painter, canvas: Rect, highlights: &Highlights, hovered: Option<&str>) {
     for part in PARTS {
-        let Some(at) = place(part.id, origin) else {
+        let Some(at) = place(part.id, canvas) else {
             continue;
         };
         let color = section_color(part.section);
@@ -346,7 +344,7 @@ mod tests {
         assert_eq!(placed, parts);
         let centres: Vec<_> = PLACES
             .iter()
-            .filter_map(|(id, ..)| place(id, Pos2::ZERO))
+            .filter_map(|(id, ..)| place(id, Rect::from_min_size(Pos2::ZERO, MIN_CANVAS)))
             .collect();
         for (index, a) in centres.iter().enumerate() {
             for b in &centres[index + 1..] {

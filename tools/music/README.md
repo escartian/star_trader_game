@@ -57,24 +57,29 @@ rhythm guitar, organ and horns support it, and it has less echo and room effect.
 
 **Space pieces.** Mostly inspired by space-opera albums, they hold each chord
 for two bars (Dm9, B♭maj7, Gm9, A7sus) and send their space layers to a second,
-seven-second reverb. `space` (60 BPM) has a halo pad, glassy crystal notes,
-atmosphere notes over faint radio static, computer beeps and boops (short,
-steady square and triangle tones from D minor pentatonic in telemetry-like
-bursts) and a quiet nod to the space hook: a synth melody, one two-bar phrase
-per chord, on a phased supersaw lead. The hook keeps its note values in every
-space piece, so the tempo alone speeds it up, and at 120 BPM it is exactly
-double time. `space_80` plays it over a soft rhythm box (light kicks,
-woodblock-like clicks and maracas) and an eighth-note analogue-sequencer bass;
-`space_100` swaps in the main drums, a sixteenth-note sequencer, an arpeggio,
-toms, a synth choir and a pluck, and layers a square an octave below the hook;
-`space_120` adds an echo canon (the hook an octave up and an eighth late, as
-filtered plucks filling its rests), ride, shaker, pumping chords, stabs and
+seven-second reverb. They have two themes. Theme A, the
+hook, is a constellation of wide leaps (fifths and ninths, one two-bar phrase
+per chord, rising a little with each chord up to B♭6) played staccato on a
+glassy FM bell-synth in the deep reverb; it keeps its note values at 60 and
+120 BPM, so 120 is exactly double time. Theme B, at 80 and 100 BPM, is a French-house riff:
+clipped, syncopated sixteenth notes high on each chord (up to A6) through a
+resonant filter sweep, over a disco octave bass. `space` (60 BPM) has a halo
+pad, glassy crystal notes, atmosphere notes over faint radio static, computer
+beeps and boops (short, steady square and triangle tones from D minor
+pentatonic in telemetry-like bursts) and a quiet nod to the hook with a faint
+echo. `space_80` plays the riff over a soft rhythm box (light kicks,
+woodblock-like clicks and maracas). `space_100` adds the main drums, disco open
+hats, chopped house chords (a high voicing on every offbeat under a slow filter
+sweep) and a synth choir. `space_120` returns to the hook at double time with a
+square an octave below, an echo canon (the hook an eighth late, as filtered
+plucks filling its rests), the house groove, pumping chords, an arpeggio and
 laser zaps. They are reached from the blocks
 at their tempo (depart, wind and the rise to 80; cruise, the solo and the fall
 to 100; arrival, the fanfare and the rise to 120) and return to them. Six
 20 BPM space ramps (`space_rise_80` to `space_fall_60`) also link neighbouring
 space pieces directly, easing every level from where one piece ends to where
-the next begins, so the music can stay in space while it speeds up or slows.
+the next begins (crossfading the themes), so the music can stay in space while
+it speeds up or slows.
 
 Every bar uses four evenly spaced kick hits. Quiet ride and toms join the
 arrival blocks and fade in and out with the tempo ramps; the upward ramps add
@@ -87,7 +92,8 @@ line plays every part in a fixed order at the demo tempo. The game instead
 uses the rendered OGG blocks with their tempo ramps and weighted transitions.
 To audition one part in Strudel, change `const demo` near the bottom to a
 one-item list such as `['arrive_a']` and press **Update**. In the game, select
-that part in the main-menu Songbook, as a list or (with the Map toggle) on a map
+that part in the main-menu Songbook, as a list or (on desktop, with the Map
+toggle) on a map
 that shows every part by section and tempo with arrows for its possible
 transitions and their chances; it
 crossfades in over two seconds and then follows its weighted transitions.

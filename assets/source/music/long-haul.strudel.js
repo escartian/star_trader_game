@@ -71,9 +71,11 @@ const instruments = {
   crystal: { sound: "gm_fx_crystal:4", boost: 2 },
   beeps: { sound: "square", boost: 1 },
   boops: { sound: "triangle", boost: 1 },
-  hook: { sound: "supersaw", boost: 2.15 },
+  hook: { sound: "sine", boost: 1.8 },
+  riff: { sound: "sawtooth", boost: 2.5 },
+  chop: { sound: "supersaw", boost: 1.27 },
   hookLow: { sound: "square", boost: 1.75 },
-  hookEcho: { sound: "sawtooth", boost: 1.75 },
+  hookEcho: { sound: "sawtooth", boost: 2.5 },
   seqbass: { sound: "sawtooth", boost: 1.25 },
   zaps: { sound: "sawtooth", boost: 2.5 },
 }
@@ -154,19 +156,32 @@ const spaceSequence = '0 ~ 4 ~ 2 ~ 5 ~ 1 ~ 4 ~ 3 ~ 6 ~'
 const spaceHarmony = { chords: "<Dm9 Dm9 Bb^7 Bb^7 Gm9 Gm9 A7sus A7sus>", roots: "<d2 d2 bb1 bb1 g1 g1 a1 a1>" }
 // The sequencer's roots as MIDI numbers (d2, bb1, g1, a1), for adding steps.
 const spaceRootNumbers = "<38 38 34 34 31 31 33 33>"
-// The space hook: one two-bar phrase per chord, eight eighth-note steps a
-// bar. It keeps these note values in every space piece, so the tempo alone
-// speeds it up: a quiet nod at 60 BPM, then 80 and 100, and at 120 exactly
-// double time, where an echo canon fills its rests.
+// The space pieces have two themes. Theme A, the hook, plays at 60 and 120 BPM
+// with the same note values, so 120 is exactly double time; theme B, a
+// French-house riff, plays at 80 and 100 BPM. The ramps between them crossfade.
+//
+// The hook (theme A): a constellation of wide leaps, fifths and ninths, one
+// two-bar phrase per chord with the same shape each time, rising a little with
+// each chord. Eight eighth-note steps a bar, played staccato on a glassy FM
+// bell-synth. At 120 an echo canon an eighth late fills its rests.
 const hookPhrases = [
-  ['d5 ~ a5 ~ f5 e5 ~ d5', 'e5@2 f5 ~ a5@3 ~'], // Dm9
-  ['d5 ~ f5 ~ a5 bb5 ~ a5', 'f5@2 d5 ~ c5@3 ~'], // Bb^7
-  ['bb4 ~ d5 ~ f5 a5 ~ g5', 'a5@2 bb5 ~ d6@3 ~'], // Gm9
-  ['e5 ~ a5 ~ g5 e5 ~ d5', 'e5@2 g5 ~ a5@3 ~'], // A7sus, resolving to D
+  ['a5 ~ e6 ~ d6 ~ ~ a5', 'c6 ~ ~ e6 ~ f6 e6 ~'], // Dm9
+  ['f5 ~ c6 ~ bb5 ~ ~ f5', 'a5 ~ ~ c6 ~ d6 c6 ~'], // Bb^7
+  ['d6 ~ a6 ~ g6 ~ ~ d6', 'f6 ~ ~ a6 ~ bb6 a6 ~'], // Gm9
+  ['e6 ~ a6 ~ g6 ~ ~ e6', 'd6 ~ e6 ~ g6 ~ a6@2'], // A7sus, resolving to D
 ]
 const hookNotes = '<' + hookPhrases.flatMap((phrase) => phrase.map((bar) => '[' + bar + ']')).join(' ') + '>'
 // One octave down: "a5" -> "a4".
 const octaveDown = (notes) => notes.replace(/([a-g]b?)(\d)/g, (_, name, octave) => name + (Number(octave) - 1))
+// The riff (theme B): a staccato, syncopated sixteenth-note figure high on each
+// chord, in the manner of filtered French house. One phrase per chord, two bars.
+const riffPhrases = [
+  ['~ a5 d6 ~ e6 ~ d6 a5 ~ f6 ~ e6 d6 ~ a5 ~', '~ a5 d6 ~ e6 ~ f6 ~ a6 ~ ~ g6 f6 ~ e6 ~'], // Dm9
+  ['~ f5 bb5 ~ d6 ~ bb5 f5 ~ a5 ~ d6 c6 ~ a5 ~', '~ f5 bb5 ~ d6 ~ f6 ~ a6 ~ ~ f6 d6 ~ c6 ~'], // Bb^7
+  ['~ g5 bb5 ~ d6 ~ bb5 g5 ~ a5 ~ d6 c6 ~ bb5 ~', '~ g5 bb5 ~ d6 ~ f6 ~ a6 ~ ~ g6 f6 ~ d6 ~'], // Gm9
+  ['~ e5 a5 ~ d6 ~ a5 e5 ~ g5 ~ d6 e6 ~ g6 ~', '~ a5 d6 ~ e6 ~ g6 ~ a6 ~ g6 ~ e6 d6 ~ ~'], // A7sus
+]
+const riffNotes = '<' + riffPhrases.flatMap((phrase) => phrase.map((bar) => '[' + bar + ']')).join(' ') + '>'
 // Computer beeps (square, high) and boops (triangle, low): steady pitches from
 // D minor pentatonic in short bursts, like ship telemetry.
 const beepNotes = "<[d6 d6 ~ a6] ~ [~ c7 c7 ~] ~ [f6 ~ f6 ~] ~ [~ ~ g6 a6] ~>"
@@ -174,6 +189,8 @@ const boopNotes = "<~ [~ ~ d4 ~] ~ [a3 ~ ~ ~] ~ [~ f4 ~ ~] ~ [~ ~ ~ [d4 a3]]>"
 // Sequencer steps above the root, in semitones: root, octave and fifth.
 const eighthSteps = '[0 12 7 12]*2'
 const sixteenthSteps = '[0 12 7 12]*4'
+// A disco bass: root and octave in eighth notes.
+const discoSteps = '[0 12]*4'
 
 // One value per bar as a pattern string: '<a b c ...>'.
 const perBar = (values) => '<' + values.join(' ') + '>'
@@ -196,7 +213,7 @@ function block(settings) {
     bells: 0, stars: 0, starsSparse: 0.5, space: 0,
     pad: 0, pump: 0, pluck: 0, viola: 0,
     chords, roots, halo: 0, choir: 0, crystal: 0, beeps: 0, seqbass: 0, seqSteps: eighthSteps,
-    hook: 0, hookLow: 0, hookEcho: 0,
+    hook: 0, hookLow: 0, hookEcho: 0, riff: 0, chop: 0, openhat: 0,
     machine: 0, zaps: 0, ...settings }
   const from = o.from
   const to = o.to ?? o.from
@@ -531,14 +548,16 @@ function block(settings) {
       .gain(level(o.beeps)))
   }
   if (on(o.hook)) {
-    // The space hook on a phased supersaw lead, with a square an octave
-    // below (`hookLow`) layered in as the pieces speed up.
+    // The space hook on a glassy FM bell-synth, short and staccato, ringing
+    // into the deep reverb, with a square an octave below (`hookLow`) at 120.
     layers.push(play(note(hookNotes), 'hook')
-      .attack(0.01).decay(0.2).sustain(0.45).release(0.25)
-      .lpf(2800).lpq(3)
-      .phaser(0.3).phaserdepth(0.35).phasersweep(800)
-      .delay(0.3).delaytime(echo).delayfeedback(0.35)
-      .pan(0.55).room(0.5).size(hall)
+      .fmi(1.6).fmh(3)
+      .attack(0.004).decay(0.16).sustain(0.08).release(0.25)
+      .lpf(5000)
+      .phaser(0.2).phaserdepth(0.25).phasersweep(900)
+      .delay(0.35).delaytime(echo).delayfeedback(0.4)
+      .pan(sine.range(0.35, 0.65).slow(4))
+      .orbit(2).room(0.55).size(deep)
       .gain(level(o.hook)))
     if (on(o.hookLow)) {
       layers.push(play(note(octaveDown(hookNotes)), 'hookLow')
@@ -548,15 +567,43 @@ function block(settings) {
         .gain(level(o.hookLow)))
     }
     if (on(o.hookEcho)) {
-      // An echo canon: the hook an octave up and one eighth late, as short
-      // filtered plucks that land in the hook's rests.
-      layers.push(play(note(octaveUp(hookNotes)), 'hookEcho').late(1 / 8)
+      // An echo canon: the hook one eighth late, as short filtered plucks
+      // that land in the hook's rests.
+      layers.push(play(note(hookNotes), 'hookEcho').late(1 / 8)
         .decay(0.1).sustain(0).release(0.05)
         .lpf(700).lpenv(4).lpdecay(0.08).lpq(5)
         .delay(0.25).delaytime(echo).delayfeedback(0.3)
         .pan(0.7).room(0.4).size(hall)
         .gain(level(o.hookEcho)))
     }
+  }
+  if (on(o.riff)) {
+    // The theme-B riff: clipped sawtooth notes through a resonant filter that
+    // sweeps open and shut, bouncing between the speakers.
+    layers.push(play(note(riffNotes), 'riff')
+      .attack(0.003).decay(0.07).sustain(0).release(0.03)
+      .lpf(sine.range(1200, 4200).slow(8)).lpq(7)
+      .delay(0.2).delaytime(echo).delayfeedback(0.3)
+      .pan("<0.35 0.65>*8").room(0.3).size(hall)
+      .gain(level(o.riff)))
+  }
+  if (on(o.chop)) {
+    // Chopped house chords: a high voicing on every offbeat, cut short and
+    // swept by a slow filter, like a looped and filtered disco sample.
+    layers.push(play(chord(o.chords).voicing().transpose(12), 'chop')
+      .struct("[~ x]*4")
+      .attack(0.003).decay(0.09).sustain(0).release(0.04)
+      .lpf(sine.range(800, 3600).slow(16)).lpq(5)
+      .pan(0.45).room(0.35).size(hall)
+      .gain(level(o.chop)))
+  }
+  if (on(o.openhat)) {
+    // Disco open hats on the offbeats.
+    layers.push(s("[~ white]*4")
+      .decay(0.16).sustain(0).release(0.05)
+      .hpf(7000).pan(0.6)
+      .room(0.25).size(hall)
+      .gain(level(o.openhat)))
   }
   if (on(o.seqbass)) {
     // An analogue-sequencer bass: root, octave and fifth through a resonant
@@ -609,24 +656,30 @@ const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarDecay: 0.9, guitarS
 
 // The space pieces' settings, shared by the pieces and the ramps between them.
 const spaceAt = {
+  // Theme A: the hook as a quiet staccato nod, with a faint echo.
   60: {
     keys: 0.12, ensemble: 0.2, bass: 0.26, space: 0.19, sequence: 0.1, pad: 0.1, halo: 0.12,
-    crystal: 0.08, beeps: 0.1, hook: 0.08, bells: 0.1, stars: 0.07, starsSparse: 0.6
+    crystal: 0.08, beeps: 0.1, hook: 0.09, hookEcho: 0.04, bells: 0.1, stars: 0.07,
+    starsSparse: 0.6
   },
+  // Theme B: the riff over the rhythm box and a disco octave bass.
   80: {
-    keys: 0.08, ensemble: 0.12, bass: 0, seqbass: 0.1, halo: 0.09, pad: 0.08, sequence: 0.06,
-    crystal: 0.06, beeps: 0.08, machine: 0.5, hook: 0.12, bells: 0.08, stars: 0.06
+    keys: 0.08, ensemble: 0.12, bass: 0, seqbass: 0.1, seqSteps: discoSteps, halo: 0.09,
+    pad: 0.08, sequence: 0.06, crystal: 0.06, beeps: 0.08, machine: 0.5, riff: 0.09,
+    bells: 0.08, stars: 0.06
   },
+  // Theme B with drums, open hats, chopped chords and the choir.
   100: {
-    keys: 0.08, ensemble: 0.1, bass: 0.2, seqbass: 0.12, seqSteps: sixteenthSteps, halo: 0.06,
-    choir: 0.07, pad: 0.05, arp: 0.08, arpLpf: 2000, crystal: 0.04, beeps: 0.06, drums: 1,
-    hats: 0.16, toms: 0.05, hook: 0.15, hookLow: [0, 0.1], pluck: [0, 0.04]
+    keys: 0.06, ensemble: 0.1, bass: 0.2, seqbass: 0.12, seqSteps: discoSteps, halo: 0.06,
+    choir: 0.07, pad: 0.05, crystal: 0.04, beeps: 0.06, drums: 1, hats: 0.12, openhat: 0.03,
+    toms: 0.05, riff: 0.13, chop: [0.03, 0.06]
   },
+  // Theme A at double time, with the full house groove and the echo canon.
   120: {
-    keys: 0.06, ensemble: 0.12, bass: 0.4, seqbass: 0.13, seqSteps: sixteenthSteps, choir: 0.09,
-    pump: 0.07, stabs: 0.04, arp: 0.12, arpLpf: 3200, arpPhaserRate: 0.25, arpPhaserDepth: 0.16,
-    arpPhaserSweep: 450, zaps: 0.06, beeps: 0.04, drums: 1, hats: 0.18, shaker: 0.14, ride: 0.06,
-    toms: 0.07, hook: 0.16, hookLow: 0.11, hookEcho: 0.07, pluck: 0.05, pad: 0.05
+    keys: 0.05, ensemble: 0.12, bass: 0.4, seqbass: 0.13, seqSteps: sixteenthSteps, choir: 0.08,
+    pump: 0.06, chop: 0.06, arp: 0.1, arpLpf: 3200, arpPhaserRate: 0.25, arpPhaserDepth: 0.16,
+    arpPhaserSweep: 450, zaps: 0.06, beeps: 0.04, drums: 1, hats: 0.14, openhat: 0.04,
+    shaker: 0.12, ride: 0.05, toms: 0.07, hook: 0.16, hookLow: 0.11, hookEcho: 0.08, pad: 0.05
   },
 }
 // Levels that ease across a space ramp; other settings switch (see spaceRamp).

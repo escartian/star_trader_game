@@ -238,11 +238,13 @@ server and core tests. Wanted durations, fine sizes and patrol strength have not
 been playtested.
 
 Songbook: offscreen captures of the list view (`--capture-view menu-songbook`,
-1280 × 800) and of the transition map with a part shown as playing
-(`menu-songbook@solo` and `@space_100`, 1280 × 800; `@space_fall_80`,
-390 × 844) were visually inspected: section outlines, tempo placement including
-the space ramps, the playing part's outgoing arrows with chances and incoming
-arrows, and the phone view scrolled to centre the playing part. Hover
+1280 × 800) and of the desktop transition map with a part shown as playing
+(`menu-songbook@space_120`, 1280 × 800; `@cruise_b`, 1920 × 1080) were visually
+inspected: the map card widens with the screen (up to 1200 points) and the map
+fills it, with section outlines, tempo placement including the space ramps, and
+the playing part's outgoing arrows with chances and incoming arrows. On a phone
+(`@space_80`, 390 × 844) the Map toggle is hidden and the list shows. Dragging
+the card was not captured; its size no longer depends on its position. Hover
 highlighting, clicking a part and the pulsing "up next" ring need live audio and
 pointer input and were not captured; the announced next part is covered by an
 audio test.

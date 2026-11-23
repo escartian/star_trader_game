@@ -115,7 +115,7 @@ The initial path is `data/slot-1.json`. Normal desktop launches open the
 and **Quit**, over a slowly orbiting view of the stars where the game's 3D
 ships cross on generated routes with live engine trails, slide into and out of a
 turning trade station or sink into the planet (picked anew each launch) while a
-moon and a prospector orbit it, while the original theme “Long Haul” plays. Load game shows which games can load, which slots are empty, and which
+moon and a prospector orbit it, while the game's original music plays. Load game shows which games can load, which slots are empty, and which
 saves need attention. An incompatible save remains untouched until you confirm
 deletion of it and its backup; the menu never autosaves over it. In game,
 **Menu → Main menu** saves (or, with autosave off, asks first) and returns there.
@@ -297,7 +297,7 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 patrol stopping a wanted fleet), `haven`, `roster`, `unlock`, `chooser` (the main menu; `chooser@SECONDS` shows its
 animation at that moment, for frame-by-frame checks), `menu-new`, `menu-load`,
 `menu-settings`, `menu-songbook` (the Songbook's list), `menu-songbook@PART` (its map,
-with a Long Haul part such as `cruise_a` shown as playing), `settings` (the in-game
+with a music part such as `cruise_a` shown as playing), `settings` (the in-game
 Settings window). Captures do not test window
 resize/DPI, touch or device lifecycle. An available GPU adapter is required.
 

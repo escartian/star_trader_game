@@ -1,250 +1,10 @@
-//! The main menu's music card: Long Haul's parts on a transition map
-//! (`songbook_graph`). Playback remains owned by audio.
+//! The main menu's music card: the music's parts as a list or, on desktop, a
+//! transition map (`songbook_graph`). Playback remains owned by audio.
 use super::songbook_graph::{self, Highlights};
 use crate::theme::{CYAN, GREEN, metal};
 use egui::RichText;
 
-pub(super) struct Part {
-    pub id: &'static str,
-    pub section: &'static str,
-    pub title: &'static str,
-    pub tempo: &'static str,
-    pub detail: &'static str,
-}
-
-pub(super) const PARTS: &[Part] = &[
-    Part {
-        id: "drift_a",
-        section: "Drift",
-        title: "Drift A",
-        tempo: "60 BPM",
-        detail: "Keys, ensemble, sequence and bells",
-    },
-    Part {
-        id: "drift_b",
-        section: "Drift",
-        title: "Drift B",
-        tempo: "60 BPM",
-        detail: "Bass and first guitar phrases",
-    },
-    Part {
-        id: "rise_70",
-        section: "Ascent",
-        title: "Rise to 70",
-        tempo: "60–70 BPM",
-        detail: "Sequence and shaker enter",
-    },
-    Part {
-        id: "rise_80",
-        section: "Ascent",
-        title: "Rise to 80",
-        tempo: "70–80 BPM",
-        detail: "Arpeggio and hats grow",
-    },
-    Part {
-        id: "depart_a",
-        section: "Departure",
-        title: "Depart A",
-        tempo: "80 BPM",
-        detail: "Guitar, organ and horn enter",
-    },
-    Part {
-        id: "depart_b",
-        section: "Departure",
-        title: "Depart B",
-        tempo: "80 BPM",
-        detail: "Wider arpeggio and woodwind reply",
-    },
-    Part {
-        id: "rise_90",
-        section: "Departure",
-        title: "Rise to 90",
-        tempo: "80–90 BPM",
-        detail: "Guitar and percussion build",
-    },
-    Part {
-        id: "rise_100",
-        section: "Departure",
-        title: "Rise to 100",
-        tempo: "90–100 BPM",
-        detail: "Drums join the ascent",
-    },
-    Part {
-        id: "cruise_a",
-        section: "Cruise",
-        title: "Cruise A",
-        tempo: "100 BPM",
-        detail: "Melody, guitar, organ and winds",
-    },
-    Part {
-        id: "cruise_b",
-        section: "Cruise",
-        title: "Cruise B",
-        tempo: "100 BPM",
-        detail: "Alternate melody and guitar strums",
-    },
-    Part {
-        id: "solo",
-        section: "Cruise",
-        title: "Guitar Solo",
-        tempo: "100 BPM",
-        detail: "16 bars of bends, strummed chords and three slurred runs",
-    },
-    Part {
-        id: "rise_110",
-        section: "Cruise",
-        title: "Rise to 110",
-        tempo: "100–110 BPM",
-        detail: "The groove gathers speed",
-    },
-    Part {
-        id: "rise_120",
-        section: "Arrival",
-        title: "Rise to 120",
-        tempo: "110–120 BPM",
-        detail: "Organ and horns build with the melody",
-    },
-    Part {
-        id: "arrive_a",
-        section: "Arrival",
-        title: "Arrive A",
-        tempo: "120 BPM",
-        detail: "Organ, horns, woodwinds and drums",
-    },
-    Part {
-        id: "arrive_b",
-        section: "Arrival",
-        title: "Arrive B",
-        tempo: "120 BPM",
-        detail: "Alternate melody with woodwind replies",
-    },
-    Part {
-        id: "fanfare",
-        section: "Arrival",
-        title: "Orbital Fanfare",
-        tempo: "120 BPM",
-        detail: "Brass theme, fast strings and light percussion",
-    },
-    Part {
-        id: "fall_110",
-        section: "Return",
-        title: "Fall to 110",
-        tempo: "120–110 BPM",
-        detail: "The organ and horns begin to ease",
-    },
-    Part {
-        id: "fall_100",
-        section: "Return",
-        title: "Fall to 100",
-        tempo: "110–100 BPM",
-        detail: "Cruise theme returns",
-    },
-    Part {
-        id: "fall_90",
-        section: "Return",
-        title: "Fall to 90",
-        tempo: "100–90 BPM",
-        detail: "Drums leave, guitar softens",
-    },
-    Part {
-        id: "fall_80",
-        section: "Return",
-        title: "Fall to 80",
-        tempo: "90–80 BPM",
-        detail: "Bells return",
-    },
-    Part {
-        id: "wind",
-        section: "Return",
-        title: "Wind Down",
-        tempo: "80 BPM",
-        detail: "Sequence and arpeggio linger",
-    },
-    Part {
-        id: "fall_70",
-        section: "Return",
-        title: "Fall to 70",
-        tempo: "80–70 BPM",
-        detail: "Hats fade away",
-    },
-    Part {
-        id: "fall_60",
-        section: "Return",
-        title: "Fall to 60",
-        tempo: "70–60 BPM",
-        detail: "Bells lead back to drift",
-    },
-    Part {
-        id: "space",
-        section: "Space",
-        title: "Space",
-        tempo: "60 BPM",
-        detail: "Halo pad, beeps and boops, a nod to the hook",
-    },
-    Part {
-        id: "space_rise_80",
-        section: "Space",
-        title: "Space Rise to 80",
-        tempo: "60–80 BPM",
-        detail: "The hook gives way to the riff and rhythm box",
-    },
-    Part {
-        id: "space_80",
-        section: "Space",
-        title: "Space 80",
-        tempo: "80 BPM",
-        detail: "A French-house riff over a rhythm box and disco bass",
-    },
-    Part {
-        id: "space_rise_100",
-        section: "Space",
-        title: "Space Rise to 100",
-        tempo: "80–100 BPM",
-        detail: "Drums, open hats and chopped chords join the riff",
-    },
-    Part {
-        id: "space_100",
-        section: "Space",
-        title: "Space 100",
-        tempo: "100 BPM",
-        detail: "The riff with drums, open hats and chopped chords",
-    },
-    Part {
-        id: "space_rise_120",
-        section: "Space",
-        title: "Space Rise to 120",
-        tempo: "100–120 BPM",
-        detail: "The riff hands over to the hook at double time",
-    },
-    Part {
-        id: "space_120",
-        section: "Space",
-        title: "Space 120",
-        tempo: "120 BPM",
-        detail: "The hook at double time, with the full house groove",
-    },
-    Part {
-        id: "space_fall_100",
-        section: "Space",
-        title: "Space Fall to 100",
-        tempo: "120–100 BPM",
-        detail: "The hook hands back to the riff",
-    },
-    Part {
-        id: "space_fall_80",
-        section: "Space",
-        title: "Space Fall to 80",
-        tempo: "100–80 BPM",
-        detail: "Drums give way to the rhythm box",
-    },
-    Part {
-        id: "space_fall_60",
-        section: "Space",
-        title: "Space Fall to 60",
-        tempo: "80–60 BPM",
-        detail: "The riff fades into the hook's quiet nod",
-    },
-];
+pub(super) use super::songbook_parts::{PARTS, Part};
 
 pub(super) fn title(id: &str) -> Option<&'static str> {
     PARTS
@@ -257,7 +17,7 @@ fn part(id: &str) -> Option<&'static Part> {
     PARTS.iter().find(|part| part.id == id)
 }
 
-/// The static ID of a Long Haul part, if `name` is one.
+/// The static ID of a music part, if `name` is one.
 #[cfg(any(test, feature = "dev-tools"))]
 pub(super) fn id(name: &str) -> Option<&'static str> {
     part(name).map(|part| part.id)
@@ -298,7 +58,7 @@ pub(super) fn show(
         440.0
     };
     let mut chosen = None;
-    metal::window(ctx, "Songbook · Long Haul", open, width, |ui| {
+    metal::window(ctx, "Songbook · Music", open, width, |ui| {
         let content_top = ui.cursor().top();
         let panel_width = (ui.available_width() - 24.0).max(0.0);
         metal::frame(ui, 235, |ui| {
@@ -441,10 +201,8 @@ mod tests {
 
     #[test]
     fn every_embedded_block_has_one_songbook_entry() {
-        let manifest: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../../assets/music/long-haul/manifest.json"
-        ))
-        .unwrap();
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../assets/music/manifest.json")).unwrap();
         let names: BTreeSet<_> = manifest["blocks"]
             .as_object()
             .unwrap()

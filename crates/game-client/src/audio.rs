@@ -7,7 +7,7 @@
 //! about -12 dB rather than -6 dB, which sounds closer to "half as loud".
 
 #[cfg(not(target_arch = "wasm32"))]
-mod long_haul;
+mod music_graph;
 
 /// Seconds for music to fade in after starting and out before stopping.
 const FADE_SECONDS: f32 = 1.2;
@@ -158,7 +158,7 @@ impl Music {
 mod output {
     use super::{
         Effect, Track,
-        long_haul::{self, LongHaul},
+        music_graph::{self, MusicGraph},
     };
     use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
     use std::io::Cursor;
@@ -213,7 +213,7 @@ mod output {
             let Some(Track::MainTheme) = track else {
                 return;
             };
-            match LongHaul::new() {
+            match MusicGraph::new() {
                 Ok(source) => {
                     self.part = Some(source.part_handle());
                     self.up_next = Some(source.up_next_handle());
@@ -223,7 +223,7 @@ mod output {
                     sink.append(source);
                     self.sink = Some(sink);
                 }
-                Err(error) => eprintln!("Long Haul could not be started: {error}"),
+                Err(error) => eprintln!("The music could not be started: {error}"),
             }
         }
 
@@ -235,16 +235,16 @@ mod output {
 
         pub fn current_block(&self) -> Option<&'static str> {
             let index = self.part.as_ref()?.load(Ordering::Acquire);
-            long_haul::part_name(index)
+            music_graph::part_name(index)
         }
 
         pub fn next_block(&self) -> Option<&'static str> {
             let index = self.up_next.as_ref()?.load(Ordering::Acquire);
-            long_haul::part_name(index)
+            music_graph::part_name(index)
         }
 
         pub fn select_part(&self, name: &str) -> bool {
-            let Some(index) = long_haul::part_index(name) else {
+            let Some(index) = music_graph::part_index(name) else {
                 return false;
             };
             let Some(selection) = &self.selection else {

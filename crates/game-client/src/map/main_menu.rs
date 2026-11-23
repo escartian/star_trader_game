@@ -240,11 +240,11 @@ fn title_page(
                 menu.pending_overwrite = None;
             }
         }
-        if wide_button(ui, Icon::Log, "Songbook · Long Haul").clicked() {
+        if wide_button(ui, Icon::Log, "Songbook · Music").clicked() {
             menu.songbook_open = true;
         }
         if let Some(title) = current_part.and_then(super::songbook::title) {
-            ui.small(format!("Now playing: Long Haul · {title}"));
+            ui.small(format!("Now playing: {title}"));
         }
         if wide_button(ui, Icon::Cancel, "Quit").clicked() {
             choice = Some(Choice::Quit);
@@ -254,7 +254,7 @@ fn title_page(
     ui.add_space(12.0);
     ui.vertical_centered(|ui| {
         ui.small(format!(
-            "v{} · offline prototype · theme “Long Haul”",
+            "v{} · offline prototype",
             env!("CARGO_PKG_VERSION")
         ));
     });

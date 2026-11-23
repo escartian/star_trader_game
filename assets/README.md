@@ -187,13 +187,18 @@ convenience; the runtime GLB has no Blender dependency.
 
 ## Music
 
-`music/main-theme.ogg` is “Long Haul”, the main menu theme: an original Strudel
-composition whose source is `source/music/main-theme.strudel.js` (paste it into
-strudel.cc to play or edit). It is synthesizer-only (pads, arpeggio, lead, synth drums and spacey FM
-bell and star chirps). Its tempo eases through 60, 80, 100, 110, 100 and 80 BPM
-over 48 bars (4 bars held, 4 bars ramping per section): the pad and chirps
-thin as it speeds up while a countermelody and chord stabs join, and it loops
-seamlessly every 135.1 s. All layers share Strudel's reverb (a 4 s hall). `tools/music/README.md` explains the export (`node tools/music/render.mjs`).
+`music/` holds the game's music: Ogg Vorbis blocks and `manifest.json`, which
+the game stitches together into an endless, changing soundtrack that rises
+from 60 to 120 BPM and settles back. It is an original Strudel composition:
+`source/music/library.strudel.js` holds the instruments and layers, and
+`main.strudel.js`, `space.strudel.js` and `funk.strudel.js` hold the main
+track and the space and funk families. Paste the generated
+`source/music/music.strudel.js` into strudel.cc to play or edit a demo. Pitched
+voices are General MIDI instruments from the MIT-licensed FluidR3_GM soundfont
+(local copies in `source/music/soundfonts/`); drums and effects are Strudel
+synthesizers. `tools/music/README.md` describes the music and its export
+(`node tools/music/render.mjs`), which re-renders only the blocks whose sources
+changed (`music/render-cache.json`).
 
 ## Trade station model
 

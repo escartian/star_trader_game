@@ -58,7 +58,7 @@ window.load = async (code) => {
   window.piece = await evaluate(code, false);
   const blocks = window.blocks
     ? Object.fromEntries(Object.entries(window.blocks).map(([name, block]) =>
-        [name, { from: block.from, to: block.to, bpm: block.bpm, next: block.next }]))
+        [name, { from: block.from, to: block.to, bpm: block.bpm, next: block.next, family: block.family }]))
     : null;
   return { tempoMap: window.tempoMap ?? null, blocks, start: window.musicStart ?? null };
 };

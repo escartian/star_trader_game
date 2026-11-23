@@ -23,6 +23,7 @@ mod render;
 mod shell;
 mod songbook;
 mod songbook_graph;
+mod songbook_parts;
 mod toolbar;
 mod visuals;
 

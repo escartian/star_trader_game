@@ -69,7 +69,7 @@ impl Map {
             view if view.starts_with("menu-songbook@") => {
                 // The map view as if a part were playing: menu-songbook@cruise_a.
                 let id = super::songbook::id(&view["menu-songbook@".len()..])
-                    .ok_or("menu-songbook@PART needs a Long Haul part ID")?;
+                    .ok_or("menu-songbook@PART needs a music part ID")?;
                 self.menu_seed = 0;
                 self.open_save_chooser("data/slot-1.json".into(), None);
                 if let Some(menu) = &mut self.save_recovery {

@@ -54,11 +54,13 @@ Music is client I/O in `game-client/src/audio.rs`. The map decides which track
 should play (the main menu theme, or in game when the player enables it) and
 the gain from the Settings sliders; `audio` owns the device through rodio
 (desktop only; the browser build is silent). `main` opens the device and hands
-it to the map, so tests and captures never touch audio hardware. Long Haul is
-an original Strudel composition kept in `assets/source/music/`, played with
+it to the map, so tests and captures never touch audio hardware. The music is
+an original Strudel composition kept in `assets/source/music/` (a shared
+library plus one file per family of blocks: main, space and funk), played with
 Strudel's synthesizers and FluidR3_GM soundfont instruments whose sample data is
 kept alongside it. Its exported Ogg blocks (eight bars unless a block sets its
-own length) and transition manifest are embedded in the desktop client.
+own length) and transition manifest in `assets/music/` are embedded in the
+desktop client (`audio/music_graph.rs`).
 The audio source chooses a weighted successor at each exact sample-frame boundary
 and mixes the previous block's reverb tail under the new block. The exporter
 balances the blocks' active RMS and records their final relative levels; a

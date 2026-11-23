@@ -1,4 +1,4 @@
-//! The Songbook's transition map. Long Haul's parts are nodes placed by tempo
+//! The Songbook's transition map. The music's parts are nodes placed by tempo
 //! (60 BPM on the left, 120 on the right) inside outlines for their sections,
 //! with arrows for the transitions the music may take. Drawing only: the part
 //! table and the window live in `songbook`, playback in `audio`.
@@ -10,19 +10,22 @@ use std::sync::OnceLock;
 
 /// The map's smallest size in points. It stretches to fill a larger window
 /// (spreading the parts out) and scrolls in a smaller one.
-pub(super) const MIN_CANVAS: Vec2 = Vec2::new(760.0, 415.0);
+pub(super) const MIN_CANVAS: Vec2 = Vec2::new(760.0, 540.0);
 const NODE_RADIUS: f32 = 10.0;
 /// Canvas margin left and right of the 60 and 120 BPM columns, in points,
 /// leaving room for arrows that bow outward from the edge columns.
 const SIDE_MARGIN: f32 = 90.0;
 
 /// Rows as fractions of the canvas height, from the top.
-const ROW_EXTRA: f32 = 0.11;
-const ROW_CLIMB: f32 = 0.26;
-const ROW_ALTERNATE: f32 = 0.39;
-const ROW_RETURN: f32 = 0.54;
-const ROW_SPACE_RISE: f32 = 0.70;
-const ROW_SPACE: f32 = 0.81;
+const ROW_FUNK_RISE: f32 = 0.05;
+const ROW_FUNK: f32 = 0.12;
+const ROW_FUNK_FALL: f32 = 0.19;
+const ROW_EXTRA: f32 = 0.30;
+const ROW_CLIMB: f32 = 0.40;
+const ROW_ALTERNATE: f32 = 0.49;
+const ROW_RETURN: f32 = 0.60;
+const ROW_SPACE_RISE: f32 = 0.73;
+const ROW_SPACE: f32 = 0.82;
 const ROW_SPACE_FALL: f32 = 0.92;
 
 /// Each part's tempo column in BPM (a ramp sits midway between its two
@@ -61,6 +64,16 @@ const PLACES: &[(&str, f32, f32)] = &[
     ("space_fall_100", 110.0, ROW_SPACE_FALL),
     ("space_fall_80", 90.0, ROW_SPACE_FALL),
     ("space_fall_60", 70.0, ROW_SPACE_FALL),
+    ("funk_60", 60.0, ROW_FUNK),
+    ("funk_80", 80.0, ROW_FUNK),
+    ("funk_100", 100.0, ROW_FUNK),
+    ("funk_120", 120.0, ROW_FUNK),
+    ("funk_rise_80", 70.0, ROW_FUNK_RISE),
+    ("funk_rise_100", 90.0, ROW_FUNK_RISE),
+    ("funk_rise_120", 110.0, ROW_FUNK_RISE),
+    ("funk_fall_100", 110.0, ROW_FUNK_FALL),
+    ("funk_fall_80", 90.0, ROW_FUNK_FALL),
+    ("funk_fall_60", 70.0, ROW_FUNK_FALL),
 ];
 
 fn section_color(section: &str) -> Color32 {
@@ -71,6 +84,7 @@ fn section_color(section: &str) -> Color32 {
         "Cruise" => GREEN,
         "Arrival" => AMBER,
         "Return" => Color32::from_rgb(230, 140, 200),
+        "Funk" => Color32::from_rgb(255, 120, 90),
         _ => Color32::from_rgb(175, 145, 255),
     }
 }
@@ -86,10 +100,9 @@ pub(super) struct Transition {
 pub(super) fn transitions() -> &'static [Transition] {
     static TRANSITIONS: OnceLock<Vec<Transition>> = OnceLock::new();
     TRANSITIONS.get_or_init(|| {
-        let manifest: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../../assets/music/long-haul/manifest.json"
-        ))
-        .unwrap_or_default();
+        let manifest: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../assets/music/manifest.json"))
+                .unwrap_or_default();
         let known = |name: &str| {
             PARTS
                 .iter()

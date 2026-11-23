@@ -10,11 +10,14 @@ and do not change if the remote copies do.
 | --- | --- | --- |
 | `0040_FluidR3_GM_sf2_file.js` | `gm_epiano1:1` | keys |
 | `0050_FluidR3_GM_sf2_file.js` | `gm_epiano2:1` | lift (root accents) |
+| `0070_FluidR3_GM_sf2_file.js` | `gm_clavinet:1` | clavinet (funk pieces) |
 | `0080_FluidR3_GM_sf2_file.js` | `gm_celesta:3` | bells |
 | `0100_FluidR3_GM_sf2_file.js` | `gm_music_box:3` | stars |
 | `0110_FluidR3_GM_sf2_file.js` | `gm_vibraphone:3` | countermelody |
 | `0160_FluidR3_GM_sf2_file.js` | `gm_drawbar_organ:3` | organ |
 | `0270_FluidR3_GM_sf2_file.js` | `gm_electric_guitar_clean:2` | guitar, rhythm guitar |
+| `0281_FluidR3_GM_sf2_file.js` | `gm_electric_guitar_muted:7` | chicken-scratch guitar (funk pieces) |
+| `0360_FluidR3_GM_sf2_file.js` | `gm_slap_bass_1:2` | slap bass (funk pieces) |
 | `0380_FluidR3_GM_sf2_file.js` | `gm_synth_bass_1:1` | bass |
 | `0410_FluidR3_GM_sf2_file.js` | `gm_viola:1` | viola |
 | `0460_FluidR3_GM_sf2_file.js` | `gm_orchestral_harp:1` | harp (space pieces) |
@@ -22,6 +25,7 @@ and do not change if the remote copies do.
 | `0501_FluidR3_GM_sf2_file.js` | `gm_synth_strings_1:3` | ensemble |
 | `0540_FluidR3_GM_sf2_file.js` | `gm_synth_choir:2` | choir (space pieces) |
 | `0600_FluidR3_GM_sf2_file.js` | `gm_french_horn:1` | horns |
+| `0610_FluidR3_GM_sf2_file.js` | `gm_brass_section:3` | horn stabs (funk pieces) |
 | `0620_FluidR3_GM_sf2_file.js` | `gm_synth_brass_1:1` | stabs |
 | `0730_FluidR3_GM_sf2_file.js` | `gm_flute:2` | woodwinds |
 | `0800_FluidR3_GM_sf2_file.js` | `gm_lead_1_square:2` | arpeggio |

@@ -73,6 +73,8 @@ const instruments = {
   boops: { sound: "triangle", boost: 1 },
   hook: { sound: "sine", boost: 1.8 },
   riff: { sound: "sawtooth", boost: 2.5 },
+  laser: { sound: "sawtooth", boost: 1.5 },
+  harp: { sound: "gm_orchestral_harp:1", boost: 1 },
   chop: { sound: "supersaw", boost: 1.27 },
   hookLow: { sound: "square", boost: 1.75 },
   hookEcho: { sound: "sawtooth", boost: 2.5 },
@@ -182,6 +184,12 @@ const riffPhrases = [
   ['~ e5 a5 ~ d6 ~ a5 e5 ~ g5 ~ d6 e6 ~ g6 ~', '~ a5 d6 ~ e6 ~ g6 ~ a6 ~ g6 ~ e6 d6 ~ ~'], // A7sus
 ]
 const riffNotes = '<' + riffPhrases.flatMap((phrase) => phrase.map((bar) => '[' + bar + ']')).join(' ') + '>'
+// Laser-harp sweeps (theme A): up and down each chord's voicing in eighth
+// notes, one octave above it; double time at 120 BPM like the hook.
+const laserSweep = '0 2 4 6 8 6 4 2'
+// Orchestral-harp glissandi: a quick run up the chord in the first quarter of
+// each chord's first bar (chords last two bars in the space pieces).
+const harpGlissando = "<[[0 1 2 3 4 5 6 7 8 9] ~ ~ ~] ~>"
 // Computer beeps (square, high) and boops (triangle, low): steady pitches from
 // D minor pentatonic in short bursts, like ship telemetry.
 const beepNotes = "<[d6 d6 ~ a6] ~ [~ c7 c7 ~] ~ [f6 ~ f6 ~] ~ [~ ~ g6 a6] ~>"
@@ -213,7 +221,7 @@ function block(settings) {
     bells: 0, stars: 0, starsSparse: 0.5, space: 0,
     pad: 0, pump: 0, pluck: 0, viola: 0,
     chords, roots, halo: 0, choir: 0, crystal: 0, beeps: 0, seqbass: 0, seqSteps: eighthSteps,
-    hook: 0, hookLow: 0, hookEcho: 0, riff: 0, chop: 0, openhat: 0,
+    hook: 0, hookLow: 0, hookEcho: 0, riff: 0, chop: 0, openhat: 0, laser: 0, harp: 0,
     machine: 0, zaps: 0, ...settings }
   const from = o.from
   const to = o.to ?? o.from
@@ -577,6 +585,27 @@ function block(settings) {
         .gain(level(o.hookEcho)))
     }
   }
+  if (on(o.laser)) {
+    // A laser harp in the manner of Jarre's: a bright sawtooth pluck snapped
+    // open by a fast resonant filter, shimmering through a phaser and ringing
+    // out in long echoes and the deep reverb.
+    layers.push(play(n(laserSweep).chord(o.chords).voicing().transpose(12), 'laser')
+      .attack(0.002).decay(0.35).sustain(0).release(0.3)
+      .lpf(900).lpenv(5).lpdecay(0.12).lpq(6)
+      .phaser(0.4).phaserdepth(0.3).phasersweep(1200)
+      .delay(0.45).delaytime(echo).delayfeedback(0.5)
+      .pan(sine.range(0.2, 0.8).slow(2))
+      .orbit(2).room(0.6).size(deep)
+      .gain(level(o.laser)))
+  }
+  if (on(o.harp)) {
+    // Orchestral-harp glissandi that mark each chord change.
+    layers.push(play(n(harpGlissando).chord(o.chords).voicing(), 'harp')
+      .decay(1.4).sustain(0).release(0.8)
+      .pan(sine.range(0.3, 0.7).slow(8))
+      .orbit(2).room(0.6).size(deep)
+      .gain(level(o.harp)))
+  }
   if (on(o.riff)) {
     // The theme-B riff: clipped sawtooth notes through a resonant filter that
     // sweeps open and shut, bouncing between the speakers.
@@ -659,34 +688,36 @@ const spaceAt = {
   // Theme A: the hook as a quiet staccato nod, with a faint echo.
   60: {
     keys: 0.12, ensemble: 0.2, bass: 0.26, space: 0.19, sequence: 0.1, pad: 0.1, halo: 0.12,
-    crystal: 0.08, beeps: 0.1, hook: 0.09, hookEcho: 0.04, bells: 0.1, stars: 0.07,
+    crystal: 0.08, beeps: 0.1, hook: 0.09, hookEcho: 0.04, laser: 0.06, bells: 0.1, stars: 0.07,
     starsSparse: 0.6
   },
   // Theme B: the riff over the rhythm box and a disco octave bass.
   80: {
     keys: 0.08, ensemble: 0.12, bass: 0, seqbass: 0.1, seqSteps: discoSteps, halo: 0.09,
-    pad: 0.08, sequence: 0.06, crystal: 0.06, beeps: 0.08, machine: 0.5, riff: 0.09,
+    pad: 0.08, sequence: 0.06, crystal: 0.06, beeps: 0.08, machine: 0.5, riff: 0.09, harp: 0.05,
     bells: 0.08, stars: 0.06
   },
   // Theme B with drums, open hats, chopped chords and the choir.
   100: {
     keys: 0.06, ensemble: 0.1, bass: 0.2, seqbass: 0.12, seqSteps: discoSteps, halo: 0.06,
     choir: 0.07, pad: 0.05, crystal: 0.04, beeps: 0.06, drums: 1, hats: 0.12, openhat: 0.03,
-    toms: 0.05, riff: 0.13, chop: [0.03, 0.06]
+    toms: 0.05, riff: 0.13, chop: [0.03, 0.06], harp: 0.05
   },
   // Theme A at double time, with the full house groove and the echo canon.
   120: {
     keys: 0.05, ensemble: 0.12, bass: 0.4, seqbass: 0.13, seqSteps: sixteenthSteps, choir: 0.08,
     pump: 0.06, chop: 0.06, arp: 0.1, arpLpf: 3200, arpPhaserRate: 0.25, arpPhaserDepth: 0.16,
     arpPhaserSweep: 450, zaps: 0.06, beeps: 0.04, drums: 1, hats: 0.14, openhat: 0.04,
-    shaker: 0.12, ride: 0.05, toms: 0.07, hook: 0.16, hookLow: 0.11, hookEcho: 0.08, pad: 0.05
+    shaker: 0.12, ride: 0.05, toms: 0.07, hook: 0.16, hookLow: 0.11, hookEcho: 0.08, pad: 0.05,
+    laser: 0.07
   },
 }
 // Levels that ease across a space ramp; other settings switch (see spaceRamp).
 const fixedSettings = ['drums', 'starsSparse', 'arpPhaserRate', 'arpPhaserDepth', 'arpPhaserSweep']
 // A 20 BPM ramp between two space pieces: every level eases from where the
 // first piece ends to where the second begins. Other settings come from the
-// faster piece, and the drums come in or go out over the second half.
+// faster piece, the drums come in or go out over the second half, and an
+// orchestral harp plays its glissandi throughout.
 function spaceRamp(from, to, next) {
   const first = spaceAt[from]
   const second = spaceAt[to]
@@ -702,6 +733,8 @@ function spaceRamp(from, to, next) {
       : faster[key] ?? first[key] ?? second[key]
   }
   settings.drums = first.drums === second.drums ? first.drums : second.drums ? 'in' : 'out'
+  // A harp glissando marks each chord change, linking the two themes.
+  settings.harp = 0.09
   return block({ from, to, ...spaceHarmony, ...settings, next })
 }
 

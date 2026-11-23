@@ -17,6 +17,7 @@ and do not change if the remote copies do.
 | `0270_FluidR3_GM_sf2_file.js` | `gm_electric_guitar_clean:2` | guitar, rhythm guitar |
 | `0380_FluidR3_GM_sf2_file.js` | `gm_synth_bass_1:1` | bass |
 | `0410_FluidR3_GM_sf2_file.js` | `gm_viola:1` | viola |
+| `0460_FluidR3_GM_sf2_file.js` | `gm_orchestral_harp:1` | harp (space pieces) |
 | `0480_FluidR3_GM_sf2_file.js` | `gm_string_ensemble_1:2` | ostinato |
 | `0501_FluidR3_GM_sf2_file.js` | `gm_synth_strings_1:3` | ensemble |
 | `0540_FluidR3_GM_sf2_file.js` | `gm_synth_choir:2` | choir (space pieces) |

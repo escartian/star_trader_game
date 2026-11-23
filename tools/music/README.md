@@ -66,20 +66,25 @@ clipped, syncopated sixteenth notes high on each chord (up to A6) through a
 resonant filter sweep, over a disco octave bass. `space` (60 BPM) has a halo
 pad, glassy crystal notes, atmosphere notes over faint radio static, computer
 beeps and boops (short, steady square and triangle tones from D minor
-pentatonic in telemetry-like bursts) and a quiet nod to the hook with a faint
-echo. `space_80` plays the riff over a soft rhythm box (light kicks,
-woodblock-like clicks and maracas). `space_100` adds the main drums, disco open
+pentatonic in telemetry-like bursts), a quiet nod to the hook with a faint
+echo, and a laser harp: a bright sawtooth pluck snapped open by a fast
+resonant filter, sweeping up and down each chord in eighth notes through a
+phaser and long echoes (double time at 120 BPM, like the hook). `space_80`
+plays the riff over a soft rhythm box (light kicks, woodblock-like clicks and
+maracas), with a quiet orchestral-harp glissando up the chord at each chord
+change, as at 100 BPM. `space_100` adds the main drums, disco open
 hats, chopped house chords (a high voicing on every offbeat under a slow filter
 sweep) and a synth choir. `space_120` returns to the hook at double time with a
 square an octave below, an echo canon (the hook an eighth late, as filtered
-plucks filling its rests), the house groove, pumping chords, an arpeggio and
-laser zaps. They are reached from the blocks
+plucks filling its rests), the laser harp, the house groove, pumping chords,
+an arpeggio and laser zaps. They are reached from the blocks
 at their tempo (depart, wind and the rise to 80; cruise, the solo and the fall
 to 100; arrival, the fanfare and the rise to 120) and return to them. Six
 20 BPM space ramps (`space_rise_80` to `space_fall_60`) also link neighbouring
 space pieces directly, easing every level from where one piece ends to where
-the next begins (crossfading the themes), so the music can stay in space while
-it speeds up or slows.
+the next begins (crossfading the themes), with orchestral-harp glissandi at
+every chord change, so the music can stay in space while it speeds up or
+slows.
 
 Every bar uses four evenly spaced kick hits. Quiet ride and toms join the
 arrival blocks and fade in and out with the tempo ramps; the upward ramps add

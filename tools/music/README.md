@@ -9,45 +9,43 @@ its fixed demo. The game embeds the exported Ogg Vorbis audio in `assets/music/`
 | `long-haul.strudel.js` | `long-haul/*.ogg`, `manifest.json` | Main menu; in game when enabled |
 | `main-theme.strudel.js` | `main-theme.ogg` | Earlier 48-bar loop, retained as a source and export |
 
-Long Haul has eight-bar blocks: steady drift, depart, cruise and arrive with
-variations; 10 BPM ramp blocks from 60 to 120 and back; a 16-bar guitar solo
-split into two blocks (`solo` always continues into `solo_b`) and a 60 BPM space
-interlude. A dry FM/triangle electric-guitar synth plays short answer phrases
-in depart, cruise and arrival, then strums chords in the solo, alternating
-rhythmic strums with held high chords and rests. Three short note-by-note runs,
-at 1.8 times the eighth-note rate, and seven whole- or half-step bends into held
-chords spread across the two halves. A quiet arpeggio and a rhythm guitar play
-under every solo bar, with off-beat chord stabs beneath the strums and a ringing
-chord plus re-strike beneath each held note, while organ and horns gradually
-join. The solo has less echo and room effect; its recurring phrases have no
-vibrato.
-Organ chords and horn/woodwind-like synth replies enter during departure,
-build through cruise and the tempo ramps, and peak at arrival. All of these
-voices are written in Strudel; no orchestra or instrument samples are used.
-The 120 BPM Orbital Fanfare is a separate eight-bar theme with brass-like calls
-and a clipped string-machine rhythm. Quiet ride and tuned tom voices join the
-arrival blocks and fade in and out with the tempo ramps; the main kick remains
-even and the hats are slightly softer there.
-Short FM keyboard chords replace the sustained pad; the interlude uses spaced
-notes and noise ticks instead of a held low drone.
-Arrival keeps a gentle phaser sweep on the arpeggio. The sequence and arpeggio
-elsewhere now use shallow sweeps; the regular lead has no vibrato.
-A short, unmodulated midrange ensemble figure now supports every block, with
-more of it and more sequence in the slow sections. Space also has a quiet moving
-bass. These parts have rests between notes, so the harmony feels present
-without restoring the old sustained drone.
-A phased, filter-swept synth sequence moves through the
-interlude and early ascent, with a quieter reprise as the music winds down.
-The upward ramps add an even shaker pulse and a warm FM
-keyboard pulse that build into the 120 BPM arrival. Quieter versions continue
-through depart and cruise before the parts fade on descent. Every
-bar uses four evenly spaced kick hits, without an end-of-bar pickup. The kick
-and snare sit lower in the mix while the lead melody is stronger in cruise
-and arrival. Each
-source block declares weighted possible successors
-whose starting tempo matches its ending tempo. The game chooses randomly at
+Long Haul is made of blocks, eight bars long unless a block sets `bars`:
+steady drift, depart, cruise and arrive with variations; 10 BPM ramp blocks
+from 60 to 120 and back; the 120 BPM Orbital Fanfare; a 16-bar guitar solo;
+and a 60 BPM space interlude. Each block declares weighted possible successors
+whose starting tempo matches its ending tempo, and the game chooses randomly at
 each boundary. Strudel.cc uses the fixed demo order and a single live tempo;
 the exporter renders the block-specific tempo for each bar.
+
+**Instruments.** Every pitched voice is a Strudel General MIDI instrument in its
+MIT-licensed FluidR3_GM version (the `instruments` table in the source; see
+`assets/source/music/soundfonts/`). Electric piano chords and a second electric
+piano's root accents, synth strings, synth bass, a square-lead arpeggio, a
+chiff-lead sequence and a sawtooth lead carry the main texture; drawbar organ,
+French horn and flute replies enter during departure, build through cruise and
+the tempo ramps, and peak at arrival, with a vibraphone countermelody,
+synth-brass stabs and a clipped string-section ostinato in the fastest blocks.
+Celesta bells, music-box stars and an atmosphere pad colour the slow blocks and
+the interlude. Each instrument has a `boost` that brings it to the level the
+earlier synth voice had, so the block levels keep their balance. Drums,
+shaker, hats, ride and the interlude's radio-noise ticks remain Strudel
+synthesizers and noise; tuned toms use the melodic-tom sample.
+
+**Guitar.** A clean electric guitar enters in the rise to 70 BPM and plays short
+answer phrases through the rises, depart, cruise and arrival, fading out in the
+fall to 70 BPM. The rises to 90 and 110 BPM, the alternate cruise and arrival
+blocks and the descent into the solo answer with two-note strums. A quiet
+rhythm guitar enters in the rise to 90 BPM, stays through cruise and arrival
+and fades on the descent. Chords in guitar parts are strummed: each string
+starts slightly after the one before. The solo is a single 16-bar block: a
+singing single-note line with six bends up into held notes, strummed chords
+and double-stops at the phrase peaks, rests between phrases, and three short
+note-by-note runs at 1.8 times the eighth-note rate. A quiet arpeggio, the
+rhythm guitar, organ and horns support it, and it has less echo and room effect.
+
+Every bar uses four evenly spaced kick hits. Quiet ride and toms join the
+arrival blocks and fade in and out with the tempo ramps; the upward ramps add
+an even shaker pulse and electric-piano root accents that build into arrival.
 
 To hear the source in a browser, open [strudel.cc](https://strudel.cc), paste
 `assets/source/music/long-haul.strudel.js` into its editor and click **Play**
@@ -70,6 +68,9 @@ node tools/music/render.mjs assets/source/music/main-theme.strudel.js assets/mus
 ```
 
 Set `CHROME=/path/to/chrome` if Chrome is not at the macOS default location.
+Sampled instruments load from local copies in `assets/source/music/soundfonts/`
+(see its README for sources, licences and how to add one), so exports need no
+network access.
 The exporter renders offline in headless Chrome one bar at a time. Each bar's
 notes can ring for nine seconds after its end. It adds bars at their exact
 start frames, compresses large average loudness differences between blocks,

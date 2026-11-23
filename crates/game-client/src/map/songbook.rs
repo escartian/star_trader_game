@@ -86,21 +86,14 @@ const PARTS: &[Part] = &[
         section: "Cruise",
         title: "Cruise B",
         tempo: "100 BPM",
-        detail: "Alternate melody",
+        detail: "Alternate melody and guitar strums",
     },
     Part {
         id: "solo",
         section: "Cruise",
         title: "Guitar Solo",
         tempo: "100 BPM",
-        detail: "Strummed chords, bends and one run",
-    },
-    Part {
-        id: "solo_b",
-        section: "Cruise",
-        title: "Guitar Solo II",
-        tempo: "100 BPM",
-        detail: "Higher chords, two runs and more bends",
+        detail: "16 bars of bends, strummed chords and three short runs",
     },
     Part {
         id: "rise_110",

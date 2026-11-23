@@ -140,8 +140,8 @@ function checkBlocks(blocks, start) {
   if (!blocks[start]) throw new Error(`Start block ${start} does not exist`);
   for (const [name, block] of Object.entries(blocks)) {
     if (!/^[a-z][a-z0-9_]*$/.test(name)) throw new Error(`Bad block name ${name}`);
-    if (block.bpm?.length !== 8 || block.bpm.some((bpm) => !(bpm > 0))) {
-      throw new Error(`Block ${name} needs eight positive bar tempos`);
+    if (!block.bpm?.length || block.bpm.some((bpm) => !(bpm > 0))) {
+      throw new Error(`Block ${name} needs a positive tempo for each bar`);
     }
     if (block.from !== block.bpm[0] || !(block.to > 0)) {
       throw new Error(`Block ${name} has inconsistent endpoints`);

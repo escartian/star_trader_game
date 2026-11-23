@@ -1,6 +1,11 @@
 // A headless Chrome session that evaluates a Strudel source and renders it
 // offline, one bar at a time (OfflineAudioContext: faster than real time, no
 // audio device). Used by render.mjs.
+//
+// Sampled instruments come from Strudel's General MIDI soundfonts
+// (@strudel/soundfonts). Their sample data is served from local copies in
+// assets/source/music/soundfonts/, so a render never downloads anything; a
+// sound whose font file is missing there fails to load and is reported.
 import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
@@ -10,8 +15,17 @@ import puppeteer from 'puppeteer-core';
 const here = dirname(fileURLToPath(import.meta.url));
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
-const page = `<!doctype html><meta charset="utf-8"><script type="module">
+const fonts = join(here, '../../assets/source/music/soundfonts');
+
+// The soundfont loader imports @strudel/core and @strudel/webaudio; both map
+// to the one bundled Strudel so its sounds register with the same engine.
+const page = `<!doctype html><meta charset="utf-8">
+<script type="importmap">
+{ "imports": { "@strudel/core": "/strudel/index.mjs", "@strudel/webaudio": "/strudel/index.mjs" } }
+</script>
+<script type="module">
 import { initStrudel, evaluate, renderPatternAudio } from '/strudel/index.mjs';
+import { registerSoundfonts, setSoundfontUrl } from '/soundfonts/fontloader.mjs';
 // renderPatternAudio "downloads" its WAV through an object URL; keep the blob.
 const createObjectURL = URL.createObjectURL;
 URL.createObjectURL = (blob) => { window.renderedWav = blob; return createObjectURL(blob); };
@@ -39,6 +53,8 @@ OfflineAudioContext.prototype.startRendering = async function () {
 // or blocks (each with its tempo per bar and the blocks that may follow).
 window.load = async (code) => {
   await initStrudel();
+  setSoundfontUrl('/fonts');
+  registerSoundfonts();
   window.piece = await evaluate(code, false);
   const blocks = window.blocks
     ? Object.fromEntries(Object.entries(window.blocks).map(([name, block]) =>
@@ -70,6 +86,9 @@ window.ready = true;
 export async function openSession(code) {
   if (!existsSync(chrome)) throw new Error(`Chrome not found at ${chrome}; set CHROME=/path/to/chrome`);
   const dist = join(here, 'node_modules/@strudel/web/dist');
+  const soundfonts = join(here, 'node_modules/@strudel/soundfonts');
+  // URL prefix -> directory; every file is JavaScript.
+  const roots = [['/strudel/', dist], ['/soundfonts/', soundfonts], ['/fonts/', fonts]];
   const server = createServer((request, response) => {
     if (request.url === '/favicon.ico') {
       response.writeHead(204).end();
@@ -79,8 +98,9 @@ export async function openSession(code) {
       response.writeHead(200, { 'content-type': 'text/html' }).end(page);
       return;
     }
-    const path = request.url.startsWith('/strudel/') ? join(dist, request.url.slice(9).split('?')[0]) : null;
-    if (!path || !path.startsWith(dist) || !existsSync(path)) {
+    const root = roots.find(([prefix]) => request.url.startsWith(prefix));
+    const path = root ? join(root[1], request.url.slice(root[0].length).split('?')[0]) : null;
+    if (!path || !path.startsWith(root[1]) || !existsSync(path)) {
       response.writeHead(404).end();
       return;
     }

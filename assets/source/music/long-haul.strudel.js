@@ -12,8 +12,11 @@
 // block (with its reverb tail) to assets/music/long-haul/ and writes the
 // transitions to manifest.json; see tools/music/README.md.
 //
-// Every block plays the same 8-chord cycle, one chord per bar, in D minor:
+// Most blocks play the same 8-chord cycle, one chord per bar, in D minor:
 // i - VI - III - VII, then i - VI - iv - V (sus, resolving on the next block).
+// The space pieces (60, 80, 100 and 120 BPM, mostly inspired by space-opera
+// albums) hold each chord for two bars instead: i - VI - iv - V. Each faster
+// one adds instruments and percussion, so the motion builds with the tempo.
 // A block's tempo eases from `from` to `to` BPM over its bars, and a block
 // may only lead to blocks that start at the tempo it ends on.
 //
@@ -30,6 +33,8 @@ setcps(80 / 60 / 4)
 // whenever its settings change), so all use one room size, `hall`: the decay
 // in seconds. Layers differ only in how much they send to it (`room`).
 const hall = 4
+// The space layers send to a second, longer reverb on orbit 2 (seconds).
+const deep = 7
 
 // Strudel's General MIDI instruments, each in its FluidR3_GM version (MIT
 // licence; the `:n` index selects it). `boost` (a postgain) brings each sample
@@ -59,6 +64,18 @@ const instruments = {
   pad: { sound: "supersaw", boost: 0.57 },
   pump: { sound: "supersaw", boost: 0.76 },
   pluck: { sound: "sawtooth", boost: 1.75 },
+  // The space pieces. Sparse voices (crystal, beeps, zaps) are boosted less
+  // than their average level would suggest, so single notes do not jump out.
+  halo: { sound: "gm_pad_halo:1", boost: 0.88 },
+  choir: { sound: "gm_synth_choir:2", boost: 0.68 },
+  crystal: { sound: "gm_fx_crystal:4", boost: 2 },
+  beeps: { sound: "square", boost: 1 },
+  boops: { sound: "triangle", boost: 1 },
+  hook: { sound: "supersaw", boost: 2.15 },
+  hookLow: { sound: "square", boost: 1.75 },
+  hookEcho: { sound: "sawtooth", boost: 1.75 },
+  seqbass: { sound: "sawtooth", boost: 1.25 },
+  zaps: { sound: "sawtooth", boost: 2.5 },
 }
 const play = (pattern, name) => pattern.s(instruments[name].sound).postgain(instruments[name].boost)
 
@@ -128,6 +145,31 @@ const arpWide = '0 4 7 4 1 5 8 5 2 6 9 6 3 7 10 7'
 // leave room for the bells and for the more regular arpeggio that arrives later.
 const spaceSequence = '0 ~ 4 ~ 2 ~ 5 ~ 1 ~ 4 ~ 3 ~ 6 ~'
 
+// The space pieces: two bars per chord, ending on A to resolve like the others.
+const spaceHarmony = { chords: "<Dm9 Dm9 Bb^7 Bb^7 Gm9 Gm9 A7sus A7sus>", roots: "<d2 d2 bb1 bb1 g1 g1 a1 a1>" }
+// The sequencer's roots as MIDI numbers (d2, bb1, g1, a1), for adding steps.
+const spaceRootNumbers = "<38 38 34 34 31 31 33 33>"
+// The space hook: one two-bar phrase per chord, eight eighth-note steps a
+// bar. It keeps these note values in every space piece, so the tempo alone
+// speeds it up: a quiet nod at 60 BPM, then 80 and 100, and at 120 exactly
+// double time, where an echo canon fills its rests.
+const hookPhrases = [
+  ['d5 ~ a5 ~ f5 e5 ~ d5', 'e5@2 f5 ~ a5@3 ~'], // Dm9
+  ['d5 ~ f5 ~ a5 bb5 ~ a5', 'f5@2 d5 ~ c5@3 ~'], // Bb^7
+  ['bb4 ~ d5 ~ f5 a5 ~ g5', 'a5@2 bb5 ~ d6@3 ~'], // Gm9
+  ['e5 ~ a5 ~ g5 e5 ~ d5', 'e5@2 g5 ~ a5@3 ~'], // A7sus, resolving to D
+]
+const hookNotes = '<' + hookPhrases.flatMap((phrase) => phrase.map((bar) => '[' + bar + ']')).join(' ') + '>'
+// One octave down: "a5" -> "a4".
+const octaveDown = (notes) => notes.replace(/([a-g]b?)(\d)/g, (_, name, octave) => name + (Number(octave) - 1))
+// Computer beeps (square, high) and boops (triangle, low): steady pitches from
+// D minor pentatonic in short bursts, like ship telemetry.
+const beepNotes = "<[d6 d6 ~ a6] ~ [~ c7 c7 ~] ~ [f6 ~ f6 ~] ~ [~ ~ g6 a6] ~>"
+const boopNotes = "<~ [~ ~ d4 ~] ~ [a3 ~ ~ ~] ~ [~ f4 ~ ~] ~ [~ ~ ~ [d4 a3]]>"
+// Sequencer steps above the root, in semitones: root, octave and fifth.
+const eighthSteps = '[0 12 7 12]*2'
+const sixteenthSteps = '[0 12 7 12]*4'
+
 // One value per bar as a pattern string: '<a b c ...>'.
 const perBar = (values) => '<' + values.join(' ') + '>'
 const on = (value) => (Array.isArray(value) ? value[0] > 0 || value[1] > 0 : value > 0)
@@ -147,7 +189,10 @@ function block(settings) {
     counter: 0, stabs: 0, ostinato: 0, drums: 0, hats: 0, shaker: 0, lift: 0,
     ride: 0, toms: 0,
     bells: 0, stars: 0, starsSparse: 0.5, space: 0,
-    pad: 0, pump: 0, pluck: 0, viola: 0, ...settings }
+    pad: 0, pump: 0, pluck: 0, viola: 0,
+    chords, roots, halo: 0, choir: 0, crystal: 0, beeps: 0, seqbass: 0, seqSteps: eighthSteps,
+    hook: 0, hookLow: 0, hookEcho: 0,
+    machine: 0, zaps: 0, ...settings }
   const from = o.from
   const to = o.to ?? o.from
   const bars = [...Array(o.bars ?? 8).keys()]
@@ -162,7 +207,7 @@ function block(settings) {
   if (on(o.keys)) {
     // Short, off-beat electric-piano chords instead of a held pad.
     // The gaps let bass, guitar and percussion breathe between chord changes.
-    layers.push(play(chord(chords).voicing(), 'keys')
+    layers.push(play(chord(o.chords).voicing(), 'keys')
       .struct("x ~ ~ [~ x]")
       .decay(0.6).sustain(0.15).release(0.2)
       .lpf(3000)
@@ -172,7 +217,7 @@ function block(settings) {
   if (on(o.ensemble)) {
     // A moving midrange harmony fills the gaps without returning to a drone:
     // two short synth-string swells per bar, with clear rests.
-    layers.push(play(chord(chords).voicing(), 'ensemble')
+    layers.push(play(chord(o.chords).voicing(), 'ensemble')
       .struct("x ~ x ~")
       .attack(0.1).decay(0.55).sustain(0.3).release(0.3)
       .lpf(1800)
@@ -181,7 +226,7 @@ function block(settings) {
       .gain(level(o.ensemble)))
   }
   if (on(o.bass)) {
-    layers.push(play(note(roots), 'bass')
+    layers.push(play(note(o.roots), 'bass')
       .struct("x ~ x x ~ x ~ x")
       .decay(0.22).sustain(0.35).release(0.1)
       .lpf(700)
@@ -189,7 +234,7 @@ function block(settings) {
       .gain(level(o.bass)))
   }
   if (on(o.arp)) {
-    layers.push(play(n(o.arpNotes).chord(chords).voicing(), 'arp')
+    layers.push(play(n(o.arpNotes).chord(o.chords).voicing(), 'arp')
       .decay(0.14).sustain(0)
       .lpf(level(o.arpLpf))
       .delay(0.35).delaytime(echo).delayfeedback(0.42)
@@ -201,7 +246,7 @@ function block(settings) {
   if (on(o.sequence)) {
     // A restrained, moving analog-style sequence. It threads through the
     // space interlude and early ascent, then yields to the square arpeggio.
-    layers.push(play(n(spaceSequence).chord(chords).voicing(), 'sequence')
+    layers.push(play(n(spaceSequence).chord(o.chords).voicing(), 'sequence')
       .decay(0.19).sustain(0).release(0.08)
       .lpf(sine.range(850, 2300).slow(8))
       .phaser(0.18).phaserdepth(0.1).phasersweep(600)
@@ -253,7 +298,7 @@ function block(settings) {
   if (on(o.pad)) {
     // A space-opera string-machine pad: one swell a bar with a gap before the
     // next chord, through a slow phaser and a resonant filter sweep.
-    layers.push(play(chord(chords).voicing(), 'pad')
+    layers.push(play(chord(o.chords).voicing(), 'pad')
       .struct("x@3 ~")
       .attack(0.7).decay(0.8).sustain(0.5).release(0.9)
       .lpf(sine.range(700, 2100).slow(16)).lpq(4)
@@ -265,7 +310,7 @@ function block(settings) {
   if (on(o.pump)) {
     // French-house pumping chords: each beat's chord swells in after the kick,
     // like a sidechained pad, under a slow filter sweep.
-    layers.push(play(chord(chords).voicing(), 'pump')
+    layers.push(play(chord(o.chords).voicing(), 'pump')
       .struct("x x x x")
       .attack(0.13).decay(0.2).sustain(0).release(0.08)
       .lpf(sine.range(900, 3200).slow(8)).lpq(2)
@@ -275,7 +320,7 @@ function block(settings) {
   if (on(o.pluck)) {
     // A progressive-house pluck: short sawtooth notes opened by a quick
     // filter envelope, echoing on the dotted eighth.
-    layers.push(play(n(pluckNotes).chord(chords).voicing(), 'pluck')
+    layers.push(play(n(pluckNotes).chord(o.chords).voicing(), 'pluck')
       .decay(0.12).sustain(0).release(0.05)
       .lpf(500).lpenv(4).lpdecay(0.09).lpq(6)
       .delay(0.3).delaytime(echo).delayfeedback(0.4)
@@ -293,7 +338,7 @@ function block(settings) {
   }
   if (on(o.organ)) {
     // Dry chordal organ accents add weight without a held low pad.
-    layers.push(play(chord(chords).voicing(), 'organ')
+    layers.push(play(chord(o.chords).voicing(), 'organ')
       .struct("x ~ ~ [~ x]")
       .attack(0.06).decay(0.25).sustain(0.65).release(0.28)
       .lpf(2400)
@@ -327,7 +372,7 @@ function block(settings) {
   }
   if (on(o.stabs)) {
     // Off-beat synth-brass stabs that drive the fastest blocks.
-    layers.push(play(chord(chords).voicing(), 'stabs')
+    layers.push(play(chord(o.chords).voicing(), 'stabs')
       .struct("~ x ~ [~ x] ~ x ~ x")
       .decay(0.12).sustain(0)
       .lpf(2400)
@@ -337,7 +382,7 @@ function block(settings) {
   }
   if (on(o.ostinato)) {
     // A clipped string-section rhythm under the 120 BPM theme.
-    layers.push(play(chord(chords).voicing(), 'ostinato')
+    layers.push(play(chord(o.chords).voicing(), 'ostinato')
       .struct("x ~ x x ~ x x ~")
       .attack(0.02).decay(0.13).sustain(0).release(0.07)
       .lpf(1900).pan(0.55)
@@ -416,19 +461,124 @@ function block(settings) {
       .gain(level(o.stars)))
   }
   if (on(o.space)) {
-    // Space interlude: spaced atmosphere notes and short radio-noise ticks.
+    // Space interlude: spaced atmosphere notes in the deep reverb, over a
+    // faint, slowly tuned radio static.
     layers.push(play(note("d3 ~ a3 ~ f4 ~ a3 ~"), 'space')
-      .decay(1.2).sustain(0).release(0.3)
+      .decay(1.6).sustain(0).release(0.6)
       .lpf(1800)
-      .delay(0.35).delaytime(echo).delayfeedback(0.3)
-      .room(0.55).size(hall)
+      .delay(0.45).delaytime(echo).delayfeedback(0.45)
+      .pan(sine.range(0.3, 0.7).slow(6))
+      .orbit(2).room(0.75).size(deep)
       .gain(level(o.space)))
     layers.push(s("pink ~ ~ ~ ~ pink ~ ~")
-      .decay(0.14).sustain(0).release(0.06)
-      .bandf(sine.range(300, 3200).slow(3)).bandq(7)
+      .decay(0.3).sustain(0).release(0.2)
+      .bandf(sine.range(400, 2600).slow(7)).bandq(3)
       .pan(sine.range(0.2, 0.8).slow(5))
       .room(0.6).size(hall)
-      .gain(level(o.space)))
+      .gain(level(o.space)).postgain(0.35))
+  }
+  if (on(o.halo)) {
+    // A slow halo pad that rises and fades with each chord, far in the reverb.
+    layers.push(play(chord(o.chords).voicing(), 'halo')
+      .attack(1.2).decay(1).sustain(0.6).release(2)
+      .lpf(2600)
+      .pan(sine.range(0.3, 0.7).slow(10))
+      .orbit(2).room(0.8).size(deep)
+      .gain(level(o.halo)))
+  }
+  if (on(o.choir)) {
+    // A synth choir swelling once a bar under the faster space pieces.
+    layers.push(play(chord(o.chords).voicing(), 'choir')
+      .struct("x@3 ~")
+      .attack(0.6).decay(0.8).sustain(0.6).release(1)
+      .lpf(3000)
+      .orbit(2).room(0.6).size(deep)
+      .gain(level(o.choir)))
+  }
+  if (on(o.crystal)) {
+    // Glassy shimmer, a note every other half bar or so.
+    layers.push(play(n("<[0 ~] ~ [~ 4] ~ [2 ~] ~ [~ 7] ~>").scale("D5:minor"), 'crystal')
+      .decay(2).sustain(0).release(1)
+      .delay(0.4).delaytime(echo).delayfeedback(0.45)
+      .pan(rand.range(0.2, 0.8))
+      .orbit(2).room(0.8).size(deep)
+      .gain(level(o.crystal)))
+  }
+  if (on(o.beeps)) {
+    // Beeps and boops: short steady tones, no pitch sweeps.
+    layers.push(play(note(beepNotes), 'beeps')
+      .attack(0.003).decay(0.05).sustain(0.4).release(0.02)
+      .lpf(3800)
+      .delay(0.3).delaytime(echo).delayfeedback(0.35)
+      .pan(rand.range(0.2, 0.8))
+      .orbit(2).room(0.5).size(deep)
+      .gain(level(o.beeps)))
+    layers.push(play(note(boopNotes), 'boops')
+      .attack(0.005).decay(0.12).sustain(0.2).release(0.05)
+      .lpf(1400)
+      .delay(0.25).delaytime(echo).delayfeedback(0.3)
+      .pan(rand.range(0.3, 0.7))
+      .orbit(2).room(0.45).size(deep)
+      .gain(level(o.beeps)))
+  }
+  if (on(o.hook)) {
+    // The space hook on a phased supersaw lead, with a square an octave
+    // below (`hookLow`) layered in as the pieces speed up.
+    layers.push(play(note(hookNotes), 'hook')
+      .attack(0.01).decay(0.2).sustain(0.45).release(0.25)
+      .lpf(2800).lpq(3)
+      .phaser(0.3).phaserdepth(0.35).phasersweep(800)
+      .delay(0.3).delaytime(echo).delayfeedback(0.35)
+      .pan(0.55).room(0.5).size(hall)
+      .gain(level(o.hook)))
+    if (on(o.hookLow)) {
+      layers.push(play(note(octaveDown(hookNotes)), 'hookLow')
+        .attack(0.005).decay(0.15).sustain(0.3).release(0.15)
+        .lpf(1500)
+        .pan(0.42).room(0.35).size(hall)
+        .gain(level(o.hookLow)))
+    }
+    if (on(o.hookEcho)) {
+      // An echo canon: the hook an octave up and one eighth late, as short
+      // filtered plucks that land in the hook's rests.
+      layers.push(play(note(octaveUp(hookNotes)), 'hookEcho').late(1 / 8)
+        .decay(0.1).sustain(0).release(0.05)
+        .lpf(700).lpenv(4).lpdecay(0.08).lpq(5)
+        .delay(0.25).delaytime(echo).delayfeedback(0.3)
+        .pan(0.7).room(0.4).size(hall)
+        .gain(level(o.hookEcho)))
+    }
+  }
+  if (on(o.seqbass)) {
+    // An analogue-sequencer bass: root, octave and fifth through a resonant
+    // filter that slowly opens and closes.
+    layers.push(play(note(o.seqSteps).add(note(spaceRootNumbers)), 'seqbass')
+      .decay(0.13).sustain(0).release(0.04)
+      .lpf(sine.range(350, 1500).slow(8)).lpq(8)
+      .room(0.3).size(hall)
+      .gain(level(o.seqbass)))
+  }
+  if (on(o.machine)) {
+    // A soft rhythm-box groove: light kicks, woodblock-like clicks and maracas.
+    layers.push(note("g1 ~ ~ g1 ~ ~ g1 ~").s("sine")
+      .decay(0.2).sustain(0).penv(18).pdecay(0.04)
+      .room(0.15).size(hall).gain(level(o.machine)).postgain(0.45))
+    layers.push(note("~ e6 ~ e6 ~ e6 e6 ~").s("sine")
+      .decay(0.025).sustain(0).hpf(1500)
+      .pan(0.62).room(0.3).size(hall).gain(level(o.machine)).postgain(0.2))
+    layers.push(s("pink*8")
+      .decay(0.03).sustain(0).bandf(6500).bandq(1.5)
+      .pan(0.38).room(0.2).size(hall).gain(level(o.machine)).postgain(0.18))
+  }
+  if (on(o.zaps)) {
+    // Laser zaps: falling sawtooth sweeps, now and then.
+    layers.push(play(note("<[~ ~ ~ a5] ~ [~ ~ d6 ~] ~ [~ a5 ~ ~] ~ [~ ~ ~ e6] ~>"), 'zaps')
+      .decay(0.3).sustain(0).penv(-24).pattack(0.28)
+      .lpf(3200)
+      .delay(0.35).delaytime(echo).delayfeedback(0.4)
+      .pan(rand.range(0.2, 0.8))
+      .orbit(2).room(0.6).size(deep)
+      .gain(level(o.zaps)))
   }
   return { from, to, bpm, next: o.next, pattern: stack(...layers) }
 }
@@ -457,8 +607,10 @@ window.blocks = {
   drift_b: block({ from: 60, keys: 0.22, ensemble: 0.23, bass: 0.5, guitar: 0.16, pad: 0.09, viola: 0.12,
     sequence: 0.09, bells: 0.1, stars: 0.08,
     next: { drift_a: 1, space: 1, rise_70: 3 } }),
-  space: block({ from: 60, keys: 0.17, ensemble: 0.29, bass: 0.28, space: 0.19, sequence: 0.12, pad: 0.12,
-    bells: 0.13, stars: 0.07, starsSparse: 0.6,
+  // 60 to 120 BPM: the space pieces.
+  space: block({ from: 60, ...spaceHarmony, keys: 0.12, ensemble: 0.2, bass: 0.26, space: 0.19,
+    sequence: 0.1, pad: 0.1, halo: 0.12, crystal: 0.08, beeps: 0.1, hook: 0.08,
+    bells: 0.1, stars: 0.07, starsSparse: 0.6,
     next: { drift_a: 2, drift_b: 1 } }),
   rise_70: block({ from: 60, to: 70, keys: [0.22, 0.2], ensemble: [0.23, 0.2], guitar: [0.08, 0.13], pad: [0.1, 0.09],
     arp: [0, 0.07], sequence: [0.1, 0.09],
@@ -467,16 +619,16 @@ window.blocks = {
   rise_80: block({ from: 70, to: 80, keys: [0.2, 0.18], ensemble: [0.2, 0.16], guitar: [0.13, 0.17], pad: [0.09, 0.07], pluck: [0, 0.04],
     arp: [0.07, 0.13], sequence: [0.09, 0], hats: [0, 0.22],
     shaker: [0.08, 0.1], lift: [0.07, 0.09], bells: 0.12, stars: 0.1,
-    next: { depart_a: 1, depart_b: 1 } }),
+    next: { depart_a: 1, depart_b: 1, space_80: 1 } }),
   // 80 BPM: departing.
   depart_a: block({ from: 80, keys: 0.18, arp: 0.13, guitar: 0.19, pad: 0.06, viola: 0.1, organ: 0.04, horns: 0.05,
     hats: 0.22, shaker: 0.09, lift: 0.07,
     bells: 0.13, stars: 0.1,
-    next: { depart_b: 2, rise_90: 2 } }),
+    next: { depart_b: 2, rise_90: 2, space_80: 1 } }),
   depart_b: block({ from: 80, keys: 0.16, arp: 0.13, arpNotes: arpWide, guitar: 0.17, pad: 0.06, viola: 0.08,
     organ: 0.05, horns: 0.05, woodwinds: 0.06, counter: 0.12, hats: 0.22,
     shaker: 0.09, lift: 0.07, bells: 0.1,
-    stars: 0.08, next: { depart_a: 1, rise_90: 2 } }),
+    stars: 0.08, next: { depart_a: 1, rise_90: 2, space_80: 1 } }),
   rise_90: block({ from: 80, to: 90, keys: [0.18, 0.14], arp: 0.13, arpLpf: [1400, 1800], guitar: [0.17, 0.22],
     guitarNotes: guitarStrums, rhythm: [0, 0.025], pad: [0.06, 0.03], pluck: [0.04, 0.06], viola: 0.08,
     organ: [0.05, 0.07], horns: [0.05, 0.08], woodwinds: [0.04, 0.06], hats: 0.22,
@@ -486,13 +638,22 @@ window.blocks = {
     organ: [0.07, 0.08], horns: [0.08, 0.1], woodwinds: [0.06, 0.07], drums: 'in', hats: 0.22,
     shaker: [0.11, 0.14], lift: [0.1, 0.12],
     bells: [0.12, 0.05], stars: 0.07, next: { cruise_a: 2, cruise_b: 1 } }),
+  space_80: block({ from: 80, ...spaceHarmony, keys: 0.08, ensemble: 0.12, bass: 0,
+    seqbass: 0.1, halo: 0.09, pad: 0.08, sequence: 0.06, crystal: 0.06, beeps: 0.08,
+    machine: 0.5, hook: 0.12, bells: 0.08, stars: 0.06,
+    next: { depart_a: 1, depart_b: 1, rise_90: 1 } }),
   // 100 BPM: cruising, with the melodies and the solo.
-  cruise_a: block({ from: 100, ...cruise, next: { cruise_b: 2, solo: 1, rise_110: 1 } }),
-  cruise_b: block({ from: 100, ...cruise, leadNotes: melodyB, guitarNotes: guitarStrums, viola: 0.08, next: { cruise_a: 1, solo: 2, rise_110: 1 } }),
+  cruise_a: block({ from: 100, ...cruise, next: { cruise_b: 2, solo: 1, rise_110: 1, space_100: 1 } }),
+  cruise_b: block({ from: 100, ...cruise, leadNotes: melodyB, guitarNotes: guitarStrums, viola: 0.08, next: { cruise_a: 1, solo: 2, rise_110: 1, space_100: 1 } }),
   solo: block({ from: 100, bars: 16, ...soloGuitar, ensemble: [0.09, 0.14], arp: [0.05, 0.11],
     guitar: [0.22, 0.3], guitarNotes: solo, guitarBends: true,
     organ: [0.04, 0.11], horns: [0, 0.1], viola: [0, 0.12],
     next: { cruise_a: 1, rise_110: 2, fall_90: 1 } }),
+  space_100: block({ from: 100, ...spaceHarmony, keys: 0.08, ensemble: 0.1, bass: 0.2,
+    seqbass: 0.12, seqSteps: sixteenthSteps, halo: 0.06, choir: 0.07, pad: 0.05,
+    arp: 0.08, arpLpf: 2000, crystal: 0.04, beeps: 0.06,
+    drums: 1, hats: 0.16, toms: 0.05, hook: 0.15, hookLow: [0, 0.1], pluck: [0, 0.04],
+    next: { cruise_a: 1, rise_110: 1, fall_90: 1 } }),
   rise_110: block({ from: 100, to: 110, ...cruise, arpLpf: [2200, 2700], stabs: [0, 0.04],
     guitarNotes: guitarStrums, rhythm: [0.045, 0.055], pump: [0.05, 0.07], pluck: 0.06,
     organ: [0.08, 0.1], horns: [0.1, 0.12], woodwinds: [0.07, 0.08],
@@ -502,14 +663,20 @@ window.blocks = {
     organ: [0.1, 0.12], horns: [0.12, 0.14], woodwinds: 0.08,
     ostinato: [0, 0.055], ride: [0, 0.055], toms: [0, 0.07],
     shaker: [0.15, 0.16], lift: [0.12, 0.14], leadNotes: octaveUp(melodyA),
-    next: { arrive_a: 1, arrive_b: 1, fanfare: 1 } }),
+    next: { arrive_a: 1, arrive_b: 1, fanfare: 1, space_120: 1 } }),
   // 120 BPM: arriving, the peak.
-  arrive_a: block({ from: 120, ...arrive, leadNotes: octaveUp(melodyA), next: { arrive_b: 2, fanfare: 1, fall_110: 2 } }),
-  arrive_b: block({ from: 120, ...arrive, leadNotes: octaveUp(melodyB), guitarNotes: guitarStrums, next: { arrive_a: 1, fanfare: 1, fall_110: 2 } }),
+  arrive_a: block({ from: 120, ...arrive, leadNotes: octaveUp(melodyA), next: { arrive_b: 2, fanfare: 1, fall_110: 2, space_120: 1 } }),
+  arrive_b: block({ from: 120, ...arrive, leadNotes: octaveUp(melodyB), guitarNotes: guitarStrums, next: { arrive_a: 1, fanfare: 1, fall_110: 2, space_120: 1 } }),
   fanfare: block({ from: 120, ...arrive, lead: 0.21, leadNotes: fanfareLine,
     horns: 0.18, organ: 0.14, woodwinds: 0.05, guitar: 0.11, counter: 0, pump: 0.07,
     arp: 0.1, stabs: 0.05, ostinato: 0.07,
-    next: { arrive_a: 1, arrive_b: 1, fall_110: 2 } }),
+    next: { arrive_a: 1, arrive_b: 1, fall_110: 2, space_120: 1 } }),
+  space_120: block({ from: 120, ...spaceHarmony, keys: 0.06, ensemble: 0.12, bass: 0.4,
+    seqbass: 0.13, seqSteps: sixteenthSteps, choir: 0.09, pump: 0.07, stabs: 0.04,
+    arp: 0.12, arpLpf: 3200, arpPhaserRate: 0.25, arpPhaserDepth: 0.16, arpPhaserSweep: 450,
+    zaps: 0.06, beeps: 0.04, drums: 1, hats: 0.18, shaker: 0.14, ride: 0.06, toms: 0.07,
+    hook: 0.16, hookLow: 0.11, hookEcho: 0.07, pluck: 0.05, pad: 0.05,
+    next: { arrive_a: 1, arrive_b: 1, fanfare: 1, fall_110: 1 } }),
   fall_110: block({ from: 120, to: 110, ...arrive, stabs: [0.075, 0.04], pump: [0.08, 0.05], pluck: [0.05, 0.03],
     shaker: [0.16, 0], ostinato: [0.055, 0], ride: [0.055, 0], toms: [0.07, 0],
     lift: [0.12, 0], leadNotes: octaveUp(melodyB),
@@ -517,7 +684,7 @@ window.blocks = {
   fall_100: block({ from: 110, to: 100, ...cruise, keys: [0.1, 0.13], arpLpf: [3200, 2200], stabs: [0.04, 0],
     guitarNotes: guitarStrums, pump: [0.05, 0.02], pluck: [0.03, 0],
     shaker: 0, lift: 0,
-    bells: [0, 0.05], next: { solo: 1, cruise_a: 1, fall_90: 2 } }),
+    bells: [0, 0.05], next: { solo: 1, cruise_a: 1, fall_90: 2, space_100: 1 } }),
   // Back down through 90, 80, 70 to 60.
   fall_90: block({ from: 100, to: 90, keys: [0.13, 0.16], arp: 0.13, guitar: [0.21, 0.14], rhythm: [0.045, 0], pump: [0.02, 0], counter: [0.16, 0.08], pad: [0, 0.04],
     organ: [0.08, 0.03], horns: [0.1, 0], woodwinds: [0.07, 0],
@@ -526,7 +693,7 @@ window.blocks = {
     hats: 0.22, bells: [0.08, 0.13], stars: 0.1, next: { wind: 1 } }),
   wind: block({ from: 80, keys: 0.18, arp: 0.13, guitar: 0.12, pad: 0.07, viola: 0.11, hats: 0.22,
     sequence: 0.035, bells: 0.13, stars: 0.1,
-    next: { fall_70: 2, depart_a: 1 } }),
+    next: { fall_70: 2, depart_a: 1, space_80: 1 } }),
   fall_70: block({ from: 80, to: 70, keys: [0.18, 0.2], arp: [0.13, 0.07], guitar: [0.12, 0], sequence: [0.035, 0.06], pad: 0.08, viola: [0.1, 0.06],
     hats: [0.22, 0],
     bells: 0.14, stars: 0.1, next: { fall_60: 1 } }),
@@ -536,7 +703,7 @@ window.blocks = {
 }
 
 // strudel.cc: one pass through every block.
-const demo = ['drift_a', 'drift_b', 'space', 'drift_a', 'rise_70', 'rise_80', 'depart_a', 'depart_b', 'rise_90',
-  'rise_100', 'cruise_a', 'solo', 'cruise_a', 'cruise_b', 'rise_110', 'rise_120', 'arrive_a', 'fanfare', 'arrive_b',
+const demo = ['drift_a', 'drift_b', 'space', 'drift_a', 'rise_70', 'rise_80', 'space_80', 'depart_a', 'depart_b', 'rise_90',
+  'rise_100', 'cruise_a', 'solo', 'space_100', 'cruise_a', 'cruise_b', 'rise_110', 'rise_120', 'arrive_a', 'fanfare', 'space_120', 'arrive_b',
   'fall_110', 'fall_100', 'fall_90', 'fall_80', 'wind', 'fall_70', 'fall_60']
 arrange(...demo.map((name) => [window.blocks[name].bpm.length, window.blocks[name].pattern]))

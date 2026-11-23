@@ -19,12 +19,15 @@ and do not change if the remote copies do.
 | `0410_FluidR3_GM_sf2_file.js` | `gm_viola:1` | viola |
 | `0480_FluidR3_GM_sf2_file.js` | `gm_string_ensemble_1:2` | ostinato |
 | `0501_FluidR3_GM_sf2_file.js` | `gm_synth_strings_1:3` | ensemble |
+| `0540_FluidR3_GM_sf2_file.js` | `gm_synth_choir:2` | choir (space pieces) |
 | `0600_FluidR3_GM_sf2_file.js` | `gm_french_horn:1` | horns |
 | `0620_FluidR3_GM_sf2_file.js` | `gm_synth_brass_1:1` | stabs |
 | `0730_FluidR3_GM_sf2_file.js` | `gm_flute:2` | woodwinds |
 | `0800_FluidR3_GM_sf2_file.js` | `gm_lead_1_square:2` | arpeggio |
 | `0810_FluidR3_GM_sf2_file.js` | `gm_lead_2_sawtooth:3` | lead |
 | `0830_FluidR3_GM_sf2_file.js` | `gm_lead_4_chiff:2` | sequence |
+| `0940_FluidR3_GM_sf2_file.js` | `gm_pad_halo:1` | halo pad (space pieces) |
+| `0981_FluidR3_GM_sf2_file.js` | `gm_fx_crystal:4` | crystal (space pieces) |
 | `0990_FluidR3_GM_sf2_file.js` | `gm_fx_atmosphere:3` | space interlude |
 | `1170_FluidR3_GM_sf2_file.js` | `gm_melodic_tom:3` | toms |
 

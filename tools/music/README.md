@@ -12,7 +12,7 @@ its fixed demo. The game embeds the exported Ogg Vorbis audio in `assets/music/`
 Long Haul is made of blocks, eight bars long unless a block sets `bars`:
 steady drift, depart, cruise and arrive with variations; 10 BPM ramp blocks
 from 60 to 120 and back; the 120 BPM Orbital Fanfare; a 16-bar guitar solo;
-and a 60 BPM space interlude. Each block declares weighted possible successors
+and four space pieces at 60, 80, 100 and 120 BPM. Each block declares weighted possible successors
 whose starting tempo matches its ending tempo, and the game chooses randomly at
 each boundary. Strudel.cc uses the fixed demo order and a single live tempo;
 the exporter renders the block-specific tempo for each bar.
@@ -52,6 +52,24 @@ singing single-note line with six bends up into held notes, strummed chords
 and double-stops at the phrase peaks, rests between phrases, and three short
 note-by-note runs at 1.8 times the eighth-note rate. A quiet arpeggio, the
 rhythm guitar, organ and horns support it, and it has less echo and room effect.
+
+**Space pieces.** Mostly inspired by space-opera albums, they hold each chord
+for two bars (Dm9, B♭maj7, Gm9, A7sus) and send their space layers to a second,
+seven-second reverb. `space` (60 BPM) has a halo pad, glassy crystal notes,
+atmosphere notes over faint radio static, computer beeps and boops (short,
+steady square and triangle tones from D minor pentatonic in telemetry-like
+bursts) and a quiet nod to the space hook: a synth melody, one two-bar phrase
+per chord, on a phased supersaw lead. The hook keeps its note values in every
+space piece, so the tempo alone speeds it up, and at 120 BPM it is exactly
+double time. `space_80` plays it over a soft rhythm box (light kicks,
+woodblock-like clicks and maracas) and an eighth-note analogue-sequencer bass;
+`space_100` swaps in the main drums, a sixteenth-note sequencer, an arpeggio,
+toms, a synth choir and a pluck, and layers a square an octave below the hook;
+`space_120` adds an echo canon (the hook an octave up and an eighth late, as
+filtered plucks filling its rests), ride, shaker, pumping chords, stabs and
+laser zaps. They are reached from the blocks
+at their tempo (depart, wind and the rise to 80; cruise, the solo and the fall
+to 100; arrival, the fanfare and the rise to 120) and return to them.
 
 Every bar uses four evenly spaced kick hits. Quiet ride and toms join the
 arrival blocks and fade in and out with the tempo ramps; the upward ramps add

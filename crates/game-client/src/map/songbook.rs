@@ -26,13 +26,6 @@ const PARTS: &[Part] = &[
         detail: "Bass and first guitar phrases",
     },
     Part {
-        id: "space",
-        section: "Drift",
-        title: "Space",
-        tempo: "60 BPM",
-        detail: "Soft bass, ensemble and radio ticks",
-    },
-    Part {
         id: "rise_70",
         section: "Ascent",
         title: "Rise to 70",
@@ -178,6 +171,34 @@ const PARTS: &[Part] = &[
         title: "Fall to 60",
         tempo: "70–60 BPM",
         detail: "Bells lead back to drift",
+    },
+    Part {
+        id: "space",
+        section: "Space",
+        title: "Space",
+        tempo: "60 BPM",
+        detail: "Halo pad, beeps and boops, a nod to the hook",
+    },
+    Part {
+        id: "space_80",
+        section: "Space",
+        title: "Space 80",
+        tempo: "80 BPM",
+        detail: "The synth hook over a rhythm box and sequencer",
+    },
+    Part {
+        id: "space_100",
+        section: "Space",
+        title: "Space 100",
+        tempo: "100 BPM",
+        detail: "Drums, choir and a doubled hook",
+    },
+    Part {
+        id: "space_120",
+        section: "Space",
+        title: "Space 120",
+        tempo: "120 BPM",
+        detail: "The hook at double time, with an echo canon",
     },
 ];
 

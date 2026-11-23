@@ -37,6 +37,10 @@ const AUDIO: &[(&str, &[u8])] = &[
         include_bytes!("../../../../assets/music/long-haul/rise_80.ogg"),
     ),
     (
+        "space_80.ogg",
+        include_bytes!("../../../../assets/music/long-haul/space_80.ogg"),
+    ),
+    (
         "depart_a.ogg",
         include_bytes!("../../../../assets/music/long-haul/depart_a.ogg"),
     ),
@@ -61,6 +65,10 @@ const AUDIO: &[(&str, &[u8])] = &[
         include_bytes!("../../../../assets/music/long-haul/cruise_b.ogg"),
     ),
     (
+        "space_100.ogg",
+        include_bytes!("../../../../assets/music/long-haul/space_100.ogg"),
+    ),
+    (
         "solo.ogg",
         include_bytes!("../../../../assets/music/long-haul/solo.ogg"),
     ),
@@ -79,6 +87,10 @@ const AUDIO: &[(&str, &[u8])] = &[
     (
         "arrive_b.ogg",
         include_bytes!("../../../../assets/music/long-haul/arrive_b.ogg"),
+    ),
+    (
+        "space_120.ogg",
+        include_bytes!("../../../../assets/music/long-haul/space_120.ogg"),
     ),
     (
         "fanfare.ogg",

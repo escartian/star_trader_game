@@ -26,7 +26,17 @@ French horn and flute replies enter during departure, build through cruise and
 the tempo ramps, and peak at arrival, with a vibraphone countermelody,
 synth-brass stabs and a clipped string-section ostinato in the fastest blocks.
 Celesta bells, music-box stars and an atmosphere pad colour the slow blocks and
-the interlude. Each instrument has a `boost` that brings it to the level the
+the interlude. A bowed viola sings slow guide tones through drift, depart, the
+alternate cruise, the second half of the solo and the wind-down.
+
+**Synths.** Strudel's own synthesizers give the music its space-opera and
+electronic character. A Jarre-style supersaw pad swells once a bar through a
+slow phaser and a resonant filter sweep in the slow, space and departing
+blocks, with gaps rather than a held drone. From the rise to 100 BPM through
+arrival, French-house pumping supersaw chords swell in after each kick under a
+slow filter sweep, and a progressive-house sawtooth pluck, opened by a short
+filter envelope and echoing on the dotted eighth, builds from the rise to
+80 BPM. Both fade out on the descent. Each instrument has a `boost` that brings it to the level the
 earlier synth voice had, so the block levels keep their balance. Drums,
 shaker, hats, ride and the interlude's radio-noise ticks remain Strudel
 synthesizers and noise; tuned toms use the melodic-tom sample.

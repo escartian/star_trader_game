@@ -16,6 +16,7 @@ and do not change if the remote copies do.
 | `0160_FluidR3_GM_sf2_file.js` | `gm_drawbar_organ:3` | organ |
 | `0270_FluidR3_GM_sf2_file.js` | `gm_electric_guitar_clean:2` | guitar, rhythm guitar |
 | `0380_FluidR3_GM_sf2_file.js` | `gm_synth_bass_1:1` | bass |
+| `0410_FluidR3_GM_sf2_file.js` | `gm_viola:1` | viola |
 | `0480_FluidR3_GM_sf2_file.js` | `gm_string_ensemble_1:2` | ostinato |
 | `0501_FluidR3_GM_sf2_file.js` | `gm_synth_strings_1:3` | ensemble |
 | `0600_FluidR3_GM_sf2_file.js` | `gm_french_horn:1` | horns |

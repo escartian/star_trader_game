@@ -286,7 +286,7 @@ protocol boundary anticipates this; multiplayer itself is not implemented.
 - [ ] Package Windows/macOS/Linux; add accessibility, inputs, audio and feedback.
   Done so far: main menu, Settings (volume, fullscreen, interface scale,
   animations) and the desktop Long Haul music sequencer (also available in game
-  when enabled), with a main-menu Songbook showing and selecting parts. Kenney CC0
+  when enabled), with a main-menu Songbook that lists parts, maps their transitions and selects them. Kenney CC0
   effects add UI clicks, battle shots and hit sounds,
   plus battle hit particles. Still open: broader sound coverage, other in-game tracks, browser audio,
   key rebinding and other accessibility options.

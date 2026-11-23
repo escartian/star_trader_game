@@ -84,7 +84,15 @@ impl Map {
                     });
                 });
             });
-        if let Some(part) = super::songbook::show(ctx, &mut menu.songbook_open, current_part) {
+        let current_part = current_part.or(menu.songbook_preview);
+        let next_part = self.music.next_block();
+        if let Some(part) = super::songbook::show(
+            ctx,
+            &mut menu.songbook_open,
+            &mut menu.songbook_view,
+            current_part,
+            next_part,
+        ) {
             self.music.select_part(part);
             ctx.request_repaint_after(std::time::Duration::from_millis(50));
         }

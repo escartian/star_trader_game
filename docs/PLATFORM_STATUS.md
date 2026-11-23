@@ -236,3 +236,13 @@ wanted banner and Pay fine button were not captured; pursuit, fines, resisting
 arrest, police against raider bands and replacement patrols are covered by
 server and core tests. Wanted durations, fine sizes and patrol strength have not
 been playtested.
+
+Songbook: offscreen captures of the list view (`--capture-view menu-songbook`,
+1280 × 800) and of the transition map with a part shown as playing
+(`menu-songbook@solo` and `@space_100`, 1280 × 800; `@space_fall_80`,
+390 × 844) were visually inspected: section outlines, tempo placement including
+the space ramps, the playing part's outgoing arrows with chances and incoming
+arrows, and the phone view scrolled to centre the playing part. Hover
+highlighting, clicking a part and the pulsing "up next" ring need live audio and
+pointer input and were not captured; the announced next part is covered by an
+audio test.

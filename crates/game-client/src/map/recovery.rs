@@ -58,6 +58,9 @@ pub(super) struct SaveRecovery {
     pub page: super::main_menu::MenuPage,
     /// A transient card over the title page, never written to settings.
     pub songbook_open: bool,
+    pub songbook_view: super::songbook::View,
+    /// A part shown as playing in Songbook captures, which have no audio.
+    pub songbook_preview: Option<&'static str>,
 }
 
 impl SaveRecovery {
@@ -96,6 +99,8 @@ impl SaveRecovery {
             setup: game_server::GameSetup::default(),
             page: Default::default(),
             songbook_open: false,
+            songbook_view: Default::default(),
+            songbook_preview: None,
         }
     }
 

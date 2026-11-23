@@ -63,9 +63,12 @@ The audio source chooses a weighted successor at each exact sample-frame boundar
 and mixes the previous block's reverb tail under the new block. The exporter
 balances the blocks' active RMS and records their final relative levels; a
 louder successor eases in over one bar, while a quieter successor keeps its
-exported level beneath the fading tail. It publishes the current block through
-an atomic index; the main-menu Songbook reads that
-index to show the playing part and its place in the track. Selecting a part
+exported level beneath the fading tail. It draws each block's successor as the
+block starts and publishes the current and upcoming blocks through atomic
+indices. The main-menu Songbook reads them and lists the parts by section, or,
+with its Map toggle, draws the track as a transition map
+(`map/songbook_graph.rs`): parts placed by tempo inside section outlines,
+with arrows and chances from the embedded manifest. Selecting a part
 in the Songbook sends an atomic request to the audio source; it switches on a
 stereo frame edge and crossfades for two seconds, then resumes weighted valid
 transitions. Browser audio is still pending.

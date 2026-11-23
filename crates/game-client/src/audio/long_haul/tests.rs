@@ -32,6 +32,26 @@ fn published_part_follows_the_sample_boundary() {
 }
 
 #[test]
+fn announced_next_part_is_the_one_that_plays() {
+    let mut source = LongHaul::new().unwrap();
+    let now = source.part_handle();
+    let up_next = source.up_next_handle();
+    for _ in 0..5 {
+        let announced = up_next.load(Ordering::Acquire);
+        let current = part_name(now.load(Ordering::Acquire)).unwrap();
+        let possible = &source.graph.blocks[current].next;
+        assert!(possible.contains_key(part_name(announced).unwrap()));
+        source.clock.samples_left = 0;
+        source.next();
+        assert_eq!(now.load(Ordering::Acquire), announced);
+    }
+    // A Songbook jump announces a successor of the chosen part.
+    source.jump_to(part_index("solo").unwrap());
+    let next = part_name(up_next.load(Ordering::Acquire)).unwrap();
+    assert!(source.graph.blocks["solo"].next.contains_key(next));
+}
+
+#[test]
 fn songbook_selection_crossfades_on_a_stereo_frame() {
     let mut source = LongHaul::new().unwrap();
     let selection = source.selection_handle();

@@ -50,7 +50,9 @@ and fades on the descent. Chords in guitar parts are strummed: each string
 starts slightly after the one before. The solo is a single 16-bar block: a
 singing single-note line with six bends up into held notes, strummed chords
 and double-stops at the phrase peaks, rests between phrases, and three short
-note-by-note runs at 1.8 times the eighth-note rate. A quiet arpeggio, the
+note-by-note runs at 1.8 times the eighth-note rate, slurred legato: each run
+is picked once and its other notes are hammer-ons and pull-offs (`h` in the
+source's guitar notation), softer and with a gentler attack. A quiet arpeggio, the
 rhythm guitar, organ and horns support it, and it has less echo and room effect.
 
 **Space pieces.** Mostly inspired by space-opera albums, they hold each chord
@@ -69,7 +71,10 @@ toms, a synth choir and a pluck, and layers a square an octave below the hook;
 filtered plucks filling its rests), ride, shaker, pumping chords, stabs and
 laser zaps. They are reached from the blocks
 at their tempo (depart, wind and the rise to 80; cruise, the solo and the fall
-to 100; arrival, the fanfare and the rise to 120) and return to them.
+to 100; arrival, the fanfare and the rise to 120) and return to them. Six
+20 BPM space ramps (`space_rise_80` to `space_fall_60`) also link neighbouring
+space pieces directly, easing every level from where one piece ends to where
+the next begins, so the music can stay in space while it speeds up or slows.
 
 Every bar uses four evenly spaced kick hits. Quiet ride and toms join the
 arrival blocks and fade in and out with the tempo ramps; the upward ramps add
@@ -82,8 +87,10 @@ line plays every part in a fixed order at the demo tempo. The game instead
 uses the rendered OGG blocks with their tempo ramps and weighted transitions.
 To audition one part in Strudel, change `const demo` near the bottom to a
 one-item list such as `['arrive_a']` and press **Update**. In the game, select
-that part from the main-menu Songbook; it crossfades in over two seconds and
-then follows its weighted transitions.
+that part in the main-menu Songbook, as a list or (with the Map toggle) on a map
+that shows every part by section and tempo with arrows for its possible
+transitions and their chances; it
+crossfades in over two seconds and then follows its weighted transitions.
 
 ## Re-export
 

@@ -22,6 +22,7 @@ mod recovery;
 mod render;
 mod shell;
 mod songbook;
+mod songbook_graph;
 mod toolbar;
 mod visuals;
 

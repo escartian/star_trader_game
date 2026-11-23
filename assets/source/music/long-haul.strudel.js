@@ -95,26 +95,31 @@ const melodyB = '[d5@2 e5 f5] [d5@3 a4] [c5@2 e5 c5] [g4@2 a4 c5] [e5@2 f5 a5] [
 const counterLine = '[~ ~ [f4 e4] [d4 a3]] [~ ~ [d4 f4] a4] [~ ~ [a4 g4] [f4 e4]] [[e4 g4] [a4 c5] [g4 e4] d4] [~ ~ [f4 a4] [c5 a4]] [~ ~ [d5 c5] [bb4 a4]] [~ ~ [g4 bb4] [d5 bb4]] [[a4 g4] [e4 d4] [e4 g4] a4]'
 // Guitar notation. A chord `[a,b,c]` is strummed: each later string starts
 // 1/STRUM of the chord's span after the one before. `d6^2` bends up into d6
-// from two semitones below; `bendsOf` turns those marks into a `penv` pattern
-// with one value per note or chord, matching the notes' structure.
+// from two semitones below. `bb5h` is slurred from the previous note (a
+// hammer-on or pull-off, as in guitar tab): softer, with a gentler attack, so a
+// run flows from its one picked note. `perNote` turns these marks into
+// patterns with one value per note or chord, matching the notes' structure.
 const STRUM = 32
 const chordMark = /\[([^\[\]]*,[^\[\]]*)\]/g
 const strum = (text) => text.replace(chordMark, (_, inner) => '[' + inner.split(',')
   .map((note, string) => (string ? '[~@' + string + ' ' + note.trim() + '@' + (STRUM - string) + ']' : note.trim())).join(', ') + ']')
-const notesOf = (text) => text.replace(/\^\d/g, '')
-const bendsOf = (text) => text
-  .replace(chordMark, (_, inner) => String(Math.max(0, ...[...inner.matchAll(/\^(\d)/g)].map((m) => Number(m[1])))))
-  .replace(/[a-g]b?\d(\^(\d))?/g, (_, mark, bend) => bend ?? '0')
+const notesOf = (text) => text.replace(/\^\d|(?<=\d)h/g, '')
+// `value` receives a note with its marks, or a chord's notes ('d5,f5,a5').
+const perNote = (text, value) => '<' + text
+  .replace(chordMark, (_, inner) => String(value(inner)))
+  .replace(/[a-g]b?\d[\^\dh]*/g, (note) => String(value(note))) + '>'
+const bendOf = (note) => Number((note.match(/\^(\d)/) ?? [0, 0])[1])
+const slurred = (note) => /\dh/.test(note)
 // A 16-bar solo: a singing single-note line with six bends, strummed chords
 // and double-stops at the phrase peaks, rests to breathe, and three short runs
 // at 1.8 times the eighth-note rate (eight notes over 5/9 of a bar). The second
 // half climbs higher; its final A resolves into the next block's D minor.
 const solo = '[~ a4 c5 d5] [f5^2@3 ~] [e5^1@2 c5 a4] [[g4,c5,e5]@2 ~ ~] ' +
-  '[~ d5 f5 a5] [d6^2@2 c6 a5] [[[d5,g5,bb5] ~ ~ ~]@4 [g5 bb5 d6 f6 g6 f6 d6 bb5]@5] [a5^1@3 ~] ' +
+  '[~ d5 f5 a5] [d6^2@2 c6 a5] [[[d5,g5,bb5] ~ ~ ~]@4 [g5 bb5h d6h f6h g6h f6h d6h bb5h]@5] [a5^1@3 ~] ' +
   '[[d5,f5,a5] ~ [d5,f5,a5] ~ ~ [f5,a5,d6] ~ ~] [[bb5,d6]@3 [a5 f5]] ' +
-  '[[[c5,f5,a5] ~ ~ ~]@4 [a4 c5 f5 a5 c6 e6 c6 a5]@5] [c6^2@3 ~] ' +
+  '[[[c5,f5,a5] ~ ~ ~]@4 [a4 c5h f5h a5h c6h e6h c6h a5h]@5] [c6^2@3 ~] ' +
   '[~ [a5,d6] [c6,e6] [d6,f6]] [f6^2@3 ~] ' +
-  '[[[d6,g6] ~ ~ ~]@4 [g6 f6 d6 bb5 a5 g5 f5 d5]@5] [[a4,d5,e5]@2 [g4,d5] [e4,a4]]'
+  '[[[d6,g6] ~ ~ ~]@4 [g6 f6h d6h bb5h a5h g5h f5h d5h]@5] [[a4,d5,e5]@2 [g4,d5] [e4,a4]]'
 // Rhythm guitar, voiced below the lead and the solo's runs: off-beat chord
 // stabs in odd bars, then a ringing chord and a re-strike in even bars. It
 // enters quietly in cruise so the solo's chordal guitar is not a sudden change.
@@ -285,7 +290,11 @@ function block(settings) {
       .room(o.guitarRoom).size(hall)
       .gain(level(o.guitar))
     // A bend starts `penv` semitones below the written note and rises into it.
-    if (o.guitarBends) guitar = guitar.penv('<' + bendsOf(o.guitarNotes) + '>').pattack(0.14)
+    if (o.guitarBends) {
+      guitar = guitar.penv(perNote(o.guitarNotes, bendOf)).pattack(0.14)
+        .velocity(perNote(o.guitarNotes, (note) => (slurred(note) ? 0.62 : 1)))
+        .attack(perNote(o.guitarNotes, (note) => (slurred(note) ? 0.03 : 0.005)))
+    }
     layers.push(guitar)
   }
   if (on(o.rhythm)) {
@@ -598,6 +607,51 @@ const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarDecay: 0.9, guitarS
   guitarLpf: 3600, guitarDelay: 0.07, guitarFeedback: 0.1, guitarRoom: 0.2, rhythm: 0.085,
   drums: 1, hats: 0.13, pad: 0.04, pump: 0, pluck: 0 }
 
+// The space pieces' settings, shared by the pieces and the ramps between them.
+const spaceAt = {
+  60: {
+    keys: 0.12, ensemble: 0.2, bass: 0.26, space: 0.19, sequence: 0.1, pad: 0.1, halo: 0.12,
+    crystal: 0.08, beeps: 0.1, hook: 0.08, bells: 0.1, stars: 0.07, starsSparse: 0.6
+  },
+  80: {
+    keys: 0.08, ensemble: 0.12, bass: 0, seqbass: 0.1, halo: 0.09, pad: 0.08, sequence: 0.06,
+    crystal: 0.06, beeps: 0.08, machine: 0.5, hook: 0.12, bells: 0.08, stars: 0.06
+  },
+  100: {
+    keys: 0.08, ensemble: 0.1, bass: 0.2, seqbass: 0.12, seqSteps: sixteenthSteps, halo: 0.06,
+    choir: 0.07, pad: 0.05, arp: 0.08, arpLpf: 2000, crystal: 0.04, beeps: 0.06, drums: 1,
+    hats: 0.16, toms: 0.05, hook: 0.15, hookLow: [0, 0.1], pluck: [0, 0.04]
+  },
+  120: {
+    keys: 0.06, ensemble: 0.12, bass: 0.4, seqbass: 0.13, seqSteps: sixteenthSteps, choir: 0.09,
+    pump: 0.07, stabs: 0.04, arp: 0.12, arpLpf: 3200, arpPhaserRate: 0.25, arpPhaserDepth: 0.16,
+    arpPhaserSweep: 450, zaps: 0.06, beeps: 0.04, drums: 1, hats: 0.18, shaker: 0.14, ride: 0.06,
+    toms: 0.07, hook: 0.16, hookLow: 0.11, hookEcho: 0.07, pluck: 0.05, pad: 0.05
+  },
+}
+// Levels that ease across a space ramp; other settings switch (see spaceRamp).
+const fixedSettings = ['drums', 'starsSparse', 'arpPhaserRate', 'arpPhaserDepth', 'arpPhaserSweep']
+// A 20 BPM ramp between two space pieces: every level eases from where the
+// first piece ends to where the second begins. Other settings come from the
+// faster piece, and the drums come in or go out over the second half.
+function spaceRamp(from, to, next) {
+  const first = spaceAt[from]
+  const second = spaceAt[to]
+  const ending = (value) => (Array.isArray(value) ? value[1] : value)
+  const starting = (value) => (Array.isArray(value) ? value[0] : value)
+  const faster = to > from ? second : first
+  const settings = {}
+  for (const key of new Set([...Object.keys(first), ...Object.keys(second)])) {
+    const a = ending(first[key] ?? 0)
+    const b = starting(second[key] ?? 0)
+    settings[key] = typeof a === 'number' && typeof b === 'number' && !fixedSettings.includes(key)
+      ? [a, b]
+      : faster[key] ?? first[key] ?? second[key]
+  }
+  settings.drums = first.drums === second.drums ? first.drums : second.drums ? 'in' : 'out'
+  return block({ from, to, ...spaceHarmony, ...settings, next })
+}
+
 window.musicStart = 'drift_a'
 window.blocks = {
   // 60 BPM: drifting.
@@ -608,10 +662,8 @@ window.blocks = {
     sequence: 0.09, bells: 0.1, stars: 0.08,
     next: { drift_a: 1, space: 1, rise_70: 3 } }),
   // 60 to 120 BPM: the space pieces.
-  space: block({ from: 60, ...spaceHarmony, keys: 0.12, ensemble: 0.2, bass: 0.26, space: 0.19,
-    sequence: 0.1, pad: 0.1, halo: 0.12, crystal: 0.08, beeps: 0.1, hook: 0.08,
-    bells: 0.1, stars: 0.07, starsSparse: 0.6,
-    next: { drift_a: 2, drift_b: 1 } }),
+  space: block({ from: 60, ...spaceHarmony, ...spaceAt[60],
+    next: { drift_a: 2, drift_b: 1, space_rise_80: 1 } }),
   rise_70: block({ from: 60, to: 70, keys: [0.22, 0.2], ensemble: [0.23, 0.2], guitar: [0.08, 0.13], pad: [0.1, 0.09],
     arp: [0, 0.07], sequence: [0.1, 0.09],
     shaker: [0, 0.08], lift: [0, 0.07], bells: 0.14, stars: 0.1,
@@ -638,10 +690,8 @@ window.blocks = {
     organ: [0.07, 0.08], horns: [0.08, 0.1], woodwinds: [0.06, 0.07], drums: 'in', hats: 0.22,
     shaker: [0.11, 0.14], lift: [0.1, 0.12],
     bells: [0.12, 0.05], stars: 0.07, next: { cruise_a: 2, cruise_b: 1 } }),
-  space_80: block({ from: 80, ...spaceHarmony, keys: 0.08, ensemble: 0.12, bass: 0,
-    seqbass: 0.1, halo: 0.09, pad: 0.08, sequence: 0.06, crystal: 0.06, beeps: 0.08,
-    machine: 0.5, hook: 0.12, bells: 0.08, stars: 0.06,
-    next: { depart_a: 1, depart_b: 1, rise_90: 1 } }),
+  space_80: block({ from: 80, ...spaceHarmony, ...spaceAt[80],
+    next: { depart_a: 1, depart_b: 1, rise_90: 1, space_rise_100: 1, space_fall_60: 1 } }),
   // 100 BPM: cruising, with the melodies and the solo.
   cruise_a: block({ from: 100, ...cruise, next: { cruise_b: 2, solo: 1, rise_110: 1, space_100: 1 } }),
   cruise_b: block({ from: 100, ...cruise, leadNotes: melodyB, guitarNotes: guitarStrums, viola: 0.08, next: { cruise_a: 1, solo: 2, rise_110: 1, space_100: 1 } }),
@@ -649,11 +699,8 @@ window.blocks = {
     guitar: [0.22, 0.3], guitarNotes: solo, guitarBends: true,
     organ: [0.04, 0.11], horns: [0, 0.1], viola: [0, 0.12],
     next: { cruise_a: 1, rise_110: 2, fall_90: 1 } }),
-  space_100: block({ from: 100, ...spaceHarmony, keys: 0.08, ensemble: 0.1, bass: 0.2,
-    seqbass: 0.12, seqSteps: sixteenthSteps, halo: 0.06, choir: 0.07, pad: 0.05,
-    arp: 0.08, arpLpf: 2000, crystal: 0.04, beeps: 0.06,
-    drums: 1, hats: 0.16, toms: 0.05, hook: 0.15, hookLow: [0, 0.1], pluck: [0, 0.04],
-    next: { cruise_a: 1, rise_110: 1, fall_90: 1 } }),
+  space_100: block({ from: 100, ...spaceHarmony, ...spaceAt[100],
+    next: { cruise_a: 1, rise_110: 1, fall_90: 1, space_rise_120: 1, space_fall_80: 1 } }),
   rise_110: block({ from: 100, to: 110, ...cruise, arpLpf: [2200, 2700], stabs: [0, 0.04],
     guitarNotes: guitarStrums, rhythm: [0.045, 0.055], pump: [0.05, 0.07], pluck: 0.06,
     organ: [0.08, 0.1], horns: [0.1, 0.12], woodwinds: [0.07, 0.08],
@@ -671,12 +718,15 @@ window.blocks = {
     horns: 0.18, organ: 0.14, woodwinds: 0.05, guitar: 0.11, counter: 0, pump: 0.07,
     arp: 0.1, stabs: 0.05, ostinato: 0.07,
     next: { arrive_a: 1, arrive_b: 1, fall_110: 2, space_120: 1 } }),
-  space_120: block({ from: 120, ...spaceHarmony, keys: 0.06, ensemble: 0.12, bass: 0.4,
-    seqbass: 0.13, seqSteps: sixteenthSteps, choir: 0.09, pump: 0.07, stabs: 0.04,
-    arp: 0.12, arpLpf: 3200, arpPhaserRate: 0.25, arpPhaserDepth: 0.16, arpPhaserSweep: 450,
-    zaps: 0.06, beeps: 0.04, drums: 1, hats: 0.18, shaker: 0.14, ride: 0.06, toms: 0.07,
-    hook: 0.16, hookLow: 0.11, hookEcho: 0.07, pluck: 0.05, pad: 0.05,
-    next: { arrive_a: 1, arrive_b: 1, fanfare: 1, fall_110: 1 } }),
+  space_120: block({ from: 120, ...spaceHarmony, ...spaceAt[120],
+    next: { arrive_a: 1, arrive_b: 1, fanfare: 1, fall_110: 1, space_fall_100: 1 } }),
+  // Ramps between the space pieces, 20 BPM each way.
+  space_rise_80: spaceRamp(60, 80, { space_80: 1 }),
+  space_rise_100: spaceRamp(80, 100, { space_100: 1 }),
+  space_rise_120: spaceRamp(100, 120, { space_120: 1 }),
+  space_fall_100: spaceRamp(120, 100, { space_100: 1 }),
+  space_fall_80: spaceRamp(100, 80, { space_80: 1 }),
+  space_fall_60: spaceRamp(80, 60, { space: 1 }),
   fall_110: block({ from: 120, to: 110, ...arrive, stabs: [0.075, 0.04], pump: [0.08, 0.05], pluck: [0.05, 0.03],
     shaker: [0.16, 0], ostinato: [0.055, 0], ride: [0.055, 0], toms: [0.07, 0],
     lift: [0.12, 0], leadNotes: octaveUp(melodyB),
@@ -705,5 +755,7 @@ window.blocks = {
 // strudel.cc: one pass through every block.
 const demo = ['drift_a', 'drift_b', 'space', 'drift_a', 'rise_70', 'rise_80', 'space_80', 'depart_a', 'depart_b', 'rise_90',
   'rise_100', 'cruise_a', 'solo', 'space_100', 'cruise_a', 'cruise_b', 'rise_110', 'rise_120', 'arrive_a', 'fanfare', 'space_120', 'arrive_b',
-  'fall_110', 'fall_100', 'fall_90', 'fall_80', 'wind', 'fall_70', 'fall_60']
+  'fall_110', 'fall_100', 'fall_90', 'fall_80', 'wind', 'fall_70', 'fall_60',
+  'space', 'space_rise_80', 'space_80', 'space_rise_100', 'space_100', 'space_rise_120', 'space_120',
+  'space_fall_100', 'space_100', 'space_fall_80', 'space_80', 'space_fall_60', 'space']
 arrange(...demo.map((name) => [window.blocks[name].bpm.length, window.blocks[name].pattern]))

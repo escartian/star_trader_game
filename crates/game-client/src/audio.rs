@@ -141,6 +141,11 @@ impl Music {
         self.output.as_ref().and_then(output::Output::current_block)
     }
 
+    /// The block already chosen to follow the current one.
+    pub fn next_block(&self) -> Option<&'static str> {
+        self.output.as_ref().and_then(output::Output::next_block)
+    }
+
     /// Requests an immediate, short crossfade to a Songbook part.
     pub fn select_part(&self, name: &str) -> bool {
         self.output
@@ -178,6 +183,7 @@ mod output {
         // Field order matters: the sink must drop before its stream.
         sink: Option<Sink>,
         part: Option<Arc<AtomicUsize>>,
+        up_next: Option<Arc<AtomicUsize>>,
         selection: Option<Arc<AtomicUsize>>,
         effects: Vec<Sink>,
         stream: OutputStream,
@@ -192,6 +198,7 @@ mod output {
             Ok(Self {
                 sink: None,
                 part: None,
+                up_next: None,
                 selection: None,
                 effects: Vec::new(),
                 stream,
@@ -201,6 +208,7 @@ mod output {
         pub fn play(&mut self, track: Option<Track>) {
             self.sink = None;
             self.part = None;
+            self.up_next = None;
             self.selection = None;
             let Some(Track::MainTheme) = track else {
                 return;
@@ -208,6 +216,7 @@ mod output {
             match LongHaul::new() {
                 Ok(source) => {
                     self.part = Some(source.part_handle());
+                    self.up_next = Some(source.up_next_handle());
                     self.selection = Some(source.selection_handle());
                     let sink = Sink::connect_new(self.stream.mixer());
                     sink.set_volume(0.0);
@@ -226,6 +235,11 @@ mod output {
 
         pub fn current_block(&self) -> Option<&'static str> {
             let index = self.part.as_ref()?.load(Ordering::Acquire);
+            long_haul::part_name(index)
+        }
+
+        pub fn next_block(&self) -> Option<&'static str> {
+            let index = self.up_next.as_ref()?.load(Ordering::Acquire);
             long_haul::part_name(index)
         }
 
@@ -278,6 +292,10 @@ mod output {
         pub fn set_gain(&self, _: f32) {}
 
         pub fn current_block(&self) -> Option<&'static str> {
+            None
+        }
+
+        pub fn next_block(&self) -> Option<&'static str> {
             None
         }
 

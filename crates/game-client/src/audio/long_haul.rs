@@ -93,6 +93,30 @@ const AUDIO: &[(&str, &[u8])] = &[
         include_bytes!("../../../../assets/music/long-haul/space_120.ogg"),
     ),
     (
+        "space_rise_80.ogg",
+        include_bytes!("../../../../assets/music/long-haul/space_rise_80.ogg"),
+    ),
+    (
+        "space_rise_100.ogg",
+        include_bytes!("../../../../assets/music/long-haul/space_rise_100.ogg"),
+    ),
+    (
+        "space_rise_120.ogg",
+        include_bytes!("../../../../assets/music/long-haul/space_rise_120.ogg"),
+    ),
+    (
+        "space_fall_100.ogg",
+        include_bytes!("../../../../assets/music/long-haul/space_fall_100.ogg"),
+    ),
+    (
+        "space_fall_80.ogg",
+        include_bytes!("../../../../assets/music/long-haul/space_fall_80.ogg"),
+    ),
+    (
+        "space_fall_60.ogg",
+        include_bytes!("../../../../assets/music/long-haul/space_fall_60.ogg"),
+    ),
+    (
         "fanfare.ogg",
         include_bytes!("../../../../assets/music/long-haul/fanfare.ogg"),
     ),
@@ -319,7 +343,10 @@ pub struct LongHaul {
     clock: JoinClock,
     ramp: EntryRamp,
     selection_fade: Option<SelectionFade>,
+    /// The successor drawn when the current block started; it plays next.
+    upcoming: String,
     now_playing: Arc<AtomicUsize>,
+    up_next: Arc<AtomicUsize>,
     selected_part: Arc<AtomicUsize>,
 }
 
@@ -331,6 +358,8 @@ impl LongHaul {
         let current = decoder(&block.file)?;
         let clock = JoinClock::new(block.frames);
         let now_playing = Arc::new(AtomicUsize::new(audio_index(&block.file)));
+        let upcoming = graph.choose_next(&name).to_owned();
+        let up_next = Arc::new(AtomicUsize::new(audio_index(&graph.blocks[&upcoming].file)));
         Ok(Self {
             graph,
             current_name: name,
@@ -339,13 +368,26 @@ impl LongHaul {
             clock,
             ramp: EntryRamp::flat(),
             selection_fade: None,
+            upcoming,
             now_playing,
+            up_next,
             selected_part: Arc::new(AtomicUsize::new(NO_SELECTION)),
         })
     }
 
     pub(super) fn part_handle(&self) -> Arc<AtomicUsize> {
         Arc::clone(&self.now_playing)
+    }
+
+    pub(super) fn up_next_handle(&self) -> Arc<AtomicUsize> {
+        Arc::clone(&self.up_next)
+    }
+
+    /// Draws the block that follows the current one and publishes it.
+    fn draw_upcoming(&mut self) {
+        self.upcoming = self.graph.choose_next(&self.current_name).to_owned();
+        let file = &self.graph.blocks[&self.upcoming].file;
+        self.up_next.store(audio_index(file), Ordering::Release);
     }
 
     pub(super) fn selection_handle(&self) -> Arc<AtomicUsize> {
@@ -370,10 +412,11 @@ impl LongHaul {
         self.clock = JoinClock::new(block.frames);
         self.ramp = EntryRamp::flat();
         self.now_playing.store(index, Ordering::Release);
+        self.draw_upcoming();
     }
 
     fn advance(&mut self) -> Result<(), String> {
-        let next = self.graph.choose_next(&self.current_name).to_owned();
+        let next = std::mem::take(&mut self.upcoming);
         let block = &self.graph.blocks[&next];
         self.ramp = EntryRamp::between(&self.graph.blocks[&self.current_name], block, 48_000);
         let decoder = decoder(&block.file)?;
@@ -382,6 +425,7 @@ impl LongHaul {
         self.clock = JoinClock::new(block.frames);
         self.now_playing
             .store(audio_index(&block.file), Ordering::Release);
+        self.draw_upcoming();
         Ok(())
     }
 }

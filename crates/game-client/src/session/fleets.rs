@@ -199,9 +199,10 @@ impl LocalSession {
                 }
             });
         }
-        if let Some(command) = self.shipyard_ui(ui) {
-            action = Some(command);
-        }
+        ui.horizontal_wrapped(|ui| {
+            icons::glyph(ui, Icon::Shipyard, GREEN, "Shipyard");
+            ui.weak("Buy and sell hulls in the market's Shipyard tab, at a port with a shipyard.");
+        });
         ui.separator();
         ui.horizontal_wrapped(|ui| {
             icons::glyph(

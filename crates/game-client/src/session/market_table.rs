@@ -211,7 +211,7 @@ impl LocalSession {
         commodity: Commodity,
         systems: &[StarSystem],
     ) {
-        match self.best_sale(here, commodity) {
+        match self.best_sale(here, commodity, systems) {
             Some(sale) => {
                 let place = super::market_scope::port_and_system(systems, sale.market.id);
                 ui.colored_label(GREEN, format!("+{} {place}", Credits(sale.sell.0 - sale.buy.0)))

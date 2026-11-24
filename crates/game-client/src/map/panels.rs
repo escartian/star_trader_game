@@ -39,7 +39,7 @@ impl Map {
         if let Some(system) = self.systems.iter().find(|s| Some(s.id) == self.selected) {
             let origin = self.route_position();
             let distance = origin.map_or(0.0, |s| s.distance(position(system)));
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 crate::theme::icons::glyph(
                     ui,
                     Icon::Star,
@@ -47,13 +47,20 @@ impl Map {
                     system.star_kind.label(),
                 );
                 ui.strong(&system.name);
-                if let Some((faction, color, tier)) = self.session.system_holder(system.id) {
-                    ui.label(egui::RichText::new(faction.label()).color(color))
-                        .on_hover_text(format!(
-                            "{} space; your standing: {}",
-                            faction.label(),
-                            tier.label()
-                        ));
+                ui.label(system.star_kind.label());
+                match self.session.system_holder(system.id) {
+                    Some((faction, color, tier)) => {
+                        ui.label(egui::RichText::new(faction.label()).color(color));
+                        ui.label(
+                            egui::RichText::new(format!("({})", tier.label()))
+                                .color(crate::session::tier_color(tier)),
+                        )
+                        .on_hover_text("Your standing with the holder");
+                    }
+                    None if self.session.factions_active() => {
+                        ui.weak("Independent");
+                    }
+                    None => {}
                 }
                 stat(
                     ui,

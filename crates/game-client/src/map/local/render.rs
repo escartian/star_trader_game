@@ -37,17 +37,6 @@ impl LocalView {
             .hover_pos()
             .map(|p| pick(&self.system, &self.camera, rect, p))
             .unwrap_or_default();
-        if !hover.is_empty() {
-            response.clone().on_hover_ui(|ui| {
-                for body in self.system.bodies.iter().filter(|b| hover.contains(&b.id)) {
-                    ui.label(format!(
-                        "{} • {}",
-                        super::layout::short_name(&self.system, body),
-                        body.kind.label()
-                    ));
-                }
-            });
-        }
         let star = self.camera.project(DVec3::ZERO, rect);
         for segment in self.preview_route.windows(2) {
             let project = |position: game_core::LocalPosition| {

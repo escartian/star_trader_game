@@ -156,7 +156,7 @@ Changing the slot changes the autosave destination; it does not load that slot.
 Use Continue to load it. Closing or starting fresh in a selected slot can replace
 that slot, with its previous valid snapshot retained as backup.
 
-Open **Fleets / shipyard** to buy ships, split checked members, merge co-located
+Open the market's **Shipyard** tab (at a port with hulls for sale) to buy or sell ships, and **Fleets** to split checked members, merge co-located
 fleets or transfer cargo. Travel moves every ship in the selected fleet and checks
 each member’s fuel/range. Ships appear beside visited bodies/trade ports and at their deep-space positions.
 Rocky/gas planets have markets at orbital berths; detailed landing/collision
@@ -208,8 +208,8 @@ The game is turn based internally, with navigation runs as the campaign language
 Single-player no longer advances the whole world when one fleet moves. Multiplayer
 will add shared player readiness; networking/authentication remain unimplemented.
 
-Visit a planet, then open **Trade** to trade there. **Fleets** (the shipyard)
-shows local hull stock, treasury-funded sale offers and fleet naming controls.
+Visit a planet, then open **Trade** to trade there. Its **Shipyard** tab shows
+local hull stock and treasury-funded sale offers; **Fleets** names fleets.
 Markets can run out of money; shipyards can run out of hulls. See
 [planet economies](docs/PLANET_ECONOMY.md).
 
@@ -296,7 +296,7 @@ Example captures: [system](docs/previews/system.png), [market](docs/previews/mar
 [run review](docs/previews/run-review.png), [advancing](docs/previews/advance.png),
 [trade route](docs/previews/trade-route.png),
 [map command](docs/previews/destination.png),
-[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png) (`battle-close`: stepped forward and aimed), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [phone battle](docs/previews/phone-battle.png), [Raider Haven](docs/previews/haven.png) (`haven`), [phone Victory panel](docs/previews/phone-victory.png) (`victory`), [landed and mining](docs/previews/landed.png), [raider band strikes](docs/previews/raiders.png), [fleet stacks](docs/previews/fleet-stacks.png) (`--scenario multi-fleet --capture-view galaxy`), [phone system view](docs/previews/phone-system.png) and [phone market](docs/previews/phone-market.png) (`--capture-size 390x844`), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `fleets`, `saves`, `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `hail` (a hailed NPC trader), `trader-offer`, `shakedown` and `distress` (a trader that came to you), `combat`, `battle`, `battle-close`, `landed`, `raiders`, `victory`, `factions` (the Factions panel), `factions-map` (territory rings), `police` (a
+[NPC traffic](docs/previews/traffic.png), [encounter](docs/previews/encounter.png), [battle](docs/previews/battle.png) (`battle-close`: stepped forward and aimed), [7 v 7 battle](docs/previews/fleet-battle.png) (`--scenario fleet-battle`), [phone battle](docs/previews/phone-battle.png), [Raider Haven](docs/previews/haven.png) (`haven`), [phone Victory panel](docs/previews/phone-victory.png) (`victory`), [landed and mining](docs/previews/landed.png), [raider band strikes](docs/previews/raiders.png), [fleet stacks](docs/previews/fleet-stacks.png) (`--scenario multi-fleet --capture-view galaxy`), [phone system view](docs/previews/phone-system.png) and [phone market](docs/previews/phone-market.png) (`--capture-size 390x844`), [save controls](docs/previews/saves.png). Capture views: `galaxy`, `system`, `advance`, `trade-route`, `market`, `shipyard` (the market's Shipyard tab), `fleets`, `saves`, `game-menu`, `game-songbook`, `card-closed` (card closed, a message popping up), `navigation`, `entry`, `arrival`, `approach`, `deep-space`, `orbit`, `planet-market`, `planet-shipyard`, `run-review`, `destination`, `traffic`, `encounter` (use `--seed 2`), `hail` (a hailed NPC trader), `trader-offer`, `shakedown` and `distress` (a trader that came to you), `combat`, `battle`, `battle-close`, `landed`, `raiders`, `victory`, `factions` (the Factions panel), `factions-map` (territory rings), `police` (a
 patrol stopping a wanted fleet), `haven`, `roster`, `unlock`, `chooser` (the main menu; `chooser@SECONDS` shows its
 animation at that moment, for frame-by-frame checks), `menu-new`, `menu-load`,
 `menu-settings`, `menu-songbook` (the Songbook's list), `menu-songbook@PART` (its map,

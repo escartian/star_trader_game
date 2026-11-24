@@ -24,6 +24,8 @@ pub(super) struct MarketPanel {
     /// Where the best-margin column looks for a sale.
     pub(super) scope: super::market_scope::TradeScope,
     pub(super) reach: super::market_scope::ReachCache,
+    /// The market window's page: trade, or the port's shipyard.
+    shipyard: bool,
 }
 impl Default for MarketPanel {
     fn default() -> Self {
@@ -33,11 +35,19 @@ impl Default for MarketPanel {
             fuel_units: 1,
             scope: Default::default(),
             reach: Default::default(),
+            shipyard: false,
         }
     }
 }
 
 impl LocalSession {
+    /// Opens the market window on its Shipyard tab (captures).
+    #[cfg(any(test, feature = "dev-tools"))]
+    pub fn open_shipyard(&mut self) {
+        self.market.open = true;
+        self.market.shipyard = true;
+    }
+
     pub fn show_market(&mut self, ctx: &egui::Context, systems: &[StarSystem]) {
         let mut open = self.market.open;
         crate::theme::metal::window(ctx, "Market", &mut open, 700.0, |ui| {
@@ -72,6 +82,32 @@ impl LocalSession {
                 .map_or(CYAN, |(_, tier)| super::factions::tier_color(tier));
             ui.label(egui::RichText::new(terms.summary()).color(color).small());
             self.wanted_banner(ui, &ship);
+        }
+        // A port with hulls for sale has a Shipyard tab (once fleets unlock);
+        // hulls are bought only there, where the ship is docked.
+        let yard = self.unlocked(game_core::progress::Feature::Fleets)
+            && market.ship_stock.iter().any(|stock| *stock > 0);
+        self.market.shipyard &= yard;
+        if yard {
+            ui.horizontal(|ui| {
+                if icons::labeled_toggle(ui, Icon::Market, "Trade", !self.market.shipyard).clicked()
+                {
+                    self.market.shipyard = false;
+                }
+                if icons::labeled_toggle(ui, Icon::Shipyard, "Shipyard", self.market.shipyard)
+                    .clicked()
+                {
+                    self.market.shipyard = true;
+                }
+            });
+            ui.separator();
+        }
+        if self.market.shipyard {
+            if let Some(command) = self.shipyard_ui(ui) {
+                self.command(command);
+                ui.ctx().request_repaint();
+            }
+            return;
         }
         ui.horizontal_wrapped(|ui| {
             stat(ui, Icon::Funds, AMBER, &market.credits.to_string(), "Market funds available to buy your cargo");

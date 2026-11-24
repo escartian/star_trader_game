@@ -9,6 +9,33 @@ use game_core::{
     travel::Ship,
 };
 
+/// A sale within this share (percent) of the best margin counts as good
+/// enough, and the nearest of those is shown: a far port paying a little
+/// more is not worth the trip.
+const NEAR_BEST_PERCENT: u64 = 90;
+
+/// Squared distance between two star systems (light-year units squared);
+/// unknown systems count as far away.
+fn distance_squared(
+    systems: &[StarSystem],
+    from: game_core::SystemId,
+    to: game_core::SystemId,
+) -> i128 {
+    let at = |id| {
+        systems
+            .iter()
+            .find(|system| system.id == id)
+            .map(|system| system.position)
+    };
+    match (at(from), at(to)) {
+        (Some(a), Some(b)) => [a.x - b.x, a.y - b.y, a.z - b.z]
+            .iter()
+            .map(|delta| i128::from(*delta) * i128::from(*delta))
+            .sum(),
+        _ => i128::MAX,
+    }
+}
+
 /// Which ports the "best margin" column and the best-trade line consider.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(super) enum TradeScope {
@@ -110,11 +137,19 @@ impl LocalSession {
             }
     }
 
-    /// The in-scope port paying most for one unit of `commodity` bought here.
-    pub(super) fn best_sale(&self, here: &Market, commodity: Commodity) -> Option<BestSale<'_>> {
+    /// The in-scope port to sell one unit of `commodity` bought here: among
+    /// ports whose margin is within [`NEAR_BEST_PERCENT`] of the best, the
+    /// nearest (by star-system distance; then the higher price).
+    pub(super) fn best_sale(
+        &self,
+        here: &Market,
+        commodity: Commodity,
+        systems: &[StarSystem],
+    ) -> Option<BestSale<'_>> {
         let local = &here.goods[commodity.index()];
         let buy = local.price(TradeSide::Buy, local.stock);
-        self.economy
+        let sales: Vec<BestSale> = self
+            .economy
             .markets
             .iter()
             .filter(|market| self.in_scope(here, market))
@@ -126,15 +161,24 @@ impl LocalSession {
                     sell: good.price(TradeSide::Sell, good.stock),
                 }
             })
-            .max_by_key(|sale| sale.sell)
             .filter(|sale| sale.sell > sale.buy)
+            .collect();
+        let best = sales.iter().map(|sale| sale.sell.0 - buy.0).max()?;
+        let good_enough = best - best * (100 - NEAR_BEST_PERCENT) / 100;
+        sales
+            .into_iter()
+            .filter(|sale| sale.sell.0 - buy.0 >= good_enough)
+            .min_by_key(|sale| {
+                let far = distance_squared(systems, here.id.system, sale.market.id.system);
+                (far, std::cmp::Reverse(sale.sell))
+            })
     }
 
     /// One line naming the single best buy-here, sell-there trade in scope.
     pub(super) fn best_trade_line(&self, ui: &mut egui::Ui, here: &Market, systems: &[StarSystem]) {
         let best = Commodity::ALL
             .into_iter()
-            .filter_map(|good| self.best_sale(here, good).map(|sale| (good, sale)))
+            .filter_map(|good| self.best_sale(here, good, systems).map(|sale| (good, sale)))
             .max_by_key(|(_, sale)| sale.sell.0 - sale.buy.0);
         let scope = self.market.scope.label().to_lowercase();
         match best {

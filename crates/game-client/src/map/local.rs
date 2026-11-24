@@ -120,6 +120,11 @@ impl LocalView {
         self.bands = bands;
     }
 
+    /// The body selected in this view, if any.
+    pub fn selected_body(&self) -> Option<BodyId> {
+        self.selected
+    }
+
     pub fn set_police(&mut self, police: Vec<crate::session::PatrolMarker>) {
         self.police = police;
     }

@@ -20,10 +20,10 @@ system and proposed route; reduce unrelated labels before reducing readability.
 | Pan | Drag | One-finger drag |
 | Zoom | Wheel/trackpad | Pinch |
 | Focus selection | Button / F | Button |
-| Find a star or planet | Search box (Ctrl/Cmd+F) | Search box |
+| Find a star or planet | Search button or Ctrl/Cmd+F | Search button |
 | Reset/overview | Visible controls | Visible controls |
 
-The galaxy map's search box (top-left) lists up to eight stars and bodies whose
+The galaxy map's **Search** button (top-left) opens a box that lists up to eight stars and bodies whose
 names contain the typed text; picking one selects and centres its system
 without plotting a course. Every UI control plays the click cue; map, system
 and battle canvases stay silent on empty space and play a brighter selection

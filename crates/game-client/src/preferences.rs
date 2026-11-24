@@ -45,6 +45,41 @@ pub struct ClientOptions {
     pub ui_scale: u8,
     /// Map glides and battle slides; off shows final positions at once.
     pub animations: bool,
+    /// How long each navigation run takes to play out on the map.
+    pub run_pace: RunPace,
+}
+
+/// Seconds per navigation run on the map: the ships' glide and the pause
+/// between an advance's runs. Display only; it never changes the rules.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RunPace {
+    Relaxed,
+    #[default]
+    Normal,
+    Quick,
+    Rapid,
+}
+
+impl RunPace {
+    pub const ALL: [Self; 4] = [Self::Relaxed, Self::Normal, Self::Quick, Self::Rapid];
+
+    pub const fn seconds(self) -> f64 {
+        match self {
+            Self::Relaxed => 2.0,
+            Self::Normal => 1.2,
+            Self::Quick => 0.6,
+            Self::Rapid => 0.35,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Relaxed => "Relaxed (2 s per run)",
+            Self::Normal => "Normal (1.2 s per run)",
+            Self::Quick => "Quick (0.6 s per run)",
+            Self::Rapid => "Rapid (0.35 s per run)",
+        }
+    }
 }
 
 pub const UI_SCALE_MIN: u8 = 75;
@@ -63,6 +98,7 @@ impl Default for ClientOptions {
             fullscreen: false,
             ui_scale: 100,
             animations: true,
+            run_pace: RunPace::default(),
         }
     }
 }

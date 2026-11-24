@@ -24,12 +24,17 @@ fn frame() -> egui::Frame {
 }
 
 impl Map {
-    /// Lays out the strip, action bar and sheet; must run before the map's
-    /// central panel so the map gets the remaining space.
+    /// Lays out the strip and (unless closed) the sheet; must run before the
+    /// map's central panel so the map gets the remaining space.
     pub(super) fn shell(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("status-strip")
             .frame(frame())
             .show(ctx, |ui| self.status_strip(ui));
+        self.reopen_card_on_change();
+        if !self.card.open {
+            self.card.map_area = ctx.available_rect();
+            return;
+        }
         let screen = ctx.screen_rect();
         let sheet = |ui: &mut egui::Ui, map: &mut Map| {
             egui::ScrollArea::vertical()
@@ -49,6 +54,7 @@ impl Map {
                 .frame(frame())
                 .show(ctx, |ui| sheet(ui, self));
         }
+        self.card.map_area = ctx.available_rect();
     }
 
     fn status_strip(&mut self, ui: &mut egui::Ui) {
@@ -57,14 +63,18 @@ impl Map {
             self.strip_title(ui);
             if one_row {
                 ui.add_space(12.0);
-                self.session.strip_actions(ui, &mut self.sheet);
+                self.session
+                    .strip_actions(ui, &mut self.sheet, &mut self.card.open);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 self.session.status_numbers(ui);
             });
         });
         if !one_row {
-            ui.horizontal(|ui| self.session.strip_actions(ui, &mut self.sheet));
+            ui.horizontal(|ui| {
+                self.session
+                    .strip_actions(ui, &mut self.sheet, &mut self.card.open)
+            });
         }
     }
 
@@ -103,20 +113,22 @@ impl Map {
         ctx.request_repaint_after(std::time::Duration::from_millis(50));
     }
 
-    /// A Fleets or Menu page's Close button, back to the selection (the
-    /// page's tab in the strip toggles it too).
-    fn page_close(&mut self, ui: &mut egui::Ui) {
+    /// The card's Close button: hides the whole card for the most map room.
+    /// It reopens on the strip's card button, a tab, a tap on the map or a
+    /// contact.
+    fn card_close(&mut self, ui: &mut egui::Ui) {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
             if icons::button(ui, Icon::Cancel, "Close")
-                .on_hover_text("Close this page")
+                .on_hover_text("Hide this card; the map takes its room")
                 .clicked()
             {
-                self.sheet = SheetTab::Selection;
+                self.close_card();
             }
         });
     }
 
     fn sheet_ui(&mut self, ui: &mut egui::Ui) {
+        self.card_close(ui);
         self.session.sheet_header(ui);
         match self.sheet {
             SheetTab::Selection => {
@@ -130,12 +142,8 @@ impl Map {
                 ui.separator();
                 self.session.destination_card(ui, &self.session_systems);
             }
-            SheetTab::Fleets => {
-                self.page_close(ui);
-                self.session.fleets_sheet(ui, &self.session_systems);
-            }
+            SheetTab::Fleets => self.session.fleets_sheet(ui, &self.session_systems),
             SheetTab::Menu => {
-                self.page_close(ui);
                 if ui
                     .add_sized([ui.available_width(), 34.0], |ui: &mut egui::Ui| {
                         icons::button(ui, Icon::Log, "Songbook · Music")

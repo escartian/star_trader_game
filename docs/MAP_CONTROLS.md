@@ -83,8 +83,10 @@ takes the screen, framed by two panels.
 
 | Part | Position | Contents |
 | --- | --- | --- |
-| Status strip | top | Back (system view), place name, **Fleets**, **ADVANCE** / **STOP** with the single-run clock, **Menu**, then credits, run number and alert badge; below 720 points wide the actions take a second row |
-| Context sheet | bottom, or docked on the right when the window is wider than tall | the guide and any contact decision first, then one page |
+| Status strip | top | Back (system view), place name, **Fleets**, **ADVANCE** / **STOP** with the single-run clock, **Menu**, the card toggle (ⓘ), then credits, run number and alert badge; below 720 points wide the actions take a second row |
+| Context card | bottom, or docked on the right when the window is wider than tall; can be closed | **Close**, the guide and any contact decision first, then one page |
+| Message pop-up | bottom of the map | each new message for about 3 s, then fades over 1 s |
+| Search | map's top-left corner | **Search** opens a name box (also Ctrl/Cmd+F); Escape, a pick or the button closes it |
 | Map buttons | map's top-right corner | overview or reset, focus selection and fleet |
 
 The sheet's pages:
@@ -96,18 +98,23 @@ The sheet's pages:
 - **Fleets:** the ship used for trading with its cargo and fuel, then every fleet
   (status, Wait, Land / Lift off, route controls) and NPC traffic.
 - **Menu:** **Songbook · Music** (play or queue any part, as from the main
-  menu), **Trade**, **Fleets & shipyard**, **Navigation**, **Victory**,
+  menu), **Trade**, **Fleets**, **Navigation**, **Victory**,
   **Factions**, **Session & saves** and **Settings**, then **Latest events**
   (the last 12 messages, newest first, highlighted; formerly the action bar's
   line and the Session window's log).
 
-Fleets and Menu each have a **Close** button back to Selection; tapping their
-strip button again does the same.
+The card's **Close** button hides it entirely, giving the map the whole
+screen below the strip. It comes back with the strip's card toggle, a Fleets or
+Menu tap, a tap on the map (a new selection), another selected ship or a new
+contact. Tapping an open page's strip button returns to Selection.
+
+Stars, planets and ports have no hover pop-ups: the selection card shows a
+star's type, holder and your standing, and a body's kind and traits.
 
 Tapping a body or system shows Selection; tapping a fleet chip shows Fleets.
 The amber alert badge counts fleets needing a decision or orders: tap it to
 select the next one, which also switches to the page that fleet needs. When
-Advance stops, the sheet does the same. Market, Fleets & shipyard, Navigation,
+Advance stops, the sheet does the same. Market (with its **Shipyard** tab), Fleets, Navigation,
 Session and the combat report open as centred windows on a wide screen, and
 full screen with a **Back** button on a narrow one (below 700 points), scrolling
 sideways where a table is wider than the screen. The system overview frames

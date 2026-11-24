@@ -22,6 +22,7 @@ mod recovery;
 mod render;
 mod search;
 mod shell;
+mod shell_card;
 mod songbook;
 mod songbook_graph;
 mod songbook_parts;
@@ -65,6 +66,8 @@ pub struct Map {
     applied_options: Option<crate::preferences::ClientOptions>,
     /// The in-game Songbook (Menu page), like the main menu's.
     songbook: (bool, songbook::View),
+    /// Whether the context card is open, and the message pop-up.
+    card: shell_card::CardState,
 }
 
 fn position(system: &StarSystem) -> DVec3 {
@@ -134,6 +137,7 @@ impl Map {
             menu_still_time: menu_backdrop::STILL_TIME,
             applied_options: None,
             songbook: (false, songbook::View::default()),
+            card: shell_card::CardState::default(),
         }
     }
 
@@ -277,6 +281,7 @@ impl Map {
         } else {
             self.galaxy_ui(ctx);
         }
+        self.show_toast(ctx);
         self.session.show_market(ctx, &self.session_systems);
         self.session.show_fleets(ctx, &self.session_systems);
         self.session.show_session_controls(ctx);

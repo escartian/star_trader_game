@@ -23,27 +23,6 @@ impl Map {
             .hover_pos()
             .map(|p| pick(&self.systems, &self.camera, rect, p))
             .unwrap_or_default();
-        if !hover.is_empty() {
-            response.clone().on_hover_ui(|ui| {
-                for system in self.systems.iter().filter(|s| hover.contains(&s.id)) {
-                    let holder = match self.session.system_holder(system.id) {
-                        Some((faction, _, tier)) => {
-                            format!(" • {} space ({})", faction.label(), tier.label())
-                        }
-                        None if self.session.factions_active() => " • independent".into(),
-                        None => String::new(),
-                    };
-                    ui.label(format!(
-                        "{} • {}{holder}",
-                        system.name,
-                        system.star_kind.label()
-                    ));
-                }
-                if hover.len() > 1 {
-                    ui.label("Click to list all overlapping targets.");
-                }
-            });
-        }
         if let (Some(origin), Some(target)) = (
             self.route_position(),
             self.systems.iter().find(|s| Some(s.id) == self.selected),

@@ -9,8 +9,9 @@ use game_core::{fleet::FleetId, travel::Location};
 use game_protocol::ClientCommand;
 use game_server::LOCAL_PLAYER;
 
-/// Pause between automatic runs, in seconds of UI time, so each step is visible.
-pub(super) const RUN_INTERVAL_SECONDS: f64 = 0.35;
+/// Pause between automatic runs at the default pace, in seconds of UI time, so
+/// each step is visible. Settings → Run speed changes it (`run_seconds`).
+pub(super) const RUN_INTERVAL_SECONDS: f64 = crate::preferences::RunPace::Normal.seconds();
 /// Safety net far above any single itinerary; reaching it pauses and reports.
 const MAX_RUNS: u32 = 64;
 
@@ -58,7 +59,7 @@ impl LocalSession {
     pub fn drive_advance(&mut self, now: f64) -> Option<f64> {
         let advance = self.advance?;
         if let Some(last) = advance.last_run_at {
-            let due = last + RUN_INTERVAL_SECONDS;
+            let due = last + self.run_seconds();
             if now < due {
                 return Some(due - now);
             }
@@ -73,7 +74,12 @@ impl LocalSession {
             runs,
             last_run_at: Some(now),
         });
-        Some(RUN_INTERVAL_SECONDS)
+        Some(self.run_seconds())
+    }
+
+    /// Seconds per run on the map at the chosen run speed.
+    pub(super) fn run_seconds(&self) -> f64 {
+        self.client_options().run_pace.seconds()
     }
 
     /// Selects a fleet and asks the map to focus it.

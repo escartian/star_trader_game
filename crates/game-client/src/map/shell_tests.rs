@@ -103,13 +103,25 @@ fn a_phone_shows_the_strip_with_its_actions_instead_of_floating_cards() {
 }
 
 #[test]
-fn the_fleets_and_menu_pages_close_with_their_close_button() {
+fn the_card_closes_fully_and_reopens_on_a_tab() {
     let ctx = egui::Context::default();
     let mut map = multi_fleet();
     tap(&ctx, &mut map, PHONE, "Fleets");
     assert_eq!(map.sheet, SheetTab::Fleets);
+    let with_card = map.card.map_area.height();
     tap(&ctx, &mut map, PHONE, "Close");
     assert_eq!(map.sheet, SheetTab::Selection);
+    assert!(!map.card.open, "the whole card is gone");
+    settle(&ctx, &mut map, PHONE);
+    assert!(
+        map.card.map_area.height() > with_card + 200.0,
+        "the map takes its room"
+    );
+    assert!(shows(&ctx, &mut map, PHONE, "FLEETS").is_none());
+    // A tab opens it again on that page.
+    tap(&ctx, &mut map, PHONE, "Fleets");
+    assert!(map.card.open && map.sheet == SheetTab::Fleets);
+    tap(&ctx, &mut map, PHONE, "Close");
     tap(&ctx, &mut map, PHONE, "Menu");
     tap(&ctx, &mut map, PHONE, "Songbook · Music");
     assert!(map.songbook.0, "the in-game songbook opens");

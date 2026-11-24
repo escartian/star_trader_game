@@ -3,7 +3,7 @@
 //! authoritative state, saves and camera-follow logic never see these positions.
 //! Courses are straight within a leg and a run never starts a second leg, so a
 //! straight glide between the two positions stays on the plotted path.
-use super::{LocalSession, advance::RUN_INTERVAL_SECONDS};
+use super::LocalSession;
 use game_core::{
     StarSystem,
     movement::SpacePosition,
@@ -11,9 +11,11 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-/// Seconds one run's movement takes to play out. Equal to the advance interval, so
-/// the runs of an advance join into one continuous glide.
-pub(super) const GLIDE_SECONDS: f64 = RUN_INTERVAL_SECONDS;
+/// Seconds one run's movement takes to play out at the default pace. Equal to
+/// the advance interval (both follow Settings → Run speed), so the runs of an
+/// advance join into one continuous glide.
+#[cfg(test)]
+pub(super) const GLIDE_SECONDS: f64 = super::advance::RUN_INTERVAL_SECONDS;
 
 /// The latest run's glide.
 pub(super) struct Motion {
@@ -41,7 +43,7 @@ impl LocalSession {
     /// final positions at once. Returns how soon to repaint without new input.
     pub fn frame(&mut self, now: f64, animate: bool) -> Option<f64> {
         self.clock = now;
-        self.glide_seconds = if animate { GLIDE_SECONDS } else { 0.0 };
+        self.glide_seconds = if animate { self.run_seconds() } else { 0.0 };
         let next_run = self.drive_advance(now);
         let gliding = self.update_motion(now).then_some(0.0);
         match (next_run, gliding) {
@@ -121,7 +123,8 @@ impl LocalSession {
             return false;
         };
         let start = *motion.started_at.get_or_insert(now);
-        if self.glide_seconds <= 0.0 || now - start >= self.glide_seconds {
+        // A hair of tolerance: UI clocks add up in floating point.
+        if self.glide_seconds <= 0.0 || now - start >= self.glide_seconds - 1e-9 {
             self.motion = None;
             return false;
         }

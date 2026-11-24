@@ -14,6 +14,7 @@ mod contacts;
 mod factions;
 mod fleets;
 mod victory;
+pub use factions::tier_color;
 pub use fleets::TradeOption;
 pub use police::PatrolMarker;
 mod approaches;
@@ -91,6 +92,8 @@ pub struct LocalSession {
     log: VecDeque<String>,
     loaded_galaxy: Option<Vec<game_core::StarSystem>>,
     notice: String,
+    /// Counts messages, so the map can tell a new one from a repeat.
+    notice_serial: u64,
     preferences_path: Option<std::path::PathBuf>,
 }
 
@@ -111,7 +114,7 @@ impl LocalSession {
             advance: None,
             motion: None,
             clock: 0.0,
-            glide_seconds: motion::GLIDE_SECONDS,
+            glide_seconds: advance::RUN_INTERVAL_SECONDS,
             authority,
             active_ship,
             state: *state,
@@ -128,6 +131,7 @@ impl LocalSession {
             log: VecDeque::new(),
             loaded_galaxy: None,
             notice: String::new(),
+            notice_serial: 0,
             preferences_path: None,
         }
     }
@@ -235,9 +239,12 @@ impl LocalSession {
     }
 
     /// The latest message shown to the player.
-    #[cfg(test)]
     pub fn notice(&self) -> &str {
         &self.notice
+    }
+
+    pub fn notice_serial(&self) -> u64 {
+        self.notice_serial
     }
 
     pub fn notify(&mut self, message: String) {
@@ -246,6 +253,7 @@ impl LocalSession {
 
     fn record(&mut self, message: String) {
         self.notice = message.clone();
+        self.notice_serial += 1;
         self.log.push_back(message);
         if self.log.len() > 50 {
             self.log.pop_front();

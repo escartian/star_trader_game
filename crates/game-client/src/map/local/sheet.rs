@@ -150,8 +150,8 @@ impl LocalView {
             .find(|b| Some(b.id) == self.selected)
         {
             ui.horizontal_wrapped(|ui| {
-                ui.strong(short_name(&self.system, body))
-                    .on_hover_text(body.kind.label());
+                ui.strong(short_name(&self.system, body));
+                ui.label(body.kind.label());
                 if let Some(surface) = &body.surface {
                     let base = self.landing.ore_per_ship(body.kind);
                     icons::surface_traits(ui, surface, surface.ore_per_ship(base));

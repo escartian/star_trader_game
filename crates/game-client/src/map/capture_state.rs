@@ -48,6 +48,12 @@ impl Map {
             "factions-map" => self.session.capture_factions(false)?,
             "roster" => self.sheet = crate::session::SheetTab::Fleets,
             "game-menu" => self.sheet = crate::session::SheetTab::Menu,
+            "card-closed" => {
+                // The card closed and the latest message popping up.
+                self.session.capture_wait_runs(1);
+                self.close_card();
+                self.card.show_next_toast();
+            }
             "game-songbook" => {
                 self.sheet = crate::session::SheetTab::Menu;
                 self.songbook.0 = true;
@@ -152,7 +158,7 @@ impl Map {
                     self.session.open_market();
                 }
                 if view == "planet-shipyard" {
-                    self.session.open_fleets();
+                    self.session.open_shipyard();
                 }
             }
             "landed" => {
@@ -188,6 +194,7 @@ impl Map {
                 self.local = Some(LocalView::new(system));
             }
             "market" => self.session.open_market(),
+            "shipyard" => self.session.open_shipyard(),
             "fleets" => self.session.open_fleets(),
             "saves" => self.session.open_saves(),
             _ => return Err("Unknown capture view; see README.md for available views".into()),
@@ -234,6 +241,7 @@ mod tests {
             "fleets",
             "saves",
             "game-menu",
+            "card-closed",
             "game-songbook",
             "menu-songbook",
             "menu-songbook@cruise_a",

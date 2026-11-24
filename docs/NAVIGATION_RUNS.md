@@ -50,8 +50,9 @@ the Wait of every fleet that still exists. The save field remains `holds`.
 
 ## Advance to next event
 
-**Advance** repeats ordinary navigation runs about three times per second
-(0.35 s apart, so each step shows on the map) and stops after the run in which:
+**Advance** repeats ordinary navigation runs one after another, 1.2 s apart by
+default so each step shows on the map (Settings → **Run speed**: Relaxed 2 s,
+Normal 1.2 s, Quick 0.6 s, Rapid 0.35 s), and stops after the run in which:
 
 - a contact needs a decision: the fleet is selected and its decision appears at
   the top of the context sheet;
@@ -85,7 +86,7 @@ advance the clock. Ordering every fleet to Wait is a valid deliberate waiting ru
 Local-system displays and waypoint inputs use AU; authoritative positions remain
 integer kilometers. Galaxy coordinates are displayed in light-years. Rendering
 interpolates active course positions from saved progress; it never advances time.
-After each run, own ships and NPC traders glide for 0.35 s from their pre-run to
+After each run, own ships and NPC traders glide for one run's time (Run speed) from their pre-run to
 their post-run positions (the Advance interval, so an advance reads as one
 continuous voyage). The glide is display-only; camera-follow, saves and rules use
 the authoritative positions, and captures (animations off) show final positions.

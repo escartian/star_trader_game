@@ -2,6 +2,7 @@
 //! galaxy map, for galaxies too large to scan by eye. Presentation only: a
 //! pick selects and centres the system, as a map click would, but plots no
 //! course.
+use crate::theme::icons::Icon;
 use crate::theme::{CYAN, PANEL};
 use egui::{Id, Key, Rect, RichText, TextEdit, Ui};
 use game_core::{StarSystem, SystemId};
@@ -81,49 +82,68 @@ fn kind_name(kind: game_core::BodyKind) -> String {
     words
 }
 
-/// The search box at the galaxy map's top-left corner, with its results below
-/// while there is a query. It is drawn in a child of the map's `ui`, after the
-/// map, so it sits on top and takes its own clicks. Ctrl/Cmd+F focuses it.
+/// A Search button at the galaxy map's top-left corner; tapping it (or
+/// Ctrl/Cmd+F) opens the search box with its results below while there is a
+/// query. It is drawn in a child of the map's `ui`, after the map, so it sits
+/// on top and takes its own clicks. Escape, a pick or the button closes it.
 /// Returns a picked system.
 pub(super) fn search_box(ui: &mut Ui, map: Rect, systems: &[StarSystem]) -> Option<SystemId> {
     let query_id = Id::new("galaxy-search-query");
+    let open_id = Id::new("galaxy-search-open");
     let mut query = ui
         .data(|data| data.get_temp::<String>(query_id))
         .unwrap_or_default();
+    let mut open = ui
+        .data(|data| data.get_temp::<bool>(open_id))
+        .unwrap_or(false);
+    let shortcut = ui.input(|i| i.modifiers.command && i.key_pressed(Key::F));
+    let mut focus = shortcut && !open;
+    open |= shortcut;
     let mut picked = None;
-    let corner = Rect::from_min_size(map.min + egui::vec2(8.0, 8.0), egui::vec2(296.0, 360.0));
+    let corner = Rect::from_min_size(map.min + egui::vec2(8.0, 8.0), egui::vec2(296.0, 400.0));
     let mut overlay = ui.new_child(egui::UiBuilder::new().max_rect(corner.intersect(map)));
-    egui::Frame::new()
-        .fill(PANEL.gamma_multiply(0.92))
-        .corner_radius(6.0)
-        .inner_margin(6.0)
-        .show(&mut overlay, |ui| {
-            let edit = ui.add(
-                TextEdit::singleline(&mut query)
-                    .hint_text("Search stars & planets (Ctrl+F)")
-                    .desired_width(260.0),
-            );
-            if ui.input(|i| i.modifiers.command && i.key_pressed(Key::F)) {
-                edit.request_focus();
-            }
-            if edit.has_focus() && ui.input(|i| i.key_pressed(Key::Escape)) {
-                query.clear();
-                edit.surrender_focus();
-            }
-            let found = find(systems, &query);
-            if !query.trim().is_empty() && found.is_empty() {
-                ui.label(RichText::new("No star or planet by that name").color(CYAN));
-            }
-            for hit in found {
-                if ui.selectable_label(false, hit.label).clicked() {
-                    picked = Some(hit.system);
-                }
-            }
-        });
-    if picked.is_some() {
-        query.clear();
+    let button = crate::theme::icons::labeled_toggle(&mut overlay, Icon::Focus, "Search", open)
+        .on_hover_text("Find a star or planet by name (Ctrl+F)");
+    if button.clicked() {
+        open = !open;
+        focus = open;
     }
-    ui.data_mut(|data| data.insert_temp(query_id, query));
+    if open {
+        egui::Frame::new()
+            .fill(PANEL.gamma_multiply(0.92))
+            .corner_radius(6.0)
+            .inner_margin(6.0)
+            .show(&mut overlay, |ui| {
+                let edit = ui.add(
+                    TextEdit::singleline(&mut query)
+                        .hint_text("Star or planet name")
+                        .desired_width(260.0),
+                );
+                if focus {
+                    edit.request_focus();
+                }
+                if ui.input(|i| i.key_pressed(Key::Escape)) {
+                    open = false;
+                }
+                let found = find(systems, &query);
+                if !query.trim().is_empty() && found.is_empty() {
+                    ui.label(RichText::new("No star or planet by that name").color(CYAN));
+                }
+                for hit in found {
+                    if ui.selectable_label(false, hit.label).clicked() {
+                        picked = Some(hit.system);
+                    }
+                }
+            });
+    }
+    if picked.is_some() || !open {
+        query.clear();
+        open = false;
+    }
+    ui.data_mut(|data| {
+        data.insert_temp(query_id, query);
+        data.insert_temp(open_id, open);
+    });
     picked
 }
 

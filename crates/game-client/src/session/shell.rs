@@ -93,18 +93,27 @@ impl LocalSession {
         self.request_sheet_for(next);
     }
 
-    /// The strip's actions: Fleets, Advance (with the single-run clock) and
-    /// Menu. A tab toggles its sheet page.
-    pub fn strip_actions(&mut self, ui: &mut egui::Ui, tab: &mut SheetTab) {
+    /// The strip's actions: Fleets, Advance (with the single-run clock), Menu
+    /// and the card toggle. A tab toggles its page, or opens a closed card on it.
+    pub fn strip_actions(&mut self, ui: &mut egui::Ui, tab: &mut SheetTab, card: &mut bool) {
         let mut tab_button = |ui: &mut egui::Ui, icon, label, page: SheetTab| {
-            let on = *tab == page;
+            let on = *card && *tab == page;
             if icons::labeled_toggle(ui, icon, label, on).clicked() {
                 *tab = if on { SheetTab::Selection } else { page };
+                *card = true;
             }
         };
         tab_button(ui, Icon::Fleets, "Fleets", SheetTab::Fleets);
         self.run_controls(ui);
         tab_button(ui, Icon::Settings, "Menu", SheetTab::Menu);
+        let tip = if *card {
+            "Hide the card"
+        } else {
+            "Show the card"
+        };
+        if icons::toggle(ui, Icon::Info, tip, *card).clicked() {
+            *card = !*card;
+        }
     }
 
     /// Always at the top of the sheet: the guide, and the selected fleet's
@@ -153,8 +162,8 @@ impl LocalSession {
             (Icon::Market, "Trade", "Market, refuel and hold upgrade"),
             (
                 Icon::Fleets,
-                "Fleets & shipyard",
-                "Ships, cargo transfer and shipyard",
+                "Fleets",
+                "Ships, fleets and cargo transfer (hulls: the market's Shipyard tab)",
             ),
             (
                 Icon::Navigation,

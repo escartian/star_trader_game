@@ -304,9 +304,6 @@ fn a_captain_sees_only_unlocked_controls_and_a_guide_card_per_unlock() {
         })
         .collect();
     assert!(texts.iter().any(|text| text == "Trade"), "{texts:?}");
-    assert!(
-        !texts.iter().any(|text| text == "Fleets & shipyard"),
-        "{texts:?}"
-    );
+    assert!(!texts.iter().any(|text| text == "Fleets"), "{texts:?}");
     assert!(!texts.iter().any(|text| text == "Victory"), "{texts:?}");
 }

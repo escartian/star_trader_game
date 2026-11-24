@@ -186,6 +186,18 @@ fn options_controls(ui: &mut egui::Ui, options: &mut ClientOptions) {
     });
     ui.checkbox(&mut options.animations, "Animations")
         .on_hover_text("Fleet glides and battle moves. Off shows results at once.");
+    ui.horizontal(|ui| {
+        ui.label("Run speed");
+        egui::ComboBox::from_id_salt("run-pace")
+            .selected_text(options.run_pace.label())
+            .show_ui(ui, |ui| {
+                for pace in crate::preferences::RunPace::ALL {
+                    ui.selectable_value(&mut options.run_pace, pace, pace.label());
+                }
+            })
+            .response
+            .on_hover_text("How long each navigation run takes on the map: the fleets' glide and the pause between Advance's runs");
+    });
 }
 
 /// Interface scale in 25% steps, applied when the slider is released: rescaling

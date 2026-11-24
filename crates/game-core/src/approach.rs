@@ -79,15 +79,19 @@ pub fn approach_run(
             continue;
         }
         let mut npc = trader.clone();
-        let kind = if npc.personality == Personality::Corsair
-            && laden(state, flagship)
-            && outguns(
-                state,
-                economy,
-                flagship,
-                &npc,
-                rules.shakedown_strength_percent,
-            ) {
+        // Pirates never trade: a corsair that cannot rob you keeps its distance.
+        let kind = if npc.personality == Personality::Corsair {
+            if !laden(state, flagship)
+                || !outguns(
+                    state,
+                    economy,
+                    flagship,
+                    &npc,
+                    rules.shakedown_strength_percent,
+                )
+            {
+                continue;
+            }
             EncounterKind::Shakedown
         } else if npc.state.ships[0].cargo_used() > 0 {
             EncounterKind::TraderOffer

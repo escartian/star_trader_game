@@ -159,13 +159,29 @@ fn resisting_a_shakedown_is_self_defence_not_piracy() {
 }
 
 #[test]
-fn a_corsair_that_does_not_outgun_you_only_offers_to_trade() {
-    let mut session = Session::default();
+fn a_corsair_that_does_not_outgun_you_keeps_its_distance() {
+    let mut session = claimed([Some(Faction::Federation); 3]);
     eager(&mut session);
-    meet_trader(&mut session, 0);
+    let (_, trader) = meet_trader(&mut session, 0);
     session.economy.traders[0].personality = Personality::Corsair;
-    let (_, kind) = approached(&mut session).unwrap();
-    assert_eq!(kind, EncounterKind::TraderOffer);
+    assert!(!approached_by(&mut session, trader), "pirates never trade");
+    // Another trader in reach may have come alongside; send it away.
+    session.state.navigation.encounters.clear();
+    // The same corsair, facing a laden and battered target, does rob.
+    session.state.ships[0].hull_damage = 50;
+    session.state.ships[0].cargo[Commodity::Ore.index()] = 5;
+    assert!(approached_by(&mut session, trader));
+}
+
+/// Whether `trader` (not any other trader in reach) approached this run.
+fn approached_by(session: &mut Session, trader: u64) -> bool {
+    approached(session);
+    session.state.navigation.encounters.iter().any(|found| {
+        found
+            .trader
+            .as_ref()
+            .is_some_and(|contact| contact.id == trader)
+    })
 }
 
 #[test]
@@ -186,15 +202,14 @@ fn traders_come_to_an_exposed_flagship_during_ordinary_runs() {
 }
 
 #[test]
-fn a_corsair_leaves_an_empty_fleet_alone_or_trades_with_it() {
+fn a_corsair_leaves_an_empty_fleet_alone() {
     let mut session = Session::default();
     eager(&mut session);
-    meet_trader(&mut session, 0);
+    let (_, trader) = meet_trader(&mut session, 0);
     session.economy.traders[0].personality = Personality::Corsair;
     session.state.ships[0].hull_damage = 50;
     session.state.ships[0].cargo = [0; 6];
-    let (_, kind) = approached(&mut session).unwrap();
-    assert_eq!(kind, EncounterKind::TraderOffer);
+    assert!(!approached_by(&mut session, trader));
 }
 
 /// Trader 0 (flying for the Federation, which holds every system) alongside

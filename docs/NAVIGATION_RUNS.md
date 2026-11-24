@@ -163,7 +163,7 @@ approach it, at most one per run and each trader at most once per 10 runs
 
 | Contact | Who | Act | Outcome |
 | --- | --- | --- | --- |
-| Trader alongside | any trader with cargo | Buy its cargo | its hold at 85% of list price, most valuable first, as far as your holds and wallet allow; the trader keeps the money |
+| Trader alongside | any trader with cargo except a corsair (pirates never trade; a corsair that cannot rob you keeps its distance) | Buy its cargo | its hold at 85% of list price, most valuable first, as far as your holds and wallet allow; the trader keeps the money |
 | Trader in distress | a trader a raider band is stalking (six times in ten, whatever its personality, checked first) | Fight the band, Auto-resolve or Leave it | a battle against the band; win and the trader pays you 10% of its wallet, and its faction grants +3 standing |
 | Corsair shakedown | a corsair with 150% of your fleet's strength, when you carry cargo | Hand it over, Fight, Auto-resolve or Evade | half your cargo, rounded up; or a battle as with raiders |
 

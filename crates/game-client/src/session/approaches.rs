@@ -1,10 +1,11 @@
-//! Cards for NPC traders that come to you: a trade offer and a stalked
-//! trader's distress call. Display only; the rules live in `game_core::approach`.
+//! Cards for NPC traders that come to you: a trade offer, a corsair's
+//! shakedown and a stalked trader's distress call. Display only; the rules live in `game_core::approach`.
 use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use game_core::{
     approach,
     economy::Commodity,
+    fleet::Fleet,
     navigation::{Encounter, EncounterChoice},
 };
 use game_protocol::ClientCommand;
@@ -48,6 +49,64 @@ impl LocalSession {
             }
             if icons::button(ui, Icon::Bypass, "Decline").clicked() {
                 choice = Some(EncounterChoice::Bypass);
+            }
+        });
+        self.resolve_approach(encounter, choice);
+    }
+
+    /// A corsair's shakedown: what it wants, then comply, fight or run.
+    pub(super) fn shakedown_ui(&mut self, ui: &mut egui::Ui, fleet: &Fleet, encounter: &Encounter) {
+        let Some(contact) = &encounter.trader else {
+            return;
+        };
+        if self
+            .state
+            .navigation
+            .battle
+            .as_ref()
+            .is_some_and(|open| open.encounter == encounter.id)
+        {
+            ui.label(format!("Battle in progress against {}.", contact.name));
+            return;
+        }
+        let aboard: u32 = fleet
+            .ships
+            .iter()
+            .filter_map(|id| self.state.ship(*id).ok())
+            .map(|ship| ship.cargo.iter().sum::<u32>())
+            .sum();
+        ui.label(format!(
+            "{} runs out its guns and demands half your cargo ({} of {aboard} units).",
+            describe(self, contact.id, &contact.name),
+            aboard.div_ceil(2)
+        ));
+        ui.small("Resisting is self-defence: it costs no standing, and a destroyed corsair's hold is yours.");
+        let chance = self
+            .state
+            .evade_chance(fleet, &encounter.hostiles, &self.economy.rules)
+            .unwrap_or(0);
+        let mut choice = None;
+        ui.horizontal_wrapped(|ui| {
+            if icons::button(ui, Icon::Confirm, "Hand it over").clicked() {
+                choice = Some(EncounterChoice::Comply);
+            }
+            if icons::button(ui, Icon::Weapon, "Fight")
+                .on_hover_text("Command your ships turn by turn.")
+                .clicked()
+            {
+                choice = Some(EncounterChoice::Fight);
+            }
+            if icons::button(ui, Icon::Execute, "Auto-resolve")
+                .on_hover_text("Let the AI fight it out.")
+                .clicked()
+            {
+                choice = Some(EncounterChoice::AutoResolve);
+            }
+            if icons::button(ui, Icon::Engine, &format!("Evade {chance}%"))
+                .on_hover_text("Run for it; a failed escape starts the battle.")
+                .clicked()
+            {
+                choice = Some(EncounterChoice::Evade);
             }
         });
         self.resolve_approach(encounter, choice);

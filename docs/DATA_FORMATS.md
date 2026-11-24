@@ -155,9 +155,9 @@ fleet strength, as a share of the trader's, that makes it yield to a demand)
 `raid_escape_percent` (0–100: chance to slip past raiders) and
 `approach_percent` (0–100, default 0: chance per run to approach your
 flagship), plus `approaches` (`offer_price_percent` 10–200,
-`cooldown_runs` 0–1,000, `distress_percent` 0–100, `rescue_reward_percent`
-0–100, `rescue_standing` 0–100; defaults 85, 10, 60, 10 and 3; other fields
-are ignored) and
+`shakedown_strength_percent` 100–1,000, `cooldown_runs` 0–1,000,
+`distress_percent` 0–100, `rescue_reward_percent` 0–100, `rescue_standing`
+0–100; defaults 85, 150, 10, 60, 10 and 3) and
 `spawn_cycle` (1–64 personalities dealt to new traders in turn; independents
 dealt a loyalist become smugglers). It is embedded as a fallback, loaded from
 the project file when present, and saved in the economy rules as
@@ -229,9 +229,9 @@ A hailed trader's contact (`kind` `Trader`) stores `trader` (`id`, `name`,
 `hull_damage`) and the trader's hull as its one `hostiles` entry; both must match
 the saved NPC trader, which cannot be refitting. A combat report from an attack
 on a trader names it in `trader` and records `plunder` (cargo units taken).
-A trader that approaches your flagship to trade opens a `TraderOffer`
-contact stored the same way (`trader` and its hull as `hostiles`). A
-`TraderDistress` contact
+A trader that approaches your flagship opens a `TraderOffer` or `Shakedown`
+contact stored the same way (`trader` and its hull as `hostiles`); a report
+from resisting a shakedown also sets `shakedown`. A `TraderDistress` contact
 stores the stalking band in `band` (its ships as `hostiles`) and the trader in
 `rescue`; its battle report keeps `rescue` and records `rescue_reward` (cents
 paid by the trader on victory). Both must name an existing trader. NPC traders record

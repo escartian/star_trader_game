@@ -99,23 +99,73 @@ fn a_trader_alongside_sells_its_hold_below_list_and_keeps_the_money() {
 }
 
 #[test]
-fn traders_never_shake_you_down_only_raiders_do() {
-    // A corsair far stronger than a battered, laden flagship still only
-    // offers its hold.
+fn a_corsair_that_outguns_you_shakes_you_down_and_complying_costs_half_your_cargo() {
+    let mut session = claimed([Some(Faction::Federation); 3]);
+    eager(&mut session);
+    let (_, trader) = meet_trader(&mut session, 0);
+    session.economy.traders[0].personality = Personality::Corsair;
+    session.economy.traders[0].state.ships[0].cargo = [0; 6];
+    // A battered freighter is no match for the corsair.
+    session.state.ships[0].hull_damage = 50;
+    session.state.ships[0].cargo = [0; 6];
+    session.state.ships[0].cargo[Commodity::Ore.index()] = 5;
+    let (contact, kind) = approached(&mut session).unwrap();
+    assert_eq!(kind, EncounterKind::Shakedown);
+    reload(&session);
+    // Hand-overs are not trade: a demand only works on hailed traders.
+    let refused = choose(&mut session, contact, EncounterChoice::Trade);
+    assert!(matches!(refused, ServerMessage::CommandRejected(_)));
+    let standing = session.economy.factions.standing;
+    choose(&mut session, contact, EncounterChoice::Comply);
+    assert_eq!(session.state.ships[0].cargo[Commodity::Ore.index()], 2);
+    let corsair = session
+        .economy
+        .traders
+        .iter()
+        .find(|npc| npc.id == trader)
+        .unwrap();
+    assert_eq!(corsair.state.ships[0].cargo[Commodity::Ore.index()], 3);
+    assert_eq!(session.economy.factions.standing, standing);
+    assert_eq!(session.state.navigation.piracies, 0);
+    reload(&session);
+}
+
+#[test]
+fn resisting_a_shakedown_is_self_defence_not_piracy() {
+    let mut session = claimed([Some(Faction::Federation); 3]);
+    eager(&mut session);
+    meet_trader(&mut session, 0);
+    session.economy.traders[0].personality = Personality::Corsair;
+    session.state.ships[0].hull_damage = 50;
+    session.state.ships[0].cargo[Commodity::Food.index()] = 4;
+    let (contact, kind) = approached(&mut session).unwrap();
+    assert_eq!(kind, EncounterKind::Shakedown);
+    let standing = session.economy.factions.standing;
+    choose(&mut session, contact, EncounterChoice::AutoResolve);
+    let report = session.state.navigation.last_combat.clone().unwrap();
+    assert!(report.shakedown);
+    assert_eq!(report.bounty.0, 0);
+    assert_eq!(session.state.navigation.piracies, 0);
+    assert_eq!(session.economy.factions.standing, standing);
+    assert!(
+        session
+            .economy
+            .factions
+            .wanted
+            .iter()
+            .all(|runs| *runs == 0)
+    );
+    reload(&session);
+}
+
+#[test]
+fn a_corsair_that_does_not_outgun_you_only_offers_to_trade() {
     let mut session = Session::default();
     eager(&mut session);
     meet_trader(&mut session, 0);
     session.economy.traders[0].personality = Personality::Corsair;
-    session.economy.traders[0].escort_runs = 5;
-    session.state.ships[0].hull_damage = 50;
-    session.state.ships[0].cargo[Commodity::Food.index()] = 6;
-    let (contact, kind) = approached(&mut session).unwrap();
+    let (_, kind) = approached(&mut session).unwrap();
     assert_eq!(kind, EncounterKind::TraderOffer);
-    // Demands and fights are not on its card.
-    for choice in [EncounterChoice::Comply, EncounterChoice::Fight] {
-        let refused = choose(&mut session, contact, choice);
-        assert!(matches!(refused, ServerMessage::CommandRejected(_)));
-    }
 }
 
 #[test]
@@ -133,6 +183,18 @@ fn traders_come_to_an_exposed_flagship_during_ordinary_runs() {
         }
     }
     panic!("no trader approached an exposed flagship in 30 runs");
+}
+
+#[test]
+fn a_corsair_leaves_an_empty_fleet_alone_or_trades_with_it() {
+    let mut session = Session::default();
+    eager(&mut session);
+    meet_trader(&mut session, 0);
+    session.economy.traders[0].personality = Personality::Corsair;
+    session.state.ships[0].hull_damage = 50;
+    session.state.ships[0].cargo = [0; 6];
+    let (_, kind) = approached(&mut session).unwrap();
+    assert_eq!(kind, EncounterKind::TraderOffer);
 }
 
 /// Trader 0 (flying for the Federation, which holds every system) alongside

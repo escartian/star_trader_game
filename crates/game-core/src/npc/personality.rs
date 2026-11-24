@@ -61,12 +61,14 @@ pub struct PersonalityDefinition {
 }
 
 /// How NPC traders deal with you when they approach (see `approach`).
-/// Unknown fields are ignored: saves from before corsair shakedowns were
-/// retired carry a `shakedown_strength_percent`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ApproachRules {
     /// A trade offer's price, in percent of the galaxy list price.
     pub offer_price_percent: u64,
+    /// A corsair shakes you down only with this much of your fleet's
+    /// strength, in percent; otherwise it trades like anyone.
+    pub shakedown_strength_percent: u64,
     /// Runs before the same trader approaches you again.
     pub cooldown_runs: u64,
     /// Percent chance per run that a trader stalked by a raider band calls
@@ -95,6 +97,7 @@ impl Default for ApproachRules {
     fn default() -> Self {
         Self {
             offer_price_percent: 85,
+            shakedown_strength_percent: 150,
             cooldown_runs: 10,
             distress_percent: default_distress_percent(),
             rescue_reward_percent: default_rescue_reward_percent(),
@@ -106,6 +109,7 @@ impl Default for ApproachRules {
 impl ApproachRules {
     fn valid(&self) -> bool {
         (10..=200).contains(&self.offer_price_percent)
+            && (100..=1_000).contains(&self.shakedown_strength_percent)
             && self.cooldown_runs <= 1_000
             && self.distress_percent <= 100
             && self.rescue_reward_percent <= 100

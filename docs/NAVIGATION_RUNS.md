@@ -165,11 +165,12 @@ approach it, at most one per run and each trader at most once per 10 runs
 | --- | --- | --- | --- |
 | Trader alongside | any trader with cargo | Buy its cargo | its hold at 85% of list price, most valuable first, as far as your holds and wallet allow; the trader keeps the money |
 | Trader in distress | a trader a raider band is stalking (six times in ten, whatever its personality, checked first) | Fight the band, Auto-resolve or Leave it | a battle against the band; win and the trader pays you 10% of its wallet, and its faction grants +3 standing |
+| Corsair shakedown | a corsair with 150% of your fleet's strength, when you carry cargo | Hand it over, Fight, Auto-resolve or Evade | half your cargo, rounded up; or a battle as with raiders |
 
 The band's bounty is paid as for any band, and it stops stalking the trader
-whatever the outcome; leaving the trader costs nothing. Traders never demand
-cargo; only raiders do. Only the flagship is approached; secondary fleets
-never are.
+whatever the outcome; leaving the trader costs nothing. Resisting a shakedown is self-defence: no standing lost, no wanted status,
+no bounty, and a destroyed corsair's hold is yours. Only the flagship is
+approached; secondary fleets never are.
 
 Random state is seeded and saved. Rolls use stable fleet-ID order, not the order
 in which you plotted courses. Reloading the same planning state and executing the

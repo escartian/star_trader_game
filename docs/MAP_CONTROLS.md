@@ -155,9 +155,9 @@ hover a trader's name in the roster for its own):
 | Corsair | 4 | prefers (120%) | any | 400% | one time in five |
 
 A loyalist dealt to an independent trader becomes a smuggler. Traders also
-come to your flagship to trade or to call for help against raiders
-([traders that come to you](NAVIGATION_RUNS.md#encounters)); traders never
-demand cargo, only raiders do. Per run, when in
+come to your flagship to trade or to call for help against raiders, and a
+corsair that outguns you shakes it down
+([traders that come to you](NAVIGATION_RUNS.md#encounters)); per run, when in
 reach: cautious and loyalist 5%, bulk hauler 10%, opportunist and smuggler
 15%, corsair 30%. Traders compare commodity
 routes including fuel costs among the six market systems nearest them (their own

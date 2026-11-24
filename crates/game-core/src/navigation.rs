@@ -65,6 +65,9 @@ pub enum EncounterKind {
     /// An NPC trader that came alongside offers to sell you its hold below
     /// list price (see `approach`): trade or let it go.
     TraderOffer,
+    /// A corsair that outguns you demands half your cargo (see `approach`):
+    /// comply, fight, or try to outrun it.
+    Shakedown,
     /// An NPC trader stalked by a raider band calls for help (see
     /// `approach`): fight the band or leave the trader to it.
     TraderDistress,
@@ -100,13 +103,14 @@ impl EncounterKind {
             Self::Trader => "Hailed trader",
             Self::Police => "Police patrol",
             Self::TraderOffer => "Trader alongside",
+            Self::Shakedown => "Corsair shakedown",
             Self::TraderDistress => "Trader in distress",
         }
     }
 
     /// Contacts with an NPC trader, whose ship (and escort) are the hostiles.
     pub fn with_trader(self) -> bool {
-        matches!(self, Self::Trader | Self::TraderOffer)
+        matches!(self, Self::Trader | Self::TraderOffer | Self::Shakedown)
     }
 }
 

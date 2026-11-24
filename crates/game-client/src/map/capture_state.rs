@@ -38,6 +38,7 @@ impl Map {
             "encounter" => self.session.capture_encounter()?,
             "hail" => self.session.capture_hail()?,
             "trader-offer" => self.session.capture_approach("offer")?,
+            "shakedown" => self.session.capture_approach("shakedown")?,
             "distress" => self.session.capture_approach("distress")?,
             "combat" => self.session.capture_combat()?,
             "battle" => self.session.capture_battle()?,

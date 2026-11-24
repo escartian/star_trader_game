@@ -51,6 +51,7 @@ fn all_icons() -> Vec<Icon> {
         Icon::Contact,
         Icon::Enter,
         Icon::Seed,
+        Icon::Search,
         Icon::Help,
         Icon::Settings,
         Icon::Danger,

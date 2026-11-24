@@ -199,6 +199,10 @@ pub const SOURCES: &[(&str, &str)] = &[
         include_str!("../../../../../assets/icons/reset.svg"),
     ),
     ("save", include_str!("../../../../../assets/icons/save.svg")),
+    (
+        "search",
+        include_str!("../../../../../assets/icons/search.svg"),
+    ),
     ("seed", include_str!("../../../../../assets/icons/seed.svg")),
     ("sell", include_str!("../../../../../assets/icons/sell.svg")),
     (

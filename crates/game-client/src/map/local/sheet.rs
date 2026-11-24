@@ -56,7 +56,8 @@ impl LocalView {
                     self.camera.focus_on(anchor);
                 }
             }
-            None => {}
+            // Search lives on the galaxy map only.
+            Some(CameraAction::Search) | None => {}
         }
         if !ctx.wants_keyboard_input()
             && !crate::battle::keyboard_claimed(ctx)

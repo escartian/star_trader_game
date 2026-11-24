@@ -27,6 +27,7 @@ mod songbook;
 mod songbook_graph;
 mod songbook_parts;
 mod toolbar;
+mod trader_marker;
 mod visuals;
 
 use camera::Camera;
@@ -364,6 +365,10 @@ impl Map {
         local.set_contacts(self.session.contact_fleets());
         local.set_bands(self.session.raider_bands().to_vec());
         local.set_police(self.session.police_patrols());
+        local.set_traders(
+            self.session
+                .traders_for_map(local.system(), &self.session_systems),
+        );
         local.set_landing(self.session.landing_rules().clone());
         local.set_campaign_marks(self.session.campaign_marks());
         local.set_headings(self.session.fleet_headings(&self.session_systems));

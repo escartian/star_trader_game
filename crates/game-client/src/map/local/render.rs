@@ -139,7 +139,13 @@ impl LocalView {
         self.draw_campaign(&painter, rect);
         self.draw_bands(&painter, rect);
         self.draw_police(&painter, rect);
+        self.draw_traders(&painter, rect);
         self.draw_fleets(&painter, rect, ships, fleets, &label_bounds);
+        if response.double_clicked()
+            && let Some(pointer) = response.interact_pointer_pos()
+        {
+            self.open_market_at(pointer, rect);
+        }
         if response.clicked()
             && let Some(pointer) = response.interact_pointer_pos()
         {

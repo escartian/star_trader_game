@@ -231,3 +231,15 @@ fn the_sheet_docks_right_on_a_wide_window_and_at_the_bottom_on_a_phone() {
     let narrow = shows(&ctx, &mut map, PHONE, "Trader introduction / earnings goal").unwrap();
     assert!(narrow.y > PHONE.y * 0.5, "bottom sheet: {narrow:?}");
 }
+
+#[test]
+fn the_search_button_opens_a_name_box_beside_the_map_buttons() {
+    let ctx = egui::Context::default();
+    let mut map = multi_fleet();
+    assert!(shows(&ctx, &mut map, DESKTOP, "Star or planet name").is_none());
+    super::search::toggle(&ctx);
+    let at = shows(&ctx, &mut map, DESKTOP, "Star or planet name").expect("box open");
+    assert!(at.y < 120.0, "at the top of the map: {at:?}");
+    super::search::toggle(&ctx);
+    assert!(shows(&ctx, &mut map, DESKTOP, "Star or planet name").is_none());
+}

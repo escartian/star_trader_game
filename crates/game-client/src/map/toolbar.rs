@@ -7,6 +7,8 @@ pub enum CameraAction {
     FocusSelection,
     FocusFleet,
     Overview,
+    /// Opens or closes the galaxy's name search.
+    Search,
 }
 
 impl CameraAction {
@@ -16,6 +18,7 @@ impl CameraAction {
             Self::FocusSelection => (Icon::Focus, "Focus selection (F)"),
             Self::FocusFleet => (Icon::Ship, "Focus selected fleet"),
             Self::Overview => (Icon::Overview, "System overview"),
+            Self::Search => (Icon::Search, "Search stars & planets (Ctrl+F)"),
         }
     }
 }

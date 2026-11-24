@@ -72,7 +72,13 @@ impl LocalSession {
                     &format!("{} ly", spec.range_ly),
                     "Jump range",
                 );
-                let blocked = if stock == 0 {
+                let coursed = self
+                    .state
+                    .fleet_for_ship(ship.id)
+                    .is_ok_and(|fleet| self.state.navigation.order(fleet.id).is_some());
+                let blocked = if coursed {
+                    Some("Cancel the fleet's plotted course first".to_string())
+                } else if stock == 0 {
                     Some("Out of stock".to_string())
                 } else if self.economy.credits < price {
                     Some("Not enough credits".to_string())

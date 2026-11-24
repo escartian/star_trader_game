@@ -287,3 +287,33 @@ fn local_fleet_and_body_clicks_emit_distinct_selection_and_destination_intents()
         })
     );
 }
+
+#[test]
+fn double_clicking_the_body_a_fleet_trades_at_opens_its_market() {
+    let system = game_core::demo_galaxy().remove(0);
+    let rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(320.0, 240.0));
+    let mut local = LocalView::new(system);
+    local.camera.zoom = 4.0;
+    local.focus();
+    let (here, elsewhere) = (local.system.bodies[0].id, local.system.bodies[1].id);
+    let point = local.camera.project(
+        display_position(&local.system, &local.system.bodies[0]),
+        rect,
+    );
+    let option = |body, selected| crate::session::TradeOption {
+        ship: game_core::travel::ShipId(if selected { 1 } else { 2 }),
+        fleet: "Fleet".into(),
+        body,
+        selected,
+    };
+    local.set_trade_options(vec![option(elsewhere, true)]);
+    local.open_market_at(point, rect);
+    assert_eq!(local.take_market_request(), None, "no fleet trades there");
+    local.set_trade_options(vec![option(here, false), option(here, true)]);
+    local.open_market_at(point, rect);
+    assert_eq!(
+        local.take_market_request(),
+        Some(game_core::travel::ShipId(1)),
+        "the selected fleet's market"
+    );
+}

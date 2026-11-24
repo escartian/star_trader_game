@@ -18,6 +18,23 @@ impl Map {
         match view {
             "galaxy" => {}
             "traffic" => self.session.capture_wait_runs(4),
+            "traffic-system" => {
+                // The system view where the most NPC traders rest after a few runs.
+                self.session.capture_wait_runs(4);
+                let busiest = self
+                    .systems
+                    .iter()
+                    .max_by_key(|system| {
+                        self.session
+                            .traffic()
+                            .iter()
+                            .filter(|npc| npc.state.ships[0].location.system() == Some(system.id))
+                            .count()
+                    })
+                    .ok_or("No system to capture")?
+                    .clone();
+                self.local = Some(LocalView::new(busiest));
+            }
             "destination" => {
                 let system = self.systems.first().ok_or("No system to capture")?.clone();
                 self.session.select_destination(system.id, Some(BodyId(1)));
@@ -242,6 +259,7 @@ mod tests {
             "saves",
             "game-menu",
             "card-closed",
+            "traffic-system",
             "game-songbook",
             "menu-songbook",
             "menu-songbook@cruise_a",

@@ -59,6 +59,7 @@ pub fn name(icon: Icon) -> &'static str {
         Icon::Contact => "contact",
         Icon::Enter => "enter",
         Icon::Seed => "seed",
+        Icon::Search => "search",
         Icon::Help => "help",
         Icon::Settings => "settings",
         Icon::Danger => "danger",

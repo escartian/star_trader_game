@@ -127,6 +127,12 @@ def i_focus(p):
     p.circle((0, 0), 2)
 
 
+def i_search(p):
+    # A magnifying glass: the lens up-left, the handle down-right.
+    p.circle((-2, -2), 5.5)
+    p.line((2.2, 2.2), (7.5, 7.5))
+
+
 def i_overview(p):
     p.circle((0, 0), 2.5)
     p.closed(p.arc_points((0, 0), (8, 4), 0, math.tau, 32)[:-1])
@@ -383,7 +389,7 @@ ICONS = {
     "star": i_star,
     "warning": i_warning, "info": i_info, "distance": i_distance, "legs": i_legs,
     "bypass": i_bypass, "contact": i_contact, "enter": i_enter, "seed": i_seed,
-    "help": i_help, "danger": i_danger,
+    "help": i_help, "danger": i_danger, "search": i_search,
     **WORLD_ICONS,
 }
 

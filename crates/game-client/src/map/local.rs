@@ -1,6 +1,7 @@
 mod campaign;
 pub use campaign::CampaignMarks;
 pub(crate) use campaign::fortress;
+pub(crate) use raiders::dash;
 mod framing;
 mod labels;
 mod layout;
@@ -11,6 +12,7 @@ use layout::{display_position, moon_parent, short_name};
 mod scale;
 mod sheet;
 mod ships;
+mod traders;
 
 use super::{art::Artwork, camera::Camera};
 use egui::{Pos2, Rect};
@@ -76,6 +78,8 @@ pub struct LocalView {
     bands: Vec<game_core::navigation::RaiderBand>,
     /// Faction police patrols with their faction's colour (drawn when in this system).
     police: Vec<crate::session::PatrolMarker>,
+    /// NPC traders in this system (see `traders`).
+    traders: Vec<crate::session::MapTrader>,
     /// The game's landing rules, for a surface's ore yield on the info card.
     landing: game_core::movement::LandingRules,
     /// The Raider Haven and chartered ports (see `campaign`).
@@ -103,6 +107,7 @@ impl LocalView {
             contacts: Vec::new(),
             bands: Vec::new(),
             police: Vec::new(),
+            traders: Vec::new(),
             landing: game_core::movement::LandingRules::default(),
             campaign: CampaignMarks::default(),
             headings: Vec::new(),
@@ -123,6 +128,10 @@ impl LocalView {
     /// The body selected in this view, if any.
     pub fn selected_body(&self) -> Option<BodyId> {
         self.selected
+    }
+
+    pub fn set_traders(&mut self, traders: Vec<crate::session::MapTrader>) {
+        self.traders = traders;
     }
 
     pub fn set_police(&mut self, police: Vec<crate::session::PatrolMarker>) {

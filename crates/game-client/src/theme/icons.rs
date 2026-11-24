@@ -59,6 +59,7 @@ pub enum Icon {
     Contact,
     Enter,
     Seed,
+    Search,
     Help,
     Settings,
     Danger,

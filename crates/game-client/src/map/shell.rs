@@ -167,6 +167,7 @@ impl Map {
             rect,
             "galaxy-map-buttons",
             &[
+                CameraAction::Search,
                 CameraAction::Reset,
                 CameraAction::FocusSelection,
                 CameraAction::FocusFleet,
@@ -178,6 +179,7 @@ impl Map {
                 self.candidates.clear();
             }
             Some(CameraAction::FocusSelection) => self.focus_selection(),
+            Some(CameraAction::Search) => super::search::toggle(ctx),
             Some(CameraAction::FocusFleet) => {
                 if let Some(position) = self.route_position() {
                     self.camera.focus_on(position);

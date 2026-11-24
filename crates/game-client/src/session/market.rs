@@ -103,6 +103,8 @@ impl LocalSession {
             ui.separator();
         }
         if self.market.shipyard {
+            // Hulls join or leave the fleet only while it has no course.
+            self.pending_course_ui(ui, systems);
             if let Some(command) = self.shipyard_ui(ui) {
                 self.command(command);
                 ui.ctx().request_repaint();

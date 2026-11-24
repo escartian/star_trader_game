@@ -1,0 +1,86 @@
+//! NPC traders on the system map: resting ones beside their body (tethered,
+//! like own fleets, on the other side), flying ones on their gliding
+//! position. Display only; traders are hailed from the Fleets page. Also
+//! the double-click that opens the market where your fleet rests.
+use super::{LocalView, scale::SymbolScale};
+use crate::map::{fleets::tether, trader_marker};
+use egui::{Painter, Rect};
+use game_core::{BodyId, BodyKind, travel::Location};
+
+impl LocalView {
+    pub(super) fn draw_traders(&self, painter: &Painter, rect: Rect) {
+        let Some(art) = &self.art else {
+            return;
+        };
+        let scale = SymbolScale::new(self.camera.zoom);
+        // How many traders already rest at each body, to spread them out.
+        let mut resting: Vec<(BodyId, usize)> = Vec::new();
+        for trader in &self.traders {
+            let Some(anchor) = self.ship_anchor(&trader.location) else {
+                continue;
+            };
+            let anchor = self.camera.project(anchor, rect);
+            let body = self.berth_body(&trader.location);
+            let at = match body {
+                Some((id, kind)) => {
+                    let count = match resting.iter_mut().find(|(known, _)| *known == id) {
+                        Some((_, count)) => {
+                            *count += 1;
+                            *count - 1
+                        }
+                        None => {
+                            resting.push((id, 1));
+                            0
+                        }
+                    };
+                    let clearance = scale.body_radius(kind);
+                    let at = trader_marker::berth_spot(anchor, clearance, count);
+                    tether(
+                        painter,
+                        anchor,
+                        clearance,
+                        at,
+                        trader_marker::TRADER,
+                        trader.ring,
+                    );
+                    at
+                }
+                None => anchor,
+            };
+            if rect.expand(trader_marker::TRADER).contains(at) {
+                trader_marker::paint(painter, art, at, trader.kind, trader.ring, trader.pip);
+            }
+        }
+    }
+
+    /// A double-click on a body (or fleet chip) where one of your fleets can
+    /// trade opens that market, preferring the selected fleet.
+    pub(super) fn open_market_at(&mut self, pointer: egui::Pos2, rect: Rect) {
+        let chip = crate::map::fleets::pick(&self.fleet_hits, pointer).map(|hit| hit.ship);
+        let body = super::pick(&self.system, &self.camera, rect, pointer);
+        let option = self
+            .trade_options
+            .iter()
+            .filter(|option| Some(option.ship) == chip || body.contains(&option.body))
+            .max_by_key(|option| option.selected);
+        if let Some(option) = option {
+            self.market_request = Some(option.ship);
+        }
+    }
+
+    /// The body a location rests at (the trade port when docked).
+    fn berth_body(&self, location: &Location) -> Option<(BodyId, BodyKind)> {
+        let body = match location {
+            Location::Docked(_) => self
+                .system
+                .bodies
+                .iter()
+                .find(|body| body.kind == BodyKind::Station),
+            Location::Orbiting { body, .. } | Location::Landed { body, .. } => {
+                self.system.bodies.iter().find(|known| known.id == *body)
+            }
+            _ => None,
+        }?;
+        Some((body.id, body.kind))
+    }
+}

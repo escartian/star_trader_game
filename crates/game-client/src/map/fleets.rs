@@ -1,7 +1,8 @@
 //! Fleet markers, shared by painting and picking. Fleets at the same place merge
 //! into one compact chip (with a count when there are several), drawn beside
-//! the body or system they rest at, or right on their position in flight. No
-//! tether lines and no status badges: the selection gets a ring and its name, a
+//! the body or system they rest at (joined to it by a short tether line, so a
+//! fleet at a star never reads as the star), or right on their position in
+//! flight. No status badges: the selection gets a ring and its name, a
 //! fleet with an unresolved contact an amber ring. Tapping a chip selects the
 //! next fleet in it, cycling through the stack.
 use super::art::{ArtKind, Artwork};
@@ -15,6 +16,8 @@ use game_core::{
 const CHIP: f32 = 20.0;
 /// Touch-friendly hit size around a chip, in points.
 const HIT: f32 = 48.0;
+/// Gap (points) between a resting chip and its body, bridged by a tether line.
+const TETHER: f32 = 12.0;
 /// Anchors closer than this (points) count as the same place.
 const SAME_PLACE: f32 = 4.0;
 
@@ -127,6 +130,9 @@ pub(super) fn paint_stacks(
                 );
             }
         }
+        if let Berth::AtBody { clearance, .. } = lead.berth {
+            tether(painter, lead.anchor, clearance, centre, CHIP, colour);
+        }
         painter.circle_filled(
             centre,
             CHIP,
@@ -196,7 +202,9 @@ fn chip_centre(lead: &StackEntry, placed: &[Rect]) -> Pos2 {
     let Berth::AtBody { clearance, .. } = lead.berth else {
         return lead.anchor;
     };
-    let distance = clearance + CHIP + 2.0;
+    // A short tether's length clear of the body, so the chip reads as a fleet
+    // resting *at* it rather than the body itself.
+    let distance = clearance + CHIP + TETHER;
     let mut first = None;
     for step in 0..8 {
         let angle = 3.0 * std::f32::consts::FRAC_PI_4 + step as f32 * std::f32::consts::FRAC_PI_4;
@@ -223,6 +231,26 @@ fn next_in_stack<'a, 'b>(
         Some(index) => stack[(index + 1) % stack.len()],
         None => stack[0],
     }
+}
+
+/// A thin line from a body's edge (`clearance` points from `anchor`) to the
+/// edge of the marker resting at it (`radius` points around `marker`).
+pub(super) fn tether(
+    painter: &Painter,
+    anchor: Pos2,
+    clearance: f32,
+    marker: Pos2,
+    radius: f32,
+    colour: Color32,
+) {
+    let direction = (marker - anchor).normalized();
+    if !direction.is_finite() || anchor.distance(marker) <= clearance + radius {
+        return;
+    }
+    painter.line_segment(
+        [anchor + direction * clearance, marker - direction * radius],
+        Stroke::new(1.2_f32, colour.gamma_multiply(0.6)),
+    );
 }
 
 /// Dashed ellipse around the orbited body; flattened to suggest the orbital plane.

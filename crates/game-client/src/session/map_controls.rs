@@ -103,6 +103,14 @@ impl LocalSession {
         if !commanding {
             return;
         }
+        // The fleet's own spot: stay (dropping a course not yet under way).
+        let systems = self.authority.systems().to_vec();
+        if self.rests_at(system, body, &systems) {
+            if self.cancel_pending_course() {
+                self.record("Course cancelled: the fleet stays here.".into());
+            }
+            return;
+        }
         self.command(ClientCommand::PlotDestination {
             ship: self.active_ship,
             system,
@@ -312,6 +320,7 @@ impl LocalSession {
                 .as_ref()
                 .map_or("Selected fleet", |fleet| fleet.name.as_str()),
         );
+        self.pending_course_ui(ui, systems);
         let Some(target) = self.map_target else {
             ui.horizontal(|ui| {
                 icons::glyph(ui, Icon::Pin, CYAN, "No destination selected");

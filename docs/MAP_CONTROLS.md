@@ -39,10 +39,12 @@ Local labels and input units are AU; galaxy distances are light-years. Rendering
 retains symbolic body/fleet sizes and schematic moon spacing.
 
 **Fleet chips.** Fleets at the same place merge into one chip showing a
-ship, with a count when there are several. Resting fleets sit just below-left of
-their body (or, in the galaxy view, their star), clear of labels and other chips.
+ship, with a count when there are several. Resting fleets sit below-left of
+their body (or, in the galaxy view, their star), clear of labels and other chips,
+joined to it by a short tether line so a fleet at a star never reads as the star.
 Fleets in flight sit on their course position with a short tick toward where
-they are heading. There are no tether lines. Your chips (20 pt) are larger than
+they are heading; on the galaxy map a faint dashed green line runs to their
+destination. Your chips (20 pt) are larger than
 NPC markers (12 pt) and ringed green: dim, or bright and named when selected;
 a fleet with an unresolved contact is ringed amber. Tapping a
 chip selects the next fleet in it, cycling through the stack. The roster lists
@@ -56,7 +58,10 @@ count you Hostile or want you; **green** for your fleets and factions that
 count you Friendly or better; **blue-grey** for everyone else (independents
 included). A trader's faction shows as a small pip in its colour (grey if
 independent); a police hexagon is filled in its faction's colour. NPC traders
-appear only in the galaxy view, not in the system view. A raider band's heading line is drawn only while it hunts one of your
+appear in both views: resting ones beside their body or star on a tether
+(below-right, then around it), flying ones on their position, and on the galaxy
+map a faint dashed line in their colour to the system they are bound for. The
+red lines between systems are raider bands crossing. A raider band's heading line is drawn only while it hunts one of your
 fleets. A band crossing to another system is drawn on a faint line between
 the two systems in the galaxy view, and is absent from the system view. The orbit ring appears only around the selected fleet's body.
 **System overview** refits the scene; **Focus selected fleet** provides a close
@@ -86,7 +91,7 @@ takes the screen, framed by two panels.
 | Status strip | top | Back (system view), place name, **Fleets**, **ADVANCE** / **STOP** with the single-run clock, **Menu**, the card toggle (ⓘ), then credits, run number and alert badge; below 720 points wide the actions take a second row |
 | Context card | bottom, or docked on the right when the window is wider than tall; can be closed | **Close**, the guide and any contact decision first, then one page |
 | Message pop-up | bottom of the map | each new message for about 3 s, then fades over 1 s |
-| Search | map's top-left corner | **Search** opens a name box (also Ctrl/Cmd+F); Escape, a pick or the button closes it |
+| Search | galaxy map buttons (magnifier, top of the column) | opens a name box beside the buttons (also Ctrl/Cmd+F); Escape, a pick or the button closes it |
 | Map buttons | map's top-right corner | overview or reset, focus selection and fleet |
 
 The sheet's pages:
@@ -112,6 +117,10 @@ Stars, planets and ports have no hover pop-ups: the selection card shows a
 star's type, holder and your standing, and a body's kind and traits.
 
 Tapping a body or system shows Selection; tapping a fleet chip shows Fleets.
+Tapping the place the flagship rests at cancels a course it has not set off on
+(the destination card and the Shipyard tab also show **Cancel course**): hull
+purchases, fleet changes and landing need no plotted course. Double-clicking a
+body (or chip) where one of your fleets can trade opens that market.
 The amber alert badge counts fleets needing a decision or orders: tap it to
 select the next one, which also switches to the page that fleet needs. When
 Advance stops, the sheet does the same. Market (with its **Shipyard** tab), Fleets, Navigation,

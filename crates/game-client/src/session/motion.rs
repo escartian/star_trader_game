@@ -68,6 +68,16 @@ impl LocalSession {
         trader: &Trader,
         systems: &[StarSystem],
     ) -> Option<glam::DVec3> {
+        self.trader_display_km(trader, systems)
+            .map(super::light_years)
+    }
+
+    /// The same drawing position in galaxy-space kilometres.
+    pub(super) fn trader_display_km(
+        &self,
+        trader: &Trader,
+        systems: &[StarSystem],
+    ) -> Option<SpacePosition> {
         let ship = trader.state.ships.first()?.id;
         let target = trader.state.navigation_position(ship, systems)?;
         let start = self
@@ -80,11 +90,7 @@ impl LocalSession {
                     .find(|before| before.id == trader.id)
             })
             .and_then(|before| before.state.navigation_position(ship, systems));
-        Some(super::light_years(glide(
-            start,
-            target,
-            self.glide_progress(),
-        )))
+        Some(glide(start, target, self.glide_progress()))
     }
 
     /// True while the latest run's glide is still playing out.
@@ -98,7 +104,7 @@ impl LocalSession {
         (from, self.state.tick, self.glide_progress())
     }
 
-    pub(super) fn gliding(&self) -> bool {
+    pub fn gliding(&self) -> bool {
         self.glide_progress() < 1.0
     }
 

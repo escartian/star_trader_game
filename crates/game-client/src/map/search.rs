@@ -2,7 +2,6 @@
 //! galaxy map, for galaxies too large to scan by eye. Presentation only: a
 //! pick selects and centres the system, as a map click would, but plots no
 //! course.
-use crate::theme::icons::Icon;
 use crate::theme::{CYAN, PANEL};
 use egui::{Id, Key, Rect, RichText, TextEdit, Ui};
 use game_core::{StarSystem, SystemId};
@@ -82,67 +81,82 @@ fn kind_name(kind: game_core::BodyKind) -> String {
     words
 }
 
-/// A Search button at the galaxy map's top-left corner; tapping it (or
-/// Ctrl/Cmd+F) opens the search box with its results below while there is a
+const QUERY: &str = "galaxy-search-query";
+const OPEN: &str = "galaxy-search-open";
+
+/// Opens the search box, or closes it (the Search map button).
+pub(super) fn toggle(ctx: &egui::Context) {
+    ctx.data_mut(|data| {
+        let open = data.get_temp::<bool>(Id::new(OPEN)).unwrap_or(false);
+        data.insert_temp(Id::new(OPEN), !open);
+        data.insert_temp(Id::new(FOCUS), !open);
+    });
+}
+
+/// Set for one frame when the box opens, so its text field takes the keyboard.
+const FOCUS: &str = "galaxy-search-focus";
+
+/// While open (the Search map button or Ctrl/Cmd+F), a name box beside the
+/// map buttons at the top-right corner, with results below while there is a
 /// query. It is drawn in a child of the map's `ui`, after the map, so it sits
 /// on top and takes its own clicks. Escape, a pick or the button closes it.
 /// Returns a picked system.
 pub(super) fn search_box(ui: &mut Ui, map: Rect, systems: &[StarSystem]) -> Option<SystemId> {
-    let query_id = Id::new("galaxy-search-query");
-    let open_id = Id::new("galaxy-search-open");
-    let mut query = ui
-        .data(|data| data.get_temp::<String>(query_id))
-        .unwrap_or_default();
-    let mut open = ui
-        .data(|data| data.get_temp::<bool>(open_id))
-        .unwrap_or(false);
-    let shortcut = ui.input(|i| i.modifiers.command && i.key_pressed(Key::F));
-    let mut focus = shortcut && !open;
-    open |= shortcut;
+    if ui.input(|i| i.modifiers.command && i.key_pressed(Key::F)) {
+        toggle(ui.ctx());
+    }
+    let (mut query, mut open, focus) = ui.data(|data| {
+        (
+            data.get_temp::<String>(Id::new(QUERY)).unwrap_or_default(),
+            data.get_temp::<bool>(Id::new(OPEN)).unwrap_or(false),
+            data.get_temp::<bool>(Id::new(FOCUS)).unwrap_or(false),
+        )
+    });
+    if !open {
+        return None;
+    }
     let mut picked = None;
-    let corner = Rect::from_min_size(map.min + egui::vec2(8.0, 8.0), egui::vec2(296.0, 400.0));
+    // Left of the map-button column (46 points wide at the right edge).
+    let width = 296.0_f32.min(map.width() - 70.0).max(160.0);
+    let corner = Rect::from_min_size(
+        map.right_top() + egui::vec2(-54.0 - width, 8.0),
+        egui::vec2(width, 400.0),
+    );
     let mut overlay = ui.new_child(egui::UiBuilder::new().max_rect(corner.intersect(map)));
-    let button = crate::theme::icons::labeled_toggle(&mut overlay, Icon::Focus, "Search", open)
-        .on_hover_text("Find a star or planet by name (Ctrl+F)");
-    if button.clicked() {
-        open = !open;
-        focus = open;
-    }
-    if open {
-        egui::Frame::new()
-            .fill(PANEL.gamma_multiply(0.92))
-            .corner_radius(6.0)
-            .inner_margin(6.0)
-            .show(&mut overlay, |ui| {
-                let edit = ui.add(
-                    TextEdit::singleline(&mut query)
-                        .hint_text("Star or planet name")
-                        .desired_width(260.0),
-                );
-                if focus {
-                    edit.request_focus();
+    egui::Frame::new()
+        .fill(PANEL.gamma_multiply(0.92))
+        .corner_radius(6.0)
+        .inner_margin(6.0)
+        .show(&mut overlay, |ui| {
+            let edit = ui.add(
+                TextEdit::singleline(&mut query)
+                    .hint_text("Star or planet name")
+                    .desired_width(width - 12.0),
+            );
+            if focus {
+                edit.request_focus();
+            }
+            if ui.input(|i| i.key_pressed(Key::Escape)) {
+                open = false;
+            }
+            let found = find(systems, &query);
+            if !query.trim().is_empty() && found.is_empty() {
+                ui.label(RichText::new("No star or planet by that name").color(CYAN));
+            }
+            for hit in found {
+                if ui.selectable_label(false, hit.label).clicked() {
+                    picked = Some(hit.system);
                 }
-                if ui.input(|i| i.key_pressed(Key::Escape)) {
-                    open = false;
-                }
-                let found = find(systems, &query);
-                if !query.trim().is_empty() && found.is_empty() {
-                    ui.label(RichText::new("No star or planet by that name").color(CYAN));
-                }
-                for hit in found {
-                    if ui.selectable_label(false, hit.label).clicked() {
-                        picked = Some(hit.system);
-                    }
-                }
-            });
-    }
+            }
+        });
     if picked.is_some() || !open {
         query.clear();
         open = false;
     }
     ui.data_mut(|data| {
-        data.insert_temp(query_id, query);
-        data.insert_temp(open_id, open);
+        data.insert_temp(Id::new(QUERY), query);
+        data.insert_temp(Id::new(OPEN), open);
+        data.insert_temp(Id::new(FOCUS), false);
     });
     picked
 }

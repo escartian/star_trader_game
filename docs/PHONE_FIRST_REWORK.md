@@ -236,7 +236,7 @@ Each phase ships on its own, keeps `./tools/check.sh` green and adds captures at
 390 × 844 and 1280 × 800.
 
 1. **Declutter on the current desktop UI** (done): fleet stacks that cycle on
-   tap, no tethers, heading ticks, labels by zoom or selection, quiet traffic
+   tap, heading ticks (short tethers to a resting fleet's body came later), labels by zoom or selection, quiet traffic
    dots, band lines only while hunting, the orbit ring only when selected. The
    list sheet for a stack arrives with phase 2.
 2. **Phone shell** (done): status strip, action bar, a context sheet with

@@ -57,7 +57,7 @@ impl LocalView {
     }
 }
 
-pub(super) fn dash(painter: &Painter, from: Pos2, to: Pos2, stroke: Stroke) {
+pub(crate) fn dash(painter: &Painter, from: Pos2, to: Pos2, stroke: Stroke) {
     let length = from.distance(to);
     let steps = (length / 6.0).max(1.0) as usize;
     for step in (0..steps).step_by(2) {

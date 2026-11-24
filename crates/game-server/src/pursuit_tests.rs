@@ -180,3 +180,62 @@ fn a_new_captain_can_pursue_and_hail_with_nothing_locked() {
     assert_eq!(contact.kind, EncounterKind::Trader, "the full hail card");
     assert_eq!(session.state.navigation.pursuit, None, "caught");
 }
+
+#[test]
+fn a_trader_is_intercepted_where_it_is_bound_and_the_flagship_refuels_on_the_way() {
+    let mut session = Session::default();
+    let (_, trader) = meet_trader(&mut session, 0);
+    let system = session.state.ships[0].location.system().unwrap();
+    // The trader is out in open space, bound for another body in this system.
+    let bodies: Vec<_> = session
+        .systems
+        .iter()
+        .find(|known| known.id == system)
+        .unwrap()
+        .bodies
+        .iter()
+        .map(|body| body.id)
+        .collect();
+    let here = match session.state.ships[0].location {
+        Location::Orbiting { body, .. } => body,
+        ref other => panic!("{other:?}"),
+    };
+    let bound = *bodies.iter().find(|body| **body != here).unwrap();
+    let npc = &mut session.economy.traders[0].state;
+    npc.ships[0].location = Location::InSystem {
+        system,
+        position: LocalPosition {
+            x_km: 150_000_000,
+            y_km: 0,
+            z_km: 0,
+        },
+    };
+    npc.navigation.orders.clear();
+    let lead = npc.ships[0].id;
+    npc.plot_course(
+        npc.ships[0].owner,
+        lead,
+        MoveTarget::Body {
+            system,
+            body: bound,
+        },
+        &session.systems,
+    )
+    .unwrap();
+    // Low on fuel at a market: the chase tops it up before setting off.
+    session.state.ships[0].fuel = 1;
+    ok(pursue(&mut session, Quarry::Trader(trader)));
+    assert_eq!(
+        session.state.ships[0].fuel, session.state.ships[0].fuel_capacity,
+        "refuelled"
+    );
+    let order = session.state.navigation.order(FleetId(1)).unwrap();
+    assert_eq!(
+        order.remaining_waypoints.last().unwrap_or(&order.target),
+        &MoveTarget::Body {
+            system,
+            body: bound
+        },
+        "steers for where the trader is going, not where it is"
+    );
+}

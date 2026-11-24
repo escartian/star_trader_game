@@ -226,12 +226,31 @@ impl Map {
                 npc_marker::paint(painter, &art, at, kind, red, None, band.ships.len());
             }
         }
-        self.paint_npc_focus(painter, &hits);
+        self.paint_npc_focus(painter, rect, &hits);
         hits
     }
 
+    /// The other star system a trader or band is bound for, if any.
+    fn quarry_bound(&self, quarry: Quarry) -> Option<&game_core::StarSystem> {
+        let bound = match quarry {
+            Quarry::Trader(id) => self
+                .session
+                .traffic()
+                .iter()
+                .find(|npc| npc.id == id)
+                .and_then(|npc| self.session.trader_heading(npc)),
+            Quarry::Band(id) => self
+                .session
+                .raider_bands()
+                .iter()
+                .find(|band| band.id == id && band.transit.is_some())
+                .map(|band| band.system),
+        }?;
+        self.systems.iter().find(|known| known.id == bound)
+    }
+
     /// The selected NPC's ring, and the pursuit line and crosshair.
-    fn paint_npc_focus(&self, painter: &Painter, hits: &[npc_marker::NpcHit]) {
+    fn paint_npc_focus(&self, painter: &Painter, rect: Rect, hits: &[npc_marker::NpcHit]) {
         let (selected, pursued) = self.session.npc_focus();
         for hit in hits {
             let (chosen, chased) = (Some(hit.quarry) == selected, Some(hit.quarry) == pursued);
@@ -243,6 +262,16 @@ impl Map {
             });
             if let (true, Some(chip)) = (chased, chip) {
                 npc_marker::paint_pursuit(painter, chip.bounds.center(), hit.at);
+            }
+            // Where the chase is going: on to the system the quarry is bound for.
+            if let (true, Some(bound)) = (chased, self.quarry_bound(hit.quarry)) {
+                let star = self.camera.project(position(bound), rect);
+                super::local::dash(
+                    painter,
+                    hit.at,
+                    star,
+                    Stroke::new(1.0_f32, crate::theme::AMBER.gamma_multiply(0.6)),
+                );
             }
         }
     }

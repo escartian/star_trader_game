@@ -120,7 +120,9 @@ star's type, holder and your standing, and a body's kind and traits.
 
 Tapping a body or system shows Selection; tapping a fleet chip shows Fleets;
 tapping a trader or raider band selects it (see
-[pursuit](NAVIGATION_RUNS.md#pursuit)). The galaxy map's course line runs only
+[pursuit](NAVIGATION_RUNS.md#pursuit)). On the galaxy map a pursuit shows as an
+amber dashed line from your flagship to the quarry and on, fainter, to the
+system the quarry is bound for. The galaxy map's course line runs only
 to where the selected fleet's course ends; cancelling the course (or a Wait)
 removes it and the system view's route line.
 Tapping the place the flagship rests at cancels a course it has not set off on

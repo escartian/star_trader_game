@@ -151,7 +151,7 @@ impl Session {
                 candidate.require_flagship(player, fleet)?;
                 vec![game_core::pursuit::pursue(
                     &mut candidate.state,
-                    &candidate.economy,
+                    &mut candidate.economy,
                     player,
                     fleet,
                     quarry,
@@ -252,7 +252,7 @@ impl Session {
                 // The flagship catches its quarry, loses it or steers for it.
                 events.extend(game_core::pursuit::service_pursuit(
                     &mut candidate.state,
-                    &candidate.economy,
+                    &mut candidate.economy,
                     player,
                     &candidate.systems,
                 )?);

@@ -65,6 +65,15 @@ impl Map {
             "factions" => self.session.capture_factions(true)?,
             "factions-map" => self.session.capture_factions(false)?,
             "roster" => self.sheet = crate::session::SheetTab::Fleets,
+            "pursuing-flight" => {
+                // A trader between systems pursued: the chase line on the galaxy map.
+                self.session.capture_traders_in_flight(1, 60)?;
+                self.session.capture_pursue_flying()?;
+            }
+            "pursuing-galaxy" => {
+                self.session.capture_pursuit_quarry()?;
+                self.session.capture_pursue_band()?;
+            }
             "pursuing" => {
                 // In the system view: the first trader selected, the band pursued.
                 self.session.capture_pursuit_quarry()?;
@@ -281,6 +290,8 @@ mod tests {
             "traffic-flight",
             "pursue",
             "pursuing",
+            "pursuing-galaxy",
+            "pursuing-flight",
             "game-songbook",
             "menu-songbook",
             "menu-songbook@cruise_a",

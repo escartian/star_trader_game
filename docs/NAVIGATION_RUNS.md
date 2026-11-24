@@ -194,10 +194,16 @@ dashed amber line from your flagship:
   only its trade offer), a band
   the raider fight (within 20 million km). A quarry already in reach is
   contacted immediately.
-- Otherwise the course is re-plotted to where the quarry is now (a trader at a
-  body is followed to that body). A quarry in, or bound for, another system
-  (a trader leaving, a band crossing) is followed to that system, and the
-  chase resumes there. While a leg is under way it is finished first. If the quarry sits inside a body's collision zone or at the
+- Otherwise the flagship steers to intercept. Your fleets and NPC traders move
+  at the same speed (50 million km a tick in a system, 4 ticks a run, whatever
+  the hull), so trailing a trader rarely closes the gap: a trader with a
+  course is met where it is bound (its body or point, in this system or the
+  next), and a resting one at its berth. Raider bands and police patrols move
+  at half that speed (100 million km a run), so a band is steered for where
+  it is. A band crossing to another system is followed there. While a leg is
+  under way it is finished first, and at any market on the way the flagship
+  refuels as far as credits allow (a jump costs about half a freighter's
+  tank). If the quarry sits inside a body's collision zone or at the
   flagship's own spot, the flagship waits a run.
 - The pursuit ends, with a log note, when the quarry is gone, when no course
   can reach it (out of jump range or fuel; a pursuit that could not even start

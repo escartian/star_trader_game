@@ -53,4 +53,20 @@ impl LocalSession {
         self.select_npc(game_core::pursuit::Quarry::Trader(trader));
         Ok(())
     }
+
+    /// Pursues the first trader between systems.
+    pub fn capture_pursue_flying(&mut self) -> Result<(), String> {
+        let trader = self
+            .economy
+            .traders
+            .iter()
+            .find(|npc| npc.state.ships[0].location.system().is_none())
+            .ok_or("No trader between systems")?
+            .id;
+        self.pursue(game_core::pursuit::Quarry::Trader(trader));
+        match self.state.navigation.pursuit {
+            Some(_) => Ok(()),
+            None => Err(format!("The pursuit did not start: {}", self.notice)),
+        }
+    }
 }

@@ -7,7 +7,7 @@ use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use crate::theme::{AMBER, CYAN, GREEN};
 use egui::{RichText, Vec2};
-use game_core::{StarSystem, fleet::FleetId, progress::Feature};
+use game_core::{StarSystem, fleet::FleetId};
 use game_server::LOCAL_PLAYER;
 
 /// Which page the context sheet shows.
@@ -122,9 +122,7 @@ impl LocalSession {
         self.unlock_cards(ui);
         self.guide(ui);
         self.contact_panel(ui);
-        if self.unlocked(Feature::Victory) {
-            self.haven_prompt(ui);
-        }
+        self.haven_prompt(ui);
     }
 
     /// The Fleets page: the ship used for trading, then every fleet.
@@ -187,15 +185,8 @@ impl LocalSession {
                 "Volume, display, guide and autosave",
             ),
         ];
-        let shown = [
-            true,
-            self.unlocked(Feature::Fleets),
-            true,
-            self.unlocked(Feature::Victory),
-            self.factions_active(),
-            true,
-            true,
-        ];
+        // Everything is open from the start; only Factions needs factions in play.
+        let shown = [true, true, true, true, self.factions_active(), true, true];
         for (index, (icon, label, tip)) in entries.into_iter().enumerate() {
             if !shown[index] {
                 continue;

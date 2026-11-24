@@ -168,3 +168,15 @@ fn a_quarry_elsewhere_or_crossing_is_followed_to_its_system() {
         "{events:?}"
     );
 }
+
+#[test]
+fn a_new_captain_can_pursue_and_hail_with_nothing_locked() {
+    let mut session = Session::default();
+    let (_, trader) = meet_trader(&mut session, 0);
+    // A fresh career: no milestones reached, yet nothing is held back.
+    session.state.progress = game_core::progress::Progress::captain(game_core::economy::Credits(0));
+    ok(pursue(&mut session, Quarry::Trader(trader)));
+    let contact = &session.state.navigation.encounters[0];
+    assert_eq!(contact.kind, EncounterKind::Trader, "the full hail card");
+    assert_eq!(session.state.navigation.pursuit, None, "caught");
+}

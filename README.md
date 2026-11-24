@@ -195,9 +195,9 @@ button runs exactly one run. Travelling fleets meet raiders or one of ten other
 contacts (salvage, convoys, customs, anomalies, comets and more); see
 [navigation runs](docs/NAVIGATION_RUNS.md). New games are set up with galaxy
 size, starting credits, inflation, danger, campaign length and the Trader goal.
-Stars, planets and stations carry generated names. A new game opens its controls
-gradually: the shipyard after your first 1,000 cr of profit, trade routes, battles,
-landing and the Victory panel as you reach them, each with a short guide card.
+Stars, planets and stations carry generated names. Every control is open from
+the first run; as you reach each milestone (your first 1,000 cr of profit, trade
+routes, battles, landing, the Victory panel) a short tip card explains it once.
 **Fight** opens the full-screen battle (**Auto-resolve** skips it; × surrenders your cargo); each battle ends
 with a combat report. Repair damaged hulls in the Market window.
 Random state and choices persist. To automate a loop, select a destination market

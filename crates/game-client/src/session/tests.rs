@@ -274,13 +274,13 @@ fn tapping_a_destination_plots_the_course_without_moving() {
 }
 
 #[test]
-fn a_captain_sees_only_unlocked_controls_and_a_guide_card_per_unlock() {
+fn a_new_captain_sees_every_control_and_a_tip_card_per_milestone() {
     use game_core::progress::Feature;
     let mut authority = game_server::Session::default();
     authority.begin_progression();
     let mut host = LocalSession::new(authority);
-    assert!(!host.unlocked(Feature::Fleets) && !host.unlocked(Feature::Victory));
-    // An unlock event queues its card (and logs it); dismissing removes it.
+    assert!(host.state.progress.unlocked.is_empty(), "no milestone yet");
+    // A milestone queues its tip card (and logs it); dismissing removes it.
     let message = host.announce_unlock(Feature::Battles);
     assert!(message.contains("Raider battles"));
     assert!(host.unlock_card_open(Feature::Battles));
@@ -290,7 +290,7 @@ fn a_captain_sees_only_unlocked_controls_and_a_guide_card_per_unlock() {
         [Feature::Battles],
         "one card per feature"
     );
-    // The menu lists only what is unlocked.
+    // The menu lists everything from the start.
     let ctx = egui::Context::default();
     let output = ctx.run(egui::RawInput::default(), |ctx| {
         egui::CentralPanel::default().show(ctx, |ui| host.menu_sheet(ui));
@@ -303,7 +303,7 @@ fn a_captain_sees_only_unlocked_controls_and_a_guide_card_per_unlock() {
             _ => None,
         })
         .collect();
-    assert!(texts.iter().any(|text| text == "Trade"), "{texts:?}");
-    assert!(!texts.iter().any(|text| text == "Fleets"), "{texts:?}");
-    assert!(!texts.iter().any(|text| text == "Victory"), "{texts:?}");
+    for entry in ["Trade", "Fleets", "Victory"] {
+        assert!(texts.iter().any(|text| text == entry), "{entry}: {texts:?}");
+    }
 }

@@ -1,6 +1,6 @@
-//! Progressive disclosure on the client: a feature's controls show once the
-//! host has unlocked it (`game_core::progress`), and each unlock brings a
-//! one-line guide card to the top of the sheet until dismissed.
+//! Milestone tips on the client: every control is shown from the start; each
+//! milestone the host records (`game_core::progress`) brings a one-line guide
+//! card to the top of the sheet until dismissed.
 use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use crate::theme::{CYAN, GREEN};
@@ -8,17 +8,12 @@ use egui::RichText;
 use game_core::progress::Feature;
 
 impl LocalSession {
-    /// Whether `feature`'s controls are shown yet.
-    pub(super) fn unlocked(&self, feature: Feature) -> bool {
-        self.state.progress.has(feature)
-    }
-
     /// Queues the guide card for a feature the host just unlocked.
     pub(super) fn announce_unlock(&mut self, feature: Feature) -> String {
         if !self.unlock_cards.contains(&feature) {
             self.unlock_cards.push(feature);
         }
-        format!("Unlocked: {}.", feature.guide().0)
+        format!("Tip: {}.", feature.guide().0)
     }
 
     /// Whether the guide card for `feature` is still showing.

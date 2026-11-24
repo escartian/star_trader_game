@@ -304,9 +304,7 @@ impl LocalSession {
                     location_stat(ui, &ship.location, systems);
                 }
                 self.standing_orders(ui, &fleet, systems);
-                if self.is_flagship(fleet.id)
-                    && self.unlocked(game_core::progress::Feature::Landing)
-                {
+                if self.is_flagship(fleet.id) {
                     self.landing_controls(ui, fleet.id, systems);
                 }
                 self.route_line(ui, fleet.id, systems);

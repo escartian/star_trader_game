@@ -1,6 +1,8 @@
-//! Progressive disclosure. Every rule works from the first run; the client
-//! shows a feature's controls once it becomes relevant, each with a one-line
-//! guide card. The host records unlocks here as play reaches them:
+//! Milestone tips. Every feature and control is open from the first run;
+//! when play first reaches a milestone the host records it here and the
+//! client shows that feature's one-line guide card once. (`unlocked` keeps
+//! its name for save compatibility: it lists the milestones reached, and
+//! hides nothing.)
 //!
 //! 1. **Captain** (always): market, refuel, plot a course, Advance.
 //! 2. [`Feature::Fleets`]: [`FLEETS_PROFIT`] of profit (net worth gained since
@@ -45,12 +47,12 @@ impl Feature {
         Feature::Victory,
     ];
 
-    /// The guide card's title and one line.
+    /// The tip card's title and one line.
     pub fn guide(self) -> (&'static str, &'static str) {
         match self {
             Feature::Fleets => (
                 "Shipyard and fleets",
-                "Profits open the shipyard: buy hulls in Fleets & shipyard (Menu), split them into fleets and give the others standing orders.",
+                "With profit to spend: buy hulls in a market's Shipyard tab, split them into fleets (Fleets) and give the others standing orders.",
             ),
             Feature::TradeRoutes => (
                 "Trade routes",
@@ -72,7 +74,7 @@ impl Feature {
     }
 }
 
-/// Saved progress through the unlocks (part of the player state).
+/// Saved milestones (part of the player state).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Progress {
@@ -97,7 +99,7 @@ impl Default for Progress {
 }
 
 impl Progress {
-    /// A new captain: nothing beyond trading and travel yet.
+    /// A new captain: no milestone reached yet (their tips still to come).
     pub fn captain(start_net_worth: Credits) -> Self {
         Self {
             unlocked: Vec::new(),

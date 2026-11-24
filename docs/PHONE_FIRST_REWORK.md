@@ -197,10 +197,10 @@ names and reports are written in that voice.
 Rules exist from the start; controls appear when they become relevant, each with
 a one-line guide card.
 
-As built (`game-core/src/progress.rs`): new player games start as a captain;
-saves from before unlocks, tests and captures have everything unlocked. The
-host records unlocks after each command; the client shows a feature's controls
-once unlocked, with a dismissible guide card. Thresholds were rescaled for the
+As built (`game-core/src/progress.rs`): the host records milestones after each
+command and the client shows a dismissible guide card for each. Since the
+unlocks were dropped at the user's request, every control is shown from the
+first run; the milestones below only time the tip cards. Thresholds were rescaled for the
 small default economy (noted below).
 
 1. **Captain:** one freighter; market, refuel, plot a course, Advance.
@@ -257,8 +257,8 @@ Each phase ships on its own, keeps `./tools/check.sh` green and adds captures at
    ship is lost, the Raider Haven (assault from orbit; destroying it wins; bands
    stop returning once it falls) and trade charters with port share and
    shipping lanes. See [campaign](CAMPAIGN.md).
-6. **Unlocks** (done): progressive disclosure with saved progress, one guide
-   card per unlock, and Auto-resolve offered first at the first raider contact.
+6. **Unlocks** (done, later reduced to tips): saved milestones, one guide
+   card per milestone, every control open from the start, and Auto-resolve offered first at the first raider contact.
 
 Diplomat/Spy and Pirate roads follow factions and missions (milestones 5 and 6).
 Mobile packaging stays deferred; phases 1 to 6 only make the layout and controls

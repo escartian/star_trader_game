@@ -181,7 +181,7 @@ wallet by the host in the same command, so saves always hold zero.
 
 ## Pursuit
 
-Once battles are unlocked, tap a trader or raider band on either map to select
+Tap a trader or raider band on either map to select
 it (a white ring; its card heads the Selection page with where it is and is
 bound, and **Hail** or **Pursue**), or use **Pursue** in the Fleets page's
 traffic list (traders in your system out of hailing range, and the raider bands

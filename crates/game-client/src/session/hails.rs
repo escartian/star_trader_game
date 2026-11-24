@@ -9,7 +9,6 @@ use game_core::{
     navigation::{Encounter, EncounterChoice},
     npc::Trader,
     piracy,
-    progress::Feature,
 };
 use game_protocol::ClientCommand;
 use game_server::LOCAL_PLAYER;
@@ -37,11 +36,7 @@ impl LocalSession {
         });
         self.pursuit_status(ui);
         let placed = game_core::orbits::placed(systems, self.state.tick);
-        let reach = if self.unlocked(Feature::Battles) {
-            piracy::in_reach(&self.state, &self.economy, LOCAL_PLAYER, &placed)
-        } else {
-            Vec::new()
-        };
+        let reach = piracy::in_reach(&self.state, &self.economy, LOCAL_PLAYER, &placed);
         let here = self.flagship_system();
         let (mut near, far): (Vec<&Trader>, Vec<&Trader>) =
             self.economy.traders.iter().partition(|trader| {

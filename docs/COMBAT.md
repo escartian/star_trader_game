@@ -355,7 +355,7 @@ someone demands its cargo.
 
 ## Hailing and robbing NPC traders
 
-Once you have met raiders, the map roster's TRAFFIC list shows **Hail** beside
+The map roster's TRAFFIC list shows **Hail** beside
 every NPC trader your flagship can reach (`game-core/src/piracy.rs`): within 20
 million km, with both ships in open space or orbit. Your fleet must not be docked
 or landed; a trader laid up for a refit is protected. A trader **docked** at a

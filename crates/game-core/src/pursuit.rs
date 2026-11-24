@@ -194,7 +194,9 @@ pub fn pursue(
         state.navigation.pursuit = None;
         return Err(NavigationError::NoCourse.into());
     }
-    if let Some(NavigationEvent::PursuitNote { note, .. }) = events.first() {
+    if let Some(NavigationEvent::PursuitNote { note, .. }) = events.first()
+        && note.starts_with("Pursuit ended")
+    {
         // Ended before it began (out of range, say): refuse with the reason.
         let reason = note.trim_start_matches("Pursuit ended: ");
         return Err(NavigationError::PursuitImpossible(reason.to_owned()).into());

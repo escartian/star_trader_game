@@ -26,9 +26,6 @@ impl LocalSession {
         let Some(body) = body else {
             return;
         };
-        if !self.unlocked(game_core::progress::Feature::TradeRoutes) {
-            return;
-        }
         let selected = self
             .state
             .fleet_for_ship(self.active_ship)

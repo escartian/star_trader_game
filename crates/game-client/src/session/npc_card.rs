@@ -95,9 +95,7 @@ impl LocalSession {
         let placed = game_core::orbits::placed(systems, self.state.tick);
         let hailable = match quarry {
             Quarry::Trader(id) => {
-                self.unlocked(game_core::progress::Feature::Battles)
-                    && piracy::in_reach(&self.state, &self.economy, LOCAL_PLAYER, &placed)
-                        .contains(&id)
+                piracy::in_reach(&self.state, &self.economy, LOCAL_PLAYER, &placed).contains(&id)
             }
             Quarry::Band(_) => false,
         };

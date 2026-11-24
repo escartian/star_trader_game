@@ -4,14 +4,15 @@
 use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use crate::theme::iff;
-use game_core::{progress::Feature, pursuit::Quarry};
+use game_core::pursuit::Quarry;
 use game_protocol::ClientCommand;
 use game_server::LOCAL_PLAYER;
 
 impl LocalSession {
-    /// Whether the flagship can be ordered to chase things (battles unlocked).
+    /// Whether the flagship can be ordered to chase things: always, from the
+    /// first run (following needs no unlock; what happens on the catch does).
     pub(super) fn can_pursue(&self) -> bool {
-        self.unlocked(Feature::Battles) && self.state.flagship(LOCAL_PLAYER).is_some()
+        self.state.flagship(LOCAL_PLAYER).is_some()
     }
 
     /// A Pursue button; returns whether it was clicked.

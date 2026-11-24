@@ -83,10 +83,9 @@ impl LocalSession {
             ui.label(egui::RichText::new(terms.summary()).color(color).small());
             self.wanted_banner(ui, &ship);
         }
-        // A port with hulls for sale has a Shipyard tab (once fleets unlock);
-        // hulls are bought only there, where the ship is docked.
-        let yard = self.unlocked(game_core::progress::Feature::Fleets)
-            && market.ship_stock.iter().any(|stock| *stock > 0);
+        // A port with hulls for sale has a Shipyard tab; hulls are bought
+        // only there, where the ship is docked.
+        let yard = market.ship_stock.iter().any(|stock| *stock > 0);
         self.market.shipyard &= yard;
         if yard {
             ui.horizontal(|ui| {
@@ -154,9 +153,7 @@ impl LocalSession {
                 "Prices in credits for the first unit. Hover an order button for its total:\nbulk orders price every unit along the stock curve. Max fills your hold;\nAll sells everything this market can pay for.",
             );
         });
-        if self.unlocked(game_core::progress::Feature::Victory) {
-            self.charter_row(ui, &ship, market.id);
-        }
+        self.charter_row(ui, &ship, market.id);
         ui.horizontal_wrapped(|ui| {
             self.trade_scope_ui(ui, &ship, systems);
             self.best_trade_line(ui, &market, systems);

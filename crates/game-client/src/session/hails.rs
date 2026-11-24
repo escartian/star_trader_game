@@ -7,6 +7,7 @@ use game_core::{
     StarSystem,
     economy::Commodity,
     navigation::{Encounter, EncounterChoice},
+    npc::Trader,
     piracy,
     progress::Feature,
 };
@@ -14,14 +15,18 @@ use game_protocol::ClientCommand;
 use game_server::LOCAL_PLAYER;
 
 impl LocalSession {
-    /// The roster's TRAFFIC section: each trader's latest news, and a Hail
-    /// button beside those the flagship can reach (once battles are unlocked).
+    /// The roster's TRAFFIC section: traders near the flagship first (those
+    /// it can hail, with a Hail button once battles are unlocked, then the
+    /// rest of its system), and everyone else folded away under Elsewhere, so
+    /// a 32-trader galaxy stays readable.
     pub(super) fn traffic_list(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
+        let total = self.economy.traders.len();
         ui.horizontal(|ui| {
             icons::glyph(ui, Icon::Contact, AMBER, "Other traders");
             ui.colored_label(
                 AMBER,
-                egui::RichText::new("TRAFFIC").font(crate::theme::fonts::display(ui.ctx(), 12.0)),
+                egui::RichText::new(format!("TRAFFIC · {total}"))
+                    .font(crate::theme::fonts::display(ui.ctx(), 12.0)),
             );
         });
         let placed = game_core::orbits::placed(systems, self.state.tick);
@@ -30,46 +35,31 @@ impl LocalSession {
         } else {
             Vec::new()
         };
-        let mut hail = None;
-        for trader in &self.economy.traders {
-            ui.horizontal(|ui| {
-                let temper = self
-                    .economy
-                    .rules
-                    .personality_catalog
-                    .get(trader.personality);
-                ui.strong(&trader.name)
-                    .on_hover_text(format!("{}: {}", temper.label, temper.description));
-                if let Some(faction) = trader.affiliation {
-                    let name = &self.economy.rules.faction_catalog.get(faction).name;
-                    ui.colored_label(
-                        self.faction_color(faction),
-                        egui::RichText::new(name).small(),
-                    )
-                    .on_hover_text(format!(
-                        "Flies for the {name}: robbing it also costs standing with them."
-                    ));
-                }
-                let armed = defences(trader);
-                if !armed.is_empty() {
-                    ui.small(armed)
-                        .on_hover_text("Anti-piracy gear and hired escort");
-                }
-                if reach.contains(&trader.id)
-                    && icons::button(ui, Icon::Contact, "Hail")
-                        .on_hover_text("Stop this trader: let it go, demand cargo or attack it.")
-                        .clicked()
-                {
-                    hail = Some(trader.id);
-                }
+        let here = self.flagship_system();
+        let (mut near, far): (Vec<&Trader>, Vec<&Trader>) =
+            self.economy.traders.iter().partition(|trader| {
+                reach.contains(&trader.id)
+                    || (here.is_some() && trader.state.ships[0].location.system() == here)
             });
-            // Raid and piracy news stands out from routine hauling.
-            let news = &trader.last_action;
-            if news.contains("raid") || news.contains("pirate") {
-                ui.colored_label(AMBER, egui::RichText::new(news).small());
-            } else {
-                ui.small(news);
+        near.sort_by_key(|trader| (!reach.contains(&trader.id), trader.id));
+        let mut hail = None;
+        if near.is_empty() {
+            ui.small("No traders near your flagship.");
+        }
+        for trader in near {
+            if self.trader_row(ui, trader, reach.contains(&trader.id)) {
+                hail = Some(trader.id);
             }
+        }
+        if !far.is_empty() {
+            egui::CollapsingHeader::new(format!("Elsewhere ({})", far.len()))
+                .id_salt("traffic-elsewhere")
+                .default_open(false)
+                .show(ui, |ui| {
+                    for trader in far {
+                        self.trader_row(ui, trader, false);
+                    }
+                });
         }
         if let (Some(trader), Some(fleet)) = (hail, self.state.flagship(LOCAL_PLAYER)) {
             self.command(ClientCommand::HailTrader {
@@ -78,6 +68,56 @@ impl LocalSession {
                 expected_revision: self.state.revision,
             });
         }
+    }
+
+    /// The system the flagship's lead ship is in, if any.
+    fn flagship_system(&self) -> Option<game_core::SystemId> {
+        let fleet = self.state.flagship(LOCAL_PLAYER)?;
+        let record = self.state.fleets.iter().find(|record| record.id == fleet)?;
+        let lead = self.state.ship(*record.ships.first()?).ok()?;
+        lead.location.system()
+    }
+
+    /// One trader: name, faction, defences and (if `can_hail`) a Hail button,
+    /// then its latest news. Returns whether Hail was clicked.
+    fn trader_row(&self, ui: &mut egui::Ui, trader: &Trader, can_hail: bool) -> bool {
+        let mut clicked = false;
+        ui.horizontal(|ui| {
+            let temper = self
+                .economy
+                .rules
+                .personality_catalog
+                .get(trader.personality);
+            ui.strong(&trader.name)
+                .on_hover_text(format!("{}: {}", temper.label, temper.description));
+            if let Some(faction) = trader.affiliation {
+                let name = &self.economy.rules.faction_catalog.get(faction).name;
+                ui.colored_label(
+                    self.faction_color(faction),
+                    egui::RichText::new(name).small(),
+                )
+                .on_hover_text(format!(
+                    "Flies for the {name}: robbing it also costs standing with them."
+                ));
+            }
+            let armed = defences(trader);
+            if !armed.is_empty() {
+                ui.small(armed)
+                    .on_hover_text("Anti-piracy gear and hired escort");
+            }
+            clicked = can_hail
+                && icons::button(ui, Icon::Contact, "Hail")
+                    .on_hover_text("Stop this trader: let it go, demand cargo or attack it.")
+                    .clicked();
+        });
+        // Raid and piracy news stands out from routine hauling.
+        let news = &trader.last_action;
+        if news.contains("raid") || news.contains("pirate") {
+            ui.colored_label(AMBER, egui::RichText::new(news).small());
+        } else {
+            ui.small(news);
+        }
+        clicked
     }
 
     /// A hailed trader's card: its hold and hull, then let it go, demand

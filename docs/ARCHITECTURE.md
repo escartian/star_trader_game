@@ -74,7 +74,9 @@ with its Map toggle, draws the track as a transition map
 with arrows and chances from the embedded manifest. Selecting a part
 in the Songbook sends an atomic request to the audio source; it switches on a
 stereo frame edge and crossfades for two seconds, then resumes weighted valid
-transitions. Browser audio is still pending.
+transitions. Right-clicking a part sends a separate queue request that replaces
+the drawn successor, so it plays at the next block boundary. Browser audio is
+still pending.
 Kenney CC0 effects are embedded from `assets/effects/`; the same rodio output
 mixes short UI and battle cues with music. Battle view state schedules each cue
 at the matching beam start or hit time. Kenney particle sprites are loaded once

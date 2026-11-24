@@ -52,6 +52,28 @@ fn announced_next_part_is_the_one_that_plays() {
 }
 
 #[test]
+fn queued_part_plays_next_at_the_boundary() {
+    let mut source = MusicGraph::new().unwrap();
+    let now = source.part_handle();
+    let up_next = source.up_next_handle();
+    // A part at another tempo than drift_a's 60 BPM: queueing ignores tempo.
+    let fanfare = part_index("fanfare").unwrap();
+    source.queue_handle().store(fanfare, Ordering::Release);
+    source.next(); // Left channel: the request is taken here.
+    assert_eq!(
+        up_next.load(Ordering::Acquire),
+        fanfare,
+        "announced at once"
+    );
+    assert_eq!(part_name(now.load(Ordering::Acquire)), Some("drift_a"));
+    source.clock.samples_left = 0;
+    source.next();
+    assert_eq!(now.load(Ordering::Acquire), fanfare);
+    let next = part_name(up_next.load(Ordering::Acquire)).unwrap();
+    assert!(source.graph.blocks["fanfare"].next.contains_key(next));
+}
+
+#[test]
 fn songbook_selection_crossfades_on_a_stereo_frame() {
     let mut source = MusicGraph::new().unwrap();
     let selection = source.selection_handle();

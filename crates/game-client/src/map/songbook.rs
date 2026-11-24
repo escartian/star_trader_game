@@ -33,6 +33,15 @@ pub(crate) enum View {
     Map,
 }
 
+/// What the viewer asked the Songbook for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Request {
+    /// Crossfade to this part now (click).
+    Play(&'static str),
+    /// Play this part when the current block ends (right-click).
+    Queue(&'static str),
+}
+
 /// Shows the Songbook if `open`; returns a part the viewer chose to play.
 pub(super) fn show(
     ctx: &egui::Context,
@@ -40,7 +49,7 @@ pub(super) fn show(
     view: &mut View,
     current: Option<&'static str>,
     next: Option<&'static str>,
-) -> Option<&'static str> {
+) -> Option<Request> {
     if !*open {
         return None;
     }
@@ -133,9 +142,10 @@ fn now_playing_line(ui: &mut egui::Ui, current: Option<&str>, next: Option<&str>
     });
 }
 
-fn list(ui: &mut egui::Ui, current: Option<&str>) -> Option<&'static str> {
+fn list(ui: &mut egui::Ui, current: Option<&str>) -> Option<Request> {
     ui.label(
-        "Select a part to play it now. The track then continues through its possible next parts.",
+        "Click a part to play it now, or right-click it to play it next. The track then \
+         continues through its possible next parts.",
     );
     let mut chosen = None;
     let mut section = "";
@@ -151,11 +161,11 @@ fn list(ui: &mut egui::Ui, current: Option<&str>) -> Option<&'static str> {
         } else {
             ui.visuals().text_color()
         });
-        if ui
-            .selectable_label(current == Some(part.id), label)
-            .clicked()
-        {
-            chosen = Some(part.id);
+        let response = ui.selectable_label(current == Some(part.id), label);
+        if response.clicked() {
+            chosen = Some(Request::Play(part.id));
+        } else if response.secondary_clicked() {
+            chosen = Some(Request::Queue(part.id));
         }
     }
     chosen
@@ -167,7 +177,7 @@ fn map(
     next: Option<&'static str>,
     width: f32,
     content_top: f32,
-) -> Option<&'static str> {
+) -> Option<Request> {
     let time = ui.input(|input| input.time);
     // The map fills the card down to its two lines of explanation; on a
     // screen too small for its minimum size, the card's content scrolls.
@@ -189,10 +199,13 @@ fn map(
     };
     ui.small(
         "Hover a part to see where it can go next (green, with chances) and what leads to \
-         it (cyan); click it to play it. Pinch or Ctrl+scroll to zoom, drag or scroll to \
-         pan, double-click to fit.",
+         it (cyan); click it to play it now or right-click to play it next. Pinch or \
+         Ctrl+scroll to zoom, drag or scroll to pan, double-click to fit.",
     );
-    input.chosen
+    input
+        .chosen
+        .map(Request::Play)
+        .or(input.queued.map(Request::Queue))
 }
 
 #[cfg(test)]

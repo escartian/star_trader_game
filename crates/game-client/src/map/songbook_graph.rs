@@ -173,6 +173,8 @@ pub(super) struct Highlights {
 pub(super) struct MapInput {
     pub hovered: Option<&'static Part>,
     pub chosen: Option<&'static str>,
+    /// A part right-clicked to play next.
+    pub queued: Option<&'static str>,
 }
 
 /// Shows the map in a `size` points large view that pinch, Ctrl+scroll or
@@ -214,15 +216,17 @@ fn paint_map(ui: &mut Ui, highlights: &Highlights) -> MapInput {
     for (at, chance) in chances {
         tag(&painter, at, Align2::CENTER_CENTER, &chance, GREEN);
     }
-    let chosen = if response.clicked() {
-        hovered.map(|part| part.id)
-    } else {
-        None
-    };
+    let id = hovered.map(|part| part.id);
+    let chosen = id.filter(|_| response.clicked());
+    let queued = id.filter(|_| response.secondary_clicked());
     if hovered.is_some() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
-    MapInput { hovered, chosen }
+    MapInput {
+        hovered,
+        chosen,
+        queued,
+    }
 }
 
 fn paint_sections(painter: &Painter, canvas: Rect) {

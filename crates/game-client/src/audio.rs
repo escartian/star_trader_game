@@ -152,6 +152,13 @@ impl Music {
             .as_ref()
             .is_some_and(|output| output.select_part(name))
     }
+
+    /// Queues a Songbook part to play when the current block ends.
+    pub fn queue_part(&self, name: &str) -> bool {
+        self.output
+            .as_ref()
+            .is_some_and(|output| output.queue_part(name))
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -185,6 +192,7 @@ mod output {
         part: Option<Arc<AtomicUsize>>,
         up_next: Option<Arc<AtomicUsize>>,
         selection: Option<Arc<AtomicUsize>>,
+        queue: Option<Arc<AtomicUsize>>,
         effects: Vec<Sink>,
         stream: OutputStream,
     }
@@ -200,6 +208,7 @@ mod output {
                 part: None,
                 up_next: None,
                 selection: None,
+                queue: None,
                 effects: Vec::new(),
                 stream,
             })
@@ -210,6 +219,7 @@ mod output {
             self.part = None;
             self.up_next = None;
             self.selection = None;
+            self.queue = None;
             let Some(Track::MainTheme) = track else {
                 return;
             };
@@ -218,6 +228,7 @@ mod output {
                     self.part = Some(source.part_handle());
                     self.up_next = Some(source.up_next_handle());
                     self.selection = Some(source.selection_handle());
+                    self.queue = Some(source.queue_handle());
                     let sink = Sink::connect_new(self.stream.mixer());
                     sink.set_volume(0.0);
                     sink.append(source);
@@ -251,6 +262,14 @@ mod output {
                 return false;
             };
             selection.store(index, Ordering::Release);
+            true
+        }
+
+        pub fn queue_part(&self, name: &str) -> bool {
+            let (Some(index), Some(queue)) = (music_graph::part_index(name), &self.queue) else {
+                return false;
+            };
+            queue.store(index, Ordering::Release);
             true
         }
 
@@ -300,6 +319,10 @@ mod output {
         }
 
         pub fn select_part(&self, _: &str) -> bool {
+            false
+        }
+
+        pub fn queue_part(&self, _: &str) -> bool {
             false
         }
 

@@ -279,6 +279,7 @@ pub struct MusicGraph {
     now_playing: Arc<AtomicUsize>,
     up_next: Arc<AtomicUsize>,
     selected_part: Arc<AtomicUsize>,
+    queued_part: Arc<AtomicUsize>,
 }
 
 impl MusicGraph {
@@ -303,6 +304,7 @@ impl MusicGraph {
             now_playing,
             up_next,
             selected_part: Arc::new(AtomicUsize::new(NO_SELECTION)),
+            queued_part: Arc::new(AtomicUsize::new(NO_SELECTION)),
         })
     }
 
@@ -323,6 +325,21 @@ impl MusicGraph {
 
     pub(super) fn selection_handle(&self) -> Arc<AtomicUsize> {
         Arc::clone(&self.selected_part)
+    }
+
+    pub(super) fn queue_handle(&self) -> Arc<AtomicUsize> {
+        Arc::clone(&self.queued_part)
+    }
+
+    /// A Songbook "play next": the queued part replaces the drawn successor
+    /// and starts at the next block boundary with the usual join, even across
+    /// tempos. Its own successor is drawn as usual once it starts.
+    fn queue(&mut self, index: usize) {
+        let Some(name) = part_name(index) else { return };
+        if self.graph.blocks.contains_key(name) {
+            self.upcoming = name.to_owned();
+            self.up_next.store(index, Ordering::Release);
+        }
     }
 
     fn jump_to(&mut self, index: usize) {
@@ -370,6 +387,10 @@ impl Iterator for MusicGraph {
             let chosen = self.selected_part.swap(NO_SELECTION, Ordering::AcqRel);
             if chosen != NO_SELECTION {
                 self.jump_to(chosen);
+            }
+            let queued = self.queued_part.swap(NO_SELECTION, Ordering::AcqRel);
+            if queued != NO_SELECTION {
+                self.queue(queued);
             }
         }
         if self.clock.boundary() && self.advance().is_err() {

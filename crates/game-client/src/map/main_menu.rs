@@ -86,14 +86,17 @@ impl Map {
             });
         let current_part = current_part.or(menu.songbook_preview);
         let next_part = self.music.next_block();
-        if let Some(part) = super::songbook::show(
+        if let Some(request) = super::songbook::show(
             ctx,
             &mut menu.songbook_open,
             &mut menu.songbook_view,
             current_part,
             next_part,
         ) {
-            self.music.select_part(part);
+            match request {
+                super::songbook::Request::Play(part) => self.music.select_part(part),
+                super::songbook::Request::Queue(part) => self.music.queue_part(part),
+            };
             ctx.request_repaint_after(std::time::Duration::from_millis(50));
         }
         if self.carry_out(ctx, &mut menu, choice) {

@@ -142,7 +142,9 @@ a one-item list such as `['arrive_a']` and press **Update**. In the game,
 select that part in the main-menu Songbook, as a list or (on desktop, with the
 Map toggle) on a map that shows every part by section and tempo with arrows for
 its possible transitions and their chances; it crossfades in over two seconds
-and then follows its weighted transitions.
+and then follows its weighted transitions. Right-click a part instead to play
+it next: it replaces the drawn successor and starts when the current block
+ends, with the usual join.
 
 ## Re-export
 

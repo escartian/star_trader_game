@@ -21,7 +21,6 @@ and do not change if the remote copies do.
 | `0360_FluidR3_GM_sf2_file.js` | `gm_slap_bass_1:2` | slap bass (Space Disco pieces) |
 | `0380_FluidR3_GM_sf2_file.js` | `gm_synth_bass_1:1` | bass |
 | `0410_FluidR3_GM_sf2_file.js` | `gm_viola:1` | viola |
-| `0420_FluidR3_GM_sf2_file.js` | `gm_cello:1` | bowed bass (Night Drift pieces) |
 | `0460_FluidR3_GM_sf2_file.js` | `gm_orchestral_harp:1` | harp (space pieces) |
 | `0480_FluidR3_GM_sf2_file.js` | `gm_string_ensemble_1:2` | ostinato |
 | `0501_FluidR3_GM_sf2_file.js` | `gm_synth_strings_1:3` | ensemble |
@@ -47,3 +46,19 @@ for anything that ends up in the game's audio. To add an instrument, find its
 FluidR3 entry in `tools/music/node_modules/@strudel/soundfonts/gm.mjs` (the
 `:n` index is its position in that list), download the matching `.js` file
 into this folder and add a row above.
+
+### GeneralUser GS
+
+| File | Strudel sound | Used for |
+| --- | --- | --- |
+| `0430_GeneralUserGS_sf2_file.js` | `gm_contrabass:2` | bowed contrabass (Night Drift pieces) |
+
+FluidR3_GM has no contrabass, so this one instrument comes from GeneralUser GS
+by S. Christian Collins (https://www.schristiancollins.com). Its licence (v2.0,
+as published with GeneralUser GS v2.0.3) allows using it "without restriction"
+for music creation, private or commercial, and in software projects, and says
+its samples allow "full use in music production"; no attribution is required.
+The author notes he "cannot be 100% sure where all of the samples originated",
+though he believes none come from commercial packages. If that ever matters,
+FluidR3's cello played in the contrabass range (`gm_cello:1`, file
+`0420_FluidR3_GM_sf2_file.js`) is a drop-in replacement.

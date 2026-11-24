@@ -92,8 +92,8 @@ lowpassed choir and vinyl crackle at 60, and drift phonk over the full kit at
 120. Theme F, sparser, plays on a dark, distorted supersaw lead at 80 and 100
 BPM; at 100 the cowbell doubles it an octave up. A picked bass guitar plays a
 syncopated line above the 808s, which slide up into each bar's last notes, a
-bowed bass (FluidR3's cello, played down in the contrabass range) holds long
-root and fifth notes, and horn-section stabs punctuate each bar. The drums sit well under the bass: a
+bowed contrabass (from GeneralUser GS, the one instrument not from FluidR3)
+holds long root and fifth notes, and horn-section stabs punctuate each bar. The drums sit well under the bass: a
 phonk kit (a heavy kick and a half-time snare),
 trap hats with triplet rolls, a half-time clap, rimshots, toms, shaker and
 open hats, growing with the tempo.

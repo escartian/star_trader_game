@@ -195,7 +195,9 @@ from 60 to 120 BPM and settles back. It is an original Strudel composition:
 `night.strudel.js` hold the main track and the space, Space Disco and Night Drift families,
 and `links.strudel.js` connects them. Paste the generated
 `source/music/music.strudel.js` into strudel.cc to play or edit a demo. Pitched
-voices are General MIDI instruments from the MIT-licensed FluidR3_GM soundfont
+voices are General MIDI instruments from the MIT-licensed FluidR3_GM soundfont,
+plus one contrabass from GeneralUser GS (its licence is noted in
+`source/music/soundfonts/README.md`)
 (local copies in `source/music/soundfonts/`); drums and effects are Strudel
 synthesizers. `tools/music/README.md` describes the music and its export
 (`node tools/music/render.mjs`), which re-renders only the blocks whose sources

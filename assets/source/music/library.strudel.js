@@ -25,7 +25,7 @@
 //
 // The sound mixes Strudel's own synthesizers (pads, pumping chords, plucks, a
 // laser harp, the drums and noise effects) with General MIDI instruments
-// (FluidR3_GM, MIT licence). The exporter serves the instrument data from
+// (FluidR3_GM, MIT licence, plus one GeneralUser GS contrabass). The exporter serves the instrument data from
 // assets/source/music/soundfonts/, so renders work offline. On strudel.cc the
 // same sounds load from Strudel's own soundfont host.
 setcps(80 / 60 / 4)
@@ -93,8 +93,9 @@ const instruments = {
   // The Night Drift pieces' dark, distorted synth lead and picked bass guitar.
   dark: { sound: "supersaw", boost: 1.1 },
   bassGuitar: { sound: "gm_electric_bass_pick:1", boost: 2.1 },
-  // A bowed bass: FluidR3's cello played down in the contrabass range.
-  bowed: { sound: "gm_cello:1", boost: 0.65 },
+  // A bowed contrabass. FluidR3 has none, so this is GeneralUser GS's (`:2`);
+  // see soundfonts/README.md for its licence.
+  bowed: { sound: "gm_contrabass:2", boost: 0.38 },
   // Space-jazz colours in the Space Disco pieces.
   vibes: { sound: "gm_vibraphone:3", boost: 1.6 },
   trumpet: { sound: "gm_muted_trumpet:3", boost: 1.4 },

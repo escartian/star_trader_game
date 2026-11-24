@@ -61,7 +61,8 @@ upgrades, hulls, charters and bounties all scale with it.
 
 Tuning lives in the session rules (`dynamics`); `MarketDynamics::frozen()`
 gives a static economy. In the three-system default world with two NPC traders
-and the player idle, galaxy wealth went from 65,000 cr to about 56,000 cr by
+(measured before the population scaled with the galaxy; that world now fields
+four) and the player idle, galaxy wealth went from 65,000 cr to about 56,000 cr by
 run 50 as treasuries settled to their ports' industry and trade (2,000–8,000
 cr), then rose with inflation to about 91,000 cr by run 400 (price level 1.22).
 

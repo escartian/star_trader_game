@@ -65,13 +65,13 @@ const spaceRamp = (from, to, next) => familyRamp(spaceAt, spaceHarmony, from, to
 family('space', {
   // 60 to 120 BPM: the space pieces.
   space: block({ from: 60, ...spaceHarmony, ...spaceAt[60],
-    next: { drift_a: 2, drift_b: 1, space_rise_80: 1, funk_60: 1 } }),
+    next: { space_rise_80: 1 } }),
   space_80: block({ from: 80, ...spaceHarmony, ...spaceAt[80],
-    next: { depart_a: 1, depart_b: 1, rise_90: 1, space_rise_100: 1, space_fall_60: 1, funk_80: 1 } }),
+    next: { space_rise_100: 1, space_fall_60: 1 } }),
   space_100: block({ from: 100, ...spaceHarmony, ...spaceAt[100],
-    next: { cruise_a: 1, rise_110: 1, fall_90: 1, space_rise_120: 1, space_fall_80: 1, funk_100: 1 } }),
+    next: { space_rise_120: 1, space_fall_80: 1 } }),
   space_120: block({ from: 120, ...spaceHarmony, ...spaceAt[120],
-    next: { arrive_a: 1, arrive_b: 1, fanfare: 1, fall_110: 1, space_fall_100: 1, funk_120: 1 } }),
+    next: { space_fall_100: 1 } }),
   // Ramps between the space pieces, 20 BPM each way.
   space_rise_80: spaceRamp(60, 80, { space_80: 1 }),
   space_rise_100: spaceRamp(80, 100, { space_100: 1 }),

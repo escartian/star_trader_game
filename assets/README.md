@@ -191,8 +191,9 @@ convenience; the runtime GLB has no Blender dependency.
 the game stitches together into an endless, changing soundtrack that rises
 from 60 to 120 BPM and settles back. It is an original Strudel composition:
 `source/music/library.strudel.js` holds the instruments and layers, and
-`main.strudel.js`, `space.strudel.js` and `funk.strudel.js` hold the main
-track and the space and funk families. Paste the generated
+`main.strudel.js`, `space.strudel.js`, `funk.strudel.js` and
+`phonk.strudel.js` hold the main track and the space, funk and phonk families,
+and `links.strudel.js` connects them. Paste the generated
 `source/music/music.strudel.js` into strudel.cc to play or edit a demo. Pitched
 voices are General MIDI instruments from the MIT-licensed FluidR3_GM soundfont
 (local copies in `source/music/soundfonts/`); drums and effects are Strudel

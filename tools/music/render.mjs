@@ -44,8 +44,10 @@ const force = args.includes('--force');
 if (force) args.splice(args.indexOf('--force'), 1);
 const loopBars = Number(flag('--bars', '32'));
 const sources = join(root, 'assets/source/music');
-/** The game's music: the shared library, then each family of blocks. */
-const FAMILIES = ['main', 'space', 'funk'];
+/** The game's music: the shared library, each family of blocks, then the
+ *  links between families (which change only the manifest, so no block's
+ *  hash includes them). */
+const FAMILIES = ['main', 'space', 'funk', 'phonk'];
 const suite = args[0] === undefined;
 const source = suite ? join(sources, 'music.strudel.js') : resolve(args[0]);
 const output = resolve(args[1] ?? join(root, 'assets/music'));
@@ -76,7 +78,7 @@ function blockGain(rms, peak) {
 
 /** Joins the library and family files into one Strudel source, written for strudel.cc. */
 function bundle() {
-  const parts = ['library', ...FAMILIES]
+  const parts = ['library', ...FAMILIES, 'links']
     .map((name) => ({ name, path: join(sources, `${name}.strudel.js`) }))
     .filter(({ path }) => existsSync(path))
     .map(({ name, path }) => ({ name, text: readFileSync(path, 'utf8') }));

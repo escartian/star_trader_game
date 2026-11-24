@@ -2,8 +2,9 @@
 // layer a block can use. An original composition for this game.
 //
 // The music is split into this library and one file per family of blocks
-// (main.strudel.js, space.strudel.js, funk.strudel.js). `tools/music/render.mjs`
-// joins them into music.strudel.js (paste that into https://strudel.cc and
+// (main.strudel.js, space.strudel.js, funk.strudel.js, phonk.strudel.js), plus
+// links.strudel.js joining the families. `tools/music/render.mjs` joins them
+// into music.strudel.js (paste that into https://strudel.cc and
 // press play to hear a demo of every block at one fixed tempo) and exports
 // each block, with its reverb tail, to assets/music/ plus the transitions in
 // manifest.json. It re-renders a block only when this library or the block's
@@ -89,6 +90,8 @@ const instruments = {
   brass: { sound: "gm_brass_section:3", boost: 3 },
   cowbell: { sound: "square", boost: 1.5 },
   bass808: { sound: "sine", boost: 0.19 },
+  // The phonk pieces' dark, distorted synth lead.
+  dark: { sound: "supersaw", boost: 1.1 },
 }
 const play = (pattern, name) => pattern.s(instruments[name].sound).postgain(instruments[name].boost)
 
@@ -194,7 +197,7 @@ function block(settings) {
     machine: 0, zaps: 0,
     talk: 0, talkNotes: '', clav: 0, clavNotes: '', scratch: 0, slap: 0, slapNotes: '', brass: 0,
     cowbell: 0, cowbellNotes: '', bass808: 0, trap: 0, clap: 0, clapPattern: "~ pink ~ pink", groove: 0,
-    congas: 0, tambourine: 0,
+    congas: 0, tambourine: 0, slide808: false, phonkKit: 0, crackle: 0, dark: 0, darkNotes: '',
     ...settings }
   const from = o.from
   const to = o.to ?? o.from
@@ -696,12 +699,16 @@ function block(settings) {
   if (on(o.bass808)) {
     // A distorted 808 bass: long sine notes on the roots, two octaves down,
     // in a syncopated phonk rhythm.
-    layers.push(play(note(o.roots).transpose(-12), 'bass808')
+    let bass808 = play(note(o.roots).transpose(-12), 'bass808')
       .struct("x ~ ~ x ~ ~ x ~ ~ ~ x ~ x ~ ~ ~")
       .attack(0.004).decay(0.6).sustain(0.35).release(0.15)
       .shape(0.55).lpf(420)
       .room(0.1).size(hall)
-      .gain(level(o.bass808)))
+      .gain(level(o.bass808))
+    // Phonk slides: the notes in each bar's last quarter glide up an octave
+    // into their pitch.
+    if (o.slide808) bass808 = bass808.penv("[0 0 0 12]").pattack(0.12)
+    layers.push(bass808)
   }
   if (on(o.trap)) {
     // Trap hats: steady eighths with triplet rolls in alternate bars.
@@ -753,6 +760,32 @@ function block(settings) {
       .pan(0.66).room(0.2).size(hall)
       .gain(level(o.tambourine)))
   }
+  if (on(o.phonkKit)) {
+    // A phonk kit: a heavy, slightly distorted kick and a half-time snare on
+    // three. Scaled as a whole by `phonkKit`.
+    layers.push(note("g1 ~ ~ ~ ~ ~ g1 ~ ~ ~ g1 ~ ~ ~ ~ ~").s("sine")
+      .decay(0.35).sustain(0).penv(36).pdecay(0.06).shape(0.3)
+      .room(0.12).size(hall).gain(level(o.phonkKit)).postgain(0.6))
+    layers.push(s("~ ~ ~ ~ ~ ~ ~ ~ pink ~ ~ ~ ~ ~ ~ ~")
+      .decay(0.2).sustain(0).bandf(1400).bandq(0.7)
+      .room(0.35).size(hall).gain(level(o.phonkKit)).postgain(0.4))
+  }
+  if (on(o.crackle)) {
+    // Lo-fi vinyl crackle: sparse, random clicks.
+    layers.push(s("pink*32").degradeBy(0.85)
+      .attack(0.001).decay(0.008).sustain(0)
+      .hpf(3000).pan(rand)
+      .gain(level(o.crackle)))
+  }
+  if (on(o.dark)) {
+    // A dark phonk lead: a detuned supersaw, lightly distorted and filtered.
+    layers.push(play(note(o.darkNotes), 'dark')
+      .attack(0.01).decay(0.2).sustain(0.4).release(0.2)
+      .shape(0.25).lpf(1600).lpq(3)
+      .delay(0.3).delaytime(echo).delayfeedback(0.35)
+      .pan(0.5).room(0.45).size(hall)
+      .gain(level(o.dark)))
+  }
   return { from, to, bpm, next: o.next, pattern: stack(...layers) }
 }
 
@@ -786,4 +819,9 @@ window.demo = []
 function family(name, blocks, demo) {
   for (const [id, built] of Object.entries(blocks)) window.blocks[id] = { ...built, family: name }
   window.demo.push(...demo)
+}
+// Adds transitions from block `from` (links.strudel.js joins the families).
+// Links do not change a block's audio, so they never cause a re-render.
+function link(from, targets) {
+  window.blocks[from] = { ...window.blocks[from], next: { ...window.blocks[from].next, ...targets } }
 }

@@ -7,8 +7,9 @@
 // layer a block can use. An original composition for this game.
 //
 // The music is split into this library and one file per family of blocks
-// (main.strudel.js, space.strudel.js, funk.strudel.js). `tools/music/render.mjs`
-// joins them into music.strudel.js (paste that into https://strudel.cc and
+// (main.strudel.js, space.strudel.js, funk.strudel.js, phonk.strudel.js), plus
+// links.strudel.js joining the families. `tools/music/render.mjs` joins them
+// into music.strudel.js (paste that into https://strudel.cc and
 // press play to hear a demo of every block at one fixed tempo) and exports
 // each block, with its reverb tail, to assets/music/ plus the transitions in
 // manifest.json. It re-renders a block only when this library or the block's
@@ -94,6 +95,8 @@ const instruments = {
   brass: { sound: "gm_brass_section:3", boost: 3 },
   cowbell: { sound: "square", boost: 1.5 },
   bass808: { sound: "sine", boost: 0.19 },
+  // The phonk pieces' dark, distorted synth lead.
+  dark: { sound: "supersaw", boost: 1.1 },
 }
 const play = (pattern, name) => pattern.s(instruments[name].sound).postgain(instruments[name].boost)
 
@@ -199,7 +202,7 @@ function block(settings) {
     machine: 0, zaps: 0,
     talk: 0, talkNotes: '', clav: 0, clavNotes: '', scratch: 0, slap: 0, slapNotes: '', brass: 0,
     cowbell: 0, cowbellNotes: '', bass808: 0, trap: 0, clap: 0, clapPattern: "~ pink ~ pink", groove: 0,
-    congas: 0, tambourine: 0,
+    congas: 0, tambourine: 0, slide808: false, phonkKit: 0, crackle: 0, dark: 0, darkNotes: '',
     ...settings }
   const from = o.from
   const to = o.to ?? o.from
@@ -701,12 +704,16 @@ function block(settings) {
   if (on(o.bass808)) {
     // A distorted 808 bass: long sine notes on the roots, two octaves down,
     // in a syncopated phonk rhythm.
-    layers.push(play(note(o.roots).transpose(-12), 'bass808')
+    let bass808 = play(note(o.roots).transpose(-12), 'bass808')
       .struct("x ~ ~ x ~ ~ x ~ ~ ~ x ~ x ~ ~ ~")
       .attack(0.004).decay(0.6).sustain(0.35).release(0.15)
       .shape(0.55).lpf(420)
       .room(0.1).size(hall)
-      .gain(level(o.bass808)))
+      .gain(level(o.bass808))
+    // Phonk slides: the notes in each bar's last quarter glide up an octave
+    // into their pitch.
+    if (o.slide808) bass808 = bass808.penv("[0 0 0 12]").pattack(0.12)
+    layers.push(bass808)
   }
   if (on(o.trap)) {
     // Trap hats: steady eighths with triplet rolls in alternate bars.
@@ -758,6 +765,32 @@ function block(settings) {
       .pan(0.66).room(0.2).size(hall)
       .gain(level(o.tambourine)))
   }
+  if (on(o.phonkKit)) {
+    // A phonk kit: a heavy, slightly distorted kick and a half-time snare on
+    // three. Scaled as a whole by `phonkKit`.
+    layers.push(note("g1 ~ ~ ~ ~ ~ g1 ~ ~ ~ g1 ~ ~ ~ ~ ~").s("sine")
+      .decay(0.35).sustain(0).penv(36).pdecay(0.06).shape(0.3)
+      .room(0.12).size(hall).gain(level(o.phonkKit)).postgain(0.6))
+    layers.push(s("~ ~ ~ ~ ~ ~ ~ ~ pink ~ ~ ~ ~ ~ ~ ~")
+      .decay(0.2).sustain(0).bandf(1400).bandq(0.7)
+      .room(0.35).size(hall).gain(level(o.phonkKit)).postgain(0.4))
+  }
+  if (on(o.crackle)) {
+    // Lo-fi vinyl crackle: sparse, random clicks.
+    layers.push(s("pink*32").degradeBy(0.85)
+      .attack(0.001).decay(0.008).sustain(0)
+      .hpf(3000).pan(rand)
+      .gain(level(o.crackle)))
+  }
+  if (on(o.dark)) {
+    // A dark phonk lead: a detuned supersaw, lightly distorted and filtered.
+    layers.push(play(note(o.darkNotes), 'dark')
+      .attack(0.01).decay(0.2).sustain(0.4).release(0.2)
+      .shape(0.25).lpf(1600).lpq(3)
+      .delay(0.3).delaytime(echo).delayfeedback(0.35)
+      .pan(0.5).room(0.45).size(hall)
+      .gain(level(o.dark)))
+  }
   return { from, to, bpm, next: o.next, pattern: stack(...layers) }
 }
 
@@ -791,6 +824,11 @@ window.demo = []
 function family(name, blocks, demo) {
   for (const [id, built] of Object.entries(blocks)) window.blocks[id] = { ...built, family: name }
   window.demo.push(...demo)
+}
+// Adds transitions from block `from` (links.strudel.js joins the families).
+// Links do not change a block's audio, so they never cause a re-render.
+function link(from, targets) {
+  window.blocks[from] = { ...window.blocks[from], next: { ...window.blocks[from].next, ...targets } }
 }
 
 
@@ -839,10 +877,10 @@ family('main', {
   // 60 BPM: drifting.
   drift_a: block({ from: 60, keys: 0.24, ensemble: 0.24, sequence: 0.1, pad: 0.1,
     bells: 0.16, stars: 0.1, starsSparse: 0.45,
-    next: { drift_b: 2, space: 1, rise_70: 2, funk_60: 1 } }),
+    next: { drift_b: 2, rise_70: 2 } }),
   drift_b: block({ from: 60, keys: 0.22, ensemble: 0.23, bass: 0.5, guitar: 0.16, pad: 0.09, viola: 0.12,
     sequence: 0.09, bells: 0.1, stars: 0.08,
-    next: { drift_a: 1, space: 1, rise_70: 3, funk_60: 1 } }),
+    next: { drift_a: 1, rise_70: 3 } }),
   rise_70: block({ from: 60, to: 70, keys: [0.22, 0.2], ensemble: [0.23, 0.2], guitar: [0.08, 0.13], pad: [0.1, 0.09],
     arp: [0, 0.07], sequence: [0.1, 0.09],
     shaker: [0, 0.08], lift: [0, 0.07], bells: 0.14, stars: 0.1,
@@ -850,16 +888,16 @@ family('main', {
   rise_80: block({ from: 70, to: 80, keys: [0.2, 0.18], ensemble: [0.2, 0.16], guitar: [0.13, 0.17], pad: [0.09, 0.07], pluck: [0, 0.04],
     arp: [0.07, 0.13], sequence: [0.09, 0], hats: [0, 0.22],
     shaker: [0.08, 0.1], lift: [0.07, 0.09], bells: 0.12, stars: 0.1,
-    next: { depart_a: 1, depart_b: 1, space_80: 1, funk_80: 1 } }),
+    next: { depart_a: 1, depart_b: 1 } }),
   // 80 BPM: departing.
   depart_a: block({ from: 80, keys: 0.18, arp: 0.13, guitar: 0.19, pad: 0.06, viola: 0.1, organ: 0.04, horns: 0.05,
     hats: 0.22, shaker: 0.09, lift: 0.07,
     bells: 0.13, stars: 0.1,
-    next: { depart_b: 2, rise_90: 2, space_80: 1, funk_80: 1 } }),
+    next: { depart_b: 2, rise_90: 2 } }),
   depart_b: block({ from: 80, keys: 0.16, arp: 0.13, arpNotes: arpWide, guitar: 0.17, pad: 0.06, viola: 0.08,
     organ: 0.05, horns: 0.05, woodwinds: 0.06, counter: 0.12, hats: 0.22,
     shaker: 0.09, lift: 0.07, bells: 0.1,
-    stars: 0.08, next: { depart_a: 1, rise_90: 2, space_80: 1, funk_80: 1 } }),
+    stars: 0.08, next: { depart_a: 1, rise_90: 2 } }),
   rise_90: block({ from: 80, to: 90, keys: [0.18, 0.14], arp: 0.13, arpLpf: [1400, 1800], guitar: [0.17, 0.22],
     guitarNotes: guitarStrums, rhythm: [0, 0.025], pad: [0.06, 0.03], pluck: [0.04, 0.06], viola: 0.08,
     organ: [0.05, 0.07], horns: [0.05, 0.08], woodwinds: [0.04, 0.06], hats: 0.22,
@@ -868,14 +906,14 @@ family('main', {
   rise_100: block({ from: 90, to: 100, keys: [0.14, 0.1], arp: 0.13, arpLpf: [1800, 2200], guitar: 0.22, rhythm: [0.025, 0.045], pluck: 0.06, pump: [0, 0.05],
     organ: [0.07, 0.08], horns: [0.08, 0.1], woodwinds: [0.06, 0.07], drums: 'in', hats: 0.22,
     shaker: [0.11, 0.14], lift: [0.1, 0.12],
-    bells: [0.12, 0.05], stars: 0.07, next: { cruise_a: 2, cruise_b: 1, funk_100: 1 } }),
+    bells: [0.12, 0.05], stars: 0.07, next: { cruise_a: 2, cruise_b: 1 } }),
   // 100 BPM: cruising, with the melodies and the solo.
-  cruise_a: block({ from: 100, ...cruise, next: { cruise_b: 2, solo: 1, rise_110: 1, space_100: 1, funk_100: 1 } }),
-  cruise_b: block({ from: 100, ...cruise, leadNotes: melodyB, guitarNotes: guitarStrums, viola: 0.08, next: { cruise_a: 1, solo: 2, rise_110: 1, space_100: 1, funk_100: 1 } }),
+  cruise_a: block({ from: 100, ...cruise, next: { cruise_b: 2, solo: 1, rise_110: 1 } }),
+  cruise_b: block({ from: 100, ...cruise, leadNotes: melodyB, guitarNotes: guitarStrums, viola: 0.08, next: { cruise_a: 1, solo: 2, rise_110: 1 } }),
   solo: block({ from: 100, bars: 16, ...soloGuitar, ensemble: [0.09, 0.14], arp: [0.05, 0.11],
     guitar: [0.22, 0.3], guitarNotes: solo, guitarBends: true,
     organ: [0.04, 0.11], horns: [0, 0.1], viola: [0, 0.12],
-    next: { cruise_a: 1, rise_110: 2, fall_90: 1, funk_100: 1 } }),
+    next: { cruise_a: 1, rise_110: 2, fall_90: 1 } }),
   rise_110: block({ from: 100, to: 110, ...cruise, arpLpf: [2200, 2700], stabs: [0, 0.04],
     guitarNotes: guitarStrums, rhythm: [0.045, 0.055], pump: [0.05, 0.07], pluck: 0.06,
     organ: [0.08, 0.1], horns: [0.1, 0.12], woodwinds: [0.07, 0.08],
@@ -885,14 +923,14 @@ family('main', {
     organ: [0.1, 0.12], horns: [0.12, 0.14], woodwinds: 0.08,
     ostinato: [0, 0.055], ride: [0, 0.055], toms: [0, 0.07],
     shaker: [0.15, 0.16], lift: [0.12, 0.14], leadNotes: octaveUp(melodyA),
-    next: { arrive_a: 1, arrive_b: 1, fanfare: 1, space_120: 1, funk_120: 1 } }),
+    next: { arrive_a: 1, arrive_b: 1, fanfare: 1 } }),
   // 120 BPM: arriving, the peak.
-  arrive_a: block({ from: 120, ...arrive, leadNotes: octaveUp(melodyA), next: { arrive_b: 2, fanfare: 1, fall_110: 2, space_120: 1, funk_120: 1 } }),
-  arrive_b: block({ from: 120, ...arrive, leadNotes: octaveUp(melodyB), guitarNotes: guitarStrums, next: { arrive_a: 1, fanfare: 1, fall_110: 2, space_120: 1, funk_120: 1 } }),
+  arrive_a: block({ from: 120, ...arrive, leadNotes: octaveUp(melodyA), next: { arrive_b: 2, fanfare: 1, fall_110: 2 } }),
+  arrive_b: block({ from: 120, ...arrive, leadNotes: octaveUp(melodyB), guitarNotes: guitarStrums, next: { arrive_a: 1, fanfare: 1, fall_110: 2 } }),
   fanfare: block({ from: 120, ...arrive, lead: 0.21, leadNotes: fanfareLine,
     horns: 0.18, organ: 0.14, woodwinds: 0.05, guitar: 0.11, counter: 0, pump: 0.07,
     arp: 0.1, stabs: 0.05, ostinato: 0.07,
-    next: { arrive_a: 1, arrive_b: 1, fall_110: 2, space_120: 1, funk_120: 1 } }),
+    next: { arrive_a: 1, arrive_b: 1, fall_110: 2 } }),
   fall_110: block({ from: 120, to: 110, ...arrive, stabs: [0.075, 0.04], pump: [0.08, 0.05], pluck: [0.05, 0.03],
     shaker: [0.16, 0], ostinato: [0.055, 0], ride: [0.055, 0], toms: [0.07, 0],
     lift: [0.12, 0], leadNotes: octaveUp(melodyB),
@@ -900,7 +938,7 @@ family('main', {
   fall_100: block({ from: 110, to: 100, ...cruise, keys: [0.1, 0.13], arpLpf: [3200, 2200], stabs: [0.04, 0],
     guitarNotes: guitarStrums, pump: [0.05, 0.02], pluck: [0.03, 0],
     shaker: 0, lift: 0,
-    bells: [0, 0.05], next: { solo: 1, cruise_a: 1, fall_90: 2, space_100: 1, funk_100: 1 } }),
+    bells: [0, 0.05], next: { solo: 1, cruise_a: 1, fall_90: 2 } }),
   // Back down through 90, 80, 70 to 60.
   fall_90: block({ from: 100, to: 90, keys: [0.13, 0.16], arp: 0.13, guitar: [0.21, 0.14], rhythm: [0.045, 0], pump: [0.02, 0], counter: [0.16, 0.08], pad: [0, 0.04],
     organ: [0.08, 0.03], horns: [0.1, 0], woodwinds: [0.07, 0],
@@ -909,13 +947,13 @@ family('main', {
     hats: 0.22, bells: [0.08, 0.13], stars: 0.1, next: { wind: 1 } }),
   wind: block({ from: 80, keys: 0.18, arp: 0.13, guitar: 0.12, pad: 0.07, viola: 0.11, hats: 0.22,
     sequence: 0.035, bells: 0.13, stars: 0.1,
-    next: { fall_70: 2, depart_a: 1, space_80: 1, funk_80: 1 } }),
+    next: { fall_70: 2, depart_a: 1 } }),
   fall_70: block({ from: 80, to: 70, keys: [0.18, 0.2], arp: [0.13, 0.07], guitar: [0.12, 0], sequence: [0.035, 0.06], pad: 0.08, viola: [0.1, 0.06],
     hats: [0.22, 0],
     bells: 0.14, stars: 0.1, next: { fall_60: 1 } }),
   fall_60: block({ from: 70, to: 60, keys: [0.2, 0.22], arp: [0.07, 0], pad: [0.08, 0.1],
     sequence: [0.06, 0.045],
-    bells: 0.16, stars: 0.1, next: { drift_a: 1, space: 1, funk_60: 1 } }),
+    bells: 0.16, stars: 0.1, next: { drift_a: 1 } }),
 }, [
   'drift_a', 'drift_b', 'space', 'drift_a', 'rise_70', 'rise_80', 'space_80', 'depart_a',
   'depart_b', 'rise_90', 'rise_100', 'cruise_a', 'solo', 'space_100', 'cruise_a', 'cruise_b',
@@ -992,13 +1030,13 @@ const spaceRamp = (from, to, next) => familyRamp(spaceAt, spaceHarmony, from, to
 family('space', {
   // 60 to 120 BPM: the space pieces.
   space: block({ from: 60, ...spaceHarmony, ...spaceAt[60],
-    next: { drift_a: 2, drift_b: 1, space_rise_80: 1, funk_60: 1 } }),
+    next: { space_rise_80: 1 } }),
   space_80: block({ from: 80, ...spaceHarmony, ...spaceAt[80],
-    next: { depart_a: 1, depart_b: 1, rise_90: 1, space_rise_100: 1, space_fall_60: 1, funk_80: 1 } }),
+    next: { space_rise_100: 1, space_fall_60: 1 } }),
   space_100: block({ from: 100, ...spaceHarmony, ...spaceAt[100],
-    next: { cruise_a: 1, rise_110: 1, fall_90: 1, space_rise_120: 1, space_fall_80: 1, funk_100: 1 } }),
+    next: { space_rise_120: 1, space_fall_80: 1 } }),
   space_120: block({ from: 120, ...spaceHarmony, ...spaceAt[120],
-    next: { arrive_a: 1, arrive_b: 1, fanfare: 1, fall_110: 1, space_fall_100: 1, funk_120: 1 } }),
+    next: { space_fall_100: 1 } }),
   // Ramps between the space pieces, 20 BPM each way.
   space_rise_80: spaceRamp(60, 80, { space_80: 1 }),
   space_rise_100: spaceRamp(80, 100, { space_100: 1 }),
@@ -1015,9 +1053,8 @@ family('space', {
 
 // ---- funk.strudel.js ----
 // Star Trader music — the funk pieces at 60, 80, 100 and 120 BPM and the
-// 20 BPM ramps between them: the main theme reworked as space funk that turns
-// to phonk as the tempo rises. Rendered with library.strudel.js; see
-// tools/music/README.md.
+// 20 BPM ramps between them: the main theme reworked as space funk. Rendered
+// with library.strudel.js; see tools/music/README.md.
 
 // A funk vamp in D dorian, two bars per chord: Dm9, G9 (its major IV), Dm9,
 // then Bb^7 and A7sus, ending on A to resolve into every other block.
@@ -1026,9 +1063,8 @@ const funkHarmony = { chords: "<Dm9 Dm9 G9 G9 Dm9 Dm9 Bb^7 A7sus>", roots: "<d2 
 
 // The funk pieces have two themes, like the space pieces. Theme C, the main
 // theme's melody (melodyA, one bar per chord), plays at 60 and 120 BPM with the
-// same note values, so 120 is exactly double time: on a talkbox lead at 60,
-// and on a phonk cowbell an octave up at 120. Theme D, a syncopated clavinet
-// riff, plays at 80 and 100 BPM; at 100 a cowbell doubles it an octave up.
+// same note values, so 120 is exactly double time: on a talkbox lead, doubled
+// on clavinet at 120. Theme D, a syncopated clavinet riff, plays at 80 and 100.
 const themeC = '<' + melodyA + '>'
 // Theme D: sixteenth-note steps, one bar per chord. Over G9 it uses B natural,
 // the dorian colour of funk.
@@ -1067,35 +1103,27 @@ const funkAt = {
     clavNotes: funkRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.078, organ: 0.06,
     laser: 0.03, pad: 0.06
   },
-  // Theme D turning phonk: an 808 under the slap bass, trap hats, claps and a
-  // cowbell doubling the riff.
+  // Theme D, fuller: organ, congas and tambourine join the band.
   100: {
-    ensemble: 0.12, bass: 0, slap: 0.13, slapNotes: slapLine, bass808: 0.22, clav: 0.12,
-    clavNotes: funkRiff, cowbell: 0.05, cowbellNotes: octaveUp(funkRiff), scratch: 0.05,
-    brass: 0.08, groove: 0.52, trap: 0.046, clap: 0.065, pump: 0.04, laser: 0.04
+    keys: 0.075, ensemble: 0.12, bass: 0, slap: 0.17, slapNotes: slapLine, clav: 0.12,
+    clavNotes: funkRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.08,
+    congas: 0.08, tambourine: 0.04, laser: 0.03
   },
-  // Theme C at double time, phonk and funk together: cowbell melody, distorted
-  // 808, trap hat rolls and a half-time clap, under the talkbox and laser harp,
-  // with the slap bass, chicken scratch, horn stabs, electric-piano comping,
-  // congas and tambourine keeping it funky.
+  // Theme C at double time: talkbox and clavinet in unison over the full band,
+  // congas and tambourine, with the laser harp above.
   120: {
-    ensemble: 0.09, bass: 0, bass808: 0.28, slap: 0.12, slapNotes: slapLine, cowbell: 0.12,
-    scratch: 0.06, brass: 0.08, keys: 0.06, congas: 0.12, tambourine: 0.05,
-    cowbellNotes: octaveUp(themeC), talk: 0.08, talkNotes: themeC, laser: 0.07, groove: 0.585,
-    trap: 0.058, clap: 0.091, clapPattern: "~ ~ pink ~", chop: 0.04, choir: 0.075, zaps: 0.04
+    keys: 0.075, ensemble: 0.09, bass: 0, slap: 0.17, slapNotes: slapLine, talk: 0.11,
+    talkNotes: themeC, clav: 0.08, clavNotes: themeC, scratch: 0.07, brass: 0.1, organ: 0.06,
+    groove: 0.585, hats: 0.08, congas: 0.12, tambourine: 0.06, laser: 0.06
   },
 }
 const funkRamp = (from, to, next) => familyRamp(funkAt, funkHarmony, from, to, next)
 
 family('funk', {
-  funk_60: block({ from: 60, ...funkHarmony, ...funkAt[60],
-    next: { drift_a: 1, space: 1, funk_rise_80: 2 } }),
-  funk_80: block({ from: 80, ...funkHarmony, ...funkAt[80],
-    next: { depart_a: 1, rise_90: 1, space_80: 1, funk_rise_100: 2, funk_fall_60: 1 } }),
-  funk_100: block({ from: 100, ...funkHarmony, ...funkAt[100],
-    next: { cruise_a: 1, rise_110: 1, space_100: 1, funk_rise_120: 2, funk_fall_80: 1 } }),
-  funk_120: block({ from: 120, ...funkHarmony, ...funkAt[120],
-    next: { arrive_a: 1, fall_110: 1, space_120: 1, funk_fall_100: 2 } }),
+  funk_60: block({ from: 60, ...funkHarmony, ...funkAt[60], next: { funk_rise_80: 2 } }),
+  funk_80: block({ from: 80, ...funkHarmony, ...funkAt[80], next: { funk_rise_100: 2, funk_fall_60: 1 } }),
+  funk_100: block({ from: 100, ...funkHarmony, ...funkAt[100], next: { funk_rise_120: 2, funk_fall_80: 1 } }),
+  funk_120: block({ from: 120, ...funkHarmony, ...funkAt[120], next: { funk_fall_100: 2 } }),
   // Ramps between the funk pieces, 20 BPM each way.
   funk_rise_80: funkRamp(60, 80, { funk_80: 1 }),
   funk_rise_100: funkRamp(80, 100, { funk_100: 1 }),
@@ -1107,6 +1135,132 @@ family('funk', {
   'funk_60', 'funk_rise_80', 'funk_80', 'funk_rise_100', 'funk_100', 'funk_rise_120', 'funk_120',
   'funk_fall_100', 'funk_100', 'funk_fall_80', 'funk_80', 'funk_fall_60', 'funk_60',
 ])
+
+
+// ---- phonk.strudel.js ----
+// Star Trader music — the phonk pieces at 60, 80, 100 and 120 BPM and the
+// 20 BPM ramps between them: dark Memphis and drift phonk in space, with
+// cowbell melodies, sliding 808s, trap hats and a half-time phonk kit.
+// Rendered with library.strudel.js; see tools/music/README.md.
+
+// A dark minor cycle, two bars per chord: Dm, Bb, Gm and A7, whose C sharp
+// (harmonic minor) pulls hard back to D minor.
+const phonkHarmony = { chords: "<Dm Dm Bb Bb Gm Gm A7 A7>", roots: "<d2 d2 bb1 bb1 g1 g1 a1 a1>",
+  rootNumbers: "<38 38 34 34 31 31 33 33>" }
+
+// The phonk pieces have two themes, like the other families. Theme E, a busy
+// cowbell melody in sixteenth-note steps, plays at 60 and 120 BPM with the same
+// note values, so 120 is exactly double time. Theme F, sparser and darker,
+// plays on the distorted synth lead at 80 and 100 BPM. Both use one bar per
+// step of the harmony; over A7 they use D flat, the C sharp of the chord.
+const themeE = '<' +
+  '[[d6 ~ d6 ~] [a5 ~ d6 ~] [f6 ~ e6 ~] [d6 ~ a5 ~]] ' +
+  '[[d6 ~ d6 ~] [a5 ~ d6 ~] [f6 e6 d6 ~] [c6 ~ a5 ~]] ' +
+  '[[bb5 ~ bb5 ~] [f5 ~ bb5 ~] [d6 ~ c6 ~] [bb5 ~ f5 ~]] ' +
+  '[[bb5 ~ bb5 ~] [f5 ~ bb5 ~] [d6 c6 bb5 ~] [a5 ~ f5 ~]] ' +
+  '[[g5 ~ g5 ~] [d5 ~ g5 ~] [bb5 ~ a5 ~] [g5 ~ d5 ~]] ' +
+  '[[g5 ~ g5 ~] [d5 ~ g5 ~] [bb5 a5 g5 ~] [f5 ~ d5 ~]] ' +
+  '[[a5 ~ a5 ~] [e5 ~ a5 ~] [db6 ~ e6 ~] [a5 ~ e5 ~]] ' +
+  '[[a5 ~ a5 ~] [e5 ~ a5 ~] [g5 ~ e5 ~] [db6 ~ ~ ~]]>'
+const themeF = '<' +
+  '[[d5 ~ ~ f5] [~ ~ a5 ~] [~ g5 ~ f5] [e5 ~ d5 ~]] ' +
+  '[[d5 ~ ~ f5] [~ ~ a5 ~] [c6 ~ a5 ~] [g5 ~ ~ ~]] ' +
+  '[[d5 ~ ~ f5] [~ ~ bb5 ~] [~ a5 ~ f5] [d5 ~ c5 ~]] ' +
+  '[[d5 ~ ~ f5] [~ ~ bb5 ~] [d6 ~ bb5 ~] [a5 ~ ~ ~]] ' +
+  '[[bb4 ~ ~ d5] [~ ~ g5 ~] [~ f5 ~ d5] [bb4 ~ a4 ~]] ' +
+  '[[bb4 ~ ~ d5] [~ ~ g5 ~] [bb5 ~ g5 ~] [f5 ~ ~ ~]] ' +
+  '[[a4 ~ ~ db5] [~ ~ e5 ~] [~ g5 ~ e5] [db5 ~ a4 ~]] ' +
+  '[[a4 ~ ~ db5] [~ ~ e5 ~] [a5 ~ g5 ~] [e5 ~ ~ ~]]>'
+
+// The phonk pieces' settings, shared by the pieces and the ramps between them.
+const phonkAt = {
+  // Theme E, slow and eerie: the cowbell over long sliding 808s, a dark pad,
+  // a lowpassed choir and crackle, with the kit and hats held back.
+  60: {
+    ensemble: 0, bass: 0, cowbell: 0.08, cowbellNotes: themeE, bass808: 0.22, slide808: true,
+    pad: 0.07, choir: 0.05, halo: 0.06, crackle: 0.05, phonkKit: 0.35, trap: 0.035
+  },
+  // Theme F on the dark lead, with the kit, trap hats and a half-time clap.
+  80: {
+    ensemble: 0, bass: 0, dark: 0.1, darkNotes: themeF, bass808: 0.26, slide808: true,
+    phonkKit: 0.55, trap: 0.05, clap: 0.07, clapPattern: "~ ~ pink ~", pad: 0.05, choir: 0.05,
+    crackle: 0.04
+  },
+  // Theme F, heavier: the cowbell doubles the lead an octave up.
+  100: {
+    ensemble: 0, bass: 0, dark: 0.12, darkNotes: themeF, cowbell: 0.05,
+    cowbellNotes: octaveUp(themeF), bass808: 0.3, slide808: true, phonkKit: 0.7, trap: 0.07,
+    clap: 0.09, clapPattern: "~ ~ pink ~", choir: 0.06, chop: 0.03, crackle: 0.03
+  },
+  // Theme E at double time: drift phonk, cowbell up front over the full kit.
+  120: {
+    ensemble: 0, bass: 0, cowbell: 0.13, cowbellNotes: themeE, dark: 0.05,
+    darkNotes: octaveDown(themeE), bass808: 0.32, slide808: true, phonkKit: 0.8, trap: 0.08,
+    clap: 0.11, clapPattern: "~ ~ pink ~", choir: 0.06, zaps: 0.03, crackle: 0.03
+  },
+}
+const phonkRamp = (from, to, next) => familyRamp(phonkAt, phonkHarmony, from, to, next)
+
+family('phonk', {
+  phonk_60: block({ from: 60, ...phonkHarmony, ...phonkAt[60], next: { phonk_rise_80: 2 } }),
+  phonk_80: block({ from: 80, ...phonkHarmony, ...phonkAt[80], next: { phonk_rise_100: 2, phonk_fall_60: 1 } }),
+  phonk_100: block({ from: 100, ...phonkHarmony, ...phonkAt[100], next: { phonk_rise_120: 2, phonk_fall_80: 1 } }),
+  phonk_120: block({ from: 120, ...phonkHarmony, ...phonkAt[120], next: { phonk_fall_100: 2 } }),
+  // Ramps between the phonk pieces, 20 BPM each way.
+  phonk_rise_80: phonkRamp(60, 80, { phonk_80: 1 }),
+  phonk_rise_100: phonkRamp(80, 100, { phonk_100: 1 }),
+  phonk_rise_120: phonkRamp(100, 120, { phonk_120: 1 }),
+  phonk_fall_100: phonkRamp(120, 100, { phonk_100: 1 }),
+  phonk_fall_80: phonkRamp(100, 80, { phonk_80: 1 }),
+  phonk_fall_60: phonkRamp(80, 60, { phonk_60: 1 }),
+}, [
+  'phonk_60', 'phonk_rise_80', 'phonk_80', 'phonk_rise_100', 'phonk_100', 'phonk_rise_120',
+  'phonk_120', 'phonk_fall_100', 'phonk_100', 'phonk_fall_80', 'phonk_80', 'phonk_fall_60',
+  'phonk_60',
+])
+
+
+// ---- links.strudel.js ----
+// Star Trader music — transitions between the families, at matching tempos.
+// Each family's own file holds the transitions within it; these join them.
+// Links change only the manifest, never a block's audio, so editing them does
+// not re-render anything.
+
+// From the main track.
+link('drift_a', { space: 1, funk_60: 1, phonk_60: 1 })
+link('drift_b', { space: 1, funk_60: 1 })
+link('rise_80', { space_80: 1, funk_80: 1 })
+link('depart_a', { space_80: 1, funk_80: 1 })
+link('depart_b', { space_80: 1, funk_80: 1, phonk_80: 1 })
+link('rise_100', { funk_100: 1 })
+link('cruise_a', { space_100: 1, funk_100: 1 })
+link('cruise_b', { space_100: 1, funk_100: 1, phonk_100: 1 })
+link('solo', { funk_100: 1 })
+link('rise_120', { space_120: 1, funk_120: 1 })
+link('arrive_a', { space_120: 1, funk_120: 1 })
+link('arrive_b', { space_120: 1, funk_120: 1, phonk_120: 1 })
+link('fanfare', { space_120: 1, funk_120: 1, phonk_120: 1 })
+link('fall_100', { space_100: 1, funk_100: 1, phonk_100: 1 })
+link('wind', { space_80: 1, funk_80: 1, phonk_80: 1 })
+link('fall_60', { space: 1, funk_60: 1, phonk_60: 1 })
+
+// From the space pieces.
+link('space', { drift_a: 2, drift_b: 1, funk_60: 1, phonk_60: 1 })
+link('space_80', { depart_a: 1, depart_b: 1, rise_90: 1, funk_80: 1, phonk_80: 1 })
+link('space_100', { cruise_a: 1, rise_110: 1, fall_90: 1, funk_100: 1, phonk_100: 1 })
+link('space_120', { arrive_a: 1, arrive_b: 1, fanfare: 1, fall_110: 1, funk_120: 1, phonk_120: 1 })
+
+// From the funk pieces.
+link('funk_60', { drift_a: 1, space: 1, phonk_60: 1 })
+link('funk_80', { depart_a: 1, rise_90: 1, space_80: 1, phonk_80: 1 })
+link('funk_100', { cruise_a: 1, rise_110: 1, space_100: 1, phonk_100: 1 })
+link('funk_120', { arrive_a: 1, fall_110: 1, space_120: 1, phonk_120: 1 })
+
+// From the phonk pieces.
+link('phonk_60', { drift_a: 1, space: 1, funk_60: 1 })
+link('phonk_80', { depart_b: 1, rise_90: 1, funk_80: 1 })
+link('phonk_100', { cruise_b: 1, fall_90: 1, funk_100: 1, space_100: 1 })
+link('phonk_120', { arrive_b: 1, fall_110: 1, funk_120: 1, space_120: 1 })
 
 
 // strudel.cc: one pass through every block.

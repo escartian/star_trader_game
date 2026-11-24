@@ -295,10 +295,6 @@ impl LocalSession {
                 self.trader_offer_ui(ui, &encounter);
                 return;
             }
-            if encounter.kind == EncounterKind::Shakedown {
-                self.shakedown_ui(ui, &fleet, &encounter);
-                return;
-            }
             if encounter.kind == EncounterKind::TraderDistress {
                 self.distress_ui(ui, &encounter);
                 return;

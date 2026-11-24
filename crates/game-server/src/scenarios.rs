@@ -65,13 +65,11 @@ impl Session {
     }
 
     /// For the approach captures: the trader `trader` (one the flagship can
-    /// hail) approaches it at once. `shakedown`: it is a corsair and the
-    /// flagship is battered enough to be outgunned (and given food if its
-    /// hold is empty). `distress`: the first raider band stalks it. Otherwise
+    /// hail) approaches it at once. `distress`: the first raider band stalks
+    /// it. Otherwise
     /// it offers its hold (given some ore and medicine if empty). Returns
     /// whether a contact opened.
     pub fn stage_approach(&mut self, trader: u64, kind: &str) -> Result<bool, String> {
-        let shakedown = kind == "shakedown";
         if kind == "distress" {
             let band = self
                 .state
@@ -96,28 +94,6 @@ impl Session {
         if hold.iter().all(|units| *units == 0) {
             hold[game_core::economy::Commodity::Ore.index()] = 6;
             hold[game_core::economy::Commodity::Medicine.index()] = 3;
-        }
-        if shakedown {
-            npc.personality = game_core::npc::Personality::Corsair;
-            let fleet = self
-                .state
-                .flagship(super::LOCAL_PLAYER)
-                .ok_or("No flagship")?;
-            let ships = self
-                .state
-                .fleets
-                .iter()
-                .find(|record| record.id == fleet)
-                .ok_or("No flagship fleet")?
-                .ships
-                .clone();
-            for id in ships {
-                let ship = self.state.ship_mut(id).map_err(|e| e.to_string())?;
-                ship.hull_damage = 50;
-                if ship.cargo_used() == 0 {
-                    ship.cargo[game_core::economy::Commodity::Food.index()] = 6;
-                }
-            }
         }
         let catalog = &mut self.economy.rules.personality_catalog;
         for definition in &mut catalog.personalities {

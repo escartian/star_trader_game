@@ -69,7 +69,7 @@
     {
       "id": "Corsair",
       "label": "Corsair",
-      "description": "Trades when it must and preys on weaker fleets when it can; never yields easily.",
+      "description": "A hard-bitten free trader: runs risky ports, slips past raiders and never yields cargo easily.",
       "avoids_danger": false,
       "danger_profit_percent": 120,
       "friendly_only": false,
@@ -92,7 +92,6 @@
   ],
   "approaches": {
     "offer_price_percent": 85,
-    "shakedown_strength_percent": 150,
     "cooldown_runs": 10,
     "distress_percent": 60,
     "rescue_reward_percent": 10,

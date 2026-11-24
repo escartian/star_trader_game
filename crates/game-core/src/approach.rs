@@ -4,17 +4,11 @@
 //! within hailing range of your flagship ([`piracy::hail_check`]) may approach
 //! it: one chance per run in its personality's `approach_percent`, rolled
 //! from the trader's saved random state and the run (nothing changes when it
-//! stays away), and not again for the catalog's `cooldown_runs`. At most one trader approaches per run, lowest id first.
+//! stays away), and not again for the catalog's `cooldown_runs`. At most one
+//! trader approaches per run, lowest id first. Traders never demand cargo:
+//! only raiders shake fleets down.
 //!
-//! - A **corsair** with `shakedown_strength_percent` of your fleet's
-//!   [`piracy::strength`] (escorts count on both sides), meeting a fleet with
-//!   cargo aboard, opens a **shakedown**: **Comply** hands it half your cargo, rounded up, most
-//!   valuable first (what its hold cannot take is dumped); **Fight**,
-//!   **Auto-resolve** and **Evade** work as against raiders. Resisting is not
-//!   piracy: no standing is lost, no bounty paid, and a destroyed corsair's
-//!   hold is yours as with any trader you defeat.
-//! - Any other trader with cargo aboard (a corsair that does not outgun you
-//!   included) offers its hold: **Trade** buys as much as fits and you can
+//! - A trader with cargo aboard offers its hold: **Trade** buys as much as fits and you can
 //!   afford, most valuable goods first, at `offer_price_percent` of the
 //!   galaxy list price (scaled by inflation); the money goes to the trader's
 //!   wallet. **Bypass** lets it go.
@@ -24,11 +18,10 @@
 mod rescue;
 use crate::{
     StarSystem,
-    combat::gear::ESCORT_KIND,
     economy::{Commodity, Credits, Economy},
     fleet::{FleetError, FleetId, FleetMovementError},
     navigation::{Encounter, EncounterChoice, EncounterKind, NavigationError, NavigationEvent},
-    npc::{Personality, Trader},
+    npc::Trader,
     piracy,
     travel::{PlayerId, TravelError, TravelState},
 };
@@ -78,28 +71,13 @@ pub fn approach_run(
         if roll % 100 >= chance {
             continue;
         }
-        let mut npc = trader.clone();
-        let kind = if npc.personality == Personality::Corsair
-            && laden(state, flagship)
-            && outguns(
-                state,
-                economy,
-                flagship,
-                &npc,
-                rules.shakedown_strength_percent,
-            ) {
-            EncounterKind::Shakedown
-        } else if npc.state.ships[0].cargo_used() > 0 {
-            EncounterKind::TraderOffer
-        } else {
+        if trader.state.ships[0].cargo_used() == 0 {
             continue;
-        };
-        let encounter = open_contact(state, flagship, kind, &npc)?;
+        }
+        let mut npc = trader.clone();
+        let encounter = open_offer(state, flagship, &npc)?;
         npc.last_approach = run;
-        npc.last_action = match kind {
-            EncounterKind::Shakedown => "Moved in to shake down a weaker fleet".into(),
-            _ => "Came alongside a fleet to trade".into(),
-        };
+        npc.last_action = "Came alongside a fleet to trade".into();
         economy.traders[index] = npc;
         return Ok(vec![NavigationEvent::EncounterFound(encounter)]);
     }
@@ -116,50 +94,10 @@ fn approach_roll(rng_state: u64, run: u64) -> u64 {
     value ^ (value >> 31)
 }
 
-/// Whether the fleet carries any cargo worth shaking down.
-fn laden(state: &TravelState, fleet: FleetId) -> bool {
-    state
-        .fleets
-        .iter()
-        .find(|record| record.id == fleet)
-        .into_iter()
-        .flat_map(|record| &record.ships)
-        .filter_map(|id| state.ship(*id).ok())
-        .any(|ship| ship.cargo_used() > 0)
-}
-
-/// Whether `npc` (and its escort) has `percent` of the fleet's strength.
-fn outguns(
-    state: &TravelState,
-    economy: &Economy,
-    fleet: FleetId,
-    npc: &Trader,
-    percent: u64,
-) -> bool {
-    let catalog = &economy.rules.ship_catalog;
-    let our_escort = (state.navigation.escort_runs(fleet) > 0).then_some((ESCORT_KIND, 0));
-    let ours = state
-        .fleets
-        .iter()
-        .find(|record| record.id == fleet)
-        .into_iter()
-        .flat_map(|record| &record.ships)
-        .filter_map(|id| state.ship(*id).ok())
-        .map(|ship| (ship.kind, ship.hull_damage))
-        .chain(our_escort);
-    let ship = &npc.state.ships[0];
-    let their_escort = (npc.escort_runs > 0).then_some((ESCORT_KIND, 0));
-    let theirs = piracy::strength(
-        std::iter::once((ship.kind, ship.hull_damage)).chain(their_escort),
-        catalog,
-    );
-    u128::from(theirs) * 100 >= u128::from(piracy::strength(ours, catalog)) * u128::from(percent)
-}
-
-fn open_contact(
+/// Opens `npc`'s trade offer to the flagship `fleet`.
+fn open_offer(
     state: &mut TravelState,
     fleet: FleetId,
-    kind: EncounterKind,
     npc: &Trader,
 ) -> Result<Encounter, FleetMovementError> {
     let navigation = &mut state.navigation;
@@ -171,7 +109,7 @@ fn open_contact(
     let encounter = Encounter {
         id: navigation.next_encounter_id,
         fleet,
-        kind,
+        kind: EncounterKind::TraderOffer,
         run: navigation.run,
         hostiles,
         band: None,
@@ -185,7 +123,7 @@ fn open_contact(
     Ok(encounter)
 }
 
-/// Resolves a trade offer, a shakedown or a distress call (see the module docs).
+/// Resolves a trade offer or a distress call (see the module docs).
 pub fn resolve(
     state: &mut TravelState,
     economy: &mut Economy,
@@ -228,18 +166,6 @@ pub fn resolve(
         .clone()
         .ok_or(NavigationError::InvalidChoice)?;
     let outcome = match (encounter.kind, choice) {
-        (EncounterKind::Shakedown, EncounterChoice::Fight)
-        | (EncounterKind::Shakedown, EncounterChoice::AutoResolve)
-        | (EncounterKind::Shakedown, EncounterChoice::Evade) => {
-            return state.resolve_encounter(player, encounter_id, choice, &economy.rules);
-        }
-        (EncounterKind::Shakedown, EncounterChoice::Comply) => {
-            if state.navigation.battle.is_some() {
-                return Err(NavigationError::BattleUnderway.into());
-            }
-            let taken = hand_over(state, economy, fleet.id, trader.id)?;
-            format!("{} took {taken} cargo and let you go.", trader.name)
-        }
         (EncounterKind::TraderOffer, EncounterChoice::Trade) => {
             let (units, paid) = buy_offer(state, economy, fleet.id, trader.id)?;
             format!("Bought {units} cargo from {} for {paid} cr.", trader.name)
@@ -303,40 +229,6 @@ fn by_value(economy: &Economy) -> Vec<(Commodity, u64)> {
         .collect();
     goods.sort_by_key(|(good, list)| (std::cmp::Reverse(*list), good.index()));
     goods
-}
-
-/// The corsair takes half the fleet's cargo, rounded up, most valuable first;
-/// what its hold cannot take is dumped. Returns the units taken.
-fn hand_over(
-    state: &mut TravelState,
-    economy: &mut Economy,
-    fleet: FleetId,
-    trader: u64,
-) -> Result<u32, FleetMovementError> {
-    let members = fleet_ships(state, fleet)?;
-    let aboard: u32 = members
-        .iter()
-        .filter_map(|id| state.ship(*id).ok())
-        .map(|ship| ship.cargo.iter().sum::<u32>())
-        .sum();
-    let mut left = aboard.div_ceil(2);
-    let taken = left;
-    let index = piracy::position(economy, trader)?;
-    let mut npc = economy.traders[index].clone();
-    for (good, _) in by_value(economy) {
-        for id in &members {
-            let ship = state.ship_mut(*id)?;
-            let units = ship.cargo[good.index()].min(left);
-            ship.cargo[good.index()] -= units;
-            left -= units;
-            let hold = &mut npc.state.ships[0];
-            let room = u64::from(hold.cargo_capacity).saturating_sub(hold.cargo_used());
-            hold.cargo[good.index()] += units.min(u32::try_from(room).unwrap_or(u32::MAX));
-        }
-    }
-    npc.last_action = format!("Shook down a fleet for {taken} cargo");
-    economy.traders[index] = npc;
-    Ok(taken)
 }
 
 /// Buys what fits and what the wallet covers from the trader's hold. Returns

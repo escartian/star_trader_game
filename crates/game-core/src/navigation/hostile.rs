@@ -122,13 +122,12 @@ impl TravelState {
                 if let Some(band) = encounter.band {
                     self.band_after_contact(band, &[]);
                 }
-                let foe = match (encounter.police, &encounter.trader) {
-                    (Some(police), _) => {
+                let foe = match encounter.police {
+                    Some(police) => {
                         self.police_after_contact(police.patrol, &[]);
                         format!("the {} patrol", police.faction.label())
                     }
-                    (None, Some(corsair)) => corsair.name.clone(),
-                    (None, None) => "the raiders".into(),
+                    None => "the raiders".into(),
                 };
                 return Ok(NavigationEvent::EncounterResolved {
                     fleet: fleet.id,

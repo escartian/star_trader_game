@@ -282,7 +282,7 @@ pub fn resolve(
     })
 }
 
-/// After a battle with a trader is filed (piracy, or a corsair's shakedown): the trader takes its damage, or, if it was
+/// After a piracy battle is filed: the trader takes its damage, or, if it was
 /// destroyed, its hold is plundered and it is refitted at its home port. Call
 /// once per newly filed report.
 pub fn settle_battle(
@@ -297,7 +297,6 @@ pub fn settle_battle(
         return Ok(());
     };
     let fleet = report.fleet;
-    let shakedown = report.shakedown;
     // The trader is the first hostile; a second one is its escort.
     let Some(result) = report.side(Side::Hostile).next().cloned() else {
         return Err(FleetError::InvalidSelection.into());
@@ -319,18 +318,10 @@ pub fn settle_battle(
             plunder = take_cargo(state, economy, fleet, &mut npc, u32::MAX)?;
         }
         let port = economy.refit(&mut npc, systems);
-        npc.last_action = if shakedown {
-            format!("Destroyed in a failed shakedown; refitting at {port}")
-        } else {
-            format!("Destroyed by pirates; refitting at {port}")
-        };
+        npc.last_action = format!("Destroyed by pirates; refitting at {port}");
     } else {
         npc.state.ships[0].hull_damage = result.final_damage;
-        npc.last_action = if shakedown {
-            format!("Beaten off in a shakedown ({hull})")
-        } else {
-            format!("Survived a pirate attack ({hull})")
-        };
+        npc.last_action = format!("Survived a pirate attack ({hull})");
     }
     economy.traders[index] = npc;
     if let Some(report) = state.navigation.last_combat.as_deref_mut() {

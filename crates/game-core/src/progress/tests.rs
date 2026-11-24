@@ -109,7 +109,6 @@ fn raiders_moons_and_bounties_open_battles_landing_and_victory() {
         trader: None,
         police: None,
         plunder: 0,
-        shakedown: false,
         rescue: None,
         rescue_reward: crate::economy::Credits(0),
     }));

@@ -3,7 +3,7 @@
 //! colours and holders the maps and market window show. Display only: the
 //! rules live in `game_core::factions`.
 use super::LocalSession;
-use crate::theme::{AMBER, CYAN, GREEN, metal};
+use crate::theme::{AMBER, CYAN, GREEN, iff::Stance, metal};
 use egui::{Color32, RichText};
 use game_core::{
     StarSystem, SystemId,
@@ -36,6 +36,21 @@ impl LocalSession {
     pub fn faction_color(&self, faction: Faction) -> Color32 {
         let [r, g, b] = self.economy.rules.faction_catalog.get(faction).color;
         Color32::from_rgb(r, g, b)
+    }
+
+    /// How `faction` stands toward you on the map: hostile when it wants you
+    /// or counts you Hostile, friendly from Friendly up, otherwise neutral.
+    pub fn faction_stance(&self, faction: Faction) -> Stance {
+        let factions = &self.economy.factions;
+        if !factions.is_active() {
+            return Stance::Neutral;
+        }
+        match factions.tier(faction) {
+            _ if factions.is_wanted(faction) => Stance::Hostile,
+            Tier::Hostile => Stance::Hostile,
+            Tier::Friendly | Tier::Honored => Stance::Friendly,
+            Tier::Unfriendly | Tier::Neutral => Stance::Neutral,
+        }
     }
 
     /// Who holds `system`, in its colour, and your tier with them.

@@ -17,15 +17,35 @@ use game_protocol::ClientCommand;
 
 const WANTED: egui::Color32 = crate::battle::scene::HOSTILE;
 
+/// A police patrol as the system map draws it.
+#[derive(Clone, Debug)]
+pub struct PatrolMarker {
+    pub patrol: game_core::police::FactionPatrol,
+    /// Fill: whose police these are.
+    pub faction: egui::Color32,
+    /// Outline and pursuit line: friend or foe.
+    pub stance: crate::theme::iff::Stance,
+}
+
 impl LocalSession {
     /// Every police patrol, with its faction's colour, for the system map.
-    pub fn police_patrols(&self) -> Vec<(game_core::police::FactionPatrol, egui::Color32)> {
+    /// Each patrol with its faction's colour and how it stands toward you
+    /// (one pursuing your fleets is hostile whatever your standing).
+    pub fn police_patrols(&self) -> Vec<PatrolMarker> {
         self.state
             .navigation
             .police
             .patrols
             .iter()
-            .map(|patrol| (patrol.clone(), self.faction_color(patrol.faction)))
+            .map(|patrol| PatrolMarker {
+                faction: self.faction_color(patrol.faction),
+                stance: if patrol.pursuing.is_some() {
+                    crate::theme::iff::Stance::Hostile
+                } else {
+                    self.faction_stance(patrol.faction)
+                },
+                patrol: patrol.clone(),
+            })
             .collect()
     }
 

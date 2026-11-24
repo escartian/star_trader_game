@@ -5,7 +5,7 @@ use super::{KM_PER_VIEW_UNIT, LocalView, kilometers};
 use egui::{Color32, Painter, Pos2, Rect, Stroke, Vec2};
 use game_core::fleet::ShipKind;
 
-const RAIDER: Color32 = Color32::from_rgb(255, 96, 80);
+const RAIDER: Color32 = crate::theme::iff::HOSTILE;
 /// Gap between a band's or patrol's marker and its tag, in points: clear of a
 /// fleet chip (radius 15) drawn on top when the two meet.
 pub(super) const TAG_GAP: f32 = 22.0;

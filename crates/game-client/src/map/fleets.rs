@@ -11,10 +11,10 @@ use game_core::{
     travel::{Ship, ShipId},
 };
 
-/// Chip radius in points.
-const CHIP: f32 = 15.0;
+/// Chip radius in points; larger than NPC markers (12) so your fleets stand out.
+const CHIP: f32 = 20.0;
 /// Touch-friendly hit size around a chip, in points.
-const HIT: f32 = 40.0;
+const HIT: f32 = 48.0;
 /// Anchors closer than this (points) count as the same place.
 const SAME_PLACE: f32 = 4.0;
 
@@ -106,12 +106,14 @@ pub(super) fn paint_stacks(
         if let Berth::AtBody { landed: true, .. } = lead.berth {
             painter.circle_filled(lead.anchor, 3.5, crate::theme::AMBER);
         }
+        // Your fleets are friendly (green; dimmer unless selected); amber
+        // flags a contact waiting for a decision.
         let colour = if stack.iter().any(|entry| entry.contact) {
             crate::theme::AMBER
         } else if chosen {
-            crate::theme::GREEN
+            crate::theme::iff::FRIENDLY
         } else {
-            Color32::from_rgb(150, 185, 205)
+            crate::theme::iff::FRIENDLY.gamma_multiply(0.6)
         };
         if let Some(heading) = lead.heading.filter(|_| lead.berth == Berth::Free) {
             let direction = (heading - centre).normalized();

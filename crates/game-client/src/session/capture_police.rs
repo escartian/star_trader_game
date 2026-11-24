@@ -1,5 +1,5 @@
 //! The police capture: factions in play, a criminal record with the holder
-//! of system 2, and the fleet flying in until that faction's patrol stops it,
+//! of system 2, and the fleet flying in (then waiting) until that faction's patrol stops it,
 //! so the system map shows the patrol and the contact card shows the choice.
 use super::LocalSession;
 use game_core::{SystemId, navigation::EncounterKind};
@@ -29,6 +29,16 @@ impl LocalSession {
                 return Ok(system);
             }
             self.capture_resolve_contacts();
+            // Arrived before the patrol caught up: wait there for it.
+            if let Ok(fleet) = self.state.fleet_for_ship(self.active_ship)
+                && self.state.navigation.order(fleet.id).is_none()
+            {
+                let fleet = fleet.id;
+                self.command(ClientCommand::HoldFleet {
+                    fleet,
+                    expected_revision: self.state.revision,
+                });
+            }
             self.command(ClientCommand::ExecuteNavigationRun {
                 expected_revision: self.state.revision,
             });

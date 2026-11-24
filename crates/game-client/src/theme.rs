@@ -2,6 +2,7 @@
 use egui::{Color32, Context, FontFamily, FontId, Stroke, TextStyle, Vec2};
 pub mod fonts;
 pub mod icons;
+pub mod iff;
 pub mod metal;
 pub const GREEN: Color32 = Color32::from_rgb(148, 255, 85);
 pub const CYAN: Color32 = Color32::from_rgb(91, 225, 226);

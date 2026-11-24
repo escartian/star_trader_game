@@ -1,4 +1,4 @@
-//! The live trade table: prices, the best known margin elsewhere and order buttons.
+//! The live trade table: prices, the best margin at a port in scope and order buttons.
 //! "Max" and "All" size an order to what the economy's quote accepts right now; the
 //! authority still validates every trade it receives.
 use super::LocalSession;
@@ -38,7 +38,7 @@ impl LocalSession {
                             Icon::Credits,
                             GREEN,
                             "+",
-                            "Best known margin: buy one unit here and sell it at another market.\nFirst-unit prices before fuel; prices change while you travel.",
+                            "Best margin: buy one unit here and sell it at the best port in the chosen scope.\nFirst-unit prices before fuel; prices change while you travel.",
                         ),
                     ] {
                         stat(ui, icon, color, text, tip);
@@ -203,7 +203,7 @@ impl LocalSession {
         ]
     }
 
-    /// Best known margin for buying one unit here and selling it at another market.
+    /// Best margin for buying one unit here and selling it at a port in scope.
     fn margin_cell(
         &self,
         ui: &mut egui::Ui,
@@ -211,38 +211,18 @@ impl LocalSession {
         commodity: Commodity,
         systems: &[StarSystem],
     ) {
-        let local = &here.goods[commodity.index()];
-        let buy = local.price(TradeSide::Buy, local.stock);
-        let best = self
-            .economy
-            .markets
-            .iter()
-            .filter(|market| market.id != here.id)
-            .map(|market| {
-                let good = &market.goods[commodity.index()];
-                (market, good.price(TradeSide::Sell, good.stock))
-            })
-            .max_by_key(|(_, sell)| *sell);
-        match best {
-            Some((market, sell)) if sell > buy => {
-                let name = super::market::market_name(systems, market.id);
-                // Another system is named by its system; a market nearby by its body.
-                let place = if market.id.system == here.id.system {
-                    name
-                } else {
-                    systems
-                        .iter()
-                        .find(|system| system.id == market.id.system)
-                        .map_or("Unknown", |system| system.name.as_str())
-                };
-                ui.colored_label(GREEN, format!("+{} {place}", Credits(sell.0 - buy.0)))
+        match self.best_sale(here, commodity) {
+            Some(sale) => {
+                let place = super::market_scope::port_and_system(systems, sale.market.id);
+                ui.colored_label(GREEN, format!("+{} {place}", Credits(sale.sell.0 - sale.buy.0)))
                     .on_hover_text(format!(
-                        "Buy here at {buy}; sells for {sell} at {name}.\nFirst-unit prices before fuel; prices change while you travel."
+                        "Buy here at {}; sells for {} at {place}.\nFirst-unit prices before fuel; prices change while you travel.",
+                        sale.buy, sale.sell
                     ));
             }
-            _ => {
+            None => {
                 ui.weak("—")
-                    .on_hover_text("No known market pays more than this buy price");
+                    .on_hover_text("No port in the chosen scope pays more than this buy price");
             }
         }
     }

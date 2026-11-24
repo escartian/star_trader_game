@@ -27,8 +27,10 @@
   Bulk orders price each unit; immediate buy/sell reversal cannot make a profit.
 - First delivery: at Sol press **Max** on food to fill the hold, select Meridian's
   trade port on the map (the tap plots the course) and Advance until arrival. Sell with **All**
-  and refuel with **Full**. The margin column compares
-  known markets for return cargo. Fixed-price fuel service costs 2.00 credits/unit
+  and refuel with **Full**. The margin column names the port
+  (and its system) that pays most for each good; the selector above it limits
+  that search to ports in fuel range, this system or the whole galaxy, and the
+  best-trade line picks the single best one. Fixed-price fuel service costs 2.00 credits/unit
   by default. Earn enough for the cargo upgrade while budgeting for future journeys.
 - Continue restores the exact saved journey, cargo, prices, markets and tick.
   Save slots use validated JSON, atomic replacement and a previous-good backup.

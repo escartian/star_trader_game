@@ -68,6 +68,18 @@ impl LocalSession {
             .map_or(INDEPENDENT_TRADER, |faction| self.faction_color(faction))
     }
 
+    /// How a trader stands toward you: corsairs are pirates, so hostile;
+    /// otherwise as its faction stands (independents are neutral).
+    pub fn trader_stance(&self, trader: &game_core::npc::Trader) -> crate::theme::iff::Stance {
+        use crate::theme::iff::Stance;
+        if trader.personality == game_core::npc::Personality::Corsair {
+            return Stance::Hostile;
+        }
+        trader
+            .affiliation
+            .map_or(Stance::Neutral, |faction| self.faction_stance(faction))
+    }
+
     pub fn fleets(&self) -> &[Fleet] {
         &self.state.fleets
     }

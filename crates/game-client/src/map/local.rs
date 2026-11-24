@@ -75,7 +75,7 @@ pub struct LocalView {
     /// Roaming raider bands (drawn when in this system).
     bands: Vec<game_core::navigation::RaiderBand>,
     /// Faction police patrols with their faction's colour (drawn when in this system).
-    police: Vec<(game_core::police::FactionPatrol, egui::Color32)>,
+    police: Vec<crate::session::PatrolMarker>,
     /// The game's landing rules, for a surface's ore yield on the info card.
     landing: game_core::movement::LandingRules,
     /// The Raider Haven and chartered ports (see `campaign`).
@@ -120,7 +120,7 @@ impl LocalView {
         self.bands = bands;
     }
 
-    pub fn set_police(&mut self, police: Vec<(game_core::police::FactionPatrol, egui::Color32)>) {
+    pub fn set_police(&mut self, police: Vec<crate::session::PatrolMarker>) {
         self.police = police;
     }
 

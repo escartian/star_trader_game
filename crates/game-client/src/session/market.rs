@@ -21,6 +21,9 @@ pub(super) struct MarketPanel {
     /// Units per Buy/Sell order button press.
     pub(super) quantity: u32,
     fuel_units: u32,
+    /// Where the best-margin column looks for a sale.
+    pub(super) scope: super::market_scope::TradeScope,
+    pub(super) reach: super::market_scope::ReachCache,
 }
 impl Default for MarketPanel {
     fn default() -> Self {
@@ -28,6 +31,8 @@ impl Default for MarketPanel {
             open: false,
             quantity: 1,
             fuel_units: 1,
+            scope: Default::default(),
+            reach: Default::default(),
         }
     }
 }
@@ -114,6 +119,10 @@ impl LocalSession {
         if self.unlocked(game_core::progress::Feature::Victory) {
             self.charter_row(ui, &ship, market.id);
         }
+        ui.horizontal_wrapped(|ui| {
+            self.trade_scope_ui(ui, &ship, systems);
+            self.best_trade_line(ui, &market, systems);
+        });
         let mut action = self.trade_table(ui, &ship, &market, systems);
         ui.separator();
         ui.horizontal_wrapped(|ui| {

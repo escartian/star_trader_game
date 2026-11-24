@@ -38,19 +38,25 @@ traffic. A ship arriving at a body or port flies in, then takes its berth marker
 Local labels and input units are AU; galaxy distances are light-years. Rendering
 retains symbolic body/fleet sizes and schematic moon spacing.
 
-**Fleet chips.** Fleets at the same place merge into one small chip showing a
+**Fleet chips.** Fleets at the same place merge into one chip showing a
 ship, with a count when there are several. Resting fleets sit just below-left of
 their body (or, in the galaxy view, their star), clear of labels and other chips.
 Fleets in flight sit on their course position with a short tick toward where
-they are heading. There are no tether lines. Only the selected fleet is named
-and ringed green; a fleet with an unresolved contact is ringed amber. Tapping a
+they are heading. There are no tether lines. Your chips (20 pt) are larger than
+NPC markers (12 pt) and ringed green: dim, or bright and named when selected;
+a fleet with an unresolved contact is ringed amber. Tapping a
 chip selects the next fleet in it, cycling through the stack. The roster lists
 every fleet.
 
 **Labels and traffic.** Body names show when zoomed in, or for the body selected
-or pointed at. NPC traders are small GLB ship models outlined in
-their faction's colour (light grey if independent) and no labels in the galaxy
-view. A raider band's heading line is drawn only while it hunts one of your
+or pointed at. NPC traders are small GLB ship models with no labels in the
+galaxy view. Map markers and the lines drawn from them use friend-or-foe
+colours: **red** for raiders, corsairs, police chasing you and factions that
+count you Hostile or want you; **green** for your fleets and factions that
+count you Friendly or better; **blue-grey** for everyone else (independents
+included). A trader's faction shows as a small pip in its colour (grey if
+independent); a police hexagon is filled in its faction's colour. NPC traders
+appear only in the galaxy view, not in the system view. A raider band's heading line is drawn only while it hunts one of your
 fleets. A band crossing to another system is drawn on a faint line between
 the two systems in the galaxy view, and is absent from the system view. The orbit ring appears only around the selected fleet's body.
 **System overview** refits the scene; **Focus selected fleet** provides a close
@@ -156,7 +162,8 @@ hover a trader's name in the roster for its own):
 
 A loyalist dealt to an independent trader becomes a smuggler. Traders also
 come to your flagship to trade or to call for help against raiders, and a
-corsair that outguns you shakes it down
+corsair that outguns a laden flagship shakes it down (a weaker corsair keeps
+its distance: pirates never trade with you)
 ([traders that come to you](NAVIGATION_RUNS.md#encounters)); per run, when in
 reach: cautious and loyalist 5%, bulk hauler 10%, opportunist and smuggler
 15%, corsair 30%. Traders compare commodity

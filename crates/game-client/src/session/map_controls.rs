@@ -5,6 +5,9 @@ use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{BodyId, StarSystem, SystemId, fleet::Fleet, movement::MoveTarget, travel::ShipId};
 use game_protocol::{ClientCommand, ServerMessage};
 
+/// Map outline of an NPC trader that flies for no faction.
+const INDEPENDENT_TRADER: egui::Color32 = egui::Color32::from_rgb(190, 196, 198);
+
 #[derive(Clone, Copy)]
 pub(super) enum MapTarget {
     Destination(SystemId, Option<BodyId>),
@@ -55,6 +58,14 @@ impl LocalSession {
 
     pub fn traffic(&self) -> &[game_core::npc::Trader] {
         &self.economy.traders
+    }
+
+    /// A trader's map outline: its faction's colour, or a neutral grey if
+    /// independent (amber would read as the Alliance's gold).
+    pub fn trader_color(&self, trader: &game_core::npc::Trader) -> egui::Color32 {
+        trader
+            .affiliation
+            .map_or(INDEPENDENT_TRADER, |faction| self.faction_color(faction))
     }
 
     pub fn fleets(&self) -> &[Fleet] {

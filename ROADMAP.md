@@ -168,9 +168,9 @@ remains separate from GPU captures and egui input regression tests.
 game over, the Raider Haven and port charters are implemented; see
 [campaign](docs/CAMPAIGN.md).
 
-**Next:** shifting territory and faction war fleets, NPC trader faction
-affiliations, mid-fight retreat and combat balance from playtests
-([combat](docs/COMBAT.md)).
+**Next:** expanded NPC personalities and NPC-initiated encounters (in
+progress, milestone 4), then shifting territory and faction war fleets,
+mid-fight retreat and combat balance from playtests ([combat](docs/COMBAT.md)).
 
 ## 4. NPC traders and fleet combat
 
@@ -180,6 +180,10 @@ Combat is the original README's first prioritized expansion.
 - [x] Initial cautious/opportunist NPC traders with route choice, fuel-aware
   profitability, real cargo/wallets, finite-market trades and navigation-run AI.
 - [ ] Expanded NPC personalities, interactions, encounters and faction affiliations.
+  Done: a population scaled to the galaxy (4–32 traders), saved home ports and
+  faction affiliation (rival ports avoided, friendly space preferred, robbing a
+  faction's trader costs its standing). Next: more personalities in JSON, then
+  NPC-initiated contacts (trade offers, distress calls, corsair shakedowns).
 - [x] Ship type/size/engine, HP, shields, armor and weapon/loadout definitions
   (`config/ships.json` schema 2, current save schema 8; see [combat](docs/COMBAT.md)).
 - [x] Carry forward Photon Singularity Beam, Quantum Entanglement Torpedo, Neutron

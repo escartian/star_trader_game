@@ -66,7 +66,10 @@ faction, so +15 with its allies and −15 with its rivals.
 | Destroy raiders in a battle (bands, random raiders, the Haven) | a faction's space | + its `raider_kill_standing` per raider destroyed |
 | Sell cargo at a market (your ships, including trade routes) | a faction's space | +1 per `sale_credits_per_point` of sales, carried over between sales |
 
-Independent space neither costs nor earns standing. Destroying a faction's
+Robbing a trader that flies for a faction (see
+[traffic](MAP_CONTROLS.md)) also costs *that* faction its own `piracy_penalty`
+and makes you wanted by it, unless it already holds the system; this spreads
+like any change. Independent space neither costs nor earns standing. Destroying a faction's
 police costs its `piracy_penalty` per patrol ship destroyed (see
 [the law](#the-law-wanted-status-and-police)). NPC traders' own trades
 never change your standing. Every change is announced in the log, for example
@@ -182,10 +185,13 @@ four numbers in faction order). Police patrols are in
 `stops` and `cooldown`), `respawns` (system, run) and `next_id`. A police
 contact carries `police` (`patrol`, `faction`); a combat report against police
 carries `police` (the faction). The definitions travel in the economy rules as
-`faction_catalog`. Saves without these fields load with
+`faction_catalog`. Each NPC trader may carry `affiliation` (its faction) and `home` (its home
+port's market id); without them it is independent and its home port is the
+`id`-th planet market. Saves without these fields load with
 no factions in play. Loading checks that claimed systems exist and are claimed
 once, that only factions in play hold territory, relations or standing, that
-standing is in range and that relations name each pair once, that wanted status
+standing is in range and that relations name each pair once, that traders fly
+only for factions in play and call a planet market home, that wanted status
 is at most 200 runs and only with factions in play, and that every patrol (and
 pending replacement) is in a system its faction holds, one per system.
 

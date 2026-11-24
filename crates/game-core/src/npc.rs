@@ -2,14 +2,16 @@
 mod band_raids;
 mod decisions;
 mod outfit;
+mod population;
 mod raids;
 use crate::{
     StarSystem,
     economy::{Credits, Economy, MarketId},
-    fleet::{Fleet, FleetId},
-    movement::MovementRules,
+    factions::Faction,
+    fleet::FleetId,
     travel::{Location, PlayerId, ShipId, TravelState},
 };
+pub use population::{MAX_TRADERS, trader_count};
 pub use raids::REFIT_RUNS;
 use serde::{Deserialize, Serialize};
 
@@ -43,6 +45,14 @@ pub struct Trader {
     /// Runs left on a hired escort contract (0: none; see `combat::gear`).
     #[serde(default, skip_serializing_if = "is_zero")]
     pub escort_runs: u32,
+    /// The planet market it was commissioned at and is refitted at. Saves
+    /// from before it was stored use the `id`-th planet market.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home: Option<MarketId>,
+    /// The faction it flies for: the holder of its home port when factions
+    /// were set up, or none (independent).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub affiliation: Option<Faction>,
 }
 
 fn is_zero(value: &u32) -> bool {
@@ -50,58 +60,8 @@ fn is_zero(value: &u32) -> bool {
 }
 
 impl Economy {
-    pub fn spawn_traders(&mut self, systems: &[StarSystem], movement: &MovementRules) {
-        self.traders.clear();
-        for (index, (name, personality)) in [
-            ("Aster Haul", Personality::Cautious),
-            ("Helix Courier", Personality::Opportunist),
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            let Some(market) = self
-                .markets
-                .iter()
-                .filter(|market| !market.is_station)
-                .nth(index)
-            else {
-                continue;
-            };
-            let id = index as u64 + 1;
-            let identity = NPC_ID_BASE + id;
-            let mut state = TravelState {
-                movement_rules: movement.clone(),
-                ..TravelState::default()
-            };
-            state.movement_rules.encounter_chance_percent = 0;
-            state.ships[0].id = ShipId(identity);
-            state.ships[0].owner = PlayerId(identity);
-            state.ships[0].name = name.into();
-            state.ships[0].location = market_location(market.id, systems);
-            state.fleets = vec![Fleet {
-                id: FleetId(identity),
-                name: name.into(),
-                owner: PlayerId(identity),
-                ships: vec![ShipId(identity)],
-            }];
-            state.next_ship_id = identity + 1;
-            state.next_fleet_id = identity + 1;
-            state.navigation.rng_state = id;
-            self.traders.push(Trader {
-                id,
-                name: name.into(),
-                personality,
-                credits: self.rules.npc_starting_credits,
-                state,
-                last_action: "Awaiting the next navigation run".into(),
-                refit_runs: 0,
-                escort_runs: 0,
-            });
-        }
-    }
-
     pub fn validate_traders(&self, systems: &[StarSystem], run: u64) -> Result<(), String> {
-        if self.traders.len() > 16 {
+        if self.traders.len() > MAX_TRADERS {
             return Err("Too many NPC traders".into());
         }
         let mut ids = std::collections::HashSet::new();
@@ -110,7 +70,16 @@ impl Economy {
                 .checked_add(trader.id)
                 .ok_or("Invalid trader ID")?;
             if trader.id == 0
-                || trader.id > 16
+                || trader.id > MAX_TRADERS as u64
+                || trader
+                    .affiliation
+                    .is_some_and(|faction| !self.factions.in_play.contains(&faction))
+                || trader.home.is_some_and(|home| {
+                    !self
+                        .markets
+                        .iter()
+                        .any(|market| market.id == home && !market.is_station)
+                })
                 || !ids.insert(trader.id)
                 || trader.credits.0 > 1_000_000_000_000_000
                 || trader.name.is_empty()

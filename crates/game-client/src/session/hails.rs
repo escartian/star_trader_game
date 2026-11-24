@@ -36,6 +36,16 @@ impl LocalSession {
             ui.horizontal(|ui| {
                 ui.strong(&trader.name)
                     .on_hover_text(trader.personality.label());
+                if let Some(faction) = trader.affiliation {
+                    let name = &self.economy.rules.faction_catalog.get(faction).name;
+                    ui.colored_label(
+                        self.faction_color(faction),
+                        egui::RichText::new(name).small(),
+                    )
+                    .on_hover_text(format!(
+                        "Flies for the {name}: robbing it also costs standing with them."
+                    ));
+                }
                 let armed = defences(trader);
                 if !armed.is_empty() {
                     ui.small(armed)

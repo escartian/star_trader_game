@@ -1,11 +1,20 @@
 use super::{Personality, Trader, market_location};
 use crate::{
-    StarSystem,
+    StarSystem, SystemId,
     economy::{Commodity, Economy, EconomyError, TradeSide},
+    factions::Relation,
     fleet::FleetMovementError,
     planet::Danger,
     travel::TravelState,
 };
+
+/// Market systems an NPC trader weighs when choosing its next haul: the
+/// nearest ones to where it stands, its own included.
+pub const ROUTE_SYSTEMS: usize = 6;
+
+/// How a faction trader values a haul into its own or allied space, as a
+/// percentage of the real profit.
+pub const FRIENDLY_PROFIT_PERCENT: u64 = 125;
 
 impl Economy {
     /// Only called once per committed global run. Each trader gets one independent
@@ -158,19 +167,34 @@ impl Economy {
         Ok(())
     }
 
+    /// The most profitable haul from here, quoted against the trader's own
+    /// wallet (swapped in for the search, then restored).
     fn best_route(
+        &mut self,
+        trader: &Trader,
+        systems: &[StarSystem],
+    ) -> Option<(crate::economy::MarketId, Commodity, u32)> {
+        let player_wallet = std::mem::replace(&mut self.credits, trader.credits);
+        let best = self.route_search(trader, systems);
+        self.credits = player_wallet;
+        best
+    }
+
+    /// [`Self::best_route`]'s search; `self.credits` holds the trader's wallet.
+    /// A faction trader never sails for a rival's port and values a haul into
+    /// its own or allied space at [`FRIENDLY_PROFIT_PERCENT`] of its profit.
+    fn route_search(
         &self,
         trader: &Trader,
         systems: &[StarSystem],
     ) -> Option<(crate::economy::MarketId, Commodity, u32)> {
         let ship = &trader.state.ships[0];
         let origin = self.current_market(ship).ok()?.id;
-        let mut quotes = self.clone();
-        quotes.credits = trader.credits;
+        let nearby = self.nearby_market_systems(origin.system, systems);
         let mut best = None;
         let mut best_profit = 0_u64;
         for market in &self.markets {
-            if market.id == origin {
+            if market.id == origin || !nearby.contains(&market.id.system) {
                 continue;
             }
             let body = systems
@@ -189,6 +213,14 @@ impl Economy {
             {
                 continue;
             }
+            let welcome = match (trader.affiliation, self.factions.owner(market.id.system)) {
+                (Some(own), Some(holder)) if own == holder => Relation::Allied,
+                (Some(own), Some(holder)) => self.factions.relation(own, holder),
+                _ => Relation::Neutral,
+            };
+            if welcome == Relation::Rival {
+                continue;
+            }
             let Ok(course) = trader.state.plan_destination(
                 ship.owner,
                 ship.id,
@@ -205,13 +237,13 @@ impl Economy {
                 .sum::<u64>();
             for good in Commodity::ALL {
                 let quantity = 4.min(ship.cargo_capacity);
-                let Ok(buy) = quotes.quote(ship, good, quantity, TradeSide::Buy, 0) else {
+                let Ok(buy) = self.quote(ship, good, quantity, TradeSide::Buy, 0) else {
                     continue;
                 };
                 let mut arrival = ship.clone();
                 arrival.location = market_location(market.id, systems);
                 arrival.cargo[good.index()] = quantity;
-                let Ok(sell) = quotes.quote(&arrival, good, quantity, TradeSide::Sell, 0) else {
+                let Ok(sell) = self.quote(&arrival, good, quantity, TradeSide::Sell, 0) else {
                     continue;
                 };
                 let cost = buy.total.0 + fuel * self.fuel_price().0;
@@ -220,7 +252,11 @@ impl Economy {
                 } else {
                     0
                 };
-                if let Some(profit) = sell.total.0.checked_sub(cost)
+                let valued = |profit: u64| match welcome {
+                    Relation::Allied => profit.saturating_mul(FRIENDLY_PROFIT_PERCENT) / 100,
+                    _ => profit,
+                };
+                if let Some(profit) = sell.total.0.checked_sub(cost).map(valued)
                     && profit > threshold
                     && profit > best_profit
                 {
@@ -230,5 +266,37 @@ impl Economy {
             }
         }
         best
+    }
+
+    /// The [`ROUTE_SYSTEMS`] market systems nearest `origin` (itself
+    /// included), by straight-line distance; ties go to the lower id. NPC
+    /// traders only weigh hauls between these, which keeps a run's route
+    /// planning bounded however large the galaxy.
+    fn nearby_market_systems(&self, origin: SystemId, systems: &[StarSystem]) -> Vec<SystemId> {
+        let Some(from) = systems.iter().find(|system| system.id == origin) else {
+            return vec![origin];
+        };
+        let mut candidates: Vec<(u128, SystemId)> = systems
+            .iter()
+            .filter(|system| {
+                self.markets
+                    .iter()
+                    .any(|market| market.id.system == system.id)
+            })
+            .map(|system| {
+                let offset = |a: i64, b: i64| i128::from(a - b).unsigned_abs().pow(2);
+                let (to, at) = (&system.position, &from.position);
+                (
+                    offset(to.x, at.x) + offset(to.y, at.y) + offset(to.z, at.z),
+                    system.id,
+                )
+            })
+            .collect();
+        candidates.sort_by_key(|(distance, id)| (*distance, id.0));
+        candidates
+            .into_iter()
+            .take(ROUTE_SYSTEMS)
+            .map(|(_, id)| id)
+            .collect()
     }
 }

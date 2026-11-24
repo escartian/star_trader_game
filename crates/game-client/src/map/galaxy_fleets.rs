@@ -79,8 +79,9 @@ impl Map {
             super::fleets::paint_stacks(painter, &art, rect, &entries, selected, labels);
     }
 
-    /// NPC traders use the same GLB hull models as battle, with
-    /// a small amber outline to distinguish them from owned ships.
+    /// NPC traders use the same GLB hull models as battle, with a small
+    /// outline in their faction's colour (grey if independent) to
+    /// distinguish them from owned ships.
     pub(super) fn draw_galaxy_threats(&self, ui: &egui::Ui, painter: &Painter, rect: Rect) {
         let art = Artwork::preload(ui.ctx());
         for trader in self.session.traffic() {
@@ -89,14 +90,14 @@ impl Map {
                 if !rect.expand(12.0).contains(at) {
                     continue;
                 }
-                let amber = crate::theme::AMBER;
+                let outline = self.session.trader_color(trader);
                 painter.circle_filled(at, 12.0, egui::Color32::from_black_alpha(190));
-                painter.circle_stroke(at, 12.0, Stroke::new(1.0_f32, amber));
+                painter.circle_stroke(at, 12.0, Stroke::new(1.0_f32, outline));
                 if let Some(ship) = trader.state.ships.first() {
                     if let Some(model) = crate::battle::model::for_kind(ship.kind) {
                         model.paint_marker(painter, at, 22.0);
                     } else if !art.paint(ArtKind::from(ship.kind), painter, at, 20.0) {
-                        painter.circle_filled(at, 3.0, amber);
+                        painter.circle_filled(at, 3.0, outline);
                     }
                 }
             }

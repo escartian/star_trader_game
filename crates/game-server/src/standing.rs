@@ -3,7 +3,9 @@
 //! Around every accepted command the host compares the world before and after:
 //! - each new act of piracy (`NavigationState::piracies`) costs the holder of
 //!   the system where your hailing fleet stood its `piracy_penalty`, and makes
-//!   you wanted there (`factions::wanted`);
+//!   you wanted there (`factions::wanted`); robbing a trader that flies for
+//!   another faction (`npc::Trader::affiliation`) costs that faction the same
+//!   way, by its own `piracy_penalty`;
 //! - a newly finished battle against raiders (not a trader you attacked, nor
 //!   the police) earns the holder of the battle's system `raider_kill_standing`
 //!   per raider destroyed;
@@ -20,6 +22,7 @@ use super::Session;
 use game_core::{
     SystemId,
     combat::{CombatOutcome, Side},
+    factions::Faction,
     fleet::FleetId,
     navigation::EncounterKind,
 };
@@ -34,16 +37,24 @@ pub(super) struct Watch {
     combat: Option<u64>,
     /// Where the fleet hailing a trader stands, if a hail is pending.
     hail: Option<SystemId>,
+    /// The faction the hailed trader flies for, if any.
+    hailed_for: Option<Faction>,
 }
 
 impl Session {
     pub(super) fn watch_standing(&self) -> Watch {
         let navigation = &self.state.navigation;
-        let hail = navigation
+        let contact = navigation
             .encounters
             .iter()
-            .find(|contact| contact.kind == EncounterKind::Trader)
-            .and_then(|contact| self.fleet_system(contact.fleet));
+            .find(|contact| contact.kind == EncounterKind::Trader);
+        let hail = contact.and_then(|contact| self.fleet_system(contact.fleet));
+        let hailed_for = contact
+            .and_then(|contact| contact.trader.as_ref())
+            .and_then(|hailed| {
+                let trader = self.economy.traders.iter().find(|npc| npc.id == hailed.id);
+                trader?.affiliation
+            });
         Watch {
             standing: self.economy.factions.standing,
             wanted: self.economy.factions.wanted,
@@ -53,6 +64,7 @@ impl Session {
                 .as_ref()
                 .map(|report| report.encounter),
             hail,
+            hailed_for,
         }
     }
 
@@ -67,10 +79,11 @@ impl Session {
         let catalog = self.economy.rules.faction_catalog.clone();
         let navigation = &self.state.navigation;
         let acts = navigation.piracies.saturating_sub(watch.piracies);
-        if let Some(faction) = watch
+        let holder = watch
             .hail
-            .and_then(|system| self.economy.factions.owner(system))
-        {
+            .and_then(|system| self.economy.factions.owner(system));
+        let victim = watch.hailed_for.filter(|faction| Some(*faction) != holder);
+        for faction in holder.into_iter().chain(victim) {
             let penalty = i64::from(catalog.get(faction).piracy_penalty) * acts as i64;
             let delta = i32::try_from(-penalty).unwrap_or(i32::MIN);
             self.economy.factions.adjust(faction, delta);

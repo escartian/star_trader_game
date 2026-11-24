@@ -48,8 +48,8 @@ chip selects the next fleet in it, cycling through the stack. The roster lists
 every fleet.
 
 **Labels and traffic.** Body names show when zoomed in, or for the body selected
-or pointed at. NPC traders are small GLB ship models with amber
-outlines and no labels in the galaxy
+or pointed at. NPC traders are small GLB ship models outlined in
+their faction's colour (light grey if independent) and no labels in the galaxy
 view. A raider band's heading line is drawn only while it hunts one of your
 fleets. A band crossing to another system is drawn on a faint line between
 the two systems in the galaxy view, and is absent from the system view. The orbit ring appears only around the selected fleet's body.
@@ -133,16 +133,26 @@ barren). Gas giant art follows its hazard profile. Touch has no hover,
 so icon meaning on mobile still needs a long-press or legend; that is open,
 along with the other deferred mobile work.
 
-Fresh sessions spawn **Aster Haul** (cautious) and **Helix Courier** (opportunistic).
-Their read-only traffic entries and amber galaxy markers show genuine persisted
-traders, not decorative ships. Cautious traders avoid dangerous markets and require
-a larger profit margin; opportunists accept smaller margins and riskier markets.
-They compare commodity routes including fuel costs, buy/haul/sell real cargo,
-refuel with their own credits and use the same safe multi-leg route planner.
+Fresh sessions spawn one NPC trader per three market systems: at least four
+(fewer only when a tiny galaxy has one planet market) and at most 32. The first
+two are always **Aster Haul** (cautious) and **Helix Courier** (opportunistic);
+personalities alternate. Home ports are spread evenly over the planet markets,
+and a destroyed trader is refitted at its own. Each trader flies for the faction
+holding its home port when the game starts, or is independent; the traffic
+roster shows its faction in that faction's colour. Their traffic entries and
+galaxy markers show genuine persisted traders, not decorative ships.
+
+Cautious traders avoid dangerous markets and require a larger profit margin;
+opportunists accept smaller margins and riskier markets. They compare commodity
+routes including fuel costs among the six market systems nearest them (their own
+included), buy/haul/sell real cargo, refuel with their own credits and use the
+same safe multi-leg route planner. A faction trader never sails for a port held
+by a rival of its faction, and values hauls into its own or allied space at 125%
+of their profit; independents go anywhere.
 
 NPCs act once per shared navigation run. They have separate wallets/hulls, finite
 market stock/funds and saved journey state. Trades conserve money and goods;
-production runs once for the world. NPC random encounters, player conversations,
-combat and expanded personalities are not implemented yet. Earlier saved sessions
+production runs once for the world. Expanded personalities and NPC-initiated
+encounters are not implemented yet. Earlier saved sessions
 without NPCs retain that population; start a fresh session for the initial traders.
 Backward save compatibility is not a prototype requirement.

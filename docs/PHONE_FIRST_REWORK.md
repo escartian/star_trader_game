@@ -77,7 +77,7 @@ hover, no right-drag) depth is the first thing to hurt.
   under way show a short direction tick.
 - **Labels:** body names appear when zoomed in or selected. System names show in
   the galaxy view; body names do not.
-- **NPC traffic:** small ship models with amber outlines and no labels;
+- **NPC traffic:** small ship models outlined in their faction's colour (grey if independent) and no labels;
   inspection cards remain planned.
 - **Raider bands:** a single red threat icon. A heading line appears only while it
   hunts one of your fleets.

@@ -13,7 +13,7 @@ use crate::navigation::escort_setup;
 use crate::{
     StarSystem,
     combat::{CombatantSetup, Side, gear::ESCORT_KIND, tactical},
-    economy::{Economy, MarketId},
+    economy::Economy,
     fleet::{FleetError, FleetMovementError, ShipKind},
 };
 
@@ -122,7 +122,7 @@ impl Economy {
     /// Replaces a destroyed trader's ship at its home port: empty hold, full
     /// fuel, no damage, no course. Returns the port's name.
     pub(crate) fn refit(&self, trader: &mut Trader, systems: &[StarSystem]) -> String {
-        let home = self.home_market(trader.id);
+        let home = self.home_market(trader);
         let ship = &mut trader.state.ships[0];
         ship.cargo = [0; 6];
         ship.hull_damage = 0;
@@ -143,15 +143,5 @@ impl Economy {
                 .map(|body| body.name.clone())
         })
         .unwrap_or_else(|| "its home port".into())
-    }
-
-    /// The planet market a trader started at (see `spawn_traders`).
-    fn home_market(&self, trader: u64) -> Option<MarketId> {
-        let index = usize::try_from(trader.checked_sub(1)?).ok()?;
-        self.markets
-            .iter()
-            .filter(|market| !market.is_station)
-            .nth(index)
-            .map(|market| market.id)
     }
 }

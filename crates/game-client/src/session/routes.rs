@@ -14,7 +14,8 @@ impl LocalSession {
     }
 
     /// "TRADE ROUTE" for a destination with a market: loops the selected fleet
-    /// between the market it is at and that destination.
+    /// between the market it is at and that destination. Only secondary fleets
+    /// run routes; the flagship takes your direct orders, so it has no button.
     pub(super) fn route_button(
         &mut self,
         ui: &mut egui::Ui,
@@ -26,6 +27,13 @@ impl LocalSession {
             return;
         };
         if !self.unlocked(game_core::progress::Feature::TradeRoutes) {
+            return;
+        }
+        let selected = self
+            .state
+            .fleet_for_ship(self.active_ship)
+            .map(|fleet| fleet.id);
+        if selected.is_ok_and(|fleet| self.is_flagship(fleet)) {
             return;
         }
         let there = MarketId { system, body };

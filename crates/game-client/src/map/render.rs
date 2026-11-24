@@ -8,6 +8,8 @@ impl Map {
             Sense::click_and_drag(),
         );
         let rect = response.rect;
+        // Empty-space clicks stay silent; hits below mark the selection cue.
+        crate::audio::quiet_clicks(ui.ctx(), response.id);
         // Every background, glow and label shares the map's clip rectangle.
         let painter = painter.with_clip_rect(rect.intersect(ui.clip_rect()));
         visuals::background(&painter, rect, "GALAXY / light-years");
@@ -119,8 +121,12 @@ impl Map {
                 super::fleets::pick_over_targets(&self.galaxy_fleet_hits, pointer, system)
             {
                 self.session.select_map_fleet(hit.ship);
+                crate::audio::mark_select(ui.ctx());
             } else {
                 let candidates = pick(&self.systems, &self.camera, rect, pointer);
+                if !candidates.is_empty() {
+                    crate::audio::mark_select(ui.ctx());
+                }
                 self.select_targets(candidates, response.double_clicked());
                 if self.scene == super::fixtures::Scene::Session
                     && self.candidates.len() == 1
@@ -130,6 +136,12 @@ impl Map {
                 }
             }
             ui.ctx().request_repaint();
+        }
+        // After the map, so the box draws on top and takes its own clicks.
+        if let Some(system) = super::search::search_box(ui, rect, &self.systems) {
+            self.selected = Some(system);
+            self.candidates.clear();
+            self.focus_selection();
         }
         if let Some(pointer) = response.hover_pos()
             && let Some(hit) = super::fleets::pick_over_targets(

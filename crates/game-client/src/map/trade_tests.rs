@@ -128,35 +128,70 @@ fn max_fills_the_hold_all_sells_it_back_and_full_refuels() {
     assert_eq!(ship.fuel, ship.fuel_capacity);
 }
 
-#[test]
-fn a_trade_route_starts_from_the_destination_card_and_ends_from_the_roster() {
-    use game_core::{BodyKind, SystemId, fleet::FleetId};
-    let ctx = egui::Context::default();
-    let mut authority = game_server::Session::default();
-    authority.set_encounter_chance(0);
-    let systems = match authority.handle(game_protocol::ClientCommand::GetGalaxy) {
-        game_protocol::ServerMessage::GalaxySnapshot { systems, .. } => systems,
-        _ => unreachable!(),
-    };
-    let port = systems
+/// The labels a few settled frames draw.
+fn labels(ctx: &egui::Context, map: &mut Map) -> Vec<String> {
+    let mut output = frame(ctx, map, Vec::new());
+    for _ in 0..3 {
+        output = frame(ctx, map, Vec::new());
+    }
+    texts(&output).into_iter().map(|(text, _)| text).collect()
+}
+
+/// System 2's trade port, the other end of the routes below.
+fn meridian_port(systems: &[game_core::StarSystem]) -> game_core::BodyId {
+    systems
         .iter()
-        .find(|system| system.id == SystemId(2))
+        .find(|system| system.id == game_core::SystemId(2))
         .and_then(|system| {
             system
                 .bodies
                 .iter()
-                .find(|body| body.kind == BodyKind::Station)
+                .find(|body| body.kind == game_core::BodyKind::Station)
         })
         .unwrap()
-        .id;
+        .id
+}
+
+#[test]
+fn the_flagship_has_no_trade_route_button() {
+    use game_core::SystemId;
+    let ctx = egui::Context::default();
+    let mut authority = game_server::Session::default();
+    authority.set_encounter_chance(0);
+    let systems = authority.systems().to_vec();
+    let port = meridian_port(&systems);
     let mut map = Map::new(systems, authority);
     map.session.select_destination(SystemId(2), Some(port));
+    assert!(
+        !labels(&ctx, &mut map)
+            .iter()
+            .any(|text| text == "TRADE ROUTE")
+    );
+}
+
+#[test]
+fn a_secondary_fleet_starts_a_route_from_the_destination_card_and_ends_it() {
+    use game_core::{SystemId, fleet::FleetId, travel::ShipId};
+    let ctx = egui::Context::default();
+    // Scout Wing (ship 2) waits in orbit of a planet with a market.
+    let mut authority = game_server::Session::multi_fleet_scenario(1).unwrap();
+    authority.set_encounter_chance(0);
+    let systems = authority.systems().to_vec();
+    let port = meridian_port(&systems);
+    let mut map = Map::new(systems, authority);
+    map.session.select_map_fleet(ShipId(2));
+    map.session.select_destination(SystemId(2), Some(port));
     click(&ctx, &mut map, "TRADE ROUTE");
-    let route = map.session.trade_route(FleetId(1)).expect("route started");
+    let fleet = (1..=4)
+        .map(FleetId)
+        .find(|fleet| map.session.trade_route(*fleet).is_some())
+        .expect("route started");
+    assert_ne!(fleet, FleetId(1), "not the flagship");
+    let route = map.session.trade_route(fleet).unwrap();
     assert_eq!(route.stops[1].system, SystemId(2));
     click(&ctx, &mut map, "Fleets");
     click(&ctx, &mut map, "End route");
-    assert!(map.session.trade_route(FleetId(1)).is_none());
+    assert!(map.session.trade_route(fleet).is_none());
 }
 
 #[test]

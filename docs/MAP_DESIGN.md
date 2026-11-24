@@ -20,7 +20,14 @@ system and proposed route; reduce unrelated labels before reducing readability.
 | Pan | Drag | One-finger drag |
 | Zoom | Wheel/trackpad | Pinch |
 | Focus selection | Button / F | Button |
+| Find a star or planet | Search box (Ctrl/Cmd+F) | Search box |
 | Reset/overview | Visible controls | Visible controls |
+
+The galaxy map's search box (top-left) lists up to eight stars and bodies whose
+names contain the typed text; picking one selects and centres its system
+without plotting a course. Every UI control plays the click cue; map, system
+and battle canvases stay silent on empty space and play a brighter selection
+cue when a click lands on a star, planet, fleet or battle target.
 
 Treat these as prototype bindings: test gesture conflicts, especially pinch versus
 drag and tap versus pan. Never require hover, a keyboard or a middle

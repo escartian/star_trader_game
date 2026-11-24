@@ -253,3 +253,10 @@ to refit need pointer input and were not captured. Hover
 highlighting, clicking a part and the pulsing "up next" ring need live audio and
 pointer input and were not captured; the announced next part is covered by an
 audio test.
+
+Galaxy search and UI sounds: offscreen captures of the galaxy view
+(`--new --capture-view galaxy`, 1280 × 800 and 390 × 844) show the search box at
+the map's top-left without covering the focus buttons or map labels. Typing,
+results and Ctrl/Cmd+F need keyboard input and were not captured; matching is
+covered by unit tests. The click and selection cues were not listened to;
+which cue a frame plays is covered by a unit test.

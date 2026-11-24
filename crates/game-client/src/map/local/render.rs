@@ -19,6 +19,8 @@ impl LocalView {
             Sense::click_and_drag(),
         );
         let rect = response.rect;
+        // Empty-space clicks stay silent; hits below mark the selection cue.
+        crate::audio::quiet_clicks(ui.ctx(), response.id);
         let painter = painter.with_clip_rect(rect.intersect(ui.clip_rect()));
         if self.frame_overview {
             self.fit_overview(rect, ships);
@@ -158,8 +160,12 @@ impl LocalView {
             {
                 self.selection_request = Some(hit.ship);
                 self.active_ship = hit.ship;
+                crate::audio::mark_select(ui.ctx());
             } else {
                 self.candidates = pick(&self.system, &self.camera, rect, pointer);
+                if !self.candidates.is_empty() {
+                    crate::audio::mark_select(ui.ctx());
+                }
                 if self.candidates.len() == 1 {
                     self.selected = self.candidates.first().copied();
                     self.move_request =

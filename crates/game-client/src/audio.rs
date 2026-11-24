@@ -20,23 +20,16 @@ pub enum Track {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Effect {
     Click,
+    /// Picking a star, planet or fleet on a map: the click, pitched up.
+    Select,
     Laser,
     Shield,
     Hull,
     Explosion,
 }
 
-const CLICK_KEY: &str = "ui-click-sound";
-
-/// UI controls mark clicks while painting; the map plays one cue per frame.
-pub fn mark_click(ctx: &egui::Context) {
-    ctx.data_mut(|data| data.insert_temp(egui::Id::new(CLICK_KEY), true));
-}
-
-pub fn take_click(ctx: &egui::Context) -> bool {
-    ctx.data_mut(|data| data.remove_temp::<bool>(egui::Id::new(CLICK_KEY)))
-        .unwrap_or(false)
-}
+mod cues;
+pub use cues::{mark_click, mark_select, quiet_clicks, take_cue};
 
 /// Linear amplitude gain for a master and a music slider, each 0-100 percent.
 pub fn music_gain(master_percent: u8, music_percent: u8, muted: bool) -> f32 {
@@ -176,7 +169,9 @@ mod output {
 
     pub(super) fn effect_bytes(effect: Effect) -> &'static [u8] {
         match effect {
-            Effect::Click => include_bytes!("../../../assets/effects/sounds/click3.ogg"),
+            Effect::Click | Effect::Select => {
+                include_bytes!("../../../assets/effects/sounds/click3.ogg")
+            }
             Effect::Laser => include_bytes!("../../../assets/effects/sounds/laserLarge_000.ogg"),
             Effect::Shield => include_bytes!("../../../assets/effects/sounds/forceField_000.ogg"),
             Effect::Hull => include_bytes!("../../../assets/effects/sounds/impactMetal_001.ogg"),
@@ -285,6 +280,11 @@ mod output {
                 Ok(source) => {
                     let sink = Sink::connect_new(self.stream.mixer());
                     sink.set_volume(gain);
+                    // A selection plays the click a fifth higher, so it reads
+                    // as a distinct, brighter blip.
+                    if effect == Effect::Select {
+                        sink.set_speed(1.5);
+                    }
                     sink.append(source);
                     self.effects.push(sink);
                 }
@@ -341,6 +341,7 @@ mod tests {
     fn every_embedded_effect_decodes() {
         for effect in [
             Effect::Click,
+            Effect::Select,
             Effect::Laser,
             Effect::Shield,
             Effect::Hull,

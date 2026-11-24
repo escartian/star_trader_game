@@ -58,7 +58,8 @@ it to the map, so tests and captures never touch audio hardware. The music is
 an original Strudel composition kept in `assets/source/music/` (a shared
 library, one file per family of blocks (main, space, Space Disco and Night Drift) and a
 file of links between them), played with
-Strudel's synthesizers and FluidR3_GM soundfont instruments whose sample data is
+Strudel's synthesizers and General MIDI soundfont instruments (FluidR3_GM, plus
+one GeneralUser GS contrabass) whose sample data is
 kept alongside it. Its exported Ogg blocks (eight bars unless a block sets its
 own length) and transition manifest in `assets/music/` are embedded in the
 desktop client (`audio/music_graph.rs`).

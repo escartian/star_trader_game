@@ -20,6 +20,7 @@ mod orbit_view;
 mod panels;
 mod recovery;
 mod render;
+mod search;
 mod shell;
 mod songbook;
 mod songbook_graph;
@@ -230,8 +231,8 @@ impl Map {
         self.apply_client_options(ctx);
         if self.save_recovery.is_some() {
             self.show_main_menu(ctx);
-            if crate::audio::take_click(ctx) {
-                self.music.play_effect(crate::audio::Effect::Click);
+            if let Some(cue) = crate::audio::take_cue(ctx) {
+                self.music.play_effect(cue);
             }
             return;
         }
@@ -297,8 +298,8 @@ impl Map {
             #[cfg(not(target_arch = "wasm32"))]
             self.open_save_chooser(self.session.save_path(), None);
         }
-        if crate::audio::take_click(ctx) {
-            self.music.play_effect(crate::audio::Effect::Click);
+        if let Some(cue) = crate::audio::take_cue(ctx) {
+            self.music.play_effect(cue);
         }
     }
 
@@ -396,7 +397,7 @@ impl Map {
             .inner;
         if !ctx.wants_keyboard_input()
             && !crate::battle::keyboard_claimed(ctx)
-            && ctx.input(|i| i.key_pressed(egui::Key::F))
+            && ctx.input(|i| i.key_pressed(egui::Key::F) && !i.modifiers.command)
         {
             self.focus_selection();
         }

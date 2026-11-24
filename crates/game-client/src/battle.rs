@@ -56,6 +56,8 @@ impl BattleView {
     ) -> (Option<Pick>, Option<Pick>) {
         let board = input.battle.board;
         let (rect, response) = ui.allocate_exact_size(size, Sense::click_and_drag());
+        // Empty-space clicks stay silent; a picked hex or ship marks the cue.
+        crate::audio::quiet_clicks(ui.ctx(), response.id);
         if response.dragged() {
             self.camera.drag_pan(response.drag_delta(), rect, board);
         }
@@ -91,6 +93,9 @@ impl BattleView {
             .clicked()
             .then(|| scene::pick(rect, &self.camera, input, response.interact_pointer_pos()))
             .flatten();
+        if clicked.is_some() {
+            crate::audio::mark_select(ui.ctx());
+        }
         (hovered, clicked)
     }
 

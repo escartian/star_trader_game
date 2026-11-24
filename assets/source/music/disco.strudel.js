@@ -1,23 +1,24 @@
-// Star Trader music — the funk pieces at 60, 80, 100 and 120 BPM and the
+// Star Trader music — the Space Disco pieces at 60, 80, 100 and 120 BPM and the
 // 20 BPM ramps between them: the main theme reworked as space funk with a
 // space-jazz colour (extended chords, Rhodes, vibraphone, muted trumpet and a
-// swung ride). Rendered
+// swung ride) and a synth-disco sheen (supersaw pad, pumping chords, a
+// filtered pluck, laser harp, zaps and beeps). Rendered
 // with library.strudel.js; see tools/music/README.md.
 
 // A funk vamp in D dorian with space-jazz extensions, two bars per chord:
 // Dm11, G13 (its major IV), Dm11, then Bbmaj9 and A7sus, ending on A to
 // resolve into every other block.
-const funkHarmony = { chords: "<Dm11 Dm11 G13 G13 Dm11 Dm11 Bb^9 A7sus>", roots: "<d2 d2 g1 g1 d2 d2 bb1 a1>",
+const discoHarmony = { chords: "<Dm11 Dm11 G13 G13 Dm11 Dm11 Bb^9 A7sus>", roots: "<d2 d2 g1 g1 d2 d2 bb1 a1>",
   rootNumbers: "<38 38 31 31 38 38 34 33>" }
 
-// The funk pieces have two themes, like the space pieces. Theme C, the main
+// The Space Disco pieces have two themes, like the space pieces. Theme C, the main
 // theme's melody (melodyA, one bar per chord), plays at 60 and 120 BPM with the
 // same note values, so 120 is exactly double time: on a talkbox lead, doubled
 // on clavinet at 120. Theme D, a syncopated clavinet riff, plays at 80 and 100.
 const themeC = '<' + melodyA + '>'
 // Theme D: sixteenth-note steps, one bar per chord. Over G9 it uses B natural,
 // the dorian colour of funk.
-const funkRiff = '<' +
+const discoRiff = '<' +
   '[[d5 ~ f5 d5] [~ a4 c5 ~] [d5 ~ ~ f5] [~ e5 d5 ~]] ' +
   '[[d5 ~ f5 d5] [~ a4 c5 ~] [f5 ~ e5 d5] [c5 ~ a4 ~]] ' +
   '[[b4 ~ d5 b4] [~ f4 a4 ~] [b4 ~ ~ d5] [~ c5 b4 ~]] ' +
@@ -53,61 +54,75 @@ const trumpetLine = '<~ [~ ~ [a5 g5] [e5 d5]] ~ [~ ~ [d5 e5] [f5 a5]] ' +
 const hornAnswers = '<~ [~ ~ ~ ~ ~ ~ [a4 c5] d5] ~ [~ [b4 d5] ~ [f5 e5] ~ d5 ~ ~] ' +
   '~ [~ ~ ~ ~ ~ ~ [f5 g5] a5] ~ [~ [g5 e5] ~ [d5 e5] ~ a4 ~ ~]>'
 
-// The funk pieces' settings, shared by the pieces and the ramps between them.
-const funkAt = {
+// The Space Disco pieces' settings, shared by the pieces and the ramps between them.
+const discoAt = {
   // Theme C, slow and sultry space jazz: talkbox lead, Rhodes, vibraphone and
   // a muted trumpet over slap bass, a swung ride and the laser harp.
   60: {
-    oohs: 0.05, moog: 0.06, glue: 0.5,
+    oohs: 0.075, moog: 0.06, glue: 0.5,
     keys: 0.13, ensemble: 0.15, bass: 0, slap: 0.16, slapNotes: slapLine, talk: 0.12,
     talkNotes: themeC, laser: 0.06, scratch: 0.04, groove: 0.3, swingRide: 0.025, pad: 0.09,
     halo: 0.075, vibes: 0.07, vibesNotes: vibesLine, trumpet: 0.08, trumpetNotes: trumpetLine,
-    bells: 0.04, beeps: 0.03
+    bells: 0.04, beeps: 0.03,
+    pluck: 0.025
   },
   // Theme D: the clavinet riff with slap bass, chicken scratch and horn stabs,
   // the trumpet answering and vibraphone above.
   80: {
-    oohs: 0.04, moog: 0.08, glue: 0.6, brassLine: 0.05, brassLineNotes: hornAnswers,
+    oohs: 0.06, moog: 0.08, glue: 0.6, brassLine: 0.075, brassLineNotes: hornAnswers,
     keys: 0.1, ensemble: 0.12, bass: 0, slap: 0.18, slapNotes: slapLine, clav: 0.12,
-    clavNotes: funkRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.06, swingRide: 0.02,
+    clavNotes: discoRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.06, swingRide: 0.02,
     organ: 0.06, laser: 0.03, pad: 0.06, vibes: 0.05, vibesNotes: vibesLine, trumpet: 0.08,
-    trumpetNotes: trumpetLine
+    trumpetNotes: trumpetLine,
+    pump: 0.03,
+    pluck: 0.035,
+    openhat: 0.012
   },
   // Theme D, fuller: organ, congas and tambourine join the band.
   100: {
-    oohs: 0.05, moog: 0.1, glue: 0.8, brassLine: 0.06, brassLineNotes: hornAnswers, openhat: 0.015,
+    oohs: 0.075, moog: 0.1, glue: 0.8, brassLine: 0.09, brassLineNotes: hornAnswers, openhat: 0.015,
     keys: 0.09, ensemble: 0.12, bass: 0, slap: 0.17, slapNotes: slapLine, clav: 0.12,
-    clavNotes: funkRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.06,
+    clavNotes: discoRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.06,
     swingRide: 0.02, congas: 0.08, tambourine: 0.04, laser: 0.03, vibes: 0.04,
-    vibesNotes: vibesLine, trumpet: 0.07, trumpetNotes: trumpetLine
+    vibesNotes: vibesLine, trumpet: 0.07, trumpetNotes: trumpetLine,
+    pad: 0.05,
+    pump: 0.045,
+    pluck: 0.04,
+    zaps: 0.02,
+    beeps: 0.02
   },
   // Theme C at double time: talkbox and clavinet in unison over the full band,
   // horns answering, a held choir and a Moog bass under the slap bass, congas,
   // tambourine, open hats and the swung ride, glued by more reverb and a
   // slapback echo, with the laser harp above.
   120: {
-    oohs: 0.06, moog: 0.12, glue: 1, brassLine: 0.08, brassLineNotes: hornAnswers, openhat: 0.02,
+    oohs: 0.09, moog: 0.12, glue: 1, brassLine: 0.12, brassLineNotes: hornAnswers, openhat: 0.02,
     keys: 0.09, ensemble: 0.09, bass: 0, slap: 0.17, slapNotes: slapLine, talk: 0.11,
     talkNotes: themeC, clav: 0.08, clavNotes: themeC, scratch: 0.07, brass: 0.1, organ: 0.06,
-    groove: 0.585, hats: 0.06, swingRide: 0.025, congas: 0.12, tambourine: 0.06, laser: 0.06,
-    vibes: 0.03, vibesNotes: vibesLine, trumpet: 0.06, trumpetNotes: trumpetLine
+    groove: 0.585, hats: 0.06, swingRide: 0.025, congas: 0.12, tambourine: 0.06, laser: 0.08,
+    vibes: 0.03, vibesNotes: vibesLine, trumpet: 0.06, trumpetNotes: trumpetLine,
+    pad: 0.05,
+    pump: 0.055,
+    pluck: 0.045,
+    zaps: 0.025,
+    beeps: 0.02
   },
 }
-const funkRamp = (from, to, next) => familyRamp(funkAt, funkHarmony, from, to, next)
+const discoRamp = (from, to, next) => familyRamp(discoAt, discoHarmony, from, to, next)
 
-family('funk', {
-  funk_60: block({ from: 60, ...funkHarmony, ...funkAt[60], next: { funk_rise_80: 2 } }),
-  funk_80: block({ from: 80, ...funkHarmony, ...funkAt[80], next: { funk_rise_100: 2, funk_fall_60: 1 } }),
-  funk_100: block({ from: 100, ...funkHarmony, ...funkAt[100], next: { funk_rise_120: 2, funk_fall_80: 1 } }),
-  funk_120: block({ from: 120, ...funkHarmony, ...funkAt[120], next: { funk_fall_100: 2 } }),
-  // Ramps between the funk pieces, 20 BPM each way.
-  funk_rise_80: funkRamp(60, 80, { funk_80: 1 }),
-  funk_rise_100: funkRamp(80, 100, { funk_100: 1 }),
-  funk_rise_120: funkRamp(100, 120, { funk_120: 1 }),
-  funk_fall_100: funkRamp(120, 100, { funk_100: 1 }),
-  funk_fall_80: funkRamp(100, 80, { funk_80: 1 }),
-  funk_fall_60: funkRamp(80, 60, { funk_60: 1 }),
+family('disco', {
+  disco_60: block({ from: 60, ...discoHarmony, ...discoAt[60], next: { disco_rise_80: 2 } }),
+  disco_80: block({ from: 80, ...discoHarmony, ...discoAt[80], next: { disco_rise_100: 2, disco_fall_60: 1 } }),
+  disco_100: block({ from: 100, ...discoHarmony, ...discoAt[100], next: { disco_rise_120: 2, disco_fall_80: 1 } }),
+  disco_120: block({ from: 120, ...discoHarmony, ...discoAt[120], next: { disco_fall_100: 2 } }),
+  // Ramps between the Space Disco pieces, 20 BPM each way.
+  disco_rise_80: discoRamp(60, 80, { disco_80: 1 }),
+  disco_rise_100: discoRamp(80, 100, { disco_100: 1 }),
+  disco_rise_120: discoRamp(100, 120, { disco_120: 1 }),
+  disco_fall_100: discoRamp(120, 100, { disco_100: 1 }),
+  disco_fall_80: discoRamp(100, 80, { disco_80: 1 }),
+  disco_fall_60: discoRamp(80, 60, { disco_60: 1 }),
 }, [
-  'funk_60', 'funk_rise_80', 'funk_80', 'funk_rise_100', 'funk_100', 'funk_rise_120', 'funk_120',
-  'funk_fall_100', 'funk_100', 'funk_fall_80', 'funk_80', 'funk_fall_60', 'funk_60',
+  'disco_60', 'disco_rise_80', 'disco_80', 'disco_rise_100', 'disco_100', 'disco_rise_120', 'disco_120',
+  'disco_fall_100', 'disco_100', 'disco_fall_80', 'disco_80', 'disco_fall_60', 'disco_60',
 ])

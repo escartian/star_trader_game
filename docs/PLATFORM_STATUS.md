@@ -245,9 +245,9 @@ fills it, with section outlines, tempo placement including the space ramps, and
 the playing part's outgoing arrows with chances and incoming arrows. On a phone
 (`@space_80`, 390 × 844) the Map toggle is hidden and the list shows. Dragging
 the card was not captured; its size no longer depends on its position.
-With the funk and phonk families added, the map is drawn on a fixed canvas
+With the Space Disco and Night Drift families added, the map is drawn on a fixed canvas
 inside a zoomable `egui::Scene` that first fits it to the card: captures at
-1280 × 800 (`@funk_80`) and 1920 × 1080 (`@phonk_100`) show the whole map and
+1280 × 800 (`@disco_80`) and 1920 × 1080 (`@night_100`) show the whole map and
 its explanation without scrolling. Pinch, Ctrl+scroll, drag and double-click
 to refit need pointer input and were not captured. Hover
 highlighting, clicking a part and the pulsing "up next" ring need live audio and

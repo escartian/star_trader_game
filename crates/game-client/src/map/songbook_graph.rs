@@ -19,9 +19,9 @@ const NODE_RADIUS: f32 = 10.0;
 const SIDE_MARGIN: f32 = 90.0;
 
 /// Rows as fractions of the canvas height, from the top.
-const ROW_FUNK_RISE: f32 = 0.04;
-const ROW_FUNK: f32 = 0.10;
-const ROW_FUNK_FALL: f32 = 0.16;
+const ROW_DISCO_RISE: f32 = 0.04;
+const ROW_DISCO: f32 = 0.10;
+const ROW_DISCO_FALL: f32 = 0.16;
 const ROW_EXTRA: f32 = 0.25;
 const ROW_CLIMB: f32 = 0.33;
 const ROW_ALTERNATE: f32 = 0.40;
@@ -29,9 +29,9 @@ const ROW_RETURN: f32 = 0.49;
 const ROW_SPACE_RISE: f32 = 0.59;
 const ROW_SPACE: f32 = 0.65;
 const ROW_SPACE_FALL: f32 = 0.71;
-const ROW_PHONK_RISE: f32 = 0.81;
-const ROW_PHONK: f32 = 0.87;
-const ROW_PHONK_FALL: f32 = 0.93;
+const ROW_NIGHT_RISE: f32 = 0.81;
+const ROW_NIGHT: f32 = 0.87;
+const ROW_NIGHT_FALL: f32 = 0.93;
 
 /// Each part's tempo column in BPM (a ramp sits midway between its two
 /// tempos) and its row.
@@ -69,26 +69,26 @@ const PLACES: &[(&str, f32, f32)] = &[
     ("space_fall_100", 110.0, ROW_SPACE_FALL),
     ("space_fall_80", 90.0, ROW_SPACE_FALL),
     ("space_fall_60", 70.0, ROW_SPACE_FALL),
-    ("funk_60", 60.0, ROW_FUNK),
-    ("funk_80", 80.0, ROW_FUNK),
-    ("funk_100", 100.0, ROW_FUNK),
-    ("funk_120", 120.0, ROW_FUNK),
-    ("funk_rise_80", 70.0, ROW_FUNK_RISE),
-    ("funk_rise_100", 90.0, ROW_FUNK_RISE),
-    ("funk_rise_120", 110.0, ROW_FUNK_RISE),
-    ("funk_fall_100", 110.0, ROW_FUNK_FALL),
-    ("funk_fall_80", 90.0, ROW_FUNK_FALL),
-    ("funk_fall_60", 70.0, ROW_FUNK_FALL),
-    ("phonk_60", 60.0, ROW_PHONK),
-    ("phonk_80", 80.0, ROW_PHONK),
-    ("phonk_100", 100.0, ROW_PHONK),
-    ("phonk_120", 120.0, ROW_PHONK),
-    ("phonk_rise_80", 70.0, ROW_PHONK_RISE),
-    ("phonk_rise_100", 90.0, ROW_PHONK_RISE),
-    ("phonk_rise_120", 110.0, ROW_PHONK_RISE),
-    ("phonk_fall_100", 110.0, ROW_PHONK_FALL),
-    ("phonk_fall_80", 90.0, ROW_PHONK_FALL),
-    ("phonk_fall_60", 70.0, ROW_PHONK_FALL),
+    ("disco_60", 60.0, ROW_DISCO),
+    ("disco_80", 80.0, ROW_DISCO),
+    ("disco_100", 100.0, ROW_DISCO),
+    ("disco_120", 120.0, ROW_DISCO),
+    ("disco_rise_80", 70.0, ROW_DISCO_RISE),
+    ("disco_rise_100", 90.0, ROW_DISCO_RISE),
+    ("disco_rise_120", 110.0, ROW_DISCO_RISE),
+    ("disco_fall_100", 110.0, ROW_DISCO_FALL),
+    ("disco_fall_80", 90.0, ROW_DISCO_FALL),
+    ("disco_fall_60", 70.0, ROW_DISCO_FALL),
+    ("night_60", 60.0, ROW_NIGHT),
+    ("night_80", 80.0, ROW_NIGHT),
+    ("night_100", 100.0, ROW_NIGHT),
+    ("night_120", 120.0, ROW_NIGHT),
+    ("night_rise_80", 70.0, ROW_NIGHT_RISE),
+    ("night_rise_100", 90.0, ROW_NIGHT_RISE),
+    ("night_rise_120", 110.0, ROW_NIGHT_RISE),
+    ("night_fall_100", 110.0, ROW_NIGHT_FALL),
+    ("night_fall_80", 90.0, ROW_NIGHT_FALL),
+    ("night_fall_60", 70.0, ROW_NIGHT_FALL),
 ];
 
 fn section_color(section: &str) -> Color32 {
@@ -99,8 +99,8 @@ fn section_color(section: &str) -> Color32 {
         "Cruise" => GREEN,
         "Arrival" => AMBER,
         "Return" => Color32::from_rgb(230, 140, 200),
-        "Funk" => Color32::from_rgb(255, 120, 90),
-        "Phonk" => Color32::from_rgb(200, 90, 255),
+        "Space Disco" => Color32::from_rgb(255, 120, 90),
+        "Night Drift" => Color32::from_rgb(200, 90, 255),
         _ => Color32::from_rgb(175, 145, 255),
     }
 }

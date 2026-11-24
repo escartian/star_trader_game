@@ -47,7 +47,7 @@ const sources = join(root, 'assets/source/music');
 /** The game's music: the shared library, each family of blocks, then the
  *  links between families (which change only the manifest, so no block's
  *  hash includes them). */
-const FAMILIES = ['main', 'space', 'funk', 'phonk'];
+const FAMILIES = ['main', 'space', 'disco', 'night'];
 const suite = args[0] === undefined;
 const source = suite ? join(sources, 'music.strudel.js') : resolve(args[0]);
 const output = resolve(args[1] ?? join(root, 'assets/music'));

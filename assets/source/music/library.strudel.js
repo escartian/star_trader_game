@@ -2,7 +2,7 @@
 // layer a block can use. An original composition for this game.
 //
 // The music is split into this library and one file per family of blocks
-// (main.strudel.js, space.strudel.js, funk.strudel.js, phonk.strudel.js), plus
+// (main.strudel.js, space.strudel.js, disco.strudel.js, night.strudel.js), plus
 // links.strudel.js joining the families. `tools/music/render.mjs` joins them
 // into music.strudel.js (paste that into https://strudel.cc and
 // press play to hear a demo of every block at one fixed tempo) and exports
@@ -81,7 +81,7 @@ const instruments = {
   hookEcho: { sound: "sawtooth", boost: 2.5 },
   seqbass: { sound: "sawtooth", boost: 1.25 },
   zaps: { sound: "sawtooth", boost: 2.5 },
-  // The funk pieces: funk voices first, then phonk (cowbell, 808). Sparse
+  // Funk voices for the Space Disco pieces, then phonk (cowbell, 808). Sparse
   // voices (clavinet riff, horn stabs) are boosted less than measured.
   talk: { sound: "sawtooth", boost: 0.65 },
   clav: { sound: "gm_clavinet:1", boost: 2.5 },
@@ -90,13 +90,15 @@ const instruments = {
   brass: { sound: "gm_brass_section:3", boost: 3 },
   cowbell: { sound: "square", boost: 1.5 },
   bass808: { sound: "sine", boost: 0.19 },
-  // The phonk pieces' dark, distorted synth lead and picked bass guitar.
+  // The Night Drift pieces' dark, distorted synth lead and picked bass guitar.
   dark: { sound: "supersaw", boost: 1.1 },
   bassGuitar: { sound: "gm_electric_bass_pick:1", boost: 2.1 },
-  // Space-jazz colours in the funk pieces.
+  // A bowed bass: FluidR3's cello played down in the contrabass range.
+  bowed: { sound: "gm_cello:1", boost: 0.65 },
+  // Space-jazz colours in the Space Disco pieces.
   vibes: { sound: "gm_vibraphone:3", boost: 1.6 },
   trumpet: { sound: "gm_muted_trumpet:3", boost: 1.4 },
-  // Fullness in the funk pieces: a held "ooh" choir and a Moog-style bass.
+  // Fullness in the Space Disco pieces: a held "ooh" choir and a Moog-style bass.
   oohs: { sound: "gm_voice_oohs:2", boost: 1.33 },
   moog: { sound: "sawtooth", boost: 0.68 },
 }
@@ -207,7 +209,7 @@ function block(settings) {
     cowbell: 0, cowbellNotes: '', bass808: 0, trap: 0, clap: 0, clapPattern: "~ pink ~ pink", groove: 0,
     congas: 0, tambourine: 0, slide808: false, phonkKit: 0, crackle: 0, dark: 0, darkNotes: '',
     bassGuitar: 0, bassGuitarNotes: '', vibes: 0, vibesNotes: '', trumpet: 0, trumpetNotes: '',
-    swingRide: 0, rim: 0, oohs: 0, moog: 0, brassLine: 0, brassLineNotes: '', glue: 0,
+    swingRide: 0, rim: 0, bowed: 0, bowedNotes: '', oohs: 0, moog: 0, brassLine: 0, brassLineNotes: '', glue: 0,
     ...settings }
   const from = o.from
   const to = o.to ?? o.from
@@ -845,6 +847,14 @@ function block(settings) {
       .bandf(3200).bandq(4)
       .pan(0.6).room(0.2).size(hall)
       .gain(level(o.rim)))
+  }
+  if (on(o.bowed)) {
+    // A bowed bass line: slow attack, long notes, dark and woody.
+    layers.push(play(note(o.bowedNotes), 'bowed')
+      .attack(0.25).decay(0.6).sustain(0.8).release(0.7)
+      .lpf(1400)
+      .pan(0.46).room(0.4).size(hall)
+      .gain(level(o.bowed)))
   }
   if (on(o.oohs)) {
     // A held "ooh" choir, one chord a bar, filling the middle softly.

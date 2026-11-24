@@ -7,14 +7,14 @@
 const melodyB = '[d5@2 e5 f5] [d5@3 a4] [c5@2 e5 c5] [g4@2 a4 c5] [e5@2 f5 a5] [f5@3 d5] [bb4@2 d5 f5] [e5@3 d5]'
 // A 16-bar solo: a singing single-note line with six bends, strummed chords
 // and double-stops at the phrase peaks, rests to breathe, and three short runs
-// at 1.8 times the eighth-note rate (eight notes over 5/9 of a bar). The second
+// at twice the eighth-note rate (eight notes over half a bar). The second
 // half climbs higher; its final A resolves into the next block's D minor.
 const solo = '[~ a4 c5 d5] [f5^2@3 ~] [e5^1@2 c5 a4] [[g4,c5,e5]@2 ~ ~] ' +
-  '[~ d5 f5 a5] [d6^2@2 c6 a5] [[[d5,g5,bb5] ~ ~ ~]@4 [g5 bb5h d6h f6h g6h f6h d6h bb5h]@5] [a5^1@3 ~] ' +
+  '[~ d5 f5 a5] [d6^2@2 c6 a5] [[[d5,g5,bb5] ~ ~ ~]@4 [g5 bb5h d6h f6h g6h f6h d6h bb5h]@4] [a5^1@3 ~] ' +
   '[[d5,f5,a5] ~ [d5,f5,a5] ~ ~ [f5,a5,d6] ~ ~] [[bb5,d6]@3 [a5 f5]] ' +
-  '[[[c5,f5,a5] ~ ~ ~]@4 [a4 c5h f5h a5h c6h e6h c6h a5h]@5] [c6^2@3 ~] ' +
+  '[[[c5,f5,a5] ~ ~ ~]@4 [a4 c5h f5h a5h c6h e6h c6h a5h]@4] [c6^2@3 ~] ' +
   '[~ [a5,d6] [c6,e6] [d6,f6]] [f6^2@3 ~] ' +
-  '[[[d6,g6] ~ ~ ~]@4 [g6 f6h d6h bb5h a5h g5h f5h d5h]@5] [[a4,d5,e5]@2 [g4,d5] [e4,a4]]'
+  '[[[d6,g6] ~ ~ ~]@4 [g6 f6h d6h bb5h a5h g5h f5h d5h]@4] [[a4,d5,e5]@2 [g4,d5] [e4,a4]]'
 // A distinct 120 BPM theme: brass-like calls over a fast string-like pulse.
 const fanfareLine = '[d5@2 f5 a5] [bb5@2 a5 f5] [a5@2 c6 a5] [g5@2 e5 c5] [a5@2 d6 c6] [bb5@2 d6 f6] [g5@2 bb5 d6] [e6@2 d6 a5]'
 // The same answers as two-note strums, foreshadowing and echoing the solo.
@@ -35,7 +35,7 @@ const arrive = { keys: 0.1, ensemble: 0.13, arp: 0.13, arpLpf: 3200,
 // The solo plays the clean electric guitar with long sustain and a light
 // reverb and echo.
 const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarDecay: 1.6, guitarSustain: 0.7,
-  guitarRelease: 1.1, guitarLpf: 4000, guitarDelay: 0.15, guitarFeedback: 0.25, guitarRoom: 0.3,
+  guitarRelease: 1.1, guitarLpf: 7000, guitarDrive: 0.1, guitarDelay: 0.08, guitarFeedback: 0.12, guitarRoom: 0.18,
   rhythm: 0.085, drums: 1, hats: 0.13, pad: 0.04, pump: 0, pluck: 0 }
 
 

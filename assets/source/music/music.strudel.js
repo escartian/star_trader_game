@@ -7,7 +7,7 @@
 // layer a block can use. An original composition for this game.
 //
 // The music is split into this library and one file per family of blocks
-// (main.strudel.js, space.strudel.js, funk.strudel.js, phonk.strudel.js), plus
+// (main.strudel.js, space.strudel.js, disco.strudel.js, night.strudel.js), plus
 // links.strudel.js joining the families. `tools/music/render.mjs` joins them
 // into music.strudel.js (paste that into https://strudel.cc and
 // press play to hear a demo of every block at one fixed tempo) and exports
@@ -86,7 +86,7 @@ const instruments = {
   hookEcho: { sound: "sawtooth", boost: 2.5 },
   seqbass: { sound: "sawtooth", boost: 1.25 },
   zaps: { sound: "sawtooth", boost: 2.5 },
-  // The funk pieces: funk voices first, then phonk (cowbell, 808). Sparse
+  // Funk voices for the Space Disco pieces, then phonk (cowbell, 808). Sparse
   // voices (clavinet riff, horn stabs) are boosted less than measured.
   talk: { sound: "sawtooth", boost: 0.65 },
   clav: { sound: "gm_clavinet:1", boost: 2.5 },
@@ -95,13 +95,15 @@ const instruments = {
   brass: { sound: "gm_brass_section:3", boost: 3 },
   cowbell: { sound: "square", boost: 1.5 },
   bass808: { sound: "sine", boost: 0.19 },
-  // The phonk pieces' dark, distorted synth lead and picked bass guitar.
+  // The Night Drift pieces' dark, distorted synth lead and picked bass guitar.
   dark: { sound: "supersaw", boost: 1.1 },
   bassGuitar: { sound: "gm_electric_bass_pick:1", boost: 2.1 },
-  // Space-jazz colours in the funk pieces.
+  // A bowed bass: FluidR3's cello played down in the contrabass range.
+  bowed: { sound: "gm_cello:1", boost: 0.65 },
+  // Space-jazz colours in the Space Disco pieces.
   vibes: { sound: "gm_vibraphone:3", boost: 1.6 },
   trumpet: { sound: "gm_muted_trumpet:3", boost: 1.4 },
-  // Fullness in the funk pieces: a held "ooh" choir and a Moog-style bass.
+  // Fullness in the Space Disco pieces: a held "ooh" choir and a Moog-style bass.
   oohs: { sound: "gm_voice_oohs:2", boost: 1.33 },
   moog: { sound: "sawtooth", boost: 0.68 },
 }
@@ -212,7 +214,7 @@ function block(settings) {
     cowbell: 0, cowbellNotes: '', bass808: 0, trap: 0, clap: 0, clapPattern: "~ pink ~ pink", groove: 0,
     congas: 0, tambourine: 0, slide808: false, phonkKit: 0, crackle: 0, dark: 0, darkNotes: '',
     bassGuitar: 0, bassGuitarNotes: '', vibes: 0, vibesNotes: '', trumpet: 0, trumpetNotes: '',
-    swingRide: 0, rim: 0, oohs: 0, moog: 0, brassLine: 0, brassLineNotes: '', glue: 0,
+    swingRide: 0, rim: 0, bowed: 0, bowedNotes: '', oohs: 0, moog: 0, brassLine: 0, brassLineNotes: '', glue: 0,
     ...settings }
   const from = o.from
   const to = o.to ?? o.from
@@ -851,6 +853,14 @@ function block(settings) {
       .pan(0.6).room(0.2).size(hall)
       .gain(level(o.rim)))
   }
+  if (on(o.bowed)) {
+    // A bowed bass line: slow attack, long notes, dark and woody.
+    layers.push(play(note(o.bowedNotes), 'bowed')
+      .attack(0.25).decay(0.6).sustain(0.8).release(0.7)
+      .lpf(1400)
+      .pan(0.46).room(0.4).size(hall)
+      .gain(level(o.bowed)))
+  }
   if (on(o.oohs)) {
     // A held "ooh" choir, one chord a bar, filling the middle softly.
     layers.push(play(chord(o.chords).voicing(), 'oohs')
@@ -928,14 +938,14 @@ function link(from, targets) {
 const melodyB = '[d5@2 e5 f5] [d5@3 a4] [c5@2 e5 c5] [g4@2 a4 c5] [e5@2 f5 a5] [f5@3 d5] [bb4@2 d5 f5] [e5@3 d5]'
 // A 16-bar solo: a singing single-note line with six bends, strummed chords
 // and double-stops at the phrase peaks, rests to breathe, and three short runs
-// at 1.8 times the eighth-note rate (eight notes over 5/9 of a bar). The second
+// at twice the eighth-note rate (eight notes over half a bar). The second
 // half climbs higher; its final A resolves into the next block's D minor.
 const solo = '[~ a4 c5 d5] [f5^2@3 ~] [e5^1@2 c5 a4] [[g4,c5,e5]@2 ~ ~] ' +
-  '[~ d5 f5 a5] [d6^2@2 c6 a5] [[[d5,g5,bb5] ~ ~ ~]@4 [g5 bb5h d6h f6h g6h f6h d6h bb5h]@5] [a5^1@3 ~] ' +
+  '[~ d5 f5 a5] [d6^2@2 c6 a5] [[[d5,g5,bb5] ~ ~ ~]@4 [g5 bb5h d6h f6h g6h f6h d6h bb5h]@4] [a5^1@3 ~] ' +
   '[[d5,f5,a5] ~ [d5,f5,a5] ~ ~ [f5,a5,d6] ~ ~] [[bb5,d6]@3 [a5 f5]] ' +
-  '[[[c5,f5,a5] ~ ~ ~]@4 [a4 c5h f5h a5h c6h e6h c6h a5h]@5] [c6^2@3 ~] ' +
+  '[[[c5,f5,a5] ~ ~ ~]@4 [a4 c5h f5h a5h c6h e6h c6h a5h]@4] [c6^2@3 ~] ' +
   '[~ [a5,d6] [c6,e6] [d6,f6]] [f6^2@3 ~] ' +
-  '[[[d6,g6] ~ ~ ~]@4 [g6 f6h d6h bb5h a5h g5h f5h d5h]@5] [[a4,d5,e5]@2 [g4,d5] [e4,a4]]'
+  '[[[d6,g6] ~ ~ ~]@4 [g6 f6h d6h bb5h a5h g5h f5h d5h]@4] [[a4,d5,e5]@2 [g4,d5] [e4,a4]]'
 // A distinct 120 BPM theme: brass-like calls over a fast string-like pulse.
 const fanfareLine = '[d5@2 f5 a5] [bb5@2 a5 f5] [a5@2 c6 a5] [g5@2 e5 c5] [a5@2 d6 c6] [bb5@2 d6 f6] [g5@2 bb5 d6] [e6@2 d6 a5]'
 // The same answers as two-note strums, foreshadowing and echoing the solo.
@@ -956,7 +966,7 @@ const arrive = { keys: 0.1, ensemble: 0.13, arp: 0.13, arpLpf: 3200,
 // The solo plays the clean electric guitar with long sustain and a light
 // reverb and echo.
 const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarDecay: 1.6, guitarSustain: 0.7,
-  guitarRelease: 1.1, guitarLpf: 4000, guitarDelay: 0.15, guitarFeedback: 0.25, guitarRoom: 0.3,
+  guitarRelease: 1.1, guitarLpf: 7000, guitarDrive: 0.1, guitarDelay: 0.08, guitarFeedback: 0.12, guitarRoom: 0.18,
   rhythm: 0.085, drums: 1, hats: 0.13, pad: 0.04, pump: 0, pluck: 0 }
 
 
@@ -1139,27 +1149,28 @@ family('space', {
 ])
 
 
-// ---- funk.strudel.js ----
-// Star Trader music — the funk pieces at 60, 80, 100 and 120 BPM and the
+// ---- disco.strudel.js ----
+// Star Trader music — the Space Disco pieces at 60, 80, 100 and 120 BPM and the
 // 20 BPM ramps between them: the main theme reworked as space funk with a
 // space-jazz colour (extended chords, Rhodes, vibraphone, muted trumpet and a
-// swung ride). Rendered
+// swung ride) and a synth-disco sheen (supersaw pad, pumping chords, a
+// filtered pluck, laser harp, zaps and beeps). Rendered
 // with library.strudel.js; see tools/music/README.md.
 
 // A funk vamp in D dorian with space-jazz extensions, two bars per chord:
 // Dm11, G13 (its major IV), Dm11, then Bbmaj9 and A7sus, ending on A to
 // resolve into every other block.
-const funkHarmony = { chords: "<Dm11 Dm11 G13 G13 Dm11 Dm11 Bb^9 A7sus>", roots: "<d2 d2 g1 g1 d2 d2 bb1 a1>",
+const discoHarmony = { chords: "<Dm11 Dm11 G13 G13 Dm11 Dm11 Bb^9 A7sus>", roots: "<d2 d2 g1 g1 d2 d2 bb1 a1>",
   rootNumbers: "<38 38 31 31 38 38 34 33>" }
 
-// The funk pieces have two themes, like the space pieces. Theme C, the main
+// The Space Disco pieces have two themes, like the space pieces. Theme C, the main
 // theme's melody (melodyA, one bar per chord), plays at 60 and 120 BPM with the
 // same note values, so 120 is exactly double time: on a talkbox lead, doubled
 // on clavinet at 120. Theme D, a syncopated clavinet riff, plays at 80 and 100.
 const themeC = '<' + melodyA + '>'
 // Theme D: sixteenth-note steps, one bar per chord. Over G9 it uses B natural,
 // the dorian colour of funk.
-const funkRiff = '<' +
+const discoRiff = '<' +
   '[[d5 ~ f5 d5] [~ a4 c5 ~] [d5 ~ ~ f5] [~ e5 d5 ~]] ' +
   '[[d5 ~ f5 d5] [~ a4 c5 ~] [f5 ~ e5 d5] [c5 ~ a4 ~]] ' +
   '[[b4 ~ d5 b4] [~ f4 a4 ~] [b4 ~ ~ d5] [~ c5 b4 ~]] ' +
@@ -1195,78 +1206,92 @@ const trumpetLine = '<~ [~ ~ [a5 g5] [e5 d5]] ~ [~ ~ [d5 e5] [f5 a5]] ' +
 const hornAnswers = '<~ [~ ~ ~ ~ ~ ~ [a4 c5] d5] ~ [~ [b4 d5] ~ [f5 e5] ~ d5 ~ ~] ' +
   '~ [~ ~ ~ ~ ~ ~ [f5 g5] a5] ~ [~ [g5 e5] ~ [d5 e5] ~ a4 ~ ~]>'
 
-// The funk pieces' settings, shared by the pieces and the ramps between them.
-const funkAt = {
+// The Space Disco pieces' settings, shared by the pieces and the ramps between them.
+const discoAt = {
   // Theme C, slow and sultry space jazz: talkbox lead, Rhodes, vibraphone and
   // a muted trumpet over slap bass, a swung ride and the laser harp.
   60: {
-    oohs: 0.05, moog: 0.06, glue: 0.5,
+    oohs: 0.075, moog: 0.06, glue: 0.5,
     keys: 0.13, ensemble: 0.15, bass: 0, slap: 0.16, slapNotes: slapLine, talk: 0.12,
     talkNotes: themeC, laser: 0.06, scratch: 0.04, groove: 0.3, swingRide: 0.025, pad: 0.09,
     halo: 0.075, vibes: 0.07, vibesNotes: vibesLine, trumpet: 0.08, trumpetNotes: trumpetLine,
-    bells: 0.04, beeps: 0.03
+    bells: 0.04, beeps: 0.03,
+    pluck: 0.025
   },
   // Theme D: the clavinet riff with slap bass, chicken scratch and horn stabs,
   // the trumpet answering and vibraphone above.
   80: {
-    oohs: 0.04, moog: 0.08, glue: 0.6, brassLine: 0.05, brassLineNotes: hornAnswers,
+    oohs: 0.06, moog: 0.08, glue: 0.6, brassLine: 0.075, brassLineNotes: hornAnswers,
     keys: 0.1, ensemble: 0.12, bass: 0, slap: 0.18, slapNotes: slapLine, clav: 0.12,
-    clavNotes: funkRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.06, swingRide: 0.02,
+    clavNotes: discoRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.06, swingRide: 0.02,
     organ: 0.06, laser: 0.03, pad: 0.06, vibes: 0.05, vibesNotes: vibesLine, trumpet: 0.08,
-    trumpetNotes: trumpetLine
+    trumpetNotes: trumpetLine,
+    pump: 0.03,
+    pluck: 0.035,
+    openhat: 0.012
   },
   // Theme D, fuller: organ, congas and tambourine join the band.
   100: {
-    oohs: 0.05, moog: 0.1, glue: 0.8, brassLine: 0.06, brassLineNotes: hornAnswers, openhat: 0.015,
+    oohs: 0.075, moog: 0.1, glue: 0.8, brassLine: 0.09, brassLineNotes: hornAnswers, openhat: 0.015,
     keys: 0.09, ensemble: 0.12, bass: 0, slap: 0.17, slapNotes: slapLine, clav: 0.12,
-    clavNotes: funkRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.06,
+    clavNotes: discoRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.06,
     swingRide: 0.02, congas: 0.08, tambourine: 0.04, laser: 0.03, vibes: 0.04,
-    vibesNotes: vibesLine, trumpet: 0.07, trumpetNotes: trumpetLine
+    vibesNotes: vibesLine, trumpet: 0.07, trumpetNotes: trumpetLine,
+    pad: 0.05,
+    pump: 0.045,
+    pluck: 0.04,
+    zaps: 0.02,
+    beeps: 0.02
   },
   // Theme C at double time: talkbox and clavinet in unison over the full band,
   // horns answering, a held choir and a Moog bass under the slap bass, congas,
   // tambourine, open hats and the swung ride, glued by more reverb and a
   // slapback echo, with the laser harp above.
   120: {
-    oohs: 0.06, moog: 0.12, glue: 1, brassLine: 0.08, brassLineNotes: hornAnswers, openhat: 0.02,
+    oohs: 0.09, moog: 0.12, glue: 1, brassLine: 0.12, brassLineNotes: hornAnswers, openhat: 0.02,
     keys: 0.09, ensemble: 0.09, bass: 0, slap: 0.17, slapNotes: slapLine, talk: 0.11,
     talkNotes: themeC, clav: 0.08, clavNotes: themeC, scratch: 0.07, brass: 0.1, organ: 0.06,
-    groove: 0.585, hats: 0.06, swingRide: 0.025, congas: 0.12, tambourine: 0.06, laser: 0.06,
-    vibes: 0.03, vibesNotes: vibesLine, trumpet: 0.06, trumpetNotes: trumpetLine
+    groove: 0.585, hats: 0.06, swingRide: 0.025, congas: 0.12, tambourine: 0.06, laser: 0.08,
+    vibes: 0.03, vibesNotes: vibesLine, trumpet: 0.06, trumpetNotes: trumpetLine,
+    pad: 0.05,
+    pump: 0.055,
+    pluck: 0.045,
+    zaps: 0.025,
+    beeps: 0.02
   },
 }
-const funkRamp = (from, to, next) => familyRamp(funkAt, funkHarmony, from, to, next)
+const discoRamp = (from, to, next) => familyRamp(discoAt, discoHarmony, from, to, next)
 
-family('funk', {
-  funk_60: block({ from: 60, ...funkHarmony, ...funkAt[60], next: { funk_rise_80: 2 } }),
-  funk_80: block({ from: 80, ...funkHarmony, ...funkAt[80], next: { funk_rise_100: 2, funk_fall_60: 1 } }),
-  funk_100: block({ from: 100, ...funkHarmony, ...funkAt[100], next: { funk_rise_120: 2, funk_fall_80: 1 } }),
-  funk_120: block({ from: 120, ...funkHarmony, ...funkAt[120], next: { funk_fall_100: 2 } }),
-  // Ramps between the funk pieces, 20 BPM each way.
-  funk_rise_80: funkRamp(60, 80, { funk_80: 1 }),
-  funk_rise_100: funkRamp(80, 100, { funk_100: 1 }),
-  funk_rise_120: funkRamp(100, 120, { funk_120: 1 }),
-  funk_fall_100: funkRamp(120, 100, { funk_100: 1 }),
-  funk_fall_80: funkRamp(100, 80, { funk_80: 1 }),
-  funk_fall_60: funkRamp(80, 60, { funk_60: 1 }),
+family('disco', {
+  disco_60: block({ from: 60, ...discoHarmony, ...discoAt[60], next: { disco_rise_80: 2 } }),
+  disco_80: block({ from: 80, ...discoHarmony, ...discoAt[80], next: { disco_rise_100: 2, disco_fall_60: 1 } }),
+  disco_100: block({ from: 100, ...discoHarmony, ...discoAt[100], next: { disco_rise_120: 2, disco_fall_80: 1 } }),
+  disco_120: block({ from: 120, ...discoHarmony, ...discoAt[120], next: { disco_fall_100: 2 } }),
+  // Ramps between the Space Disco pieces, 20 BPM each way.
+  disco_rise_80: discoRamp(60, 80, { disco_80: 1 }),
+  disco_rise_100: discoRamp(80, 100, { disco_100: 1 }),
+  disco_rise_120: discoRamp(100, 120, { disco_120: 1 }),
+  disco_fall_100: discoRamp(120, 100, { disco_100: 1 }),
+  disco_fall_80: discoRamp(100, 80, { disco_80: 1 }),
+  disco_fall_60: discoRamp(80, 60, { disco_60: 1 }),
 }, [
-  'funk_60', 'funk_rise_80', 'funk_80', 'funk_rise_100', 'funk_100', 'funk_rise_120', 'funk_120',
-  'funk_fall_100', 'funk_100', 'funk_fall_80', 'funk_80', 'funk_fall_60', 'funk_60',
+  'disco_60', 'disco_rise_80', 'disco_80', 'disco_rise_100', 'disco_100', 'disco_rise_120', 'disco_120',
+  'disco_fall_100', 'disco_100', 'disco_fall_80', 'disco_80', 'disco_fall_60', 'disco_60',
 ])
 
 
-// ---- phonk.strudel.js ----
-// Star Trader music — the phonk pieces at 60, 80, 100 and 120 BPM and the
+// ---- night.strudel.js ----
+// Star Trader music — the Night Drift pieces at 60, 80, 100 and 120 BPM and the
 // 20 BPM ramps between them: dark Memphis and drift phonk in space, with
 // cowbell melodies, sliding 808s, trap hats and a half-time phonk kit.
 // Rendered with library.strudel.js; see tools/music/README.md.
 
 // A dark minor cycle, two bars per chord: Dm, Bb, Gm and A7, whose C sharp
 // (harmonic minor) pulls hard back to D minor.
-const phonkHarmony = { chords: "<Dm Dm Bb Bb Gm Gm A7 A7>", roots: "<d2 d2 bb1 bb1 g1 g1 a1 a1>",
+const nightHarmony = { chords: "<Dm Dm Bb Bb Gm Gm A7 A7>", roots: "<d2 d2 bb1 bb1 g1 g1 a1 a1>",
   rootNumbers: "<38 38 34 34 31 31 33 33>" }
 
-// The phonk pieces have two themes, like the other families. Theme E, a busy
+// The Night Drift pieces have two themes, like the other families. Theme E, a busy
 // cowbell melody in sixteenth-note steps, plays at 60 and 120 BPM with the same
 // note values, so 120 is exactly double time. Theme F, sparser and darker,
 // plays on the distorted synth lead at 80 and 100 BPM. Both use one bar per
@@ -1291,65 +1316,69 @@ const themeF = '<' +
   '[[a4 ~ ~ db5] [~ ~ e5 ~] [a5 ~ g5 ~] [e5 ~ ~ ~]]>'
 
 // A picked bass guitar groove under the 808, two bars per chord.
-const phonkBassLine = '<' +
+const nightBassLine = '<' +
   '[[d2 ~ ~ d2] [~ ~ f2 ~] [a2 ~ ~ g2] [~ f2 ~ ~]] [[d2 ~ ~ d2] [~ ~ f2 ~] [c3 ~ a2 ~] [g2 ~ e2 ~]] ' +
   '[[bb1 ~ ~ bb1] [~ ~ d2 ~] [f2 ~ ~ e2] [~ d2 ~ ~]] [[bb1 ~ ~ bb1] [~ ~ d2 ~] [a2 ~ f2 ~] [d2 ~ c2 ~]] ' +
   '[[g1 ~ ~ g1] [~ ~ bb1 ~] [d2 ~ ~ c2] [~ bb1 ~ ~]] [[g1 ~ ~ g1] [~ ~ bb1 ~] [f2 ~ d2 ~] [bb1 ~ a1 ~]] ' +
   '[[a1 ~ ~ a1] [~ ~ db2 ~] [e2 ~ ~ g2] [~ e2 ~ ~]] [[a1 ~ ~ a1] [~ ~ db2 ~] [g2 ~ e2 ~] [db2 ~ a1 ~]]>'
 
-// The phonk pieces' settings, shared by the pieces and the ramps between them.
+// A bowed bass: two long notes per chord, root then fifth, in the contrabass
+// range.
+const bowedLine = '<d2 [d2@3 a1] bb1 [bb1@3 f1] g1 [g1@3 d2] a1 [a1@3 e1]>'
+
+// The Night Drift pieces' settings, shared by the pieces and the ramps between them.
 // The kit sits under the music; rimshots, toms, shaker and open hats vary it.
-const phonkAt = {
+const nightAt = {
   // Theme E, slow and eerie: the cowbell over long sliding 808s and the bass
   // guitar, a dark pad, a lowpassed choir and crackle, the kit held back.
   60: {
-    brass: 0.04, ensemble: 0, bass: 0, cowbell: 0.08, cowbellNotes: themeE, bass808: 0.234, slide808: true,
-    bassGuitar: 0.195, bassGuitarNotes: phonkBassLine, pad: 0.07, choir: 0.05, halo: 0.06,
+    bowed: 0.1, bowedNotes: bowedLine, brass: 0.04, ensemble: 0, bass: 0, cowbell: 0.08, cowbellNotes: themeE, bass808: 0.234, slide808: true,
+    bassGuitar: 0.195, bassGuitarNotes: nightBassLine, pad: 0.07, choir: 0.05, halo: 0.06,
     crackle: 0.05, phonkKit: 0.175, trap: 0.017, rim: 0.087, shaker: 0.028
   },
   // Theme F on the dark lead, with the kit, trap hats, rimshots, toms and a
   // half-time clap.
   80: {
-    brass: 0.06, ensemble: 0, bass: 0, dark: 0.1, darkNotes: themeF, bass808: 0.286, slide808: true,
-    bassGuitar: 0.234, bassGuitarNotes: phonkBassLine, phonkKit: 0.266, trap: 0.025, clap: 0.035,
+    bowed: 0.1, bowedNotes: bowedLine, brass: 0.06, ensemble: 0, bass: 0, dark: 0.1, darkNotes: themeF, bass808: 0.286, slide808: true,
+    bassGuitar: 0.234, bassGuitarNotes: nightBassLine, phonkKit: 0.266, trap: 0.025, clap: 0.035,
     clapPattern: "~ ~ pink ~", rim: 0.105, toms: 0.028, shaker: 0.035, pad: 0.05, choir: 0.05,
     crackle: 0.04
   },
   // Theme F, heavier: the cowbell doubles the lead an octave up.
   100: {
-    brass: 0.07, ensemble: 0, bass: 0, dark: 0.12, darkNotes: themeF, cowbell: 0.05,
+    bowed: 0.09, bowedNotes: bowedLine, brass: 0.07, ensemble: 0, bass: 0, dark: 0.12, darkNotes: themeF, cowbell: 0.05,
     cowbellNotes: octaveUp(themeF), bass808: 0.325, slide808: true, bassGuitar: 0.234,
-    bassGuitarNotes: phonkBassLine, phonkKit: 0.343, trap: 0.035, clap: 0.044,
+    bassGuitarNotes: nightBassLine, phonkKit: 0.343, trap: 0.035, clap: 0.044,
     clapPattern: "~ ~ pink ~", rim: 0.122, toms: 0.035, shaker: 0.035, openhat: 0.014, choir: 0.06,
     chop: 0.03, crackle: 0.03
   },
   // Theme E at double time: drift phonk, cowbell up front over the full kit.
   120: {
-    brass: 0.07, ensemble: 0, bass: 0, cowbell: 0.13, cowbellNotes: themeE, dark: 0.05,
+    bowed: 0.08, bowedNotes: bowedLine, brass: 0.07, ensemble: 0, bass: 0, cowbell: 0.13, cowbellNotes: themeE, dark: 0.05,
     darkNotes: octaveDown(themeE), bass808: 0.338, slide808: true, bassGuitar: 0.208,
-    bassGuitarNotes: phonkBassLine, phonkKit: 0.392, trap: 0.039, clap: 0.054,
+    bassGuitarNotes: nightBassLine, phonkKit: 0.392, trap: 0.039, clap: 0.054,
     clapPattern: "~ ~ pink ~", rim: 0.122, toms: 0.042, shaker: 0.042, openhat: 0.021, choir: 0.06,
     zaps: 0.03, crackle: 0.03
   },
 }
-const phonkRamp = (from, to, next) => familyRamp(phonkAt, phonkHarmony, from, to, next)
+const nightRamp = (from, to, next) => familyRamp(nightAt, nightHarmony, from, to, next)
 
-family('phonk', {
-  phonk_60: block({ from: 60, ...phonkHarmony, ...phonkAt[60], next: { phonk_rise_80: 2 } }),
-  phonk_80: block({ from: 80, ...phonkHarmony, ...phonkAt[80], next: { phonk_rise_100: 2, phonk_fall_60: 1 } }),
-  phonk_100: block({ from: 100, ...phonkHarmony, ...phonkAt[100], next: { phonk_rise_120: 2, phonk_fall_80: 1 } }),
-  phonk_120: block({ from: 120, ...phonkHarmony, ...phonkAt[120], next: { phonk_fall_100: 2 } }),
-  // Ramps between the phonk pieces, 20 BPM each way.
-  phonk_rise_80: phonkRamp(60, 80, { phonk_80: 1 }),
-  phonk_rise_100: phonkRamp(80, 100, { phonk_100: 1 }),
-  phonk_rise_120: phonkRamp(100, 120, { phonk_120: 1 }),
-  phonk_fall_100: phonkRamp(120, 100, { phonk_100: 1 }),
-  phonk_fall_80: phonkRamp(100, 80, { phonk_80: 1 }),
-  phonk_fall_60: phonkRamp(80, 60, { phonk_60: 1 }),
+family('night', {
+  night_60: block({ from: 60, ...nightHarmony, ...nightAt[60], next: { night_rise_80: 2 } }),
+  night_80: block({ from: 80, ...nightHarmony, ...nightAt[80], next: { night_rise_100: 2, night_fall_60: 1 } }),
+  night_100: block({ from: 100, ...nightHarmony, ...nightAt[100], next: { night_rise_120: 2, night_fall_80: 1 } }),
+  night_120: block({ from: 120, ...nightHarmony, ...nightAt[120], next: { night_fall_100: 2 } }),
+  // Ramps between the Night Drift pieces, 20 BPM each way.
+  night_rise_80: nightRamp(60, 80, { night_80: 1 }),
+  night_rise_100: nightRamp(80, 100, { night_100: 1 }),
+  night_rise_120: nightRamp(100, 120, { night_120: 1 }),
+  night_fall_100: nightRamp(120, 100, { night_100: 1 }),
+  night_fall_80: nightRamp(100, 80, { night_80: 1 }),
+  night_fall_60: nightRamp(80, 60, { night_60: 1 }),
 }, [
-  'phonk_60', 'phonk_rise_80', 'phonk_80', 'phonk_rise_100', 'phonk_100', 'phonk_rise_120',
-  'phonk_120', 'phonk_fall_100', 'phonk_100', 'phonk_fall_80', 'phonk_80', 'phonk_fall_60',
-  'phonk_60',
+  'night_60', 'night_rise_80', 'night_80', 'night_rise_100', 'night_100', 'night_rise_120',
+  'night_120', 'night_fall_100', 'night_100', 'night_fall_80', 'night_80', 'night_fall_60',
+  'night_60',
 ])
 
 
@@ -1360,40 +1389,40 @@ family('phonk', {
 // not re-render anything.
 
 // From the main track.
-link('drift_a', { space: 1, funk_60: 1, phonk_60: 1 })
-link('drift_b', { space: 1, funk_60: 1 })
-link('rise_80', { space_80: 1, funk_80: 1 })
-link('depart_a', { space_80: 1, funk_80: 1 })
-link('depart_b', { space_80: 1, funk_80: 1, phonk_80: 1 })
-link('rise_100', { funk_100: 1 })
-link('cruise_a', { space_100: 1, funk_100: 1 })
-link('cruise_b', { space_100: 1, funk_100: 1, phonk_100: 1 })
-link('solo', { funk_100: 1 })
-link('rise_120', { space_120: 1, funk_120: 1 })
-link('arrive_a', { space_120: 1, funk_120: 1 })
-link('arrive_b', { space_120: 1, funk_120: 1, phonk_120: 1 })
-link('fanfare', { space_120: 1, funk_120: 1, phonk_120: 1 })
-link('fall_100', { space_100: 1, funk_100: 1, phonk_100: 1 })
-link('wind', { space_80: 1, funk_80: 1, phonk_80: 1 })
-link('fall_60', { space: 1, funk_60: 1, phonk_60: 1 })
+link('drift_a', { space: 1, disco_60: 1, night_60: 1 })
+link('drift_b', { space: 1, disco_60: 1 })
+link('rise_80', { space_80: 1, disco_80: 1 })
+link('depart_a', { space_80: 1, disco_80: 1 })
+link('depart_b', { space_80: 1, disco_80: 1, night_80: 1 })
+link('rise_100', { disco_100: 1 })
+link('cruise_a', { space_100: 1, disco_100: 1 })
+link('cruise_b', { space_100: 1, disco_100: 1, night_100: 1 })
+link('solo', { disco_100: 1 })
+link('rise_120', { space_120: 1, disco_120: 1 })
+link('arrive_a', { space_120: 1, disco_120: 1 })
+link('arrive_b', { space_120: 1, disco_120: 1, night_120: 1 })
+link('fanfare', { space_120: 1, disco_120: 1, night_120: 1 })
+link('fall_100', { space_100: 1, disco_100: 1, night_100: 1 })
+link('wind', { space_80: 1, disco_80: 1, night_80: 1 })
+link('fall_60', { space: 1, disco_60: 1, night_60: 1 })
 
 // From the space pieces.
-link('space', { drift_a: 2, drift_b: 1, funk_60: 1, phonk_60: 1 })
-link('space_80', { depart_a: 1, depart_b: 1, rise_90: 1, funk_80: 1, phonk_80: 1 })
-link('space_100', { cruise_a: 1, rise_110: 1, fall_90: 1, funk_100: 1, phonk_100: 1 })
-link('space_120', { arrive_a: 1, arrive_b: 1, fanfare: 1, fall_110: 1, funk_120: 1, phonk_120: 1 })
+link('space', { drift_a: 2, drift_b: 1, disco_60: 1, night_60: 1 })
+link('space_80', { depart_a: 1, depart_b: 1, rise_90: 1, disco_80: 1, night_80: 1 })
+link('space_100', { cruise_a: 1, rise_110: 1, fall_90: 1, disco_100: 1, night_100: 1 })
+link('space_120', { arrive_a: 1, arrive_b: 1, fanfare: 1, fall_110: 1, disco_120: 1, night_120: 1 })
 
-// From the funk pieces.
-link('funk_60', { drift_a: 1, space: 1, phonk_60: 1 })
-link('funk_80', { depart_a: 1, rise_90: 1, space_80: 1, phonk_80: 1 })
-link('funk_100', { cruise_a: 1, rise_110: 1, space_100: 1, phonk_100: 1 })
-link('funk_120', { arrive_a: 1, fall_110: 1, space_120: 1, phonk_120: 1 })
+// From the Space Disco pieces.
+link('disco_60', { drift_a: 1, space: 1, night_60: 1 })
+link('disco_80', { depart_a: 1, rise_90: 1, space_80: 1, night_80: 1 })
+link('disco_100', { cruise_a: 1, rise_110: 1, space_100: 1, night_100: 1 })
+link('disco_120', { arrive_a: 1, fall_110: 1, space_120: 1, night_120: 1 })
 
-// From the phonk pieces.
-link('phonk_60', { drift_a: 1, space: 1, funk_60: 1 })
-link('phonk_80', { depart_b: 1, rise_90: 1, funk_80: 1 })
-link('phonk_100', { cruise_b: 1, fall_90: 1, funk_100: 1, space_100: 1 })
-link('phonk_120', { arrive_b: 1, fall_110: 1, funk_120: 1, space_120: 1 })
+// From the Night Drift pieces.
+link('night_60', { drift_a: 1, space: 1, disco_60: 1 })
+link('night_80', { depart_b: 1, rise_90: 1, disco_80: 1 })
+link('night_100', { cruise_b: 1, fall_90: 1, disco_100: 1, space_100: 1 })
+link('night_120', { arrive_b: 1, fall_110: 1, disco_120: 1, space_120: 1 })
 
 
 // strudel.cc: one pass through every block.

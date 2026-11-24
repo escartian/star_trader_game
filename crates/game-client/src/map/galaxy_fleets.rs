@@ -102,6 +102,13 @@ impl Map {
         let art = Artwork::preload(ui.ctx());
         let gliding = self.session.gliding();
         let mut resting: Vec<(game_core::SystemId, usize)> = Vec::new();
+        // Markers already on the map (own chips, then traders as placed), so a
+        // trader never covers one; (centre, radius) in points.
+        let mut placed: Vec<(egui::Pos2, f32)> = self
+            .galaxy_fleet_hits
+            .iter()
+            .map(|hit| (hit.bounds.center(), super::fleets::CHIP))
+            .collect();
         for trader in self.session.traffic() {
             let Some(ship) = trader.state.ships.first() else {
                 continue;
@@ -126,7 +133,10 @@ impl Map {
                     };
                     let anchor = self.camera.project(position(system), rect);
                     // Clear of the star and of own chips (lower left).
-                    let at = trader_marker::berth_spot(anchor, STAR_CLEARANCE, count);
+                    let at = clear_of(
+                        trader_marker::berth_spot(anchor, STAR_CLEARANCE, count),
+                        &placed,
+                    );
                     super::fleets::tether(
                         painter,
                         anchor,
@@ -142,7 +152,7 @@ impl Map {
                     else {
                         continue;
                     };
-                    let at = self.camera.project(world, rect);
+                    let at = clear_of(self.camera.project(world, rect), &placed);
                     if let Some(bound) = self
                         .session
                         .trader_heading(trader)
@@ -158,6 +168,7 @@ impl Map {
                     at
                 }
             };
+            placed.push((at, trader_marker::TRADER));
             if rect.expand(trader_marker::TRADER).contains(at) {
                 trader_marker::paint(
                     painter,
@@ -204,4 +215,35 @@ impl Map {
             ));
         }
     }
+}
+
+/// A trader's marker moved off the markers already `placed` (own fleet
+/// chips, other traders) that it would overlap: traders resting at or
+/// leaving a star sit right by your fleets there. Each overlap pushes it
+/// straight away from that marker's centre; a few passes settle chains.
+/// Display only.
+fn clear_of(at: egui::Pos2, placed: &[(egui::Pos2, f32)]) -> egui::Pos2 {
+    let mut at = at;
+    for _ in 0..4 {
+        let mut moved = false;
+        for (centre, radius) in placed {
+            let gap = radius + trader_marker::TRADER + 3.0;
+            let offset = at - *centre;
+            if offset.length() >= gap - 0.01 {
+                continue;
+            }
+            // Dead centre: step aside to the right.
+            let direction = if offset.length() > 0.5 {
+                offset.normalized()
+            } else {
+                Vec2::X
+            };
+            at = *centre + direction * gap;
+            moved = true;
+        }
+        if !moved {
+            break;
+        }
+    }
+    at
 }

@@ -63,6 +63,8 @@ pub struct Map {
     menu_still_time: f64,
     /// Display options last sent to egui; `None` means egui's defaults.
     applied_options: Option<crate::preferences::ClientOptions>,
+    /// The in-game Songbook (Menu page), like the main menu's.
+    songbook: (bool, songbook::View),
 }
 
 fn position(system: &StarSystem) -> DVec3 {
@@ -131,6 +133,7 @@ impl Map {
             menu_seed: fastrand::u64(..),
             menu_still_time: menu_backdrop::STILL_TIME,
             applied_options: None,
+            songbook: (false, songbook::View::default()),
         }
     }
 
@@ -289,6 +292,7 @@ impl Map {
         self.session.show_combat_report(ctx);
         self.session.show_victory(ctx, &self.session_systems);
         self.session.show_factions(ctx, &self.session_systems);
+        self.show_game_songbook(ctx);
         // Taps on the strip or sheet may ask for another page: show it at once.
         if let Some(tab) = self.session.take_sheet_request() {
             self.sheet = tab;

@@ -66,7 +66,7 @@ No participants have been contacted and no playtest results are claimed here.
   between runs, and a ship arriving at a body flies in before taking its berth.
 - [ ] Press Stop mid-advance; confirm no further runs execute. Advance into a contact
   and confirm its decision appears at the top of the sheet.
-- [ ] At phone width (390 × 844), use only the action bar, sheet pages and alert
+- [ ] At phone width (390 × 844), use only the status strip, sheet pages and alert
   badge for a delivery; open Trade and confirm it fills the screen with Back.
 - [ ] Start a trade route Sol port to Meridian port and Advance: the fleet trades at
   both ends without asking for orders, the log explains each stop, and credits

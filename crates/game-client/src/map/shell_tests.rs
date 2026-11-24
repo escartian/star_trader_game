@@ -1,5 +1,6 @@
 //! The phone-first shell: strip, action bar, sheet pages and full-screen panels.
 use super::*;
+use crate::session::SheetTab;
 use egui::Vec2;
 
 const PHONE: Vec2 = Vec2::new(390.0, 844.0);
@@ -79,7 +80,7 @@ fn multi_fleet() -> Map {
 }
 
 #[test]
-fn a_phone_shows_the_strip_and_action_bar_instead_of_floating_cards() {
+fn a_phone_shows_the_strip_with_its_actions_instead_of_floating_cards() {
     let ctx = egui::Context::default();
     let mut map = multi_fleet();
     let labels = settle(&ctx, &mut map, PHONE);
@@ -92,10 +93,31 @@ fn a_phone_shows_the_strip_and_action_bar_instead_of_floating_cards() {
             "old card {old}"
         );
     }
-    // The action bar sits at the bottom of the screen, the strip at the top.
+    // No bottom bar: on a phone the actions take the strip's second row.
     let advance = shows(&ctx, &mut map, PHONE, "ADVANCE").unwrap();
-    assert!(advance.y > PHONE.y - 60.0);
-    assert!(shows(&ctx, &mut map, PHONE, "GALAXY").unwrap().y < 40.0);
+    let title = shows(&ctx, &mut map, PHONE, "GALAXY").unwrap();
+    assert!(title.y < 40.0 && advance.y > title.y && advance.y < 90.0);
+    // A wide window keeps title and actions on one row.
+    let advance = shows(&ctx, &mut map, DESKTOP, "ADVANCE").unwrap();
+    assert!((advance.y - shows(&ctx, &mut map, DESKTOP, "GALAXY").unwrap().y).abs() < 8.0);
+}
+
+#[test]
+fn the_fleets_and_menu_pages_close_with_their_close_button() {
+    let ctx = egui::Context::default();
+    let mut map = multi_fleet();
+    tap(&ctx, &mut map, PHONE, "Fleets");
+    assert_eq!(map.sheet, SheetTab::Fleets);
+    tap(&ctx, &mut map, PHONE, "Close");
+    assert_eq!(map.sheet, SheetTab::Selection);
+    tap(&ctx, &mut map, PHONE, "Menu");
+    tap(&ctx, &mut map, PHONE, "Songbook · Music");
+    assert!(map.songbook.0, "the in-game songbook opens");
+    // On a phone it fills the screen; Back returns to the Menu page.
+    tap(&ctx, &mut map, PHONE, "Back");
+    assert!(!map.songbook.0);
+    tap(&ctx, &mut map, PHONE, "Close");
+    assert_eq!(map.sheet, SheetTab::Selection);
 }
 
 #[test]

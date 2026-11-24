@@ -79,13 +79,12 @@ that courses also route around; landed fleets show an amber pad on the body
 ## Command-console style and NPC traffic
 
 The layout is phone-first (see the [rework plan](PHONE_FIRST_REWORK.md)): the map
-takes the screen, framed by three panels.
+takes the screen, framed by two panels.
 
 | Part | Position | Contents |
 | --- | --- | --- |
-| Status strip | top | Back (system view), place name, credits, run number, alert badge |
-| Action bar | bottom | latest event; **Fleets**, **ADVANCE** / **STOP** with the single-run clock, **Menu** |
-| Context sheet | above the action bar, or docked on the right when the window is wider than tall | the guide and any contact decision first, then one page |
+| Status strip | top | Back (system view), place name, **Fleets**, **ADVANCE** / **STOP** with the single-run clock, **Menu**, then credits, run number and alert badge; below 720 points wide the actions take a second row |
+| Context sheet | bottom, or docked on the right when the window is wider than tall | the guide and any contact decision first, then one page |
 | Map buttons | map's top-right corner | overview or reset, focus selection and fleet |
 
 The sheet's pages:
@@ -96,8 +95,14 @@ The sheet's pages:
   ROUTE**.
 - **Fleets:** the ship used for trading with its cargo and fuel, then every fleet
   (status, Wait, Land / Lift off, route controls) and NPC traffic.
-- **Menu:** **Trade**, **Fleets & shipyard**, **Navigation** and **Session &
-  saves**.
+- **Menu:** **Songbook · Music** (play or queue any part, as from the main
+  menu), **Trade**, **Fleets & shipyard**, **Navigation**, **Victory**,
+  **Factions**, **Session & saves** and **Settings**, then **Latest events**
+  (the last 12 messages, newest first, highlighted; formerly the action bar's
+  line and the Session window's log).
+
+Fleets and Menu each have a **Close** button back to Selection; tapping their
+strip button again does the same.
 
 Tapping a body or system shows Selection; tapping a fleet chip shows Fleets.
 The amber alert badge counts fleets needing a decision or orders: tap it to

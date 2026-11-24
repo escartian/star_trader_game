@@ -1,6 +1,7 @@
-//! The session's parts of the phone-first shell: the status strip's numbers and
-//! alert badge, the action bar (Fleets, Advance, Menu) and the sheet contents
-//! that belong to the session (guide, contact decision, fleet list, menu).
+//! The session's parts of the phone-first shell: the status strip's numbers,
+//! alert badge and actions (Fleets, Advance, Menu) and the sheet contents
+//! that belong to the session (guide, contact decision, fleet list, menu and
+//! its event log).
 //! Layout (which panel goes where) is the map's job; see `map::shell`.
 use super::LocalSession;
 use crate::theme::icons::{self, Icon};
@@ -92,37 +93,18 @@ impl LocalSession {
         self.request_sheet_for(next);
     }
 
-    /// The bottom action bar: the latest message, then Fleets, Advance (with the
-    /// single-run clock) and Menu.
-    pub fn action_bar(&mut self, ui: &mut egui::Ui, tab: &mut SheetTab) {
-        if !self.notice.is_empty() {
-            ui.horizontal(|ui| {
-                icons::glyph(ui, Icon::Info, CYAN, "Latest event");
-                ui.add(egui::Label::new(RichText::new(&self.notice).small()).truncate());
-            });
-        }
-        ui.columns(3, |columns| {
-            let tab_button =
-                |ui: &mut egui::Ui, icon, label, page: SheetTab, tab: &mut SheetTab| {
-                    ui.vertical_centered(|ui| {
-                        let on = *tab == page;
-                        if icons::labeled_toggle(ui, icon, label, on).clicked() {
-                            *tab = if on { SheetTab::Selection } else { page };
-                        }
-                    });
-                };
-            tab_button(
-                &mut columns[0],
-                Icon::Fleets,
-                "Fleets",
-                SheetTab::Fleets,
-                tab,
-            );
-            columns[1].vertical_centered(|ui| {
-                ui.horizontal(|ui| self.run_controls(ui));
-            });
-            tab_button(&mut columns[2], Icon::Settings, "Menu", SheetTab::Menu, tab);
-        });
+    /// The strip's actions: Fleets, Advance (with the single-run clock) and
+    /// Menu. A tab toggles its sheet page.
+    pub fn strip_actions(&mut self, ui: &mut egui::Ui, tab: &mut SheetTab) {
+        let mut tab_button = |ui: &mut egui::Ui, icon, label, page: SheetTab| {
+            let on = *tab == page;
+            if icons::labeled_toggle(ui, icon, label, on).clicked() {
+                *tab = if on { SheetTab::Selection } else { page };
+            }
+        };
+        tab_button(ui, Icon::Fleets, "Fleets", SheetTab::Fleets);
+        self.run_controls(ui);
+        tab_button(ui, Icon::Settings, "Menu", SheetTab::Menu);
     }
 
     /// Always at the top of the sheet: the guide, and the selected fleet's
@@ -189,11 +171,7 @@ impl LocalSession {
                 "Factions",
                 "Territory, relations and your standing with each faction",
             ),
-            (
-                Icon::Save,
-                "Session & saves",
-                "Save, load, new game and log",
-            ),
+            (Icon::Save, "Session & saves", "Save, load and new game"),
             (
                 Icon::Settings,
                 "Settings",
@@ -228,10 +206,28 @@ impl LocalSession {
                 }
             }
         }
+        self.event_log(ui);
         // The browser build has no main menu yet: it starts straight in a game.
         if !cfg!(target_arch = "wasm32") {
             ui.separator();
             self.main_menu_controls(ui);
         }
+    }
+
+    /// The Menu page's event log, newest first (the latest event opens it).
+    fn event_log(&mut self, ui: &mut egui::Ui) {
+        ui.separator();
+        egui::CollapsingHeader::new(RichText::new("Latest events").strong())
+            .id_salt("event_log")
+            .default_open(true)
+            .show(ui, |ui| {
+                if self.log.is_empty() {
+                    ui.weak("Nothing yet.");
+                }
+                for (index, message) in self.log.iter().rev().take(12).enumerate() {
+                    let text = RichText::new(message).small();
+                    ui.label(if index == 0 { text.color(CYAN) } else { text });
+                }
+            });
     }
 }

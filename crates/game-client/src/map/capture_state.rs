@@ -47,6 +47,11 @@ impl Map {
             "factions" => self.session.capture_factions(true)?,
             "factions-map" => self.session.capture_factions(false)?,
             "roster" => self.sheet = crate::session::SheetTab::Fleets,
+            "game-menu" => self.sheet = crate::session::SheetTab::Menu,
+            "game-songbook" => {
+                self.sheet = crate::session::SheetTab::Menu;
+                self.songbook.0 = true;
+            }
             "unlock" => self.session.capture_unlock(),
             // "chooser@SECONDS": the main menu at that moment of its animation.
             view if view.starts_with("chooser@") => {
@@ -228,6 +233,8 @@ mod tests {
             "market",
             "fleets",
             "saves",
+            "game-menu",
+            "game-songbook",
             "menu-songbook",
             "menu-songbook@cruise_a",
         ] {

@@ -24,7 +24,8 @@ hover, no right-drag) depth is the first thing to hurt.
 ## Interface principles
 
 1. **The map is the board; everything else is on demand.** Only a thin status
-   strip and one action bar stay on screen.
+   strip stays on screen (it holds the actions; the bottom action bar was
+   folded into it).
 2. **One decision at a time.** A single bottom sheet holds what was tapped. Sheets
    replace each other; they never stack.
 3. **Show only what can be acted on.** Other fleets' courses, NPC labels and orbit

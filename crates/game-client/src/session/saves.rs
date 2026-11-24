@@ -199,14 +199,6 @@ impl LocalSession {
                 "Plotting, reading, trading and fleet management take no time.\nOnly navigation runs (Advance or the clock button) move fleets and markets.",
             );
         });
-        ui.separator();
-        ui.horizontal(|ui| {
-            icons::glyph(ui, Icon::Log, GREEN, "Session log");
-            ui.heading("Log");
-        });
-        for message in self.log.iter().rev() {
-            ui.label(message);
-        }
     }
 
     fn slot_controls(&mut self, ui: &mut egui::Ui) {

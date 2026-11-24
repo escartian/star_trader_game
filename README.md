@@ -8,8 +8,8 @@ browser build compiles the same client to WebAssembly.
 
 - Click fleets on either map, select a planet/station/point of interest and plot
   the route from a destination card. Numeric controls are optional advanced tools.
-- A phone-first layout: status strip, action bar (Fleets, Advance, Menu) and one
-  context sheet; panels go full screen on narrow windows. Route feedback and live
+- A phone-first layout: a status strip with the actions (Fleets, Advance, Menu)
+  and one context sheet; panels go full screen on narrow windows. Route feedback and live
   NPC traffic shown with ship models on the map.
 - Galaxy navigation: drag to pan, pinch/wheel zoom, focus, overlap chooser,
   double-click system inspection, and separate local views with planets/stations.

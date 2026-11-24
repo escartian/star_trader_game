@@ -186,8 +186,9 @@ NPC traders in your flagship's star system that are out of hailing range, and on
 the raider bands there. The flagship then chases its quarry:
 
 - At once, and after every run (once everything has moved), a flagship within
-  reach opens the contact and Advance stops: a trader the hail card (trade,
-  demand cargo, attack, let go; within 20 million km and not docked), a band
+  reach opens the contact and Advance stops: a trader the hail card (demand
+  cargo, attack, let go; within 20 million km; at a port, docked beside it,
+  only its trade offer), a band
   the raider fight (within 20 million km). A quarry already in reach is
   contacted immediately.
 - Otherwise the course is re-plotted to where the quarry is now (a trader at a
@@ -199,6 +200,7 @@ the raider bands there. The flagship then chases its quarry:
   flagship, or when you give the flagship any other order (**Stop** issues a
   Wait). Only the flagship pursues.
 
+A docked flagship can pursue too: the chase plots its way out of the port.
 Saved as `pursuit` in navigation state and validated on load.
 
 ## Saves and multiplayer

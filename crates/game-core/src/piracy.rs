@@ -2,8 +2,12 @@
 //!
 //! - The flagship may **hail** an NPC trader within [`HAIL_KM`] of it, both
 //!   in open space or orbit (a fleet docked at a station or landed is out of
-//!   reach, and so is a trader docked at a station or laid up for a refit).
-//!   Hailing opens a `Trader` contact showing the trader's hold and hull.
+//!   reach, and so is a trader laid up for a refit). Hailing opens a `Trader`
+//!   contact showing the trader's hold and hull.
+//! - A trader **docked** at a station can be hailed only by a flagship docked
+//!   at the same port, and only to trade: the hail opens its `TraderOffer`
+//!   (its hold below list price, see `approach`); the station's guns rule out
+//!   demands and attacks.
 //! - **Let it go** (`Bypass`) ends the contact.
 //! - **Demand cargo** works only when the trader is outgunned: your fleet's
 //!   [`strength`] must reach [`yield_percent`] of the trader's (its
@@ -79,10 +83,18 @@ pub fn hail_check(
     }
     let npc = find(economy, trader)?;
     let theirs = &npc.state.ships[0];
-    if npc.refit_runs > 0 || matches!(theirs.location, Location::Docked(_)) {
+    if npc.refit_runs > 0 {
         return Err(NavigationError::TraderProtected.into());
     }
     let lead = state.ship(*record.ships.first().ok_or(FleetError::UnknownFleet)?)?;
+    // A docked trader can be hailed only from the same port, and only to
+    // trade: the station's guns protect it (see `hail`).
+    if let Location::Docked(port) = theirs.location {
+        return match lead.location {
+            Location::Docked(ours) if ours == port && state.navigation.run > 0 => Ok(()),
+            _ => Err(NavigationError::TraderProtected.into()),
+        };
+    }
     // Contacts need a run on record; nobody has met anyone on run 0.
     if state.navigation.run == 0
         || matches!(lead.location, Location::Docked(_) | Location::Landed { .. })
@@ -138,6 +150,16 @@ pub fn hail(
 ) -> Result<NavigationEvent, FleetMovementError> {
     hail_check(state, economy, player, fleet, trader, systems)?;
     let npc = find(economy, trader)?;
+    // At a port the station's guns allow trade only: its offer of its hold.
+    let docked = matches!(npc.state.ships[0].location, Location::Docked(_));
+    if docked && npc.state.ships[0].cargo_used() == 0 {
+        return Err(NavigationError::NothingToSell.into());
+    }
+    let kind = if docked {
+        EncounterKind::TraderOffer
+    } else {
+        EncounterKind::Trader
+    };
     let navigation = &mut state.navigation;
     let next = navigation
         .next_encounter_id
@@ -151,7 +173,7 @@ pub fn hail(
     let encounter = Encounter {
         id: navigation.next_encounter_id,
         fleet,
-        kind: EncounterKind::Trader,
+        kind,
         run: navigation.run,
         hostiles,
         band: None,

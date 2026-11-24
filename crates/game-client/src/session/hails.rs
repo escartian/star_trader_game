@@ -128,9 +128,19 @@ impl LocalSession {
                 ui.small(armed)
                     .on_hover_text("Anti-piracy gear and hired escort");
             }
+            let docked = matches!(
+                trader.state.ships[0].location,
+                game_core::travel::Location::Docked(_)
+            );
+            let tip = if docked {
+                "Docked at your port: under the station's guns it will only trade."
+            } else {
+                "Stop this trader: let it go, demand cargo or attack it."
+            };
+            let label = if docked { "Hail · trade" } else { "Hail" };
             if can_hail
-                && icons::button(ui, Icon::Contact, "Hail")
-                    .on_hover_text("Stop this trader: let it go, demand cargo or attack it.")
+                && icons::button(ui, Icon::Contact, label)
+                    .on_hover_text(tip)
                     .clicked()
             {
                 clicked = Some(Row::Hail);

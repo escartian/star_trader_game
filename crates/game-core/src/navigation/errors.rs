@@ -126,7 +126,8 @@ impl std::fmt::Display for NavigationError {
                  orbit, to hail it.",
             ),
             Self::TraderProtected => f.write_str(
-                "That trader is docked under a station's protection or laid up for a refit.",
+                "That trader is laid up for a refit, or docked under a station's protection: \
+                 dock at the same port to hail it, and then only to trade.",
             ),
             Self::WillNotYield => f.write_str(
                 "The trader will not hand over cargo to a fleet this weak; attack or let it go.",

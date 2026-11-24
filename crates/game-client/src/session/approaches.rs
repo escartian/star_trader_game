@@ -34,8 +34,17 @@ impl LocalSession {
             .personality_catalog
             .approaches
             .offer_price_percent;
+        let docked = matches!(
+            npc.state.ships[0].location,
+            game_core::travel::Location::Docked(_)
+        );
+        let how = if docked {
+            "answers your hail at the port and, under the station's guns, offers"
+        } else {
+            "comes alongside and offers"
+        };
         ui.label(format!(
-            "{} comes alongside and offers its hold below list price ({percent}%): {}.",
+            "{} {how} its hold below list price ({percent}%): {}.",
             describe(self, contact.id, &contact.name),
             goods.join(", ")
         ));

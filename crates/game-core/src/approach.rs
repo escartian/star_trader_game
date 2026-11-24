@@ -52,7 +52,13 @@ pub fn approach_run(
         let trader = &economy.traders[index];
         let rested = trader.last_approach == 0
             || run.saturating_sub(trader.last_approach) >= rules.cooldown_runs;
+        // Only out in space: a trader at a port waits to be hailed there.
+        let docked = matches!(
+            trader.state.ships[0].location,
+            crate::travel::Location::Docked(_)
+        );
         if !rested
+            || docked
             || piracy::hail_check(state, economy, player, flagship, trader.id, systems).is_err()
         {
             continue;

@@ -358,8 +358,13 @@ someone demands its cargo.
 Once you have met raiders, the map roster's TRAFFIC list shows **Hail** beside
 every NPC trader your flagship can reach (`game-core/src/piracy.rs`): within 20
 million km, with both ships in open space or orbit. Your fleet must not be docked
-or landed; a trader docked at a station, or laid up for a refit, is protected.
-Hailing opens a contact that shows the trader's hold and hull. You can:
+or landed; a trader laid up for a refit is protected. A trader **docked** at a
+station can be hailed only by a flagship docked at the same port (**Hail ·
+trade**), and only to trade: the station's guns rule out demands and attacks,
+so the hail opens its offer of its hold below list price, as when a trader
+comes alongside ([navigation runs](NAVIGATION_RUNS.md#encounters)). Traders at a
+port never approach you on their own. Otherwise hailing opens a contact that
+shows the trader's hold and hull. You can:
 
 - **Let it go:** nothing happens.
 - **Demand cargo:** only when the trader is outgunned. Your fleet's fighting

@@ -18,6 +18,7 @@ impl Map {
         match view {
             "galaxy" => {}
             "traffic" => self.session.capture_wait_runs(4),
+            "traffic-flight" => self.session.capture_traders_in_flight(2, 60)?,
             "traffic-system" => {
                 // The system view where the most NPC traders rest after a few runs.
                 self.session.capture_wait_runs(4);
@@ -260,6 +261,7 @@ mod tests {
             "game-menu",
             "card-closed",
             "traffic-system",
+            "traffic-flight",
             "game-songbook",
             "menu-songbook",
             "menu-songbook@cruise_a",

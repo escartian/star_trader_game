@@ -235,6 +235,33 @@ impl LocalSession {
 }
 
 impl LocalSession {
+    /// Waits run by run (at most `limit`) until `count` NPC traders are
+    /// between star systems with a destination, so the galaxy map shows
+    /// their heading lines. Contacts are passed by.
+    pub fn capture_traders_in_flight(&mut self, count: usize, limit: usize) -> Result<(), String> {
+        for _ in 0..limit {
+            let flying = self
+                .economy
+                .traders
+                .iter()
+                .filter(|trader| {
+                    trader.state.ships[0].location.system().is_none()
+                        && self.trader_heading(trader).is_some()
+                })
+                .count();
+            if flying >= count {
+                return Ok(());
+            }
+            self.capture_resolve_contacts();
+            self.capture_wait_runs(1);
+        }
+        Err(format!(
+            "Fewer than {count} traders in flight after {limit} runs"
+        ))
+    }
+}
+
+impl LocalSession {
     /// Fight raiders and bypass every other contact so capture courses continue.
     pub(super) fn capture_resolve_contacts(&mut self) {
         use game_core::navigation::{EncounterChoice, EncounterKind};

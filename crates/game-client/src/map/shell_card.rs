@@ -19,6 +19,7 @@ struct Shown {
     system: Option<SystemId>,
     local: Option<(SystemId, Option<BodyId>)>,
     ship: ShipId,
+    npc: Option<game_core::pursuit::Quarry>,
     contacts: Vec<FleetId>,
 }
 
@@ -61,11 +62,12 @@ impl Map {
                 .as_ref()
                 .map(|local| (local.system().id, local.selected_body())),
             ship: self.session.selected_ship().id,
+            npc: self.session.npc_focus().0,
             contacts: self.session.contact_fleets(),
         };
         if let Some(last) = &self.card.shown {
-            let moved = (last.tab, last.system, last.local, last.ship)
-                != (shown.tab, shown.system, shown.local, shown.ship);
+            let moved = (last.tab, last.system, last.local, last.ship, last.npc)
+                != (shown.tab, shown.system, shown.local, shown.ship, shown.npc);
             // A new contact needs a decision; a resolved one does not.
             let new_contact = shown
                 .contacts

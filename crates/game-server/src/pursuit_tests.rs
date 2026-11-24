@@ -121,21 +121,44 @@ fn a_trader_in_reach_is_hailed_at_once_and_far_ones_are_chased() {
 }
 
 #[test]
-fn only_a_quarry_in_the_flagships_system_can_be_pursued_and_one_that_leaves_is_lost() {
+fn a_quarry_elsewhere_or_crossing_is_followed_to_its_system() {
     let (mut session, band) = quiet_band(100_000_000);
-    session.state.navigation.bands[0].system = SystemId(3);
-    assert!(matches!(
-        pursue(&mut session, Quarry::Band(band)),
-        ServerMessage::CommandRejected(_)
-    ));
     assert!(matches!(
         pursue(&mut session, Quarry::Band(999)),
         ServerMessage::CommandRejected(_)
     ));
+    // A band in another system: the flagship sets off for that system.
+    session.state.navigation.bands[0].system = SystemId(1);
+    ok(pursue(&mut session, Quarry::Band(band)));
+    let bound_for = |session: &Session| {
+        let order = session.state.navigation.order(FleetId(1)).unwrap();
+        match order.remaining_waypoints.last().unwrap_or(&order.target) {
+            MoveTarget::Body { system, .. }
+            | MoveTarget::Local { system, .. }
+            | MoveTarget::EnterSystem(system) => *system,
+            other => panic!("{other:?}"),
+        }
+    };
+    assert_eq!(bound_for(&session), SystemId(1));
+    // Back in our system, the chase is local again once the leg is free.
+    session.state.navigation.bands[0].system = SystemId(2);
+    session.state.navigation.orders.clear();
+    session.state.navigation.holds.push(FleetId(1));
+    let events = run(&mut session);
+    assert!(session.state.navigation.pursuit.is_some(), "{events:?}");
+    assert_eq!(bound_for(&session), SystemId(2));
+    // Out of jump range (Far Reach from here): refused with the reason.
+    session.state.navigation.bands[0].system = SystemId(3);
+    session.state.navigation.orders.clear();
+    session.state.navigation.pursuit = None;
+    assert!(matches!(
+        pursue(&mut session, Quarry::Band(band)),
+        ServerMessage::CommandRejected(_)
+    ));
     session.state.navigation.bands[0].system = SystemId(2);
     ok(pursue(&mut session, Quarry::Band(band)));
-    // The band slips away to another system.
-    session.state.navigation.bands[0].system = SystemId(3);
+    // A band that is gone ends the chase with a note.
+    session.state.navigation.bands.clear();
     let events = run(&mut session);
     assert_eq!(session.state.navigation.pursuit, None);
     assert!(

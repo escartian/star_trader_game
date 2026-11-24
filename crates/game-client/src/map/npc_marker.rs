@@ -62,3 +62,78 @@ pub(crate) fn paint(
         );
     }
 }
+
+/// A drawn trader or raider band marker a tap can select.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct NpcHit {
+    pub quarry: game_core::pursuit::Quarry,
+    pub at: Pos2,
+}
+
+/// The marker under `pointer`, nearest first.
+pub(crate) fn pick(hits: &[NpcHit], pointer: Pos2) -> Option<game_core::pursuit::Quarry> {
+    hits.iter()
+        .filter(|hit| hit.at.distance(pointer) <= TRADER + 4.0)
+        .min_by(|a, b| a.at.distance(pointer).total_cmp(&b.at.distance(pointer)))
+        .map(|hit| hit.quarry)
+}
+
+/// The selection ring (white) and the pursuit crosshair (amber) around a
+/// marker at `at`.
+pub(crate) fn paint_focus(painter: &Painter, at: Pos2, selected: bool, pursued: bool) {
+    if selected {
+        painter.circle_stroke(at, TRADER + 4.0, Stroke::new(1.5_f32, Color32::WHITE));
+    }
+    if pursued {
+        let amber = crate::theme::AMBER;
+        let radius = TRADER + 7.0;
+        painter.circle_stroke(at, radius, Stroke::new(1.5_f32, amber));
+        for direction in [Vec2::X, -Vec2::X, Vec2::Y, -Vec2::Y] {
+            painter.line_segment(
+                [
+                    at + direction * (radius - 3.0),
+                    at + direction * (radius + 5.0),
+                ],
+                Stroke::new(1.5_f32, amber),
+            );
+        }
+    }
+}
+
+/// The dashed amber line from the pursuing flagship's chip to its quarry.
+pub(crate) fn paint_pursuit(painter: &Painter, from: Pos2, to: Pos2) {
+    let direction = (to - from).normalized();
+    if !direction.is_finite() {
+        return;
+    }
+    crate::map::local::dash(
+        painter,
+        from + direction * crate::map::fleets::CHIP,
+        to - direction * (TRADER + 7.0),
+        Stroke::new(1.6_f32, crate::theme::AMBER),
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{NpcHit, TRADER, pick};
+    use egui::pos2;
+    use game_core::pursuit::Quarry;
+
+    #[test]
+    fn a_tap_selects_the_nearest_marker_under_it() {
+        let hits = [
+            NpcHit {
+                quarry: Quarry::Trader(1),
+                at: pos2(100.0, 100.0),
+            },
+            NpcHit {
+                quarry: Quarry::Band(7),
+                at: pos2(110.0, 100.0),
+            },
+        ];
+        assert_eq!(pick(&hits, pos2(98.0, 100.0)), Some(Quarry::Trader(1)));
+        assert_eq!(pick(&hits, pos2(113.0, 100.0)), Some(Quarry::Band(7)));
+        assert_eq!(pick(&hits, pos2(100.0, 100.0 + TRADER + 10.0)), None);
+    }
+}

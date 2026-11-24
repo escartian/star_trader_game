@@ -35,4 +35,22 @@ impl LocalSession {
             "Fewer than {count} traders in flight after {limit} runs"
         ))
     }
+
+    /// Pursues the first raider band and selects the first trader on the map.
+    pub fn capture_pursue_band(&mut self) -> Result<(), String> {
+        let band = self
+            .state
+            .navigation
+            .bands
+            .first()
+            .ok_or("No raider band")?
+            .id;
+        self.pursue(game_core::pursuit::Quarry::Band(band));
+        if self.state.navigation.pursuit.is_none() {
+            return Err(format!("The pursuit did not start: {}", self.notice));
+        }
+        let trader = self.economy.traders.first().ok_or("No trader")?.id;
+        self.select_npc(game_core::pursuit::Quarry::Trader(trader));
+        Ok(())
+    }
 }

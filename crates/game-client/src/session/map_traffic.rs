@@ -14,6 +14,7 @@ use game_core::{
 /// One NPC trader on the system map.
 #[derive(Clone, Debug)]
 pub struct MapTrader {
+    pub id: u64,
     pub kind: ShipKind,
     /// Where to draw it: its berth while resting, else its gliding position
     /// as `InSystem` kilometres from the star.
@@ -60,6 +61,7 @@ impl LocalSession {
                     }
                 };
                 Some(MapTrader {
+                    id: trader.id,
                     kind: ship.kind,
                     location,
                     ring: self.trader_stance(trader).color(),

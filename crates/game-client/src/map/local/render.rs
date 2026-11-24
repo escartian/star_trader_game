@@ -137,10 +137,12 @@ impl LocalView {
             }
         }
         self.draw_campaign(&painter, rect);
+        self.npc_hits.clear();
         self.draw_bands(&painter, rect);
         self.draw_police(&painter, rect);
         self.draw_traders(&painter, rect);
         self.draw_fleets(&painter, rect, ships, fleets, &label_bounds);
+        self.draw_npc_focus(&painter);
         if response.double_clicked()
             && let Some(pointer) = response.interact_pointer_pos()
         {
@@ -150,7 +152,11 @@ impl LocalView {
             && let Some(pointer) = response.interact_pointer_pos()
         {
             let body = super::nearest_body(&self.system, &self.camera, rect, pointer);
-            if let Some(hit) =
+            // Traders and bands draw over bodies, so they take the tap first.
+            if let Some(quarry) = crate::map::npc_marker::pick(&self.npc_hits, pointer) {
+                self.npc_request = Some(quarry);
+                crate::audio::mark_select(ui.ctx());
+            } else if let Some(hit) =
                 crate::map::fleets::pick_over_targets(&self.fleet_hits, pointer, body)
             {
                 self.selection_request = Some(hit.ship);

@@ -10,6 +10,7 @@ use super::{
     npc_marker,
 };
 use egui::{Painter, Rect, Stroke, Vec2};
+use game_core::pursuit::Quarry;
 
 /// Points between a system's marker and the chips resting there.
 const SYSTEM_CLEARANCE: f32 = 12.0;
@@ -98,8 +99,15 @@ impl Map {
     /// on short tethers, flying ones on their gliding position with a faint
     /// dashed line, in their friend-or-foe colour, to the system they are
     /// bound for. Raider bands crossing between systems follow, in red.
-    pub(super) fn draw_galaxy_threats(&self, ui: &egui::Ui, painter: &Painter, rect: Rect) {
+    /// Returns the drawn trader and band markers, for taps.
+    pub(super) fn draw_galaxy_threats(
+        &self,
+        ui: &egui::Ui,
+        painter: &Painter,
+        rect: Rect,
+    ) -> Vec<npc_marker::NpcHit> {
         let art = Artwork::preload(ui.ctx());
+        let mut hits = Vec::new();
         let gliding = self.session.gliding();
         let mut resting: Vec<(game_core::SystemId, usize)> = Vec::new();
         // Markers already on the map (own chips, then traders as placed), so a
@@ -169,6 +177,10 @@ impl Map {
                 }
             };
             placed.push((at, npc_marker::TRADER));
+            hits.push(npc_marker::NpcHit {
+                quarry: Quarry::Trader(trader.id),
+                at,
+            });
             if rect.expand(npc_marker::TRADER).contains(at) {
                 npc_marker::paint(
                     painter,
@@ -206,8 +218,31 @@ impl Map {
             // Clear of own chips and traders already drawn there.
             let at = clear_of(at, &placed);
             placed.push((at, npc_marker::TRADER));
+            hits.push(npc_marker::NpcHit {
+                quarry: Quarry::Band(band.id),
+                at,
+            });
             if let Some(kind) = npc_marker::lead(&band.ships) {
                 npc_marker::paint(painter, &art, at, kind, red, None, band.ships.len());
+            }
+        }
+        self.paint_npc_focus(painter, &hits);
+        hits
+    }
+
+    /// The selected NPC's ring, and the pursuit line and crosshair.
+    fn paint_npc_focus(&self, painter: &Painter, hits: &[npc_marker::NpcHit]) {
+        let (selected, pursued) = self.session.npc_focus();
+        for hit in hits {
+            let (chosen, chased) = (Some(hit.quarry) == selected, Some(hit.quarry) == pursued);
+            npc_marker::paint_focus(painter, hit.at, chosen, chased);
+            let chip = self.session.flagship_fleet().and_then(|fleet| {
+                self.galaxy_fleet_hits
+                    .iter()
+                    .find(|chip| chip.fleet == fleet)
+            });
+            if let (true, Some(chip)) = (chased, chip) {
+                npc_marker::paint_pursuit(painter, chip.bounds.center(), hit.at);
             }
         }
     }

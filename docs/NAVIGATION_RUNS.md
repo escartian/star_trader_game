@@ -181,9 +181,12 @@ wallet by the host in the same command, so saves always hold zero.
 
 ## Pursuit
 
-Once battles are unlocked, the Fleets page's traffic list offers **Pursue** on
-NPC traders in your flagship's star system that are out of hailing range, and on
-the raider bands there. The flagship then chases its quarry:
+Once battles are unlocked, tap a trader or raider band on either map to select
+it (a white ring; its card heads the Selection page with where it is and is
+bound, and **Hail** or **Pursue**), or use **Pursue** in the Fleets page's
+traffic list (traders in your system out of hailing range, and the raider bands
+there). The flagship then chases its quarry, drawn with an amber crosshair and a
+dashed amber line from your flagship:
 
 - At once, and after every run (once everything has moved), a flagship within
   reach opens the contact and Advance stops: a trader the hail card (demand
@@ -192,11 +195,13 @@ the raider bands there. The flagship then chases its quarry:
   the raider fight (within 20 million km). A quarry already in reach is
   contacted immediately.
 - Otherwise the course is re-plotted to where the quarry is now (a trader at a
-  body is followed to that body). While a leg is under way it is finished
-  first. If the quarry sits inside a body's collision zone or at the
+  body is followed to that body). A quarry in, or bound for, another system
+  (a trader leaving, a band crossing) is followed to that system, and the
+  chase resumes there. While a leg is under way it is finished first. If the quarry sits inside a body's collision zone or at the
   flagship's own spot, the flagship waits a run.
-- The pursuit ends, with a log note, when the quarry leaves the system or is
-  gone, when no course can reach it, when a contact (any kind) stops the
+- The pursuit ends, with a log note, when the quarry is gone, when no course
+  can reach it (out of jump range or fuel; a pursuit that could not even start
+  is refused with that reason), when a contact (any kind) stops the
   flagship, or when you give the flagship any other order (**Stop** issues a
   Wait). Only the flagship pursues.
 

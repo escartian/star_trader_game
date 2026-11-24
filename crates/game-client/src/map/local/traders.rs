@@ -5,13 +5,14 @@
 use super::{LocalView, scale::SymbolScale};
 use crate::map::{fleets::tether, npc_marker};
 use egui::{Painter, Rect};
-use game_core::{BodyId, BodyKind, travel::Location};
+use game_core::{BodyId, BodyKind, pursuit::Quarry, travel::Location};
 
 impl LocalView {
-    pub(super) fn draw_traders(&self, painter: &Painter, rect: Rect) {
+    pub(super) fn draw_traders(&mut self, painter: &Painter, rect: Rect) {
         let Some(art) = &self.art else {
             return;
         };
+        let mut hits = Vec::new();
         let scale = SymbolScale::new(self.camera.zoom);
         // How many traders already rest at each body, to spread them out.
         let mut resting: Vec<(BodyId, usize)> = Vec::new();
@@ -47,6 +48,10 @@ impl LocalView {
                 }
                 None => anchor,
             };
+            hits.push(npc_marker::NpcHit {
+                quarry: Quarry::Trader(trader.id),
+                at,
+            });
             if rect.expand(npc_marker::TRADER).contains(at) {
                 npc_marker::paint(
                     painter,
@@ -57,6 +62,21 @@ impl LocalView {
                     Some(trader.pip),
                     1,
                 );
+            }
+        }
+        self.npc_hits.extend(hits);
+    }
+
+    /// The selected NPC's ring and, while pursuing, the dashed line from the
+    /// flagship's chip to its quarry with a crosshair. After fleets are drawn.
+    pub(super) fn draw_npc_focus(&self, painter: &Painter) {
+        let (selected, pursued, flagship) = self.npc_focus;
+        let chip = flagship.and_then(|fleet| self.fleet_hits.iter().find(|hit| hit.fleet == fleet));
+        for hit in &self.npc_hits {
+            let chased = Some(hit.quarry) == pursued;
+            npc_marker::paint_focus(painter, hit.at, Some(hit.quarry) == selected, chased);
+            if let (true, Some(chip)) = (chased, chip) {
+                npc_marker::paint_pursuit(painter, chip.bounds.center(), hit.at);
             }
         }
     }

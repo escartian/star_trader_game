@@ -51,8 +51,8 @@ pub enum NavigationError {
     WillNotYield,
     /// The wallet cannot pay for a single unit of a trader's offer.
     CannotAfford,
-    /// Pursuit targets a trader or raider band in the flagship's own system.
-    PursuitOutOfSystem,
+    /// The pursuit could not begin (the reason, e.g. out of range).
+    PursuitImpossible(String),
     /// No raider band has that ID.
     UnknownBand,
     Battle(crate::combat::tactical::BattleError),
@@ -133,10 +133,7 @@ impl std::fmt::Display for NavigationError {
                 "The trader will not hand over cargo to a fleet this weak; attack or let it go.",
             ),
             Self::CannotAfford => f.write_str("You cannot afford any of the trader's cargo."),
-            Self::PursuitOutOfSystem => f.write_str(
-                "Pursue a trader or raider band in your flagship's own star system, \
-                 with the flagship in open space or orbit there.",
-            ),
+            Self::PursuitImpossible(reason) => f.write_str(reason),
             Self::UnknownBand => f.write_str("There is no such raider band."),
             Self::Battle(error) => error.fmt(f),
         }

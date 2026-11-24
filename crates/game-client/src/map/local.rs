@@ -80,6 +80,16 @@ pub struct LocalView {
     police: Vec<crate::session::PatrolMarker>,
     /// NPC traders in this system (see `traders`).
     traders: Vec<crate::session::MapTrader>,
+    /// Trader and band markers drawn last frame, for taps.
+    npc_hits: Vec<crate::map::npc_marker::NpcHit>,
+    /// A trader or band tapped this frame (the map selects it).
+    npc_request: Option<game_core::pursuit::Quarry>,
+    /// (selected NPC, pursued NPC, pursuing flagship) for rings and the line.
+    npc_focus: (
+        Option<game_core::pursuit::Quarry>,
+        Option<game_core::pursuit::Quarry>,
+        Option<game_core::fleet::FleetId>,
+    ),
     /// The game's landing rules, for a surface's ore yield on the info card.
     landing: game_core::movement::LandingRules,
     /// The Raider Haven and chartered ports (see `campaign`).
@@ -108,6 +118,9 @@ impl LocalView {
             bands: Vec::new(),
             police: Vec::new(),
             traders: Vec::new(),
+            npc_hits: Vec::new(),
+            npc_request: None,
+            npc_focus: (None, None, None),
             landing: game_core::movement::LandingRules::default(),
             campaign: CampaignMarks::default(),
             headings: Vec::new(),
@@ -132,6 +145,21 @@ impl LocalView {
 
     pub fn set_traders(&mut self, traders: Vec<crate::session::MapTrader>) {
         self.traders = traders;
+    }
+
+    pub fn set_npc_focus(
+        &mut self,
+        focus: (
+            Option<game_core::pursuit::Quarry>,
+            Option<game_core::pursuit::Quarry>,
+            Option<game_core::fleet::FleetId>,
+        ),
+    ) {
+        self.npc_focus = focus;
+    }
+
+    pub fn take_npc_request(&mut self) -> Option<game_core::pursuit::Quarry> {
+        self.npc_request.take()
     }
 
     pub fn set_police(&mut self, police: Vec<crate::session::PatrolMarker>) {

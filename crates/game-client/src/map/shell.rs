@@ -132,6 +132,7 @@ impl Map {
         self.session.sheet_header(ui);
         match self.sheet {
             SheetTab::Selection => {
+                self.session.npc_card(ui, &self.session_systems);
                 if let Some(local) = &mut self.local {
                     local.selection_sheet(ui);
                 } else {

@@ -65,6 +65,18 @@ impl Map {
             "factions" => self.session.capture_factions(true)?,
             "factions-map" => self.session.capture_factions(false)?,
             "roster" => self.sheet = crate::session::SheetTab::Fleets,
+            "pursuing" => {
+                // In the system view: the first trader selected, the band pursued.
+                self.session.capture_pursuit_quarry()?;
+                self.session.capture_pursue_band()?;
+                let system = self
+                    .session
+                    .current_system()
+                    .and_then(|id| self.systems.iter().find(|known| known.id == id))
+                    .ok_or("The flagship is between systems")?
+                    .clone();
+                self.local = Some(LocalView::new(system));
+            }
             "pursue" => {
                 // A trader and a raider band to chase in the flagship's system.
                 self.session.capture_pursuit_quarry()?;
@@ -268,6 +280,7 @@ mod tests {
             "traffic-system",
             "traffic-flight",
             "pursue",
+            "pursuing",
             "game-songbook",
             "menu-songbook",
             "menu-songbook@cruise_a",

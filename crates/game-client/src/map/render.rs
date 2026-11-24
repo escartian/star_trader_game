@@ -23,9 +23,15 @@ impl Map {
             .hover_pos()
             .map(|p| pick(&self.systems, &self.camera, rect, p))
             .unwrap_or_default();
+        // The selected fleet's course to another system (none without one).
+        let bound = if self.scene == super::fixtures::Scene::Session {
+            self.session.course_system()
+        } else {
+            self.selected
+        };
         if let (Some(origin), Some(target)) = (
             self.route_position(),
-            self.systems.iter().find(|s| Some(s.id) == self.selected),
+            self.systems.iter().find(|s| Some(s.id) == bound),
         ) {
             let route = [
                 self.camera.project(origin, rect),
@@ -90,13 +96,18 @@ impl Map {
         if self.scene == super::fixtures::Scene::Session {
             self.draw_galaxy_campaign(&painter, rect);
             self.draw_galaxy_fleets(ui, &painter, rect, &labels);
-            self.draw_galaxy_threats(ui, &painter, rect);
+            self.galaxy_npc_hits = self.draw_galaxy_threats(ui, &painter, rect);
         }
         if (response.clicked() || response.double_clicked())
             && let Some(pointer) = response.interact_pointer_pos()
         {
             let system = super::nearest_system(&self.systems, &self.camera, rect, pointer);
-            if let Some(hit) =
+            // NPC markers draw on top, so they take the tap first.
+            if let Some(quarry) = super::npc_marker::pick(&self.galaxy_npc_hits, pointer) {
+                self.session.select_npc(quarry);
+                self.sheet = crate::session::SheetTab::Selection;
+                crate::audio::mark_select(ui.ctx());
+            } else if let Some(hit) =
                 super::fleets::pick_over_targets(&self.galaxy_fleet_hits, pointer, system)
             {
                 self.session.select_map_fleet(hit.ship);

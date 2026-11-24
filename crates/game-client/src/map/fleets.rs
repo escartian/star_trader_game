@@ -13,7 +13,7 @@ use game_core::{
 };
 
 /// Chip radius in points; larger than NPC markers (12) so your fleets stand out.
-pub(super) const CHIP: f32 = 20.0;
+pub(crate) const CHIP: f32 = 20.0;
 /// Touch-friendly hit size around a chip, in points.
 const HIT: f32 = 48.0;
 /// Gap (points) between a resting chip and its body, bridged by a tether line.

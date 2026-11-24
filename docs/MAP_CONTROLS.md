@@ -118,7 +118,11 @@ contact. Tapping an open page's strip button returns to Selection.
 Stars, planets and ports have no hover pop-ups: the selection card shows a
 star's type, holder and your standing, and a body's kind and traits.
 
-Tapping a body or system shows Selection; tapping a fleet chip shows Fleets.
+Tapping a body or system shows Selection; tapping a fleet chip shows Fleets;
+tapping a trader or raider band selects it (see
+[pursuit](NAVIGATION_RUNS.md#pursuit)). The galaxy map's course line runs only
+to where the selected fleet's course ends; cancelling the course (or a Wait)
+removes it and the system view's route line.
 Tapping the place the flagship rests at cancels a course it has not set off on
 (the destination card and the Shipyard tab also show **Cancel course**): hull
 purchases, fleet changes and landing need no plotted course. Double-clicking a

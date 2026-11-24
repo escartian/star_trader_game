@@ -33,6 +33,7 @@ mod market_scope;
 mod market_table;
 mod motion;
 mod navigation;
+mod npc_card;
 mod outfitting;
 mod panel;
 mod police;
@@ -71,6 +72,8 @@ pub(crate) fn light_years(position: SpacePosition) -> glam::DVec3 {
 
 pub struct LocalSession {
     map_target: Option<map_controls::MapTarget>,
+    /// A trader or raider band tapped on the map (see `npc_card`).
+    npc_target: Option<game_core::pursuit::Quarry>,
     focus_requested: bool,
     /// Sheet page the map should switch to (e.g. after Advance stops).
     sheet_request: Option<SheetTab>,
@@ -116,6 +119,7 @@ impl LocalSession {
         let victory = victory::VictoryPanel::seen(&state);
         Self {
             map_target: None,
+            npc_target: None,
             focus_requested: false,
             sheet_request: None,
             advance: None,
@@ -305,6 +309,7 @@ impl LocalSession {
                     self.active_ship = self.state.ships[0].id;
                 }
                 for event in events {
+                    self.forget_cancelled_target(&event);
                     let message = match event {
                         SessionEvent::Navigation(event) => runs::event_label(event),
                         SessionEvent::ShipSold { ship, price } => {

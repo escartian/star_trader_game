@@ -89,6 +89,7 @@ impl LocalSession {
     pub fn select_map_fleet(&mut self, ship: ShipId) {
         self.select_ship(ship);
         self.map_target = None;
+        self.npc_target = None;
     }
     /// Picking a destination plots the flagship's course at once (it replaces
     /// any earlier course; nothing moves until Advance). With a secondary fleet
@@ -96,6 +97,7 @@ impl LocalSession {
     /// fleet a trade route; secondary fleets take no direct courses.
     pub fn select_destination(&mut self, system: SystemId, body: Option<BodyId>) {
         self.map_target = Some(MapTarget::Destination(system, body));
+        self.npc_target = None;
         let commanding = self
             .state
             .fleet_for_ship(self.active_ship)
@@ -120,6 +122,7 @@ impl LocalSession {
     }
     pub fn select_departure(&mut self, system: SystemId) {
         self.map_target = Some(MapTarget::Departure(system));
+        self.npc_target = None;
         let commanding = self
             .state
             .fleet_for_ship(self.active_ship)
@@ -320,7 +323,11 @@ impl LocalSession {
                 .as_ref()
                 .map_or("Selected fleet", |fleet| fleet.name.as_str()),
         );
-        self.pending_course_ui(ui, systems);
+        if self.state.navigation.pursuit.is_some() {
+            self.pursuit_status(ui);
+        } else {
+            self.pending_course_ui(ui, systems);
+        }
         let Some(target) = self.map_target else {
             ui.horizontal(|ui| {
                 icons::glyph(ui, Icon::Pin, CYAN, "No destination selected");

@@ -11,7 +11,8 @@ const RAIDER: Color32 = crate::theme::iff::HOSTILE;
 pub(super) const TAG_GAP: f32 = 22.0;
 
 impl LocalView {
-    pub(super) fn draw_bands(&self, painter: &Painter, rect: Rect) {
+    pub(super) fn draw_bands(&mut self, painter: &Painter, rect: Rect) {
+        let mut hits = Vec::new();
         for band in self
             .bands
             .iter()
@@ -35,6 +36,10 @@ impl LocalView {
                     Stroke::new(1.2_f32, RAIDER.gamma_multiply(0.9)),
                 );
             }
+            hits.push(npc_marker::NpcHit {
+                quarry: game_core::pursuit::Quarry::Band(band.id),
+                at,
+            });
             if let (Some(art), Some(kind)) = (&self.art, npc_marker::lead(&band.ships)) {
                 npc_marker::paint(painter, art, at, kind, RAIDER, None, band.ships.len());
             }
@@ -56,6 +61,7 @@ impl LocalView {
             );
             painter.galley(origin, galley, RAIDER);
         }
+        self.npc_hits.extend(hits);
     }
 }
 

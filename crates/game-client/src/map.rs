@@ -41,6 +41,8 @@ pub struct Map {
     observed_system: Option<SystemId>,
     observed_position: Option<DVec3>,
     galaxy_fleet_hits: Vec<fleets::FleetHit>,
+    /// Trader and band markers drawn on the galaxy map, for taps.
+    galaxy_npc_hits: Vec<npc_marker::NpcHit>,
     session_systems: Vec<StarSystem>,
     systems: Vec<StarSystem>,
     selected: Option<SystemId>,
@@ -118,6 +120,7 @@ impl Map {
             observed_system: session.current_system(),
             observed_position: session.galaxy_position(&systems),
             galaxy_fleet_hits: Vec::new(),
+            galaxy_npc_hits: Vec::new(),
             session_systems: systems.clone(),
             systems,
             selected,
@@ -369,6 +372,8 @@ impl Map {
             self.session
                 .traders_for_map(local.system(), &self.session_systems),
         );
+        let (selected, pursued) = self.session.npc_focus();
+        local.set_npc_focus((selected, pursued, self.session.flagship_fleet()));
         local.set_landing(self.session.landing_rules().clone());
         local.set_campaign_marks(self.session.campaign_marks());
         local.set_headings(self.session.fleet_headings(&self.session_systems));
@@ -382,6 +387,10 @@ impl Map {
             // Trading from another fleet in this system switches the selection first.
             self.session.select_map_fleet(ship);
             self.session.open_market();
+        }
+        if let Some(quarry) = local.take_npc_request() {
+            self.session.select_npc(quarry);
+            self.sheet = crate::session::SheetTab::Selection;
         }
         if let Some(ship) = local.take_fleet_selection() {
             self.session.select_map_fleet(ship);

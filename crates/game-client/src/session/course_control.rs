@@ -56,6 +56,39 @@ impl LocalSession {
         true
     }
 
+    /// A cancelled course (or a Wait) for the selected fleet drops its
+    /// destination, so no route line lingers on the map.
+    pub(super) fn forget_cancelled_target(&mut self, event: &game_protocol::SessionEvent) {
+        use game_core::navigation::NavigationEvent;
+        let game_protocol::SessionEvent::Navigation(
+            NavigationEvent::CourseCancelled(fleet) | NavigationEvent::Holding(fleet),
+        ) = event
+        else {
+            return;
+        };
+        if self
+            .state
+            .fleet_for_ship(self.active_ship)
+            .is_ok_and(|selected| selected.id == *fleet)
+        {
+            self.map_target = None;
+        }
+    }
+
+    /// Where the selected fleet's course ends, by star system.
+    pub fn course_system(&self) -> Option<SystemId> {
+        let fleet = self.state.fleet_for_ship(self.active_ship).ok()?;
+        let order = self.state.navigation.order(fleet.id)?;
+        let last = order.remaining_waypoints.last().unwrap_or(&order.target);
+        match last {
+            game_core::movement::MoveTarget::Body { system, .. }
+            | game_core::movement::MoveTarget::Local { system, .. }
+            | game_core::movement::MoveTarget::EnterSystem(system)
+            | game_core::movement::MoveTarget::LeaveSystem(system) => Some(*system),
+            game_core::movement::MoveTarget::DeepSpace(_) => None,
+        }
+    }
+
     /// "Course plotted to X · Cancel course", while one waits to set off.
     pub(super) fn pending_course_ui(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
         let Some((_, destination)) = self.pending_course() else {
@@ -113,5 +146,33 @@ mod tests {
         // With no course, the own spot is simply selected: no error.
         host.select_destination(system, body);
         assert!(host.state.navigation.orders.is_empty());
+    }
+
+    #[test]
+    fn cancelling_a_course_clears_its_line() {
+        let mut host = LocalSession::new(game_server::Session::default());
+        let systems = host.authority.systems().to_vec();
+        let here = host.state.ships[0].location.system().unwrap();
+        let body = systems
+            .iter()
+            .find(|known| known.id == here)
+            .unwrap()
+            .bodies
+            .iter()
+            .map(|body| body.id)
+            .find(|body| !host.rests_at(here, Some(*body), &systems))
+            .unwrap();
+        host.select_destination(here, Some(body));
+        assert!(
+            !host.map_route_points(here, &systems).is_empty(),
+            "a line to it"
+        );
+        assert_eq!(host.course_system(), Some(here));
+        assert!(host.cancel_pending_course());
+        assert!(
+            host.map_route_points(here, &systems).is_empty(),
+            "no line left"
+        );
+        assert_eq!(host.course_system(), None);
     }
 }

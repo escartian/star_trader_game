@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 /// Extra flags listed in help only when the developer tooling is compiled in.
 #[cfg(feature = "dev-tools")]
-const DEV_OPTIONS: &str = ", --capture PATH, --capture-view VIEW, --capture-size WxH, --scenario multi-fleet|fleet-battle";
+const DEV_OPTIONS: &str = ", --capture PATH, --capture-view VIEW, --capture-size WxH, --scenario multi-fleet|fleet-battle[:NvM]";
 #[cfg(not(feature = "dev-tools"))]
 const DEV_OPTIONS: &str = " (capture and scenario flags need a dev-tools build)";
 
@@ -25,7 +25,7 @@ pub struct Options {
     pub save: PathBuf,
     pub save_explicit: bool,
     pub economy: Option<PathBuf>,
-    /// Named test scenario to build and save before starting ("multi-fleet" or "fleet-battle").
+    /// Named test scenario to build and save before starting ("multi-fleet", "fleet-battle" or "fleet-battle:NvM").
     #[cfg(feature = "dev-tools")]
     pub scenario: Option<String>,
 }
@@ -70,7 +70,7 @@ impl Options {
                 "--scenario" => {
                     options.new = true;
                     options.scenario =
-                        Some(args.next().ok_or("--scenario needs a name: multi-fleet or fleet-battle")?);
+                        Some(args.next().ok_or("--scenario needs a name: multi-fleet, fleet-battle or fleet-battle:NvM")?);
                 }
                 #[cfg(feature = "dev-tools")]
                 "--capture" => {

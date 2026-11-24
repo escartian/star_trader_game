@@ -18,7 +18,7 @@ mod position;
 pub use battle::{ActiveBattle, BattleAction};
 pub use haven::{GARRISON, RaiderHaven, haven_site};
 pub(crate) use hostile::escort_setup;
-pub use hostile::evade_chance_percent;
+pub use hostile::{MAX_SAVED_RAIDERS, evade_chance_percent};
 pub use position::space_position;
 mod resolution;
 mod validation;

@@ -75,8 +75,10 @@ cargo run -p game-client -- --continue
 # Built with ordinary commands plus a 25,000 cr test budget; reload with --continue:
 cargo run -p game-client --features dev-tools -- --scenario multi-fleet --save data/multi-fleet.json
 cargo run -p game-client -- --continue --save data/multi-fleet.json
-# Seven ships against seven raiders, the battle open on your first turn:
+# Seven ships against seven raiders, the battle open on your first turn
+# (or pick sizes, 1 to 8 a side: fleet-battle:3v5):
 cargo run -p game-client --features dev-tools -- --scenario fleet-battle --save data/fleet-battle.json
+cargo run -p game-client --features dev-tools -- --scenario fleet-battle:3v5 --save data/fleet-battle.json
 # macOS: build target/StarTrader.app with the game icon:
 ./tools/package_macos.sh
 # Export a complete initial world/player save as JSON without a window:

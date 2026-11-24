@@ -13,6 +13,32 @@ use game_core::{
 };
 use game_protocol::{ClientCommand, ServerMessage};
 
+/// Largest side in the fleet-battle fixture: two sides of eight fill a battle's
+/// 16 combatants, and eight is also the most raiders a save accepts.
+pub const MAX_SCENARIO_SIDE: usize = game_core::navigation::MAX_SAVED_RAIDERS;
+/// Hulls bought after the starting freighter, in order; the first six give the
+/// 7-ship default of three freighters, two patrols and two scouts.
+const STRIKE_GROUP_EXTRAS: [ShipKind; MAX_SCENARIO_SIDE - 1] = [
+    ShipKind::Patrol,
+    ShipKind::Scout,
+    ShipKind::Freighter,
+    ShipKind::Patrol,
+    ShipKind::Scout,
+    ShipKind::Freighter,
+    ShipKind::Patrol,
+];
+/// Raider hulls, in order; the first seven are two patrols and five scouts.
+const RAIDER_GROUP: [ShipKind; MAX_SCENARIO_SIDE] = [
+    ShipKind::Patrol,
+    ShipKind::Scout,
+    ShipKind::Scout,
+    ShipKind::Patrol,
+    ShipKind::Scout,
+    ShipKind::Scout,
+    ShipKind::Scout,
+    ShipKind::Patrol,
+];
+
 /// Credits granted so the scenario can afford its extra hulls (hundredths: 25,000.00 cr).
 const TEST_BUDGET: Credits = Credits(2_500_000);
 
@@ -91,15 +117,22 @@ impl Session {
         Ok(session)
     }
 
-    /// Seven ships against seven raiders, with the battle open on the player's
-    /// first turn:
-    /// - "Strike Group": the starting freighter, two more freighters, two patrol
-    ///   ships and two scouts, bound for the first planet;
-    /// - raiders: two patrol ships and five scouts. Play caps raider groups at
-    ///   three; this fixture sets the group directly.
-    pub fn fleet_battle_scenario(seed: u64) -> Result<Self, String> {
+    /// `player` ships against `raiders` raiders (each 1..=8), with the battle
+    /// open on the player's first turn. The "Strike Group" is the starting
+    /// freighter plus hulls taken in turn from [`STRIKE_GROUP_EXTRAS`]; the
+    /// raiders are the first `raiders` of [`RAIDER_GROUP`]. The 7 v 7 default
+    /// is three freighters, two patrols and two scouts against two raider
+    /// patrols and five scouts. Play caps raider groups at three; this fixture
+    /// sets the group directly, within the saved limit.
+    pub fn fleet_battle_scenario(seed: u64, player: usize, raiders: usize) -> Result<Self, String> {
+        if !(1..=MAX_SCENARIO_SIDE).contains(&player) || !(1..=MAX_SCENARIO_SIDE).contains(&raiders)
+        {
+            return Err(format!(
+                "fleet-battle sides must each have 1 to {MAX_SCENARIO_SIDE} ships"
+            ));
+        }
         let mut session = Self::with_seed(seed);
-        session.economy.credits = Credits(TEST_BUDGET.0 * 4);
+        session.economy.credits = Credits(TEST_BUDGET.0 * 5);
         let yard = session
             .economy
             .current_market(&session.state.ships[0])
@@ -111,15 +144,8 @@ impl Session {
             .market_mut(yard)
             .map_err(|error| error.to_string())?;
         yard.ship_stock = yard.ship_stock.map(|stock| stock.max(4));
-        for kind in [
-            ShipKind::Freighter,
-            ShipKind::Freighter,
-            ShipKind::Patrol,
-            ShipKind::Patrol,
-            ShipKind::Scout,
-            ShipKind::Scout,
-        ] {
-            session.buy(kind)?;
+        for kind in &STRIKE_GROUP_EXTRAS[..player - 1] {
+            session.buy(*kind)?;
         }
         session.rename(ShipId(1), "Strike Group")?;
         let home = session.state.ships[0]
@@ -141,10 +167,7 @@ impl Session {
             .first_mut()
             .ok_or("The strike group met no contact")?;
         encounter.kind = EncounterKind::Raiders;
-        encounter.hostiles = [ShipKind::Patrol; 2]
-            .into_iter()
-            .chain([ShipKind::Scout; 5])
-            .collect();
+        encounter.hostiles = RAIDER_GROUP[..raiders].to_vec();
         let encounter = encounter.id;
         session.run(ClientCommand::ResolveEncounter {
             encounter,
@@ -307,7 +330,7 @@ mod fleet_battle_tests {
 
     #[test]
     fn seven_against_seven_opens_on_a_player_turn_saves_and_fights_to_a_finish() {
-        let mut session = Session::fleet_battle_scenario(1).unwrap();
+        let mut session = Session::fleet_battle_scenario(1, 7, 7).unwrap();
         let open = session
             .state
             .navigation
@@ -339,5 +362,32 @@ mod fleet_battle_tests {
         assert!(session.state.navigation.battle.is_none());
         // Fought, not a ceasefire: ships were lost, whoever left the field.
         assert!(report.combatants.iter().any(|ship| ship.destroyed));
+    }
+
+    #[test]
+    fn side_sizes_range_from_one_v_one_to_a_full_eight_v_eight_board() {
+        for (player, raiders) in [(1, 1), (2, 6), (8, 8)] {
+            let session = Session::fleet_battle_scenario(1, player, raiders).unwrap();
+            let open = session
+                .state
+                .navigation
+                .battle
+                .as_ref()
+                .expect("battle open");
+            let count = |side| {
+                open.battle
+                    .units
+                    .iter()
+                    .filter(|unit| unit.side == side)
+                    .count()
+            };
+            assert_eq!(
+                (count(Side::Player), count(Side::Hostile)),
+                (player, raiders)
+            );
+        }
+        for (player, raiders) in [(0, 3), (3, 0), (9, 1), (1, 9)] {
+            assert!(Session::fleet_battle_scenario(1, player, raiders).is_err());
+        }
     }
 }

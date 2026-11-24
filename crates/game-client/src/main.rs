@@ -170,6 +170,19 @@ fn fresh_session(
     Ok(authority)
 }
 
+/// Side sizes for `fleet-battle:NvM` (player ships v raiders); 7 v 7 when omitted.
+#[cfg(feature = "dev-tools")]
+#[cfg(not(target_arch = "wasm32"))]
+fn battle_sides(sides: &str) -> Result<(usize, usize), String> {
+    if sides.is_empty() {
+        return Ok((7, 7));
+    }
+    sides
+        .split_once(['v', 'x'])
+        .and_then(|(player, raiders)| Some((player.parse().ok()?, raiders.parse().ok()?)))
+        .ok_or_else(|| format!("fleet-battle sides look like 3v5, not {sides}"))
+}
+
 /// Build a named test scenario and save it immediately, so `--continue` can reload it.
 #[cfg(feature = "dev-tools")]
 #[cfg(not(target_arch = "wasm32"))]
@@ -177,13 +190,20 @@ fn dev_scenario(
     name: &str,
     options: &options::Options,
 ) -> Result<game_server::Session, Box<dyn std::error::Error>> {
-    let session = match name {
-        "multi-fleet" => game_server::Session::multi_fleet_scenario(options.seed)?,
-        "fleet-battle" => game_server::Session::fleet_battle_scenario(options.seed)?,
-        other => {
-            return Err(
-                format!("Unknown scenario {other}; available: multi-fleet, fleet-battle").into(),
-            );
+    let (base, sides) = name.split_once(':').unwrap_or((name, ""));
+    let session = match base {
+        "multi-fleet" if sides.is_empty() => {
+            game_server::Session::multi_fleet_scenario(options.seed)?
+        }
+        "fleet-battle" => {
+            let (player, raiders) = battle_sides(sides)?;
+            game_server::Session::fleet_battle_scenario(options.seed, player, raiders)?
+        }
+        _ => {
+            return Err(format!(
+                "Unknown scenario {name}; available: multi-fleet, fleet-battle, fleet-battle:NvM"
+            )
+            .into());
         }
     };
     if !options.capturing() {

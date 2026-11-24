@@ -216,7 +216,11 @@ the load reports it.
 **Large battles.** Play caps raider groups at three, but battles hold up to 16
 ships. The developer scenario `--scenario fleet-battle` (dev-tools build) opens a
 7 v 7 battle on your first turn: a strike group of three freighters, two patrol
-ships and two scouts against two raider patrols and five scouts. Saves accept up
+ships and two scouts against two raider patrols and five scouts. Pick other
+sizes with `--scenario fleet-battle:NvM`, from 1 to 8 ships a side (`8v8`
+fills the 16-ship board); extra player hulls cycle patrol, scout, freighter
+after the starting freighter, and raiders are the first M of patrol, scout,
+scout, patrol, scout, scout, scout, patrol. Saves accept up
 to 8 raiders per contact for such fixtures. With more than six ships the
 turn-order bar switches to compact portrait chips (names on hover).
 

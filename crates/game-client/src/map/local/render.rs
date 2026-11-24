@@ -30,9 +30,7 @@ impl LocalView {
         if response.dragged() {
             self.camera.pan += ui.input(|i| i.pointer.delta());
         }
-        if response.hovered() {
-            self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom, 0.3);
-        }
+        self.camera.zoom_toward_pointer(ui, &response, 0.3);
         let hover = response
             .hover_pos()
             .map(|p| pick(&self.system, &self.camera, rect, p))

@@ -12,13 +12,13 @@ impl Map {
         crate::audio::quiet_clicks(ui.ctx(), response.id);
         // Every background, glow and label shares the map's clip rectangle.
         let painter = painter.with_clip_rect(rect.intersect(ui.clip_rect()));
-        visuals::background(&painter, rect, "GALAXY / light-years");
+        // Move the camera before drawing anything, so every layer this frame
+        // (stars, fleets) uses the same view.
         if response.dragged() {
             self.camera.pan += ui.input(|i| i.pointer.delta());
         }
-        if response.hovered() {
-            self.camera.zoom = crate::map::camera::zoom_input(ui, self.camera.zoom, 0.15);
-        }
+        self.camera.zoom_toward_pointer(ui, &response, 0.15);
+        visuals::background(&painter, rect, "GALAXY / light-years");
         let hover = response
             .hover_pos()
             .map(|p| pick(&self.systems, &self.camera, rect, p))

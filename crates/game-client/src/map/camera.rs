@@ -26,6 +26,7 @@ impl Default for Camera {
 /// Wheel/two-finger scroll and trackpad pinch both zoom the hovered map.
 /// The map never sits inside a scroll area, so scrolling cannot also move the page.
 /// `zoom_delta` is egui's multiplicative pinch (and ctrl+wheel) factor; 1.0 = none.
+/// egui already eases mouse-wheel steps over several frames (`smooth_scroll_delta`).
 pub fn zoom_input(ui: &egui::Ui, zoom: f32, minimum: f32) -> f32 {
     let (scroll, pinch) = ui.input(|i| (i.smooth_scroll_delta.y, i.zoom_delta()));
     (zoom * (scroll * 0.002).exp() * pinch).clamp(minimum, 4.0)
@@ -58,6 +59,29 @@ impl Camera {
         rect.center() + self.pan + Vec2::new(p.x as f32, -p.y as f32) * scale
     }
 
+    /// Apply this frame's zoom input while the pointer hovers the map, keeping
+    /// the point under the pointer fixed on screen so zooming homes in on it.
+    pub fn zoom_toward_pointer(&mut self, ui: &egui::Ui, response: &egui::Response, minimum: f32) {
+        let Some(anchor) = response.hover_pos() else {
+            return;
+        };
+        let zoom = zoom_input(ui, self.zoom, minimum);
+        self.zoom_about(zoom, anchor, response.rect);
+    }
+
+    /// Rescale to `zoom` around the screen point `anchor` inside `rect`.
+    pub fn zoom_about(&mut self, zoom: f32, anchor: Pos2, rect: Rect) {
+        if zoom == self.zoom {
+            return;
+        }
+        // project() = centre + pan + offset; scaling the offset by `ratio`
+        // and moving the pan by what it lost keeps `anchor` over one point.
+        let ratio = zoom / self.zoom;
+        let offset = anchor - rect.center() - self.pan;
+        self.pan += offset * (1.0 - ratio);
+        self.zoom = zoom;
+    }
+
     pub fn focus_on(&mut self, position: DVec3) {
         self.focus = position;
         self.pan = Vec2::ZERO;
@@ -83,6 +107,20 @@ mod tests {
             camera.focus_on(target);
             assert_eq!(camera.project(target, rect), rect.center());
         }
+    }
+
+    #[test]
+    fn zooming_keeps_the_point_under_the_pointer_still() {
+        let rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(320.0, 240.0));
+        let mut camera = Camera {
+            pan: Vec2::new(20.0, -10.0),
+            ..Camera::default()
+        };
+        let world = DVec3::new(6.0, 0.0, -4.0);
+        let anchor = camera.project(world, rect);
+        camera.zoom_about(2.7, anchor, rect);
+        assert!(camera.project(world, rect).distance(anchor) < 1e-3);
+        assert_eq!(camera.zoom, 2.7);
     }
 
     #[test]

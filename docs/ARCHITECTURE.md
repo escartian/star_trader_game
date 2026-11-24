@@ -162,7 +162,9 @@ Blender is a build-time authoring tool. Static transparent sprites are embedded
 and preloaded once per egui context, with shared texture handles reused across
 system views. A new graphics context receives new handles. Stars retain procedural
 halos; tiny galaxy star markers remain geometry. Embedded ship GLBs are decoded
-once and drawn as client-side triangles for battles and moving NPC traffic. No
+once and drawn as client-side triangles in battles. NPC traffic markers use the
+same fixed marker view, rasterised once per model and egui context into a small
+sprite texture, so a busy map does not re-send thousands of triangles per frame. No
 general scene importer, animation asset pipeline or additional engine framework
 is introduced. Offscreen wgpu captures
 exercise the same UI code for visual review, separately from window/device checks.

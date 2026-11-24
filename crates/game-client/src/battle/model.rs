@@ -5,7 +5,7 @@
 //! Model space is Blender's: +Z up, nose along +Y, in Blender units. Loading
 //! recentres each model on its bounding box.
 use super::camera::{Projector, ScenePoint};
-use egui::{Color32, Mesh, Painter, Pos2, Rgba, Shape, Vec2 as ScreenVec2};
+use egui::{Color32, Mesh, Painter, Pos2, Rgba, Shape};
 use game_core::fleet::ShipKind;
 use glam::{Mat3, Mat4, Vec2, Vec3};
 use std::sync::OnceLock;
@@ -175,14 +175,14 @@ impl ShipModel {
         painter.add(Shape::mesh(mesh));
     }
 
-    /// A tiny orthographic view of the same GLB for moving map traffic. The
-    /// marker follows the trader's projected position; mesh depth is sorted
-    /// locally, while the map remains responsible for world positioning.
-    pub fn paint_marker(&self, painter: &Painter, at: Pos2, size: f32) {
+    /// A tiny fixed orthographic view of the same GLB for map traffic, one
+    /// point long and centred on the origin, far faces first. Map markers
+    /// draw it pre-rendered (`marker_sprite`), not as live triangles.
+    pub(super) fn marker_mesh(&self) -> Mesh {
         let eye = Vec3::new(0.8, -1.2, 2.5).normalize();
         let right = Vec3::Z.cross(eye).normalize();
         let up = eye.cross(right);
-        let scale = size / self.length;
+        let scale = 1.0 / self.length;
         let light = LIGHT.normalize();
         let mut faces = Vec::with_capacity(self.triangles.len());
         for triangle in &self.triangles {
@@ -192,7 +192,7 @@ impl ShipModel {
             let centroid = triangle.corners.into_iter().sum::<Vec3>() / 3.0;
             let points = triangle
                 .corners
-                .map(|corner| at + ScreenVec2::new(corner.dot(right), -corner.dot(up)) * scale);
+                .map(|corner| Pos2::new(corner.dot(right) * scale, -corner.dot(up) * scale));
             let shade = if triangle.emissive {
                 1.0
             } else {
@@ -214,7 +214,7 @@ impl ShipModel {
             }
             mesh.add_triangle(base, base + 1, base + 2);
         }
-        painter.add(Shape::mesh(mesh));
+        mesh
     }
 }
 

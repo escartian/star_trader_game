@@ -5,6 +5,7 @@ mod backdrop;
 pub mod camera;
 mod canvas;
 pub mod effects;
+mod marker_sprite;
 pub mod model;
 mod particles;
 pub mod scene;

@@ -181,7 +181,8 @@ are authoritative. Ships share fleet locations and are illustrated beside their
 body anchors or at deep-space positions. The current primary trade station retains
 its system ID in Docked; planetary Orbiting locations resolve a market by body.
 Ship catalog definitions come from config/ships.json, weapons from
-config/combat.json and factions from config/factions.json, all embedded as
+config/combat.json, factions from config/factions.json and NPC personalities
+from config/npc.json, all embedded as
 fallbacks. Faction territory and your standing live in `Economy::factions`;
 the host adjusts standing and wanted status after each command
 (`game-server/src/standing.rs`) and core prices apply its terms

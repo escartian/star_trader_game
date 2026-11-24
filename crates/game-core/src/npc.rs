@@ -2,6 +2,7 @@
 mod band_raids;
 mod decisions;
 mod outfit;
+mod personality;
 mod population;
 mod raids;
 use crate::{
@@ -11,25 +12,12 @@ use crate::{
     fleet::FleetId,
     travel::{Location, PlayerId, ShipId, TravelState},
 };
+pub use personality::{Personality, PersonalityCatalog, PersonalityDefinition};
 pub use population::{MAX_TRADERS, trader_count};
 pub use raids::REFIT_RUNS;
 use serde::{Deserialize, Serialize};
 
 pub const NPC_ID_BASE: u64 = 1 << 63;
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Personality {
-    Cautious,
-    Opportunist,
-}
-impl Personality {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Cautious => "Cautious trader",
-            Self::Opportunist => "Opportunist",
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Trader {

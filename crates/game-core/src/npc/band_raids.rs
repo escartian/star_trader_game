@@ -80,7 +80,7 @@ impl Economy {
             std::iter::once((ship.kind, ship.hull_damage)).chain(escort),
             catalog,
         );
-        let threshold = piracy::yield_percent(trader.personality);
+        let threshold = piracy::yield_percent(&self.rules.personality_catalog, trader.personality);
         if u128::from(ours) * 100 >= u128::from(theirs) * u128::from(threshold) {
             let cargo = &mut trader.state.ships[0].cargo;
             let mut left = cargo.iter().sum::<u32>().div_ceil(2);

@@ -270,6 +270,8 @@ mod setup_tests;
 #[cfg(test)]
 mod npc_faction_tests;
 #[cfg(test)]
+mod npc_personality_tests;
+#[cfg(test)]
 mod npc_tests;
 
 #[cfg(test)]

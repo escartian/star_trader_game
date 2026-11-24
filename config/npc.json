@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "personalities": [
+    {
+      "id": "Cautious",
+      "label": "Cautious trader",
+      "description": "Avoids dangerous ports and wants a safe margin; yields cargo to a modest show of force.",
+      "avoids_danger": true,
+      "danger_profit_percent": 100,
+      "friendly_only": false,
+      "margin_percent": 10,
+      "haul_units": 4,
+      "yield_percent": 150,
+      "raid_escape_percent": 0
+    },
+    {
+      "id": "Opportunist",
+      "label": "Opportunist",
+      "description": "Takes any profitable haul, however thin or risky; hard to intimidate.",
+      "avoids_danger": false,
+      "danger_profit_percent": 100,
+      "friendly_only": false,
+      "margin_percent": 0,
+      "haul_units": 4,
+      "yield_percent": 300,
+      "raid_escape_percent": 0
+    },
+    {
+      "id": "BulkHauler",
+      "label": "Bulk hauler",
+      "description": "Fills its hold on thin margins along safe lanes; a rich, slow prize.",
+      "avoids_danger": true,
+      "danger_profit_percent": 100,
+      "friendly_only": false,
+      "margin_percent": 3,
+      "haul_units": 12,
+      "yield_percent": 200,
+      "raid_escape_percent": 0
+    },
+    {
+      "id": "Loyalist",
+      "label": "Loyalist",
+      "description": "Trades only in its own faction's and allied space.",
+      "avoids_danger": false,
+      "danger_profit_percent": 100,
+      "friendly_only": true,
+      "margin_percent": 5,
+      "haul_units": 6,
+      "yield_percent": 250,
+      "raid_escape_percent": 0
+    },
+    {
+      "id": "Smuggler",
+      "label": "Smuggler",
+      "description": "Runs dangerous ports for the premium and often slips past raiders.",
+      "avoids_danger": false,
+      "danger_profit_percent": 150,
+      "friendly_only": false,
+      "margin_percent": 5,
+      "haul_units": 6,
+      "yield_percent": 250,
+      "raid_escape_percent": 50
+    },
+    {
+      "id": "Corsair",
+      "label": "Corsair",
+      "description": "Trades when it must and preys on weaker fleets when it can; never yields easily.",
+      "avoids_danger": false,
+      "danger_profit_percent": 120,
+      "friendly_only": false,
+      "margin_percent": 0,
+      "haul_units": 4,
+      "yield_percent": 400,
+      "raid_escape_percent": 20
+    }
+  ],
+  "spawn_cycle": [
+    "Cautious",
+    "Opportunist",
+    "BulkHauler",
+    "Loyalist",
+    "Smuggler",
+    "Cautious",
+    "Opportunist",
+    "Corsair"
+  ]
+}

@@ -141,6 +141,11 @@ fn fresh_session(
             &std::fs::read_to_string("config/factions.json")?,
         )?;
     }
+    if std::path::Path::new("config/npc.json").is_file() {
+        rules.personality_catalog = game_core::npc::PersonalityCatalog::from_json(
+            &std::fs::read_to_string("config/npc.json")?,
+        )?;
+    }
     if std::path::Path::new("config/planets.json").is_file() {
         rules.planet_catalog = game_core::planet::PlanetCatalog::from_json(
             &std::fs::read_to_string("config/planets.json")?,

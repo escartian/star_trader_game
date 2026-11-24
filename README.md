@@ -222,7 +222,8 @@ another save slot uses the configured starting funds and hull inventory.
 [config/planets.json](config/planets.json) defines planet profiles, market templates,
 starting budgets and hull stock. [config/ships.json](config/ships.json) defines purchasable hull prices, holds, fuel,
 range and combat profiles. [config/combat.json](config/combat.json) defines the
-weapons ([combat](docs/COMBAT.md)). [config/economy.json](config/economy.json) defines starting credits/cargo capacity,
+weapons ([combat](docs/COMBAT.md)). [config/npc.json](config/npc.json) tunes the
+NPC trader personalities ([traffic](docs/MAP_CONTROLS.md)). [config/economy.json](config/economy.json) defines starting credits/cargo capacity,
 service/upgrade costs, commodity prices and market production/consumption. Money
 uses integer hundredths of a credit: `100000` means `1000.00` credits.
 The explicit commodity order identifies array entries. Custom definitions are

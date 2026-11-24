@@ -6,11 +6,13 @@
 //! - Home ports are spread evenly over the planet markets in id order; the
 //!   first trader is commissioned at the first planet market.
 //! - Names come from fixed word lists, so the first two are always Aster Haul
-//!   (cautious) and Helix Courier (opportunist), as in earlier versions.
-//! - Personalities alternate cautious and opportunist.
+//!   and Helix Courier, as in earlier versions.
+//! - Personalities are dealt from the catalog's `spawn_cycle` (cautious, then
+//!   opportunist first).
 //! - A trader flies for the faction holding its home port, once factions are
-//!   set up ([`Economy::affiliate_traders`]); in independent space it has none.
-use super::{NPC_ID_BASE, Personality, Trader, market_location};
+//!   set up ([`Economy::affiliate_traders`]); in independent space it has none,
+//!   and a loyalist there trades as a smuggler instead.
+use super::{NPC_ID_BASE, PersonalityCatalog, Trader, market_location};
 use crate::{
     StarSystem,
     economy::{Economy, MarketId},
@@ -70,11 +72,7 @@ impl Economy {
         let count = trader_count(market_systems.len(), ports.len());
         for index in 0..count {
             let home = ports[index * ports.len() / count];
-            let personality = if index % 2 == 0 {
-                Personality::Cautious
-            } else {
-                Personality::Opportunist
-            };
+            let personality = self.rules.personality_catalog.dealt(index);
             let id = index as u64 + 1;
             let name = trader_name(index);
             let state = commissioned(id, &name, home, systems, movement);
@@ -94,12 +92,17 @@ impl Economy {
     }
 
     /// Each trader flies for the faction holding its home port (independent
-    /// space: none). Run when factions are set up.
+    /// space: none, and loyalists there turn smuggler). Run when factions are
+    /// set up.
     pub fn affiliate_traders(&mut self) {
         for index in 0..self.traders.len() {
             let home = self.home_market(&self.traders[index]);
-            self.traders[index].affiliation =
-                home.and_then(|home| self.factions.owner(home.system));
+            let affiliation = home.and_then(|home| self.factions.owner(home.system));
+            let trader = &mut self.traders[index];
+            trader.affiliation = affiliation;
+            if affiliation.is_none() {
+                trader.personality = PersonalityCatalog::for_independent(trader.personality);
+            }
         }
     }
 

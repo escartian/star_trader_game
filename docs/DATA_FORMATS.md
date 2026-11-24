@@ -141,6 +141,23 @@ factions with `relation` `Allied` or `Rival` (unlisted pairs are neutral). It is
 embedded as a fallback, loaded from the project file when present, and saved in
 the economy rules as `faction_catalog`.
 
+## NPC personality catalog (schema 1)
+
+`config/npc.json` lists the six NPC trader personalities in order
+(`Cautious`, `Opportunist`, `BulkHauler`, `Loyalist`, `Smuggler`, `Corsair`),
+each with `id`, `label` (1–64 bytes), `description` (up to 256),
+`avoids_danger` (skip ports on dangerous, very dangerous or insidious planets),
+`danger_profit_percent` (50–400: how a haul to such a port is valued),
+`friendly_only` (a faction trader trades only in its own or allied space),
+`margin_percent` (0–100: least profit as a share of the haul's cost),
+`haul_units` (1–1,000, capped by the hold), `yield_percent` (100–1,000: your
+fleet strength, as a share of the trader's, that makes it yield to a demand)
+and `raid_escape_percent` (0–100: chance to slip past raiders), plus
+`spawn_cycle` (1–64 personalities dealt to new traders in turn; independents
+dealt a loyalist become smugglers). It is embedded as a fallback, loaded from
+the project file when present, and saved in the economy rules as
+`personality_catalog`; saves without it use the embedded catalog.
+
 ## Movement definition (schema 1)
 
 `config/movement.json` controls cubic extents, local fuel/tick distance units,

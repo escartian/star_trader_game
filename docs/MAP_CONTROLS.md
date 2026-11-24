@@ -136,14 +136,26 @@ along with the other deferred mobile work.
 Fresh sessions spawn one NPC trader per three market systems: at least four
 (fewer only when a tiny galaxy has one planet market) and at most 32. The first
 two are always **Aster Haul** (cautious) and **Helix Courier** (opportunistic);
-personalities alternate. Home ports are spread evenly over the planet markets,
+later traders are dealt personalities in turn from `config/npc.json`. Home ports are spread evenly over the planet markets,
 and a destroyed trader is refitted at its own. Each trader flies for the faction
 holding its home port when the game starts, or is independent; the traffic
 roster shows its faction in that faction's colour. Their traffic entries and
 galaxy markers show genuine persisted traders, not decorative ships.
 
-Cautious traders avoid dangerous markets and require a larger profit margin;
-opportunists accept smaller margins and riskier markets. They compare commodity
+Personalities (tuned in [`config/npc.json`](DATA_FORMATS.md#npc-personality-catalog-schema-1);
+hover a trader's name in the roster for its own):
+
+| Personality | Hauls | Danger | Margin | Yields to | Slips raiders |
+| --- | --- | --- | --- | --- | --- |
+| Cautious | 4 units | avoids | 10% | 150% strength | never |
+| Opportunist | 4 | goes | any | 300% | never |
+| Bulk hauler | 12 | avoids | 3% | 200% | never |
+| Loyalist | 6 | goes; own and allied space only | 5% | 250% | never |
+| Smuggler | 6 | prefers (hauls valued 150%) | 5% | 250% | one time in two |
+| Corsair | 4 | prefers (120%) | any | 400% | one time in five |
+
+A loyalist dealt to an independent trader becomes a smuggler. The corsair's
+predatory side arrives with NPC-initiated encounters. Traders compare commodity
 routes including fuel costs among the six market systems nearest them (their own
 included), buy/haul/sell real cargo, refuel with their own credits and use the
 same safe multi-leg route planner. A faction trader never sails for a port held
@@ -152,7 +164,7 @@ of their profit; independents go anywhere.
 
 NPCs act once per shared navigation run. They have separate wallets/hulls, finite
 market stock/funds and saved journey state. Trades conserve money and goods;
-production runs once for the world. Expanded personalities and NPC-initiated
-encounters are not implemented yet. Earlier saved sessions
+production runs once for the world. NPC-initiated encounters are not
+implemented yet. Earlier saved sessions
 without NPCs retain that population; start a fresh session for the initial traders.
 Backward save compatibility is not a prototype requirement.

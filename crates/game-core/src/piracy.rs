@@ -6,8 +6,9 @@
 //!   Hailing opens a `Trader` contact showing the trader's hold and hull.
 //! - **Let it go** (`Bypass`) ends the contact.
 //! - **Demand cargo** works only when the trader is outgunned: your fleet's
-//!   [`strength`] must reach [`yield_percent`] of the trader's (150% for a
-//!   cautious trader, 300% for an opportunist). It hands over half its cargo,
+//!   [`strength`] must reach [`yield_percent`] of the trader's (its
+//!   personality's `yield_percent`: 150% for a cautious trader, 300% for an
+//!   opportunist, 400% for a corsair; see `config/npc.json`). It hands over half its cargo,
 //!   rounded up, most valuable goods first, as far as your holds have room.
 //! - **Attack** opens the usual tactical battle against the trader's ship.
 //!   If the trader is destroyed you plunder its hold (what fits), and it is
@@ -25,7 +26,7 @@ use crate::{
     navigation::{
         Encounter, EncounterChoice, EncounterKind, NavigationError, NavigationEvent, TraderContact,
     },
-    npc::{Personality, Trader},
+    npc::{Personality, PersonalityCatalog, Trader},
     travel::{Location, PlayerId, TravelError, TravelState},
 };
 
@@ -33,11 +34,8 @@ use crate::{
 pub const HAIL_KM: i64 = 20_000_000;
 
 /// The share of the trader's strength (in percent) a fleet needs for a demand.
-pub fn yield_percent(personality: Personality) -> u64 {
-    match personality {
-        Personality::Cautious => 150,
-        Personality::Opportunist => 300,
-    }
+pub fn yield_percent(catalog: &PersonalityCatalog, personality: Personality) -> u64 {
+    catalog.get(personality).yield_percent
 }
 
 /// Fighting strength of some hulls: hull points left plus shields, times the
@@ -207,7 +205,11 @@ pub fn would_yield(state: &TravelState, economy: &Economy, encounter: &Encounter
         catalog,
     );
     u128::from(strength(ours, catalog)) * 100
-        >= u128::from(theirs) * u128::from(yield_percent(npc.personality))
+        >= u128::from(theirs)
+            * u128::from(yield_percent(
+                &economy.rules.personality_catalog,
+                npc.personality,
+            ))
 }
 
 /// Resolves a hailed trader's contact. Demand is settled here, against the

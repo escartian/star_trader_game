@@ -7,7 +7,6 @@ use game_core::{
     StarSystem,
     economy::Commodity,
     navigation::{Encounter, EncounterChoice},
-    npc::Personality,
     piracy,
     progress::Feature,
 };
@@ -34,8 +33,13 @@ impl LocalSession {
         let mut hail = None;
         for trader in &self.economy.traders {
             ui.horizontal(|ui| {
+                let temper = self
+                    .economy
+                    .rules
+                    .personality_catalog
+                    .get(trader.personality);
                 ui.strong(&trader.name)
-                    .on_hover_text(trader.personality.label());
+                    .on_hover_text(format!("{}: {}", temper.label, temper.description));
                 if let Some(faction) = trader.affiliation {
                     let name = &self.economy.rules.faction_catalog.get(faction).name;
                     ui.colored_label(
@@ -96,6 +100,7 @@ impl LocalSession {
             return;
         };
         let ship = &npc.state.ships[0];
+        let temper = self.economy.rules.personality_catalog.get(npc.personality);
         let hull = self
             .economy
             .rules
@@ -115,7 +120,7 @@ impl LocalSession {
         ui.label(format!(
             "{} ({}) answers your hail: a {} with {hold}, hull {}/{hull}.",
             hailed.name,
-            npc.personality.label().to_lowercase(),
+            temper.label.to_lowercase(),
             ship.kind.label().to_lowercase(),
             hull.saturating_sub(ship.hull_damage),
         ));
@@ -123,16 +128,12 @@ impl LocalSession {
         if !armed.is_empty() {
             ui.small(format!("Defences: {armed}."));
         }
-        let threshold = piracy::yield_percent(npc.personality);
+        let threshold = temper.yield_percent;
         let yields = piracy::would_yield(&self.state, &self.economy, encounter);
-        ui.small(match (yields, npc.personality) {
-            (true, _) => "Outgunned: it will hand over half its cargo if you demand it.".to_owned(),
-            (false, Personality::Cautious) => format!(
-                "It will only give way to a fleet with {threshold}% of its fighting strength."
-            ),
-            (false, Personality::Opportunist) => format!(
-                "An opportunist: it gives way only to {threshold}% of its fighting strength."
-            ),
+        ui.small(if yields {
+            "Outgunned: it will hand over half its cargo if you demand it.".to_owned()
+        } else {
+            format!("It gives way only to a fleet with {threshold}% of its fighting strength.")
         });
         let mut choice = None;
         ui.horizontal_wrapped(|ui| {

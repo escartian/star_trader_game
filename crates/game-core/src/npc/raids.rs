@@ -1,6 +1,7 @@
 //! NPC traders meet raiders too. After each run in which a trader was under way
 //! it may be attacked (`npc_raid_chance_percent`) by one scout, or two one time
-//! in three. The fight is the same tactical battle the player plays,
+//! in three; a personality with `raid_escape_percent` may slip away first. The
+//! fight is the same tactical battle the player plays,
 //! auto-resolved for both sides, so the battle AI's retreats apply:
 //! - fought off: the trader keeps its cargo;
 //! - escaped: the trader dumped its cargo to get away;
@@ -29,6 +30,12 @@ impl Economy {
     ) -> Result<(), FleetMovementError> {
         let roll = trader.state.navigation.rolls();
         if roll % 100 >= u64::from(self.rules.npc_raid_chance_percent) {
+            return Ok(());
+        }
+        // The roll's top bits: a smuggler's (or corsair's) chance to slip away.
+        let escape = self.rules.personality_catalog.get(trader.personality);
+        if (roll >> 48) % 100 < escape.raid_escape_percent {
+            trader.last_action = "Slipped past raiders".into();
             return Ok(());
         }
         let raiders = if (roll >> 32).is_multiple_of(3) { 2 } else { 1 };

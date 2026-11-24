@@ -1,5 +1,5 @@
-use super::{strength, yield_percent};
-use crate::{economy::EconomyRules, fleet::ShipKind, npc::Personality};
+use super::strength;
+use crate::{economy::EconomyRules, fleet::ShipKind};
 
 #[test]
 fn strength_counts_hull_left_and_shields_times_weapons() {
@@ -10,9 +10,4 @@ fn strength_counts_hull_left_and_shields_times_weapons() {
     assert_eq!(strength([(ShipKind::Patrol, 0)], &catalog), 360);
     let pair = [(ShipKind::Freighter, 0), (ShipKind::Scout, 0)];
     assert_eq!(strength(pair, &catalog), 70 + 45);
-}
-
-#[test]
-fn opportunists_hold_out_longer_than_cautious_traders() {
-    assert!(yield_percent(Personality::Opportunist) > yield_percent(Personality::Cautious));
 }

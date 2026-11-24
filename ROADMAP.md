@@ -182,8 +182,10 @@ Combat is the original README's first prioritized expansion.
 - [ ] Expanded NPC personalities, interactions, encounters and faction affiliations.
   Done: a population scaled to the galaxy (4–32 traders), saved home ports and
   faction affiliation (rival ports avoided, friendly space preferred, robbing a
-  faction's trader costs its standing). Next: more personalities in JSON, then
-  NPC-initiated contacts (trade offers, distress calls, corsair shakedowns).
+  faction's trader costs its standing); six personalities tuned in
+  `config/npc.json` (cautious, opportunist, bulk hauler, loyalist, smuggler,
+  corsair). Next: NPC-initiated contacts (trade offers, distress calls,
+  corsair shakedowns).
 - [x] Ship type/size/engine, HP, shields, armor and weapon/loadout definitions
   (`config/ships.json` schema 2, current save schema 8; see [combat](docs/COMBAT.md)).
 - [x] Carry forward Photon Singularity Beam, Quantum Entanglement Torpedo, Neutron

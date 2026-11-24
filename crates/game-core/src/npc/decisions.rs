@@ -1,4 +1,4 @@
-use super::{Personality, Trader, market_location};
+use super::{Trader, market_location};
 use crate::{
     StarSystem, SystemId,
     economy::{Commodity, Economy, EconomyError, TradeSide},
@@ -181,14 +181,18 @@ impl Economy {
     }
 
     /// [`Self::best_route`]'s search; `self.credits` holds the trader's wallet.
-    /// A faction trader never sails for a rival's port and values a haul into
-    /// its own or allied space at [`FRIENDLY_PROFIT_PERCENT`] of its profit.
+    /// The trader's personality (`config/npc.json`) sets the load, the least
+    /// margin, and how it treats dangerous ports. A faction trader never sails
+    /// for a rival's port (a loyalist only for its own or allied ones) and
+    /// values a haul into its own or allied space at
+    /// [`FRIENDLY_PROFIT_PERCENT`] of its profit.
     fn route_search(
         &self,
         trader: &Trader,
         systems: &[StarSystem],
     ) -> Option<(crate::economy::MarketId, Commodity, u32)> {
         let ship = &trader.state.ships[0];
+        let temper = self.rules.personality_catalog.get(trader.personality);
         let origin = self.current_market(ship).ok()?.id;
         let nearby = self.nearby_market_systems(origin.system, systems);
         let mut best = None;
@@ -203,14 +207,13 @@ impl Economy {
                 .bodies
                 .iter()
                 .find(|body| body.id == market.id.body)?;
-            if trader.personality == Personality::Cautious
-                && body.planet.as_ref().is_some_and(|profile| {
-                    matches!(
-                        profile.danger,
-                        Danger::Dangerous | Danger::VeryDangerous | Danger::Insidious
-                    )
-                })
-            {
+            let dangerous = body.planet.as_ref().is_some_and(|profile| {
+                matches!(
+                    profile.danger,
+                    Danger::Dangerous | Danger::VeryDangerous | Danger::Insidious
+                )
+            });
+            if dangerous && temper.avoids_danger {
                 continue;
             }
             let welcome = match (trader.affiliation, self.factions.owner(market.id.system)) {
@@ -218,7 +221,8 @@ impl Economy {
                 (Some(own), Some(holder)) => self.factions.relation(own, holder),
                 _ => Relation::Neutral,
             };
-            if welcome == Relation::Rival {
+            let outsider = trader.affiliation.is_some() && welcome != Relation::Allied;
+            if welcome == Relation::Rival || (temper.friendly_only && outsider) {
                 continue;
             }
             let Ok(course) = trader.state.plan_destination(
@@ -236,7 +240,7 @@ impl Economy {
                 .map(|leg| u64::from(leg.fuel_per_ship))
                 .sum::<u64>();
             for good in Commodity::ALL {
-                let quantity = 4.min(ship.cargo_capacity);
+                let quantity = temper.haul_units.min(ship.cargo_capacity);
                 let Ok(buy) = self.quote(ship, good, quantity, TradeSide::Buy, 0) else {
                     continue;
                 };
@@ -247,20 +251,22 @@ impl Economy {
                     continue;
                 };
                 let cost = buy.total.0 + fuel * self.fuel_price().0;
-                let threshold = if trader.personality == Personality::Cautious {
-                    cost / 10
-                } else {
-                    0
+                let Some(profit) =
+                    sell.total.0.checked_sub(cost).filter(|profit| {
+                        *profit > cost.saturating_mul(temper.margin_percent) / 100
+                    })
+                else {
+                    continue;
                 };
-                let valued = |profit: u64| match welcome {
-                    Relation::Allied => profit.saturating_mul(FRIENDLY_PROFIT_PERCENT) / 100,
-                    _ => profit,
-                };
-                if let Some(profit) = sell.total.0.checked_sub(cost).map(valued)
-                    && profit > threshold
-                    && profit > best_profit
-                {
-                    best_profit = profit;
+                let mut valued = profit;
+                if welcome == Relation::Allied {
+                    valued = valued.saturating_mul(FRIENDLY_PROFIT_PERCENT) / 100;
+                }
+                if dangerous {
+                    valued = valued.saturating_mul(temper.danger_profit_percent) / 100;
+                }
+                if valued > best_profit {
+                    best_profit = valued;
                     best = Some((market.id, good, quantity));
                 }
             }

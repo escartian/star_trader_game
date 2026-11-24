@@ -203,7 +203,12 @@ dashed amber line from your flagship:
   it is. A band crossing to another system is followed there. While a leg is
   under way it is finished first, and at any market on the way the flagship
   refuels as far as credits allow (a jump costs about half a freighter's
-  tank). If the quarry sits inside a body's collision zone or at the
+  tank). A trader bound for a station is met 8 million km off it, on its way
+  in; one that docks between two looks while the flagship is within reach is
+  still caught there with the full hail. A chase never settles for a docked
+  trader's trade-only offer: it waits off the port for it to come out. While
+  you hunt, other traders do not come alongside to sell or shake you down
+  (a distress call still can), and the hunted trader never approaches you. If the quarry sits inside a body's collision zone or at the
   flagship's own spot, the flagship waits a run.
 - The pursuit ends, with a log note, when the quarry is gone, when no course
   can reach it (out of jump range or fuel; a pursuit that could not even start

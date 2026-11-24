@@ -57,8 +57,14 @@ pub fn approach_run(
             trader.state.ships[0].location,
             crate::travel::Location::Docked(_)
         );
+        // The trader the flagship hunts does not come alongside to sell.
+        let hunted = state
+            .navigation
+            .pursuit
+            .is_some_and(|pursuit| pursuit.quarry == crate::pursuit::Quarry::Trader(trader.id));
         if !rested
             || docked
+            || hunted
             || piracy::hail_check(state, economy, player, flagship, trader.id, systems).is_err()
         {
             continue;
@@ -75,6 +81,11 @@ pub fn approach_run(
             npc.last_action = "Stalked by raiders; calling nearby ships for help".into();
             economy.traders[index] = npc;
             return Ok(vec![NavigationEvent::EncounterFound(encounter)]);
+        }
+        // A flagship on the hunt is not hailed to trade or shaken down: only a
+        // distress call (above) may interrupt the chase.
+        if state.navigation.pursuit.is_some() {
+            continue;
         }
         let chance = economy
             .rules

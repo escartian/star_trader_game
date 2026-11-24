@@ -119,3 +119,69 @@ fn a_docked_flagship_can_set_off_in_pursuit() {
         "it left the port"
     );
 }
+
+#[test]
+fn a_pursued_trader_docking_beside_the_flagship_is_caught_on_its_way_in() {
+    use game_core::pursuit::{Pursuit, service_pursuit};
+    let (mut session, trader, system) = at_port();
+    // The flagship waits in open space just off the port; the trader was out
+    // in space at the last look and has docked since.
+    let station = session
+        .systems
+        .iter()
+        .find(|known| known.id == system)
+        .unwrap()
+        .bodies
+        .iter()
+        .find(|body| body.kind == game_core::BodyKind::Station)
+        .unwrap()
+        .position;
+    session.state.ships[0].location = Location::InSystem {
+        system,
+        position: LocalPosition {
+            x_km: station.x_km + 8_000_000,
+            ..station
+        },
+    };
+    session.state.navigation.pursuit = Some(Pursuit {
+        fleet: FleetId(1),
+        quarry: Quarry::Trader(trader),
+        quarry_docked: false,
+    });
+    let events = service_pursuit(
+        &mut session.state,
+        &mut session.economy,
+        super::LOCAL_PLAYER,
+        &session.systems,
+    )
+    .unwrap();
+    let contact = &session.state.navigation.encounters[0];
+    assert_eq!(
+        contact.kind,
+        EncounterKind::Trader,
+        "the full hail: {events:?}"
+    );
+    // Already docked at the last look: the chase waits off the port instead.
+    let (mut session, trader, system) = at_port();
+    session.state.ships[0].location = Location::InSystem {
+        system,
+        position: LocalPosition {
+            x_km: station.x_km + 8_000_000,
+            ..station
+        },
+    };
+    session.state.navigation.pursuit = Some(Pursuit {
+        fleet: FleetId(1),
+        quarry: Quarry::Trader(trader),
+        quarry_docked: true,
+    });
+    service_pursuit(
+        &mut session.state,
+        &mut session.economy,
+        super::LOCAL_PLAYER,
+        &session.systems,
+    )
+    .unwrap();
+    assert!(session.state.navigation.encounters.is_empty());
+    assert!(session.state.navigation.pursuit.is_some(), "still waiting");
+}

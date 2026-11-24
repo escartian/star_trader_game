@@ -7,7 +7,10 @@ use std::path::Path;
 use std::path::PathBuf;
 
 pub(super) struct SavePanel {
+    /// The Save & load window.
     pub open: bool,
+    /// The New session window.
+    pub new_open: bool,
     pub path: PathBuf,
     pub(super) slot: u8,
     seed: u64,
@@ -28,6 +31,7 @@ impl Default for SavePanel {
     fn default() -> Self {
         Self {
             open: false,
+            new_open: false,
             path: "data/slot-1.json".into(),
             slot: 1,
             seed: 0,
@@ -138,11 +142,19 @@ impl LocalSession {
         result
     }
 
+    /// The Save & load and New session windows (Menu).
     pub fn show_session_controls(&mut self, ctx: &egui::Context) {
         let previous = self.preferences();
         let mut open = self.saves.open;
-        crate::theme::metal::window(ctx, "Session", &mut open, 460.0, |ui| self.controls_ui(ui));
+        crate::theme::metal::window(ctx, "Save & load", &mut open, 460.0, |ui| {
+            self.slot_controls(ui)
+        });
         self.saves.open = open;
+        let mut open = self.saves.new_open;
+        crate::theme::metal::window(ctx, "New session", &mut open, 460.0, |ui| {
+            self.new_session_ui(ui)
+        });
+        self.saves.new_open = open;
         if self.preferences() != previous
             && let Err(error) = self.persist_preferences()
         {
@@ -150,9 +162,12 @@ impl LocalSession {
         }
     }
 
-    fn controls_ui(&mut self, ui: &mut egui::Ui) {
-        self.slot_controls(ui);
-        ui.separator();
+    /// A new map: its setup, an optional fixed seed, then New session.
+    fn new_session_ui(&mut self, ui: &mut egui::Ui) {
+        ui.small(format!(
+            "Replaces the current session. Autosave writes to slot {}; save first, or pick another slot under Save & load, to keep this run.",
+            self.saves.slot
+        ));
         super::setup::setup_controls(ui, &mut self.saves.setup);
         ui.horizontal_wrapped(|ui| {
             icons::glyph(ui, Icon::Seed, CYAN, "Map seed for a new session");
@@ -184,23 +199,9 @@ impl LocalSession {
                 }
             }
         });
-        ui.separator();
-        ui.horizontal_wrapped(|ui| {
-            if icons::button(ui, Icon::Settings, "Settings")
-                .on_hover_text("Volume, display, guide and autosave")
-                .clicked()
-            {
-                self.saves.settings_open = true;
-            }
-            icons::glyph(
-                ui,
-                Icon::Info,
-                CYAN,
-                "Plotting, reading, trading and fleet management take no time.\nOnly navigation runs (Advance or the clock button) move fleets and markets.",
-            );
-        });
     }
 
+    /// Save slots: pick one, then Save into it or Load from it.
     fn slot_controls(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             icons::glyph(

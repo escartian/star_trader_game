@@ -34,6 +34,27 @@ pub enum Quarry {
 pub struct Pursuit {
     pub fleet: FleetId,
     pub quarry: Quarry,
+    /// The trader was docked when last seen: one that docks between two
+    /// looks, within reach of the flagship, is caught on its way in.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub quarry_docked: bool,
+}
+
+/// Whether the quarry is a trader docked at a station right now.
+fn docked(economy: &Economy, quarry: Quarry) -> bool {
+    let Quarry::Trader(id) = quarry else {
+        return false;
+    };
+    economy
+        .traders
+        .iter()
+        .find(|npc| npc.id == id)
+        .is_some_and(|npc| {
+            matches!(
+                npc.state.ships[0].location,
+                crate::travel::Location::Docked(_)
+            )
+        })
 }
 
 /// How close (km) the flagship must come to a raider band to engage it on
@@ -90,7 +111,11 @@ pub fn pursue(
     state.end_trade_route(fleet);
     state.end_patrol(fleet);
     state.navigation.holds.retain(|held| *held != fleet);
-    state.navigation.pursuit = Some(Pursuit { fleet, quarry });
+    state.navigation.pursuit = Some(Pursuit {
+        fleet,
+        quarry,
+        quarry_docked: docked(economy, quarry),
+    });
     let events = service_pursuit(state, economy, player, systems)?;
     let ordered =
         state.navigation.order(fleet).is_some() || state.navigation.holds.contains(&fleet);
@@ -131,7 +156,12 @@ pub fn service_pursuit(
     player: PlayerId,
     systems: &[StarSystem],
 ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
-    let Some(Pursuit { fleet, quarry }) = state.navigation.pursuit else {
+    let Some(Pursuit {
+        fleet,
+        quarry,
+        quarry_docked,
+    }) = state.navigation.pursuit
+    else {
         return Ok(Vec::new());
     };
     let note = |note: &str| NavigationEvent::PursuitNote {
@@ -158,10 +188,10 @@ pub fn service_pursuit(
         && let Some(contact) = catch(
             state,
             economy,
-            player,
-            fleet,
+            (player, fleet),
             quarry,
             (position, at),
+            !quarry_docked && docked(economy, quarry),
             systems,
         )?
     {
@@ -175,6 +205,9 @@ pub fn service_pursuit(
             state.cancel_course(player, fleet)?;
         }
         return Ok(vec![contact]);
+    }
+    if let Some(pursuit) = &mut state.navigation.pursuit {
+        pursuit.quarry_docked = docked(economy, quarry);
     }
     if state
         .navigation
@@ -226,16 +259,23 @@ pub fn service_pursuit(
 
 /// The contact when the flagship is in reach of its quarry; `(ours, theirs)`
 /// are their positions in the same system.
+/// `approaching`: the trader docked since the last look, so it is caught on
+/// its way in.
 fn catch(
     state: &mut TravelState,
     economy: &Economy,
-    player: PlayerId,
-    fleet: FleetId,
+    (player, fleet): (PlayerId, FleetId),
     quarry: Quarry,
     (position, at): (LocalPosition, LocalPosition),
+    approaching: bool,
     systems: &[StarSystem],
 ) -> Result<Option<NavigationEvent>, FleetMovementError> {
     Ok(match quarry {
+        Quarry::Trader(id) if approaching => {
+            piracy::hail_on_approach(state, economy, player, fleet, id, systems).ok()
+        }
+        // Under a station's guns: wait off the port for it to come out.
+        Quarry::Trader(_) if docked(economy, quarry) => None,
         Quarry::Trader(id) => piracy::hail(state, economy, player, fleet, id, systems).ok(),
         Quarry::Band(id) if distance(position, at) <= ENGAGE_KM => {
             let band = state

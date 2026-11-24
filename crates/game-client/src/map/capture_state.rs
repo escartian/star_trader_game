@@ -241,6 +241,7 @@ impl Map {
             "shipyard" => self.session.open_shipyard(),
             "fleets" => self.session.open_fleets(),
             "saves" => self.session.open_saves(),
+            "new-session" => self.session.open_new_session(),
             _ => return Err("Unknown capture view; see README.md for available views".into()),
         }
         Ok(())
@@ -284,6 +285,7 @@ mod tests {
             "market",
             "fleets",
             "saves",
+            "new-session",
             "game-menu",
             "card-closed",
             "traffic-system",

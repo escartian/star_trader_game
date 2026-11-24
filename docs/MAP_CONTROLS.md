@@ -106,7 +106,9 @@ The sheet's pages:
   (status, Wait, Land / Lift off, route controls) and NPC traffic.
 - **Menu:** **Songbook · Music** (play or queue any part, as from the main
   menu), **Trade**, **Fleets**, **Navigation**, **Victory**,
-  **Factions**, **Session & saves** and **Settings**, then **Latest events**
+  **Factions**, **Save & load** (slots, Save, Load), **New session** (the new
+  game's setup, one setting per line, and an optional fixed seed) and
+  **Settings**, then **Latest events**
   (the last 12 messages, newest first, highlighted; formerly the action bar's
   line and the Session window's log).
 

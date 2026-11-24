@@ -64,6 +64,20 @@ pub fn hail_check(
     trader: u64,
     systems: &[StarSystem],
 ) -> Result<(), FleetMovementError> {
+    reach_check(state, economy, player, fleet, trader, systems, false)
+}
+
+/// `hail_check`; `approaching` treats a trader that has just docked as still
+/// in open space (a pursuer caught it on its way in, see `hail_on_approach`).
+fn reach_check(
+    state: &TravelState,
+    economy: &Economy,
+    player: PlayerId,
+    fleet: FleetId,
+    trader: u64,
+    systems: &[StarSystem],
+    approaching: bool,
+) -> Result<(), FleetMovementError> {
     let record = state
         .fleets
         .iter()
@@ -89,7 +103,9 @@ pub fn hail_check(
     let lead = state.ship(*record.ships.first().ok_or(FleetError::UnknownFleet)?)?;
     // A docked trader can be hailed only from the same port, and only to
     // trade: the station's guns protect it (see `hail`).
-    if let Location::Docked(port) = theirs.location {
+    if let Location::Docked(port) = theirs.location
+        && !approaching
+    {
         return match lead.location {
             Location::Docked(ours) if ours == port && state.navigation.run > 0 => Ok(()),
             _ => Err(NavigationError::TraderProtected.into()),
@@ -148,10 +164,36 @@ pub fn hail(
     trader: u64,
     systems: &[StarSystem],
 ) -> Result<NavigationEvent, FleetMovementError> {
-    hail_check(state, economy, player, fleet, trader, systems)?;
+    open_hail(state, economy, player, fleet, trader, systems, false)
+}
+
+/// A pursuing flagship within reach of a trader that docked this very run
+/// caught it on its way in: the full hail, as in open space, before the
+/// station's guns cover it.
+pub fn hail_on_approach(
+    state: &mut TravelState,
+    economy: &Economy,
+    player: PlayerId,
+    fleet: FleetId,
+    trader: u64,
+    systems: &[StarSystem],
+) -> Result<NavigationEvent, FleetMovementError> {
+    open_hail(state, economy, player, fleet, trader, systems, true)
+}
+
+fn open_hail(
+    state: &mut TravelState,
+    economy: &Economy,
+    player: PlayerId,
+    fleet: FleetId,
+    trader: u64,
+    systems: &[StarSystem],
+    approaching: bool,
+) -> Result<NavigationEvent, FleetMovementError> {
+    reach_check(state, economy, player, fleet, trader, systems, approaching)?;
     let npc = find(economy, trader)?;
     // At a port the station's guns allow trade only: its offer of its hold.
-    let docked = matches!(npc.state.ships[0].location, Location::Docked(_));
+    let docked = !approaching && matches!(npc.state.ships[0].location, Location::Docked(_));
     if docked && npc.state.ships[0].cargo_used() == 0 {
         return Err(NavigationError::NothingToSell.into());
     }

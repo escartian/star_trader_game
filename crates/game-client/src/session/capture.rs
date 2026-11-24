@@ -19,6 +19,10 @@ impl LocalSession {
         self.saves.open = true;
     }
 
+    pub fn open_new_session(&mut self) {
+        self.saves.new_open = true;
+    }
+
     pub fn open_fleets(&mut self) {
         self.fleet_panel.open = true;
     }

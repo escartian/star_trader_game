@@ -1,7 +1,7 @@
 //! New-game setup controls, shared by the game chooser and the Session panel:
 //! galaxy size, starting credits, inflation, danger, the campaign's length
 //! and Trader goal, and the factions in play. The choices become session rules in `game_server::setup`.
-use egui::{RichText, Ui};
+use egui::Ui;
 use game_core::{
     economy::Credits,
     factions::{Coverage, Faction, RelationMode},
@@ -11,16 +11,58 @@ use game_server::{DangerLevel, GameSetup, InflationLevel, STARTING_CREDITS, WEAL
 /// Campaign lengths offered (0: open-ended).
 const RUN_LIMITS: [u64; 4] = [0, 200, 400, 800];
 
+/// Every setting on its own line: its name, then its value right beside it.
 pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
-    let galaxy = &mut setup.galaxy;
-    ui.horizontal_wrapped(|ui| {
-        ui.label("STAR SYSTEMS");
-        ui.add(egui::DragValue::new(&mut galaxy.systems).range(4..=150));
-        ui.label("MAP RADIUS (ly)");
-        ui.add(egui::DragValue::new(&mut galaxy.radius_ly).range(20..=95));
-        ui.label("MAX OBJECTS / SYSTEM");
-        ui.add(egui::DragValue::new(&mut galaxy.max_objects).range(6..=15));
-    });
+    egui::Grid::new("new-game-setup")
+        .num_columns(2)
+        .spacing([12.0, 6.0])
+        .show(ui, |ui| {
+            let galaxy = &mut setup.galaxy;
+            number_row(ui, "Star systems", &mut galaxy.systems, 4..=150);
+            number_row(ui, "Map radius (ly)", &mut galaxy.radius_ly, 20..=95);
+            number_row(
+                ui,
+                "Max objects per system",
+                &mut galaxy.max_objects,
+                6..=15,
+            );
+            choice_row(
+                ui,
+                "Starting credits",
+                &mut setup.starting_credits,
+                STARTING_CREDITS.map(Credits),
+                |credits| format!("{credits} cr"),
+            );
+            choice_row(
+                ui,
+                "Inflation",
+                &mut setup.inflation,
+                InflationLevel::ALL,
+                |level| level.label().to_owned(),
+            );
+            choice_row(ui, "Danger", &mut setup.danger, DangerLevel::ALL, |level| {
+                level.label().to_owned()
+            });
+            choice_row(
+                ui,
+                "Campaign length",
+                &mut setup.run_limit,
+                RUN_LIMITS.map(|runs| (runs > 0).then_some(runs)),
+                |limit| match limit {
+                    None => "Open-ended".into(),
+                    Some(runs) => format!("{runs} runs, then score"),
+                },
+            );
+            choice_row(
+                ui,
+                "Trader goal",
+                &mut setup.wealth_share_percent,
+                WEALTH_SHARES,
+                |share| format!("{share}% of galaxy wealth"),
+            );
+            faction_rows(ui, &mut setup.factions);
+        });
+    let galaxy = &setup.galaxy;
     let area = std::f64::consts::PI * f64::from(galaxy.radius_ly).powi(2);
     ui.small(format!(
         "Up to {} ly across · {:.1} systems per 1,000 ly² · objects include the star and \
@@ -28,54 +70,21 @@ pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
         u32::from(galaxy.radius_ly) * 2,
         f64::from(galaxy.systems) * 1000.0 / area
     ));
-    choice_row(
-        ui,
-        "STARTING CREDITS",
-        &mut setup.starting_credits,
-        STARTING_CREDITS.map(Credits),
-        |credits| format!("{credits} cr"),
-    );
-    choice_row(
-        ui,
-        "INFLATION",
-        &mut setup.inflation,
-        InflationLevel::ALL,
-        |level| level.label().to_owned(),
-    );
-    choice_row(ui, "DANGER", &mut setup.danger, DangerLevel::ALL, |level| {
-        level.label().to_owned()
-    });
-    choice_row(
-        ui,
-        "CAMPAIGN LENGTH",
-        &mut setup.run_limit,
-        RUN_LIMITS.map(|runs| (runs > 0).then_some(runs)),
-        |limit| match limit {
-            None => "Open-ended".into(),
-            Some(runs) => format!("{runs} runs, then score"),
-        },
-    );
-    choice_row(
-        ui,
-        "TRADER GOAL",
-        &mut setup.wealth_share_percent,
-        WEALTH_SHARES,
-        |share| format!("{share}% of galaxy wealth"),
-    );
-    faction_controls(ui, &mut setup.factions);
+    if !setup.factions.in_play.contains(&true) {
+        ui.small("No factions: every system is independent and trades at list prices.");
+    }
 }
 
-/// Which factions take part, your allegiance, territory and relations.
-fn faction_controls(ui: &mut Ui, factions: &mut game_core::factions::FactionSetup) {
+/// Which factions take part, then (with any in play) your allegiance,
+/// territory and relations: grid rows.
+fn faction_rows(ui: &mut Ui, factions: &mut game_core::factions::FactionSetup) {
+    ui.label("Factions");
     ui.horizontal_wrapped(|ui| {
-        ui.add_sized(
-            [130.0, 18.0],
-            egui::Label::new(RichText::new("FACTIONS").small()),
-        );
         for faction in Faction::ALL {
             ui.checkbox(&mut factions.in_play[faction.index()], faction.label());
         }
     });
+    ui.end_row();
     // An allegiance to a faction left out of the game lapses.
     if factions
         .allegiance
@@ -84,7 +93,6 @@ fn faction_controls(ui: &mut Ui, factions: &mut game_core::factions::FactionSetu
         factions.allegiance = None;
     }
     if !factions.in_play.contains(&true) {
-        ui.small("No factions: every system is independent and trades at list prices.");
         return;
     }
     let choices = std::iter::once(None).chain(
@@ -95,7 +103,7 @@ fn faction_controls(ui: &mut Ui, factions: &mut game_core::factions::FactionSetu
     );
     choice_row(
         ui,
-        "ALLEGIANCE",
+        "Allegiance",
         &mut factions.allegiance,
         choices,
         |choice| match choice {
@@ -105,21 +113,33 @@ fn faction_controls(ui: &mut Ui, factions: &mut game_core::factions::FactionSetu
     );
     choice_row(
         ui,
-        "TERRITORY",
+        "Territory",
         &mut factions.coverage,
         Coverage::ALL,
         |coverage| coverage.label().to_owned(),
     );
     choice_row(
         ui,
-        "RELATIONS",
+        "Relations",
         &mut factions.relations,
         RelationMode::ALL,
         |mode| mode.label().to_owned(),
     );
 }
 
-/// A labelled drop-down over a fixed set of choices.
+/// A grid row: a number setting and its value.
+fn number_row<T: egui::emath::Numeric>(
+    ui: &mut Ui,
+    label: &str,
+    value: &mut T,
+    range: std::ops::RangeInclusive<T>,
+) {
+    ui.label(label);
+    ui.add(egui::DragValue::new(value).range(range));
+    ui.end_row();
+}
+
+/// A grid row: a drop-down over a fixed set of choices.
 fn choice_row<T: Copy + PartialEq>(
     ui: &mut Ui,
     label: &str,
@@ -127,19 +147,15 @@ fn choice_row<T: Copy + PartialEq>(
     choices: impl IntoIterator<Item = T>,
     text: impl Fn(T) -> String,
 ) {
-    ui.horizontal(|ui| {
-        ui.add_sized(
-            [130.0, 18.0],
-            egui::Label::new(RichText::new(label).small()),
-        );
-        egui::ComboBox::from_id_salt(label)
-            .selected_text(text(*value))
-            .show_ui(ui, |ui| {
-                for choice in choices {
-                    ui.selectable_value(value, choice, text(choice));
-                }
-            });
-    });
+    ui.label(label);
+    egui::ComboBox::from_id_salt(label)
+        .selected_text(text(*value))
+        .show_ui(ui, |ui| {
+            for choice in choices {
+                ui.selectable_value(value, choice, text(choice));
+            }
+        });
+    ui.end_row();
 }
 
 /// One line describing a new game, for the log.

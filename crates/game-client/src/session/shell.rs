@@ -178,7 +178,16 @@ impl LocalSession {
                 "Factions",
                 "Territory, relations and your standing with each faction",
             ),
-            (Icon::Save, "Session & saves", "Save, load and new game"),
+            (
+                Icon::Save,
+                "Save & load",
+                "Save slots: save this run or load another",
+            ),
+            (
+                Icon::New,
+                "New session",
+                "Start a new map with its own setup",
+            ),
             (
                 Icon::Settings,
                 "Settings",
@@ -186,7 +195,16 @@ impl LocalSession {
             ),
         ];
         // Everything is open from the start; only Factions needs factions in play.
-        let shown = [true, true, true, true, self.factions_active(), true, true];
+        let shown = [
+            true,
+            true,
+            true,
+            true,
+            self.factions_active(),
+            true,
+            true,
+            true,
+        ];
         for (index, (icon, label, tip)) in entries.into_iter().enumerate() {
             if !shown[index] {
                 continue;
@@ -202,6 +220,7 @@ impl LocalSession {
                     3 => self.victory.open = true,
                     4 => self.factions.open = true,
                     5 => self.saves.open = true,
+                    6 => self.saves.new_open = true,
                     _ => self.open_settings(),
                 }
             }

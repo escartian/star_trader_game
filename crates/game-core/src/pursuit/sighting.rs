@@ -66,13 +66,73 @@ pub(super) fn sight(
                 }
             });
             let steer = match (bound, now) {
-                (Some(bound), _) => bound,
-                (None, Some((system, at))) => (system, berth(&ship.location, system, at, systems)?),
+                (Some(bound), _) => off_station(bound, now, systems),
+                (None, Some((system, at))) => {
+                    // Docked: wait off the port for it to come out.
+                    off_station(
+                        (system, berth(&ship.location, system, at, systems)?),
+                        None,
+                        systems,
+                    )
+                }
                 (None, None) => return None,
             };
             Some(Sighting { now, steer })
         }
     }
+}
+
+/// How far off a station (km) the flagship waits for a trader bound there:
+/// inside hailing range, outside the station's own berth, so the trader is
+/// caught on its way in rather than under the station's guns.
+const STATION_STANDOFF_KM: i64 = 8_000_000;
+
+/// A trader bound for a station is met just off it, on the side it comes
+/// from, instead of docking there too.
+fn off_station(
+    bound: (SystemId, MoveTarget),
+    now: Option<(SystemId, LocalPosition)>,
+    systems: &[StarSystem],
+) -> (SystemId, MoveTarget) {
+    let (system, MoveTarget::Body { body, .. }) = bound else {
+        return bound;
+    };
+    let Some(station) = systems
+        .iter()
+        .find(|known| known.id == system)
+        .and_then(|known| known.bodies.iter().find(|known| known.id == body))
+        .filter(|known| known.kind == crate::BodyKind::Station)
+    else {
+        return bound;
+    };
+    let at = station.position;
+    // Toward the trader when it is in the system, else toward the star.
+    let from = match now {
+        Some((here, position)) if here == system => position,
+        _ => LocalPosition {
+            x_km: 0,
+            y_km: 0,
+            z_km: 0,
+        },
+    };
+    let delta = [
+        (from.x_km - at.x_km) as f64,
+        (from.y_km - at.y_km) as f64,
+        (from.z_km - at.z_km) as f64,
+    ];
+    let length = delta.iter().map(|value| value * value).sum::<f64>().sqrt();
+    let unit = if length > 1.0 {
+        delta.map(|value| value / length)
+    } else {
+        [1.0, 0.0, 0.0]
+    };
+    let step = |value: f64| (value * STATION_STANDOFF_KM as f64).round() as i64;
+    let position = LocalPosition {
+        x_km: at.x_km + step(unit[0]),
+        y_km: at.y_km + step(unit[1]),
+        z_km: at.z_km + step(unit[2]),
+    };
+    (system, MoveTarget::Local { system, position })
 }
 
 /// A resting trader is followed to its body (the port when docked), one in

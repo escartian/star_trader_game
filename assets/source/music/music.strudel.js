@@ -55,6 +55,8 @@ const instruments = {
   lift: { sound: "gm_epiano2:1", boost: 1.7 },
   lead: { sound: "gm_lead_2_sawtooth:3", boost: 1.2 },
   guitar: { sound: "gm_electric_guitar_clean:2", boost: 3 },
+  // The solo's overdriven rock guitar (FluidR3's only version, `:0`).
+  rockGuitar: { sound: "gm_overdriven_guitar:0", boost: 0.8 },
   organ: { sound: "gm_drawbar_organ:3", boost: 3.5 },
   horns: { sound: "gm_french_horn:1", boost: 1.15 },
   woodwinds: { sound: "gm_flute:2", boost: 1.4 },
@@ -95,8 +97,12 @@ const instruments = {
   brass: { sound: "gm_brass_section:3", boost: 3 },
   cowbell: { sound: "square", boost: 1.5 },
   bass808: { sound: "sine", boost: 0.19 },
-  // The phonk pieces' dark, distorted synth lead.
+  // The phonk pieces' dark, distorted synth lead and picked bass guitar.
   dark: { sound: "supersaw", boost: 1.1 },
+  bassGuitar: { sound: "gm_electric_bass_pick:1", boost: 2.1 },
+  // Space-jazz colours in the funk pieces.
+  vibes: { sound: "gm_vibraphone:3", boost: 1.6 },
+  trumpet: { sound: "gm_muted_trumpet:3", boost: 1.4 },
 }
 const play = (pattern, name) => pattern.s(instruments[name].sound).postgain(instruments[name].boost)
 
@@ -189,6 +195,7 @@ function block(settings) {
     arpPhaserRate: 0.12, arpPhaserDepth: 0.12, arpPhaserSweep: 600,
     sequence: 0, lead: 0, leadNotes: melodyA,
     guitar: 0, guitarNotes: guitarLine, guitarBends: false, rhythm: 0,
+    guitarSound: 'guitar', guitarDrive: 0,
     guitarDecay: 0.4, guitarSustain: 0.35, guitarRelease: 0.3, guitarLpf: 2400,
     guitarDelay: 0.18, guitarFeedback: 0.22, guitarRoom: 0.35,
     organ: 0, horns: 0, woodwinds: 0,
@@ -203,6 +210,8 @@ function block(settings) {
     talk: 0, talkNotes: '', clav: 0, clavNotes: '', scratch: 0, slap: 0, slapNotes: '', brass: 0,
     cowbell: 0, cowbellNotes: '', bass808: 0, trap: 0, clap: 0, clapPattern: "~ pink ~ pink", groove: 0,
     congas: 0, tambourine: 0, slide808: false, phonkKit: 0, crackle: 0, dark: 0, darkNotes: '',
+    bassGuitar: 0, bassGuitarNotes: '', vibes: 0, vibesNotes: '', trumpet: 0, trumpetNotes: '',
+    swingRide: 0, rim: 0,
     ...settings }
   const from = o.from
   const to = o.to ?? o.from
@@ -288,8 +297,11 @@ function block(settings) {
   if (on(o.guitar)) {
     // Only the solo bends into selected notes (`guitarBends`); the other
     // phrases hold pitch.
-    let guitar = play(note(strum('<' + notesOf(o.guitarNotes) + '>')), 'guitar')
+    // `guitarSound` picks the clean or the overdriven guitar; `guitarDrive`
+    // adds waveshaping distortion on top.
+    let guitar = play(note(strum('<' + notesOf(o.guitarNotes) + '>')), o.guitarSound)
       .attack(0.005).decay(o.guitarDecay).sustain(o.guitarSustain).release(o.guitarRelease)
+      .shape(o.guitarDrive)
       .hpf(220).lpf(o.guitarLpf)
       .delay(o.guitarDelay).delaytime(echo).delayfeedback(o.guitarFeedback)
       .pan(0.42)
@@ -791,6 +803,51 @@ function block(settings) {
       .pan(0.5).room(0.45).size(hall)
       .gain(level(o.dark)))
   }
+  if (on(o.bassGuitar)) {
+    // A picked electric bass guitar line.
+    layers.push(play(note(o.bassGuitarNotes), 'bassGuitar')
+      .attack(0.003).decay(0.3).sustain(0.4).release(0.08)
+      .lpf(1800)
+      .pan(0.48).room(0.15).size(hall)
+      .gain(level(o.bassGuitar)))
+  }
+  if (on(o.vibes)) {
+    // Space-jazz vibraphone: soft arpeggios through each extended chord,
+    // ringing into the deep reverb.
+    layers.push(play(note(o.vibesNotes), 'vibes')
+      .attack(0.003).decay(0.7).sustain(0.05).release(0.4)
+      .lpf(4000)
+      .delay(0.3).delaytime(echo).delayfeedback(0.3)
+      .pan(sine.range(0.3, 0.7).slow(4))
+      .orbit(2).room(0.5).size(deep)
+      .gain(level(o.vibes)))
+  }
+  if (on(o.trumpet)) {
+    // A muted trumpet answering the melody in its gaps, jazz-club style.
+    layers.push(play(note(o.trumpetNotes), 'trumpet')
+      .attack(0.03).decay(0.3).sustain(0.5).release(0.25)
+      .lpf(3200)
+      .delay(0.25).delaytime(echo).delayfeedback(0.3)
+      .pan(0.38).room(0.5).size(hall)
+      .gain(level(o.trumpet)))
+  }
+  if (on(o.swingRide)) {
+    // A swung jazz ride: "ding, ding-a" on every beat, ringing a little.
+    layers.push(s("[white ~ ~] [white ~ white] [white ~ ~] [white ~ white]")
+      .velocity("[1 ~ ~] [0.8 ~ 0.5] [1 ~ ~] [0.8 ~ 0.5]")
+      .attack(0.001).decay(0.22).sustain(0)
+      .bandf(6200).bandq(2.5)
+      .pan(0.4).room(0.3).size(hall)
+      .gain(level(o.swingRide)))
+  }
+  if (on(o.rim)) {
+    // Rimshots: short, woody clicks in a syncopated sixteenth pattern.
+    layers.push(s("[~ ~ white ~] [~ white ~ ~] [~ ~ white ~] [white ~ ~ white]")
+      .attack(0.001).decay(0.03).sustain(0)
+      .bandf(3200).bandq(4)
+      .pan(0.6).room(0.2).size(hall)
+      .gain(level(o.rim)))
+  }
   return { from, to, bpm, next: o.next, pattern: stack(...layers) }
 }
 
@@ -867,8 +924,10 @@ const arrive = { keys: 0.1, ensemble: 0.13, arp: 0.13, arpLpf: 3200,
   counter: 0.12, stabs: 0.075, ostinato: 0.055, drums: 1,
   hats: 0.18, shaker: 0.16, ride: 0.055, toms: 0.07, lift: 0.12 }
 
-const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarDecay: 0.9, guitarSustain: 0.45, guitarRelease: 0.95,
-  guitarLpf: 3600, guitarDelay: 0.07, guitarFeedback: 0.1, guitarRoom: 0.2, rhythm: 0.085,
+// The solo plays a sustaining, overdriven rock guitar with a little extra drive.
+const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarSound: 'rockGuitar', guitarDrive: 0.2,
+  guitarDecay: 1.4, guitarSustain: 0.65, guitarRelease: 0.9,
+  guitarLpf: 4500, guitarDelay: 0.18, guitarFeedback: 0.28, guitarRoom: 0.3, rhythm: 0.085,
   drums: 1, hats: 0.13, pad: 0.04, pump: 0, pluck: 0 }
 
 
@@ -1053,12 +1112,15 @@ family('space', {
 
 // ---- funk.strudel.js ----
 // Star Trader music — the funk pieces at 60, 80, 100 and 120 BPM and the
-// 20 BPM ramps between them: the main theme reworked as space funk. Rendered
+// 20 BPM ramps between them: the main theme reworked as space funk with a
+// space-jazz colour (extended chords, Rhodes, vibraphone, muted trumpet and a
+// swung ride). Rendered
 // with library.strudel.js; see tools/music/README.md.
 
-// A funk vamp in D dorian, two bars per chord: Dm9, G9 (its major IV), Dm9,
-// then Bb^7 and A7sus, ending on A to resolve into every other block.
-const funkHarmony = { chords: "<Dm9 Dm9 G9 G9 Dm9 Dm9 Bb^7 A7sus>", roots: "<d2 d2 g1 g1 d2 d2 bb1 a1>",
+// A funk vamp in D dorian with space-jazz extensions, two bars per chord:
+// Dm11, G13 (its major IV), Dm11, then Bbmaj9 and A7sus, ending on A to
+// resolve into every other block.
+const funkHarmony = { chords: "<Dm11 Dm11 G13 G13 Dm11 Dm11 Bb^9 A7sus>", roots: "<d2 d2 g1 g1 d2 d2 bb1 a1>",
   rootNumbers: "<38 38 31 31 38 38 34 33>" }
 
 // The funk pieces have two themes, like the space pieces. Theme C, the main
@@ -1088,33 +1150,49 @@ const slapLine = '<' +
   '[[bb1 ~ bb2 ~] [~ bb1 ~ d2] [~ f2 ~ bb1] [c2 ~ d2 f2]] ' +
   '[[a1 ~ a2 ~] [~ a1 ~ e2] [~ g2 ~ a1] [e2 ~ g2 a2]]>'
 
+// Space jazz: vibraphone arpeggios through the extended chords (ninths,
+// elevenths and thirteenths), one bar per chord, eighth notes.
+const vibesLine = '<' +
+  '[a4 c5 e5 g5 a5 g5 e5 c5] [d5 e5 g5 c6 a5 g5 e5 d5] ' +
+  '[b4 d5 e5 a5 b5 a5 e5 d5] [f5 a5 b5 e6 d6 b5 a5 f5] ' +
+  '[a4 c5 e5 g5 a5 g5 e5 c5] [d5 e5 g5 c6 a5 g5 e5 d5] ' +
+  '[d5 f5 a5 c6 d6 c6 a5 f5] [e5 g5 a5 d6 e6 d6 a5 g5]>'
+// A muted trumpet answering in the second bar of each chord, in its gaps.
+const trumpetLine = '<~ [~ ~ [a5 g5] [e5 d5]] ~ [~ ~ [d5 e5] [f5 a5]] ' +
+  '~ [~ ~ [c6 a5] [g5 e5]] ~ [~ ~ [d5 e5] a5]>'
+
 // The funk pieces' settings, shared by the pieces and the ramps between them.
 const funkAt = {
-  // Theme C, slow and sultry: talkbox lead, laser harp, slap bass and a light
-  // groove, with a little space colour.
+  // Theme C, slow and sultry space jazz: talkbox lead, Rhodes, vibraphone and
+  // a muted trumpet over slap bass, a swung ride and the laser harp.
   60: {
-    keys: 0.105, ensemble: 0.15, bass: 0, slap: 0.16, slapNotes: slapLine, talk: 0.12,
-    talkNotes: themeC, laser: 0.06, scratch: 0.04, groove: 0.325, hats: 0.052, pad: 0.09,
-    halo: 0.075, bells: 0.05, beeps: 0.04
+    keys: 0.13, ensemble: 0.15, bass: 0, slap: 0.16, slapNotes: slapLine, talk: 0.12,
+    talkNotes: themeC, laser: 0.06, scratch: 0.04, groove: 0.3, swingRide: 0.025, pad: 0.09,
+    halo: 0.075, vibes: 0.07, vibesNotes: vibesLine, trumpet: 0.08, trumpetNotes: trumpetLine,
+    bells: 0.04, beeps: 0.03
   },
-  // Theme D: the clavinet riff with slap bass, chicken scratch and horn stabs.
+  // Theme D: the clavinet riff with slap bass, chicken scratch and horn stabs,
+  // the trumpet answering and vibraphone above.
   80: {
-    keys: 0.075, ensemble: 0.12, bass: 0, slap: 0.18, slapNotes: slapLine, clav: 0.12,
-    clavNotes: funkRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.078, organ: 0.06,
-    laser: 0.03, pad: 0.06
+    keys: 0.1, ensemble: 0.12, bass: 0, slap: 0.18, slapNotes: slapLine, clav: 0.12,
+    clavNotes: funkRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.06, swingRide: 0.02,
+    organ: 0.06, laser: 0.03, pad: 0.06, vibes: 0.05, vibesNotes: vibesLine, trumpet: 0.08,
+    trumpetNotes: trumpetLine
   },
   // Theme D, fuller: organ, congas and tambourine join the band.
   100: {
-    keys: 0.075, ensemble: 0.12, bass: 0, slap: 0.17, slapNotes: slapLine, clav: 0.12,
-    clavNotes: funkRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.08,
-    congas: 0.08, tambourine: 0.04, laser: 0.03
+    keys: 0.09, ensemble: 0.12, bass: 0, slap: 0.17, slapNotes: slapLine, clav: 0.12,
+    clavNotes: funkRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.06,
+    swingRide: 0.02, congas: 0.08, tambourine: 0.04, laser: 0.03, vibes: 0.04,
+    vibesNotes: vibesLine, trumpet: 0.07, trumpetNotes: trumpetLine
   },
   // Theme C at double time: talkbox and clavinet in unison over the full band,
-  // congas and tambourine, with the laser harp above.
+  // congas, tambourine and the swung ride, with the laser harp above.
   120: {
-    keys: 0.075, ensemble: 0.09, bass: 0, slap: 0.17, slapNotes: slapLine, talk: 0.11,
+    keys: 0.09, ensemble: 0.09, bass: 0, slap: 0.17, slapNotes: slapLine, talk: 0.11,
     talkNotes: themeC, clav: 0.08, clavNotes: themeC, scratch: 0.07, brass: 0.1, organ: 0.06,
-    groove: 0.585, hats: 0.08, congas: 0.12, tambourine: 0.06, laser: 0.06
+    groove: 0.585, hats: 0.06, swingRide: 0.025, congas: 0.12, tambourine: 0.06, laser: 0.06,
+    vibes: 0.03, vibesNotes: vibesLine, trumpet: 0.06, trumpetNotes: trumpetLine
   },
 }
 const funkRamp = (from, to, next) => familyRamp(funkAt, funkHarmony, from, to, next)
@@ -1172,31 +1250,46 @@ const themeF = '<' +
   '[[a4 ~ ~ db5] [~ ~ e5 ~] [~ g5 ~ e5] [db5 ~ a4 ~]] ' +
   '[[a4 ~ ~ db5] [~ ~ e5 ~] [a5 ~ g5 ~] [e5 ~ ~ ~]]>'
 
+// A picked bass guitar groove under the 808, two bars per chord.
+const phonkBassLine = '<' +
+  '[[d2 ~ ~ d2] [~ ~ f2 ~] [a2 ~ ~ g2] [~ f2 ~ ~]] [[d2 ~ ~ d2] [~ ~ f2 ~] [c3 ~ a2 ~] [g2 ~ e2 ~]] ' +
+  '[[bb1 ~ ~ bb1] [~ ~ d2 ~] [f2 ~ ~ e2] [~ d2 ~ ~]] [[bb1 ~ ~ bb1] [~ ~ d2 ~] [a2 ~ f2 ~] [d2 ~ c2 ~]] ' +
+  '[[g1 ~ ~ g1] [~ ~ bb1 ~] [d2 ~ ~ c2] [~ bb1 ~ ~]] [[g1 ~ ~ g1] [~ ~ bb1 ~] [f2 ~ d2 ~] [bb1 ~ a1 ~]] ' +
+  '[[a1 ~ ~ a1] [~ ~ db2 ~] [e2 ~ ~ g2] [~ e2 ~ ~]] [[a1 ~ ~ a1] [~ ~ db2 ~] [g2 ~ e2 ~] [db2 ~ a1 ~]]>'
+
 // The phonk pieces' settings, shared by the pieces and the ramps between them.
+// The kit sits under the music; rimshots, toms, shaker and open hats vary it.
 const phonkAt = {
-  // Theme E, slow and eerie: the cowbell over long sliding 808s, a dark pad,
-  // a lowpassed choir and crackle, with the kit and hats held back.
+  // Theme E, slow and eerie: the cowbell over long sliding 808s and the bass
+  // guitar, a dark pad, a lowpassed choir and crackle, the kit held back.
   60: {
-    ensemble: 0, bass: 0, cowbell: 0.08, cowbellNotes: themeE, bass808: 0.22, slide808: true,
-    pad: 0.07, choir: 0.05, halo: 0.06, crackle: 0.05, phonkKit: 0.35, trap: 0.035
+    brass: 0.04, ensemble: 0, bass: 0, cowbell: 0.08, cowbellNotes: themeE, bass808: 0.234, slide808: true,
+    bassGuitar: 0.195, bassGuitarNotes: phonkBassLine, pad: 0.07, choir: 0.05, halo: 0.06,
+    crackle: 0.05, phonkKit: 0.175, trap: 0.017, rim: 0.087, shaker: 0.028
   },
-  // Theme F on the dark lead, with the kit, trap hats and a half-time clap.
+  // Theme F on the dark lead, with the kit, trap hats, rimshots, toms and a
+  // half-time clap.
   80: {
-    ensemble: 0, bass: 0, dark: 0.1, darkNotes: themeF, bass808: 0.26, slide808: true,
-    phonkKit: 0.55, trap: 0.05, clap: 0.07, clapPattern: "~ ~ pink ~", pad: 0.05, choir: 0.05,
+    brass: 0.06, ensemble: 0, bass: 0, dark: 0.1, darkNotes: themeF, bass808: 0.286, slide808: true,
+    bassGuitar: 0.234, bassGuitarNotes: phonkBassLine, phonkKit: 0.266, trap: 0.025, clap: 0.035,
+    clapPattern: "~ ~ pink ~", rim: 0.105, toms: 0.028, shaker: 0.035, pad: 0.05, choir: 0.05,
     crackle: 0.04
   },
   // Theme F, heavier: the cowbell doubles the lead an octave up.
   100: {
-    ensemble: 0, bass: 0, dark: 0.12, darkNotes: themeF, cowbell: 0.05,
-    cowbellNotes: octaveUp(themeF), bass808: 0.3, slide808: true, phonkKit: 0.7, trap: 0.07,
-    clap: 0.09, clapPattern: "~ ~ pink ~", choir: 0.06, chop: 0.03, crackle: 0.03
+    brass: 0.07, ensemble: 0, bass: 0, dark: 0.12, darkNotes: themeF, cowbell: 0.05,
+    cowbellNotes: octaveUp(themeF), bass808: 0.325, slide808: true, bassGuitar: 0.234,
+    bassGuitarNotes: phonkBassLine, phonkKit: 0.343, trap: 0.035, clap: 0.044,
+    clapPattern: "~ ~ pink ~", rim: 0.122, toms: 0.035, shaker: 0.035, openhat: 0.014, choir: 0.06,
+    chop: 0.03, crackle: 0.03
   },
   // Theme E at double time: drift phonk, cowbell up front over the full kit.
   120: {
-    ensemble: 0, bass: 0, cowbell: 0.13, cowbellNotes: themeE, dark: 0.05,
-    darkNotes: octaveDown(themeE), bass808: 0.32, slide808: true, phonkKit: 0.8, trap: 0.08,
-    clap: 0.11, clapPattern: "~ ~ pink ~", choir: 0.06, zaps: 0.03, crackle: 0.03
+    brass: 0.07, ensemble: 0, bass: 0, cowbell: 0.13, cowbellNotes: themeE, dark: 0.05,
+    darkNotes: octaveDown(themeE), bass808: 0.338, slide808: true, bassGuitar: 0.208,
+    bassGuitarNotes: phonkBassLine, phonkKit: 0.392, trap: 0.039, clap: 0.054,
+    clapPattern: "~ ~ pink ~", rim: 0.122, toms: 0.042, shaker: 0.042, openhat: 0.021, choir: 0.06,
+    zaps: 0.03, crackle: 0.03
   },
 }
 const phonkRamp = (from, to, next) => familyRamp(phonkAt, phonkHarmony, from, to, next)

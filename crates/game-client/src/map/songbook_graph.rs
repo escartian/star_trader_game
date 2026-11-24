@@ -8,9 +8,11 @@ use egui::epaint::QuadraticBezierShape;
 use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2};
 use std::sync::OnceLock;
 
-/// The map's smallest size in points. It stretches to fill a larger window
-/// (spreading the parts out) and scrolls in a smaller one.
-pub(super) const MIN_CANVAS: Vec2 = Vec2::new(760.0, 640.0);
+/// The map's own size in points. It is drawn at this size inside a zoomable
+/// `egui::Scene`, which first scales it to fit the card.
+pub(super) const CANVAS: Vec2 = Vec2::new(1000.0, 660.0);
+/// How far the viewer may zoom: out to a quarter, in to four times the fit.
+const ZOOM: std::ops::RangeInclusive<f32> = 0.25..=4.0;
 const NODE_RADIUS: f32 = 10.0;
 /// Canvas margin left and right of the 60 and 120 BPM columns, in points,
 /// leaving room for arrows that bow outward from the edge columns.
@@ -143,6 +145,9 @@ pub(super) fn transitions() -> &'static [Transition] {
     })
 }
 
+/// Canvas margin above the top row, in points, for its section's name.
+const TOP_MARGIN: f32 = 18.0;
+
 /// A part's centre on the map's `canvas`.
 fn place(id: &str, canvas: Rect) -> Option<Pos2> {
     let (_, bpm, row) = PLACES.iter().find(|(place, ..)| *place == id)?;
@@ -151,7 +156,7 @@ fn place(id: &str, canvas: Rect) -> Option<Pos2> {
         canvas.min
             + Vec2::new(
                 SIDE_MARGIN + (bpm - 60.0) / 60.0 * span,
-                row * canvas.height(),
+                TOP_MARGIN + row * (canvas.height() - TOP_MARGIN),
             ),
     )
 }
@@ -170,10 +175,32 @@ pub(super) struct MapInput {
     pub chosen: Option<&'static str>,
 }
 
-/// Paints the map at the cursor, `size` points large (at least `MIN_CANVAS`),
-/// and returns the hovered and clicked parts.
+/// Shows the map in a `size` points large view that pinch, Ctrl+scroll or
+/// two-finger scroll zoom and pan, drag pans and a double-click refits.
+/// Returns the hovered and clicked parts.
 pub(super) fn show(ui: &mut Ui, highlights: &Highlights, size: Vec2) -> MapInput {
-    let (response, painter) = ui.allocate_painter(size.max(MIN_CANVAS), Sense::click());
+    let memory = ui.id().with("songbook-map-view");
+    let whole = Rect::from_min_size(Pos2::ZERO, CANVAS);
+    let mut view = ui
+        .ctx()
+        .data(|data| data.get_temp::<Rect>(memory))
+        .unwrap_or(whole);
+    let shown = ui.allocate_ui(size, |ui| {
+        ui.set_min_size(size);
+        egui::Scene::new()
+            .zoom_range(ZOOM)
+            .show(ui, &mut view, |ui| paint_map(ui, highlights))
+    });
+    if shown.inner.response.double_clicked() {
+        view = whole;
+    }
+    ui.ctx().data_mut(|data| data.insert_temp(memory, view));
+    shown.inner.inner
+}
+
+/// Paints the whole map at `CANVAS` size in scene coordinates.
+fn paint_map(ui: &mut Ui, highlights: &Highlights) -> MapInput {
+    let (response, painter) = ui.allocate_painter(CANVAS, Sense::click());
     let canvas = response.rect;
     let hovered = response.hover_pos().and_then(|pointer| {
         PARTS.iter().find(|part| {
@@ -371,7 +398,7 @@ mod tests {
         assert_eq!(placed, parts);
         let centres: Vec<_> = PLACES
             .iter()
-            .filter_map(|(id, ..)| place(id, Rect::from_min_size(Pos2::ZERO, MIN_CANVAS)))
+            .filter_map(|(id, ..)| place(id, Rect::from_min_size(Pos2::ZERO, CANVAS)))
             .collect();
         for (index, a) in centres.iter().enumerate() {
             for b in &centres[index + 1..] {

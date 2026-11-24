@@ -92,7 +92,7 @@ pub(super) fn show(
 fn map_height(ui: &egui::Ui, content_top: f32, below: f32) -> f32 {
     let budget = ui.ctx().screen_rect().height() * 0.7;
     let above = ui.cursor().top() - content_top;
-    (budget - above - below).max(songbook_graph::MIN_CANVAS.y)
+    (budget - above - below).max(160.0)
 }
 
 fn now_playing(ui: &mut egui::Ui, current: Option<&str>, next: Option<&str>) {
@@ -189,7 +189,8 @@ fn map(
     };
     ui.small(
         "Hover a part to see where it can go next (green, with chances) and what leads to \
-         it (cyan). Click a part to play it; the music then follows its arrows.",
+         it (cyan); click it to play it. Pinch or Ctrl+scroll to zoom, drag or scroll to \
+         pan, double-click to fit.",
     );
     input.chosen
 }

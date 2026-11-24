@@ -32,31 +32,46 @@ const themeF = '<' +
   '[[a4 ~ ~ db5] [~ ~ e5 ~] [~ g5 ~ e5] [db5 ~ a4 ~]] ' +
   '[[a4 ~ ~ db5] [~ ~ e5 ~] [a5 ~ g5 ~] [e5 ~ ~ ~]]>'
 
+// A picked bass guitar groove under the 808, two bars per chord.
+const phonkBassLine = '<' +
+  '[[d2 ~ ~ d2] [~ ~ f2 ~] [a2 ~ ~ g2] [~ f2 ~ ~]] [[d2 ~ ~ d2] [~ ~ f2 ~] [c3 ~ a2 ~] [g2 ~ e2 ~]] ' +
+  '[[bb1 ~ ~ bb1] [~ ~ d2 ~] [f2 ~ ~ e2] [~ d2 ~ ~]] [[bb1 ~ ~ bb1] [~ ~ d2 ~] [a2 ~ f2 ~] [d2 ~ c2 ~]] ' +
+  '[[g1 ~ ~ g1] [~ ~ bb1 ~] [d2 ~ ~ c2] [~ bb1 ~ ~]] [[g1 ~ ~ g1] [~ ~ bb1 ~] [f2 ~ d2 ~] [bb1 ~ a1 ~]] ' +
+  '[[a1 ~ ~ a1] [~ ~ db2 ~] [e2 ~ ~ g2] [~ e2 ~ ~]] [[a1 ~ ~ a1] [~ ~ db2 ~] [g2 ~ e2 ~] [db2 ~ a1 ~]]>'
+
 // The phonk pieces' settings, shared by the pieces and the ramps between them.
+// The kit sits under the music; rimshots, toms, shaker and open hats vary it.
 const phonkAt = {
-  // Theme E, slow and eerie: the cowbell over long sliding 808s, a dark pad,
-  // a lowpassed choir and crackle, with the kit and hats held back.
+  // Theme E, slow and eerie: the cowbell over long sliding 808s and the bass
+  // guitar, a dark pad, a lowpassed choir and crackle, the kit held back.
   60: {
-    ensemble: 0, bass: 0, cowbell: 0.08, cowbellNotes: themeE, bass808: 0.22, slide808: true,
-    pad: 0.07, choir: 0.05, halo: 0.06, crackle: 0.05, phonkKit: 0.35, trap: 0.035
+    brass: 0.04, ensemble: 0, bass: 0, cowbell: 0.08, cowbellNotes: themeE, bass808: 0.234, slide808: true,
+    bassGuitar: 0.195, bassGuitarNotes: phonkBassLine, pad: 0.07, choir: 0.05, halo: 0.06,
+    crackle: 0.05, phonkKit: 0.175, trap: 0.017, rim: 0.087, shaker: 0.028
   },
-  // Theme F on the dark lead, with the kit, trap hats and a half-time clap.
+  // Theme F on the dark lead, with the kit, trap hats, rimshots, toms and a
+  // half-time clap.
   80: {
-    ensemble: 0, bass: 0, dark: 0.1, darkNotes: themeF, bass808: 0.26, slide808: true,
-    phonkKit: 0.55, trap: 0.05, clap: 0.07, clapPattern: "~ ~ pink ~", pad: 0.05, choir: 0.05,
+    brass: 0.06, ensemble: 0, bass: 0, dark: 0.1, darkNotes: themeF, bass808: 0.286, slide808: true,
+    bassGuitar: 0.234, bassGuitarNotes: phonkBassLine, phonkKit: 0.266, trap: 0.025, clap: 0.035,
+    clapPattern: "~ ~ pink ~", rim: 0.105, toms: 0.028, shaker: 0.035, pad: 0.05, choir: 0.05,
     crackle: 0.04
   },
   // Theme F, heavier: the cowbell doubles the lead an octave up.
   100: {
-    ensemble: 0, bass: 0, dark: 0.12, darkNotes: themeF, cowbell: 0.05,
-    cowbellNotes: octaveUp(themeF), bass808: 0.3, slide808: true, phonkKit: 0.7, trap: 0.07,
-    clap: 0.09, clapPattern: "~ ~ pink ~", choir: 0.06, chop: 0.03, crackle: 0.03
+    brass: 0.07, ensemble: 0, bass: 0, dark: 0.12, darkNotes: themeF, cowbell: 0.05,
+    cowbellNotes: octaveUp(themeF), bass808: 0.325, slide808: true, bassGuitar: 0.234,
+    bassGuitarNotes: phonkBassLine, phonkKit: 0.343, trap: 0.035, clap: 0.044,
+    clapPattern: "~ ~ pink ~", rim: 0.122, toms: 0.035, shaker: 0.035, openhat: 0.014, choir: 0.06,
+    chop: 0.03, crackle: 0.03
   },
   // Theme E at double time: drift phonk, cowbell up front over the full kit.
   120: {
-    ensemble: 0, bass: 0, cowbell: 0.13, cowbellNotes: themeE, dark: 0.05,
-    darkNotes: octaveDown(themeE), bass808: 0.32, slide808: true, phonkKit: 0.8, trap: 0.08,
-    clap: 0.11, clapPattern: "~ ~ pink ~", choir: 0.06, zaps: 0.03, crackle: 0.03
+    brass: 0.07, ensemble: 0, bass: 0, cowbell: 0.13, cowbellNotes: themeE, dark: 0.05,
+    darkNotes: octaveDown(themeE), bass808: 0.338, slide808: true, bassGuitar: 0.208,
+    bassGuitarNotes: phonkBassLine, phonkKit: 0.392, trap: 0.039, clap: 0.054,
+    clapPattern: "~ ~ pink ~", rim: 0.122, toms: 0.042, shaker: 0.042, openhat: 0.021, choir: 0.06,
+    zaps: 0.03, crackle: 0.03
   },
 }
 const phonkRamp = (from, to, next) => familyRamp(phonkAt, phonkHarmony, from, to, next)

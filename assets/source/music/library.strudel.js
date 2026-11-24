@@ -50,6 +50,8 @@ const instruments = {
   lift: { sound: "gm_epiano2:1", boost: 1.7 },
   lead: { sound: "gm_lead_2_sawtooth:3", boost: 1.2 },
   guitar: { sound: "gm_electric_guitar_clean:2", boost: 3 },
+  // The solo's overdriven rock guitar (FluidR3's only version, `:0`).
+  rockGuitar: { sound: "gm_overdriven_guitar:0", boost: 0.8 },
   organ: { sound: "gm_drawbar_organ:3", boost: 3.5 },
   horns: { sound: "gm_french_horn:1", boost: 1.15 },
   woodwinds: { sound: "gm_flute:2", boost: 1.4 },
@@ -90,8 +92,12 @@ const instruments = {
   brass: { sound: "gm_brass_section:3", boost: 3 },
   cowbell: { sound: "square", boost: 1.5 },
   bass808: { sound: "sine", boost: 0.19 },
-  // The phonk pieces' dark, distorted synth lead.
+  // The phonk pieces' dark, distorted synth lead and picked bass guitar.
   dark: { sound: "supersaw", boost: 1.1 },
+  bassGuitar: { sound: "gm_electric_bass_pick:1", boost: 2.1 },
+  // Space-jazz colours in the funk pieces.
+  vibes: { sound: "gm_vibraphone:3", boost: 1.6 },
+  trumpet: { sound: "gm_muted_trumpet:3", boost: 1.4 },
 }
 const play = (pattern, name) => pattern.s(instruments[name].sound).postgain(instruments[name].boost)
 
@@ -184,6 +190,7 @@ function block(settings) {
     arpPhaserRate: 0.12, arpPhaserDepth: 0.12, arpPhaserSweep: 600,
     sequence: 0, lead: 0, leadNotes: melodyA,
     guitar: 0, guitarNotes: guitarLine, guitarBends: false, rhythm: 0,
+    guitarSound: 'guitar', guitarDrive: 0,
     guitarDecay: 0.4, guitarSustain: 0.35, guitarRelease: 0.3, guitarLpf: 2400,
     guitarDelay: 0.18, guitarFeedback: 0.22, guitarRoom: 0.35,
     organ: 0, horns: 0, woodwinds: 0,
@@ -198,6 +205,8 @@ function block(settings) {
     talk: 0, talkNotes: '', clav: 0, clavNotes: '', scratch: 0, slap: 0, slapNotes: '', brass: 0,
     cowbell: 0, cowbellNotes: '', bass808: 0, trap: 0, clap: 0, clapPattern: "~ pink ~ pink", groove: 0,
     congas: 0, tambourine: 0, slide808: false, phonkKit: 0, crackle: 0, dark: 0, darkNotes: '',
+    bassGuitar: 0, bassGuitarNotes: '', vibes: 0, vibesNotes: '', trumpet: 0, trumpetNotes: '',
+    swingRide: 0, rim: 0,
     ...settings }
   const from = o.from
   const to = o.to ?? o.from
@@ -283,8 +292,11 @@ function block(settings) {
   if (on(o.guitar)) {
     // Only the solo bends into selected notes (`guitarBends`); the other
     // phrases hold pitch.
-    let guitar = play(note(strum('<' + notesOf(o.guitarNotes) + '>')), 'guitar')
+    // `guitarSound` picks the clean or the overdriven guitar; `guitarDrive`
+    // adds waveshaping distortion on top.
+    let guitar = play(note(strum('<' + notesOf(o.guitarNotes) + '>')), o.guitarSound)
       .attack(0.005).decay(o.guitarDecay).sustain(o.guitarSustain).release(o.guitarRelease)
+      .shape(o.guitarDrive)
       .hpf(220).lpf(o.guitarLpf)
       .delay(o.guitarDelay).delaytime(echo).delayfeedback(o.guitarFeedback)
       .pan(0.42)
@@ -785,6 +797,51 @@ function block(settings) {
       .delay(0.3).delaytime(echo).delayfeedback(0.35)
       .pan(0.5).room(0.45).size(hall)
       .gain(level(o.dark)))
+  }
+  if (on(o.bassGuitar)) {
+    // A picked electric bass guitar line.
+    layers.push(play(note(o.bassGuitarNotes), 'bassGuitar')
+      .attack(0.003).decay(0.3).sustain(0.4).release(0.08)
+      .lpf(1800)
+      .pan(0.48).room(0.15).size(hall)
+      .gain(level(o.bassGuitar)))
+  }
+  if (on(o.vibes)) {
+    // Space-jazz vibraphone: soft arpeggios through each extended chord,
+    // ringing into the deep reverb.
+    layers.push(play(note(o.vibesNotes), 'vibes')
+      .attack(0.003).decay(0.7).sustain(0.05).release(0.4)
+      .lpf(4000)
+      .delay(0.3).delaytime(echo).delayfeedback(0.3)
+      .pan(sine.range(0.3, 0.7).slow(4))
+      .orbit(2).room(0.5).size(deep)
+      .gain(level(o.vibes)))
+  }
+  if (on(o.trumpet)) {
+    // A muted trumpet answering the melody in its gaps, jazz-club style.
+    layers.push(play(note(o.trumpetNotes), 'trumpet')
+      .attack(0.03).decay(0.3).sustain(0.5).release(0.25)
+      .lpf(3200)
+      .delay(0.25).delaytime(echo).delayfeedback(0.3)
+      .pan(0.38).room(0.5).size(hall)
+      .gain(level(o.trumpet)))
+  }
+  if (on(o.swingRide)) {
+    // A swung jazz ride: "ding, ding-a" on every beat, ringing a little.
+    layers.push(s("[white ~ ~] [white ~ white] [white ~ ~] [white ~ white]")
+      .velocity("[1 ~ ~] [0.8 ~ 0.5] [1 ~ ~] [0.8 ~ 0.5]")
+      .attack(0.001).decay(0.22).sustain(0)
+      .bandf(6200).bandq(2.5)
+      .pan(0.4).room(0.3).size(hall)
+      .gain(level(o.swingRide)))
+  }
+  if (on(o.rim)) {
+    // Rimshots: short, woody clicks in a syncopated sixteenth pattern.
+    layers.push(s("[~ ~ white ~] [~ white ~ ~] [~ ~ white ~] [white ~ ~ white]")
+      .attack(0.001).decay(0.03).sustain(0)
+      .bandf(3200).bandq(4)
+      .pan(0.6).room(0.2).size(hall)
+      .gain(level(o.rim)))
   }
   return { from, to, bpm, next: o.next, pattern: stack(...layers) }
 }

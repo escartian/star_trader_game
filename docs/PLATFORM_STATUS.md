@@ -245,9 +245,11 @@ fills it, with section outlines, tempo placement including the space ramps, and
 the playing part's outgoing arrows with chances and incoming arrows. On a phone
 (`@space_80`, 390 × 844) the Map toggle is hidden and the list shows. Dragging
 the card was not captured; its size no longer depends on its position.
-With the funk family added (`@funk_100`, 1920 × 1080; `@funk_60`, 1280 × 800)
-the map fits a 1080-point-tall screen; on an 800-point screen the card scrolls
-to reach the space rows and the explanation. Hover
+With the funk and phonk families added, the map is drawn on a fixed canvas
+inside a zoomable `egui::Scene` that first fits it to the card: captures at
+1280 × 800 (`@funk_80`) and 1920 × 1080 (`@phonk_100`) show the whole map and
+its explanation without scrolling. Pinch, Ctrl+scroll, drag and double-click
+to refit need pointer input and were not captured. Hover
 highlighting, clicking a part and the pulsing "up next" ring need live audio and
 pointer input and were not captured; the announced next part is covered by an
 audio test.

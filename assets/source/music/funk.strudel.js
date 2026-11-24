@@ -1,10 +1,13 @@
 // Star Trader music — the funk pieces at 60, 80, 100 and 120 BPM and the
-// 20 BPM ramps between them: the main theme reworked as space funk. Rendered
+// 20 BPM ramps between them: the main theme reworked as space funk with a
+// space-jazz colour (extended chords, Rhodes, vibraphone, muted trumpet and a
+// swung ride). Rendered
 // with library.strudel.js; see tools/music/README.md.
 
-// A funk vamp in D dorian, two bars per chord: Dm9, G9 (its major IV), Dm9,
-// then Bb^7 and A7sus, ending on A to resolve into every other block.
-const funkHarmony = { chords: "<Dm9 Dm9 G9 G9 Dm9 Dm9 Bb^7 A7sus>", roots: "<d2 d2 g1 g1 d2 d2 bb1 a1>",
+// A funk vamp in D dorian with space-jazz extensions, two bars per chord:
+// Dm11, G13 (its major IV), Dm11, then Bbmaj9 and A7sus, ending on A to
+// resolve into every other block.
+const funkHarmony = { chords: "<Dm11 Dm11 G13 G13 Dm11 Dm11 Bb^9 A7sus>", roots: "<d2 d2 g1 g1 d2 d2 bb1 a1>",
   rootNumbers: "<38 38 31 31 38 38 34 33>" }
 
 // The funk pieces have two themes, like the space pieces. Theme C, the main
@@ -34,33 +37,49 @@ const slapLine = '<' +
   '[[bb1 ~ bb2 ~] [~ bb1 ~ d2] [~ f2 ~ bb1] [c2 ~ d2 f2]] ' +
   '[[a1 ~ a2 ~] [~ a1 ~ e2] [~ g2 ~ a1] [e2 ~ g2 a2]]>'
 
+// Space jazz: vibraphone arpeggios through the extended chords (ninths,
+// elevenths and thirteenths), one bar per chord, eighth notes.
+const vibesLine = '<' +
+  '[a4 c5 e5 g5 a5 g5 e5 c5] [d5 e5 g5 c6 a5 g5 e5 d5] ' +
+  '[b4 d5 e5 a5 b5 a5 e5 d5] [f5 a5 b5 e6 d6 b5 a5 f5] ' +
+  '[a4 c5 e5 g5 a5 g5 e5 c5] [d5 e5 g5 c6 a5 g5 e5 d5] ' +
+  '[d5 f5 a5 c6 d6 c6 a5 f5] [e5 g5 a5 d6 e6 d6 a5 g5]>'
+// A muted trumpet answering in the second bar of each chord, in its gaps.
+const trumpetLine = '<~ [~ ~ [a5 g5] [e5 d5]] ~ [~ ~ [d5 e5] [f5 a5]] ' +
+  '~ [~ ~ [c6 a5] [g5 e5]] ~ [~ ~ [d5 e5] a5]>'
+
 // The funk pieces' settings, shared by the pieces and the ramps between them.
 const funkAt = {
-  // Theme C, slow and sultry: talkbox lead, laser harp, slap bass and a light
-  // groove, with a little space colour.
+  // Theme C, slow and sultry space jazz: talkbox lead, Rhodes, vibraphone and
+  // a muted trumpet over slap bass, a swung ride and the laser harp.
   60: {
-    keys: 0.105, ensemble: 0.15, bass: 0, slap: 0.16, slapNotes: slapLine, talk: 0.12,
-    talkNotes: themeC, laser: 0.06, scratch: 0.04, groove: 0.325, hats: 0.052, pad: 0.09,
-    halo: 0.075, bells: 0.05, beeps: 0.04
+    keys: 0.13, ensemble: 0.15, bass: 0, slap: 0.16, slapNotes: slapLine, talk: 0.12,
+    talkNotes: themeC, laser: 0.06, scratch: 0.04, groove: 0.3, swingRide: 0.025, pad: 0.09,
+    halo: 0.075, vibes: 0.07, vibesNotes: vibesLine, trumpet: 0.08, trumpetNotes: trumpetLine,
+    bells: 0.04, beeps: 0.03
   },
-  // Theme D: the clavinet riff with slap bass, chicken scratch and horn stabs.
+  // Theme D: the clavinet riff with slap bass, chicken scratch and horn stabs,
+  // the trumpet answering and vibraphone above.
   80: {
-    keys: 0.075, ensemble: 0.12, bass: 0, slap: 0.18, slapNotes: slapLine, clav: 0.12,
-    clavNotes: funkRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.078, organ: 0.06,
-    laser: 0.03, pad: 0.06
+    keys: 0.1, ensemble: 0.12, bass: 0, slap: 0.18, slapNotes: slapLine, clav: 0.12,
+    clavNotes: funkRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.06, swingRide: 0.02,
+    organ: 0.06, laser: 0.03, pad: 0.06, vibes: 0.05, vibesNotes: vibesLine, trumpet: 0.08,
+    trumpetNotes: trumpetLine
   },
   // Theme D, fuller: organ, congas and tambourine join the band.
   100: {
-    keys: 0.075, ensemble: 0.12, bass: 0, slap: 0.17, slapNotes: slapLine, clav: 0.12,
-    clavNotes: funkRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.08,
-    congas: 0.08, tambourine: 0.04, laser: 0.03
+    keys: 0.09, ensemble: 0.12, bass: 0, slap: 0.17, slapNotes: slapLine, clav: 0.12,
+    clavNotes: funkRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.06,
+    swingRide: 0.02, congas: 0.08, tambourine: 0.04, laser: 0.03, vibes: 0.04,
+    vibesNotes: vibesLine, trumpet: 0.07, trumpetNotes: trumpetLine
   },
   // Theme C at double time: talkbox and clavinet in unison over the full band,
-  // congas and tambourine, with the laser harp above.
+  // congas, tambourine and the swung ride, with the laser harp above.
   120: {
-    keys: 0.075, ensemble: 0.09, bass: 0, slap: 0.17, slapNotes: slapLine, talk: 0.11,
+    keys: 0.09, ensemble: 0.09, bass: 0, slap: 0.17, slapNotes: slapLine, talk: 0.11,
     talkNotes: themeC, clav: 0.08, clavNotes: themeC, scratch: 0.07, brass: 0.1, organ: 0.06,
-    groove: 0.585, hats: 0.08, congas: 0.12, tambourine: 0.06, laser: 0.06
+    groove: 0.585, hats: 0.06, swingRide: 0.025, congas: 0.12, tambourine: 0.06, laser: 0.06,
+    vibes: 0.03, vibesNotes: vibesLine, trumpet: 0.06, trumpetNotes: trumpetLine
   },
 }
 const funkRamp = (from, to, next) => familyRamp(funkAt, funkHarmony, from, to, next)

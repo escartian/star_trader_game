@@ -17,6 +17,8 @@ and do not change if the remote copies do.
 | `0160_FluidR3_GM_sf2_file.js` | `gm_drawbar_organ:3` | organ |
 | `0270_FluidR3_GM_sf2_file.js` | `gm_electric_guitar_clean:2` | guitar, rhythm guitar |
 | `0281_FluidR3_GM_sf2_file.js` | `gm_electric_guitar_muted:7` | chicken-scratch guitar (funk pieces) |
+| `0290_FluidR3_GM_sf2_file.js` | `gm_overdriven_guitar:0` | the solo's rock guitar |
+| `0340_FluidR3_GM_sf2_file.js` | `gm_electric_bass_pick:1` | bass guitar (phonk pieces) |
 | `0360_FluidR3_GM_sf2_file.js` | `gm_slap_bass_1:2` | slap bass (funk pieces) |
 | `0380_FluidR3_GM_sf2_file.js` | `gm_synth_bass_1:1` | bass |
 | `0410_FluidR3_GM_sf2_file.js` | `gm_viola:1` | viola |
@@ -24,6 +26,7 @@ and do not change if the remote copies do.
 | `0480_FluidR3_GM_sf2_file.js` | `gm_string_ensemble_1:2` | ostinato |
 | `0501_FluidR3_GM_sf2_file.js` | `gm_synth_strings_1:3` | ensemble |
 | `0540_FluidR3_GM_sf2_file.js` | `gm_synth_choir:2` | choir (space pieces) |
+| `0590_FluidR3_GM_sf2_file.js` | `gm_muted_trumpet:3` | muted trumpet (funk pieces) |
 | `0600_FluidR3_GM_sf2_file.js` | `gm_french_horn:1` | horns |
 | `0610_FluidR3_GM_sf2_file.js` | `gm_brass_section:3` | horn stabs (funk pieces) |
 | `0620_FluidR3_GM_sf2_file.js` | `gm_synth_brass_1:1` | stabs |

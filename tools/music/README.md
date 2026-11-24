@@ -57,21 +57,24 @@ and fades on the descent. Chords in guitar parts are strummed: each string
 starts slightly after the one before. The solo is a single 16-bar block: a
 singing single-note line with six bends up into held notes, strummed chords
 and double-stops at the phrase peaks, rests between phrases, and three short
-note-by-note runs at 1.8 times the eighth-note rate, slurred legato: each run
+note-by-note runs at 1.8 times the eighth-note rate on an overdriven rock
+guitar with extra drive, long sustain and more echo, slurred legato: each run
 is picked once and its other notes are hammer-ons and pull-offs (`h` in the
 source's guitar notation), softer and with a gentler attack. A quiet arpeggio, the
 rhythm guitar, organ and horns support it, and it has less echo and room effect.
 
-**Funk pieces.** The old main theme, reworked as space funk. They play a
-D-dorian vamp, two bars per chord (Dm9, G9, Dm9, then B♭maj7 and A7sus, ending
-on A like every block), and have two themes like the space pieces. Theme C, the
-main theme's melody, keeps its note values at 60 and 120 BPM: `funk_60` sings
-it on a talkbox-style vowel lead over slap bass, chicken-scratch guitar, a
-light funk kit and the laser harp; `funk_120` plays it at double time on the
-talkbox and clavinet in unison over the full band, congas and tambourine.
-Theme D, a syncopated clavinet riff that uses the B natural of D dorian over
-G9, plays at 80 and 100 BPM with slap bass, chicken scratch and horn-section
-stabs; `funk_100` adds organ, congas and tambourine.
+**Funk pieces.** The old main theme, reworked as space funk with a space-jazz
+colour. They play a D-dorian vamp with extended chords, two bars per chord
+(Dm11, G13, Dm11, then B♭maj9 and A7sus, ending on A like every block), and
+have two themes like the space pieces. Theme C, the main theme's melody, keeps
+its note values at 60 and 120 BPM: `funk_60` sings it on a talkbox-style vowel
+lead over slap bass, Rhodes, vibraphone arpeggios, a muted trumpet answering
+in the gaps, a swung jazz ride and the laser harp; `funk_120` plays it at double
+time on the talkbox and clavinet in unison over the full band, congas and
+tambourine. Theme D, a syncopated clavinet riff that uses the B natural of
+D dorian, plays at 80 and 100 BPM with slap bass, chicken scratch, horn-section
+stabs, the trumpet and vibraphone; `funk_100` adds organ, congas and
+tambourine.
 
 **Phonk pieces.** Dark Memphis and drift phonk in space, over a minor cycle of
 two bars per chord (Dm, B♭, Gm, A7, whose C sharp pulls back to D minor).
@@ -79,9 +82,11 @@ Theme E, a busy cowbell melody (two square waves a fifth apart), keeps its note
 values at 60 and 120 BPM: slow and eerie over sliding 808s, a dark pad, a
 lowpassed choir and vinyl crackle at 60, and drift phonk over the full kit at
 120. Theme F, sparser, plays on a dark, distorted supersaw lead at 80 and 100
-BPM; at 100 the cowbell doubles it an octave up. The phonk kit (a heavy kick
-and a half-time snare), trap hats with triplet rolls, a half-time clap and
-808s that slide up into each bar's last notes grow with the tempo.
+BPM; at 100 the cowbell doubles it an octave up. A picked bass guitar plays a
+syncopated line above the 808s, which slide up into each bar's last notes. The
+drums sit under the music: a phonk kit (a heavy kick and a half-time snare),
+trap hats with triplet rolls, a half-time clap, rimshots, toms, shaker and
+open hats, growing with the tempo.
 
 Each family has six 20 BPM ramps between its pieces, and `links.strudel.js`
 connects every piece to the main track and the other families at its tempo.

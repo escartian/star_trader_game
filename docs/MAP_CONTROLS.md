@@ -155,7 +155,8 @@ hover a trader's name in the roster for its own):
 | Corsair | 4 | prefers (120%) | any | 400% | one time in five |
 
 A loyalist dealt to an independent trader becomes a smuggler. Traders also
-come to your flagship to trade, and a corsair that outguns you shakes it down
+come to your flagship to trade or to call for help against raiders, and a
+corsair that outguns you shakes it down
 ([traders that come to you](NAVIGATION_RUNS.md#encounters)); per run, when in
 reach: cautious and loyalist 5%, bulk hauler 10%, opportunist and smuggler
 15%, corsair 30%. Traders compare commodity
@@ -167,7 +168,6 @@ of their profit; independents go anywhere.
 
 NPCs act once per shared navigation run. They have separate wallets/hulls, finite
 market stock/funds and saved journey state. Trades conserve money and goods;
-production runs once for the world. NPC distress calls are not implemented
-yet. Earlier saved sessions
+production runs once for the world. Earlier saved sessions
 without NPCs retain that population; start a fresh session for the initial traders.
 Backward save compatibility is not a prototype requirement.

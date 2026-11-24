@@ -80,6 +80,15 @@ fn report_ui(ui: &mut egui::Ui, report: &CombatReport) {
                 "Bounty paid for the raiders destroyed",
             );
         }
+        if report.rescue_reward.0 > 0 {
+            stat(
+                ui,
+                Icon::Credits,
+                GREEN,
+                &format!("+{} cr", report.rescue_reward),
+                "Paid by the trader you rescued",
+            );
+        }
         if report.salvage_ore > 0 {
             stat(
                 ui,

@@ -158,6 +158,7 @@ pub fn hail(
         haven: false,
         trader: Some(contact),
         police: None,
+        rescue: None,
     };
     navigation.next_encounter_id = next;
     navigation.encounters.push(encounter.clone());

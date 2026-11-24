@@ -138,9 +138,13 @@ impl TravelState {
                 || (encounter.kind.with_trader()
                     || matches!(
                         encounter.kind,
-                        super::EncounterKind::Raiders | super::EncounterKind::Police
+                        super::EncounterKind::Raiders
+                            | super::EncounterKind::Police
+                            | super::EncounterKind::TraderDistress
                     ))
                     == encounter.hostiles.is_empty()
+                || (encounter.kind == super::EncounterKind::TraderDistress)
+                    != (encounter.rescue.is_some() && encounter.band.is_some())
                 || encounter.kind.with_trader() != encounter.trader.is_some()
                 || encounter.hostiles.len() > super::hostile::MAX_SAVED_RAIDERS
                 || !self.encounter_source_valid(encounter)
@@ -212,12 +216,14 @@ impl TravelState {
                 .order(encounter.fleet)
                 .is_some_and(|order| order.started),
             Some(band) => {
-                encounter.kind == super::EncounterKind::Raiders
-                    && self
-                        .navigation
-                        .bands
-                        .iter()
-                        .any(|known| known.id == band && known.ships == encounter.hostiles)
+                matches!(
+                    encounter.kind,
+                    super::EncounterKind::Raiders | super::EncounterKind::TraderDistress
+                ) && self
+                    .navigation
+                    .bands
+                    .iter()
+                    .any(|known| known.id == band && known.ships == encounter.hostiles)
             }
         }
     }

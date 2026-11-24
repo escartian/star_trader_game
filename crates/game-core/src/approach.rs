@@ -18,6 +18,10 @@
 //!   afford, most valuable goods first, at `offer_price_percent` of the
 //!   galaxy list price (scaled by inflation); the money goes to the trader's
 //!   wallet. **Bypass** lets it go.
+//! - Before any of that, a trader that a raider band stalks calls for help,
+//!   one run in `distress_percent` (see [`rescue`]): **Fight** or
+//!   **Auto-resolve** the band, or **Bypass** and leave the trader to it.
+mod rescue;
 use crate::{
     StarSystem,
     combat::gear::ESCORT_KIND,
@@ -28,6 +32,7 @@ use crate::{
     piracy,
     travel::{PlayerId, TravelError, TravelState},
 };
+pub use rescue::settle_rescue;
 
 /// Opens at most one NPC-initiated contact with the player's flagship.
 pub fn approach_run(
@@ -52,12 +57,25 @@ pub fn approach_run(
         {
             continue;
         }
+        let roll = approach_roll(trader.state.navigation.rng_state, run);
+        // A stalked trader's call for help comes first (the roll's high bits).
+        if let Some(band) = rescue::stalker(state, trader.id)
+            && (roll >> 32) % 100 < rules.distress_percent
+        {
+            let band = band.clone();
+            let mut npc = trader.clone();
+            let encounter = rescue::open_distress(state, flagship, &npc, &band)?;
+            npc.last_approach = run;
+            npc.last_action = "Stalked by raiders; calling nearby ships for help".into();
+            economy.traders[index] = npc;
+            return Ok(vec![NavigationEvent::EncounterFound(encounter)]);
+        }
         let chance = economy
             .rules
             .personality_catalog
             .get(trader.personality)
             .approach_percent;
-        if approach_roll(trader.state.navigation.rng_state, run) % 100 >= chance {
+        if roll % 100 >= chance {
             continue;
         }
         let mut npc = trader.clone();
@@ -160,13 +178,14 @@ fn open_contact(
         haven: false,
         trader: Some(contact),
         police: None,
+        rescue: None,
     };
     navigation.next_encounter_id = next;
     navigation.encounters.push(encounter.clone());
     Ok(encounter)
 }
 
-/// Resolves a trade offer or a shakedown (see the module docs).
+/// Resolves a trade offer, a shakedown or a distress call (see the module docs).
 pub fn resolve(
     state: &mut TravelState,
     economy: &mut Economy,
@@ -181,10 +200,6 @@ pub fn resolve(
         .find(|encounter| encounter.id == encounter_id)
         .ok_or(NavigationError::UnknownEncounter)?
         .clone();
-    let trader = encounter
-        .trader
-        .clone()
-        .ok_or(NavigationError::InvalidChoice)?;
     let fleet = state
         .fleets
         .iter()
@@ -194,6 +209,24 @@ pub fn resolve(
     if fleet.owner != player {
         return Err(FleetError::NotOwner.into());
     }
+    if encounter.kind == EncounterKind::TraderDistress {
+        let name = encounter
+            .rescue
+            .and_then(|id| piracy::find(economy, id).ok())
+            .map_or_else(|| "the trader".to_owned(), |npc| npc.name.clone());
+        let outcome = match choice {
+            EncounterChoice::Fight | EncounterChoice::AutoResolve => {
+                return state.resolve_encounter(player, encounter_id, choice, &economy.rules);
+            }
+            EncounterChoice::Bypass => format!("You leave {name} to the raiders."),
+            _ => return Err(NavigationError::InvalidChoice.into()),
+        };
+        return close(state, &encounter, outcome);
+    }
+    let trader = encounter
+        .trader
+        .clone()
+        .ok_or(NavigationError::InvalidChoice)?;
     let outcome = match (encounter.kind, choice) {
         (EncounterKind::Shakedown, EncounterChoice::Fight)
         | (EncounterKind::Shakedown, EncounterChoice::AutoResolve)
@@ -216,6 +249,15 @@ pub fn resolve(
         }
         _ => return Err(NavigationError::InvalidChoice.into()),
     };
+    close(state, &encounter, outcome)
+}
+
+/// Ends a settled contact with its outcome.
+fn close(
+    state: &mut TravelState,
+    encounter: &Encounter,
+    outcome: String,
+) -> Result<NavigationEvent, FleetMovementError> {
     let revision = state
         .revision
         .checked_add(1)
@@ -223,10 +265,10 @@ pub fn resolve(
     state
         .navigation
         .encounters
-        .retain(|record| record.id != encounter_id);
+        .retain(|record| record.id != encounter.id);
     state.revision = revision;
     Ok(NavigationEvent::EncounterResolved {
-        fleet: fleet.id,
+        fleet: encounter.fleet,
         outcome,
     })
 }

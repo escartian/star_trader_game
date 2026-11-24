@@ -71,6 +71,26 @@ pub struct ApproachRules {
     pub shakedown_strength_percent: u64,
     /// Runs before the same trader approaches you again.
     pub cooldown_runs: u64,
+    /// Percent chance per run that a trader stalked by a raider band calls
+    /// your flagship for help, whatever its personality.
+    #[serde(default = "default_distress_percent")]
+    pub distress_percent: u64,
+    /// A rescued trader pays this share of its wallet, in percent.
+    #[serde(default = "default_rescue_reward_percent")]
+    pub rescue_reward_percent: u64,
+    /// Standing its faction grants for a rescue.
+    #[serde(default = "default_rescue_standing")]
+    pub rescue_standing: u32,
+}
+
+fn default_distress_percent() -> u64 {
+    60
+}
+fn default_rescue_reward_percent() -> u64 {
+    10
+}
+fn default_rescue_standing() -> u32 {
+    3
 }
 
 impl Default for ApproachRules {
@@ -79,6 +99,9 @@ impl Default for ApproachRules {
             offer_price_percent: 85,
             shakedown_strength_percent: 150,
             cooldown_runs: 10,
+            distress_percent: default_distress_percent(),
+            rescue_reward_percent: default_rescue_reward_percent(),
+            rescue_standing: default_rescue_standing(),
         }
     }
 }
@@ -88,6 +111,9 @@ impl ApproachRules {
         (10..=200).contains(&self.offer_price_percent)
             && (100..=1_000).contains(&self.shakedown_strength_percent)
             && self.cooldown_runs <= 1_000
+            && self.distress_percent <= 100
+            && self.rescue_reward_percent <= 100
+            && self.rescue_standing <= 100
     }
 }
 

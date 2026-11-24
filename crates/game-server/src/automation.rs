@@ -33,8 +33,9 @@ impl Session {
     }
 
     /// Settles a battle that ended since `paid`, once: pays its bounty at
-    /// today's price level (the report records what was paid) and, after a
-    /// piracy battle, applies the attacked trader's fate (`piracy`).
+    /// today's price level (the report records what was paid), after a
+    /// piracy battle applies the attacked trader's fate (`piracy`), and after
+    /// a won rescue takes the trader's reward (`approach`).
     pub(super) fn settle_new_battle(&mut self, paid: &mut Option<u64>) -> Result<(), CommandError> {
         let level = self.economy.price_level_ppm;
         let Some(report) = self.state.navigation.last_combat.as_mut() else {
@@ -54,6 +55,7 @@ impl Session {
             .map(Credits)
             .ok_or(TravelError::TimeOverflow)?;
         game_core::piracy::settle_battle(&mut self.state, &mut self.economy, &self.systems)?;
+        game_core::approach::settle_rescue(&mut self.state, &mut self.economy)?;
         Ok(())
     }
 

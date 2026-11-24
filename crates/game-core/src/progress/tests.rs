@@ -72,6 +72,7 @@ fn raiders_moons_and_bounties_open_battles_landing_and_victory() {
         haven: false,
         trader: None,
         police: None,
+        rescue: None,
     });
     assert_eq!(unlocks(&state, &economy, &systems), [Feature::Battles]);
     let (systems, mut state, economy) = captain();
@@ -109,6 +110,8 @@ fn raiders_moons_and_bounties_open_battles_landing_and_victory() {
         police: None,
         plunder: 0,
         shakedown: false,
+        rescue: None,
+        rescue_reward: crate::economy::Credits(0),
     }));
     let found = unlocks(&state, &economy, &systems);
     assert!(found.contains(&Feature::Victory) && found.contains(&Feature::Battles));

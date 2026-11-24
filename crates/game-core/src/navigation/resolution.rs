@@ -151,6 +151,7 @@ impl TravelState {
                     haven: false,
                     trader: None,
                     police: None,
+                    rescue: None,
                 };
                 self.navigation.next_encounter_id = next;
                 self.navigation.encounters.push(encounter.clone());
@@ -229,11 +230,15 @@ impl TravelState {
             .checked_add(1)
             .ok_or(TravelError::TimeOverflow)?;
         // A police patrol or a corsair's shakedown is fought or evaded like
-        // raiders; complying needs the wallet or the corsair's hold, so
-        // `police::resolve` and `approach::resolve` handle it.
+        // raiders, and a stalked trader's band is fought; complying (or
+        // leaving the trader) needs the wallet or a hold, so `police::resolve`
+        // and `approach::resolve` handle it.
         if matches!(
             encounter.kind,
-            EncounterKind::Raiders | EncounterKind::Police | EncounterKind::Shakedown
+            EncounterKind::Raiders
+                | EncounterKind::Police
+                | EncounterKind::Shakedown
+                | EncounterKind::TraderDistress
         ) {
             if !matches!(
                 choice,

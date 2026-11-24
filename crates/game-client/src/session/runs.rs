@@ -299,6 +299,10 @@ impl LocalSession {
                 self.shakedown_ui(ui, &fleet, &encounter);
                 return;
             }
+            if encounter.kind == EncounterKind::TraderDistress {
+                self.distress_ui(ui, &encounter);
+                return;
+            }
             let mut choice = None;
             let carries = |test: &dyn Fn(&game_core::travel::Ship) -> bool| {
                 fleet

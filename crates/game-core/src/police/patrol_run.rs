@@ -209,6 +209,7 @@ fn stop_fleet(
             patrol: patrol.id,
             faction: patrol.faction,
         }),
+        rescue: None,
     };
     navigation.next_encounter_id = next;
     navigation.encounters.push(encounter.clone());

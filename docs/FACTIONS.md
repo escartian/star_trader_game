@@ -65,6 +65,7 @@ faction, so +15 with its allies and −15 with its rivals.
 | Demand cargo from or attack an NPC trader (each act of piracy) | a faction's space | − its `piracy_penalty` |
 | Destroy raiders in a battle (bands, random raiders, the Haven) | a faction's space | + its `raider_kill_standing` per raider destroyed |
 | Sell cargo at a market (your ships, including trade routes) | a faction's space | +1 per `sale_credits_per_point` of sales, carried over between sales |
+| Win a battle answering a trader's distress call | anywhere | +3 (`rescue_standing` in `config/npc.json`) with the trader's own faction |
 
 Robbing a trader that flies for a faction (see
 [traffic](MAP_CONTROLS.md)) also costs *that* faction its own `piracy_penalty`

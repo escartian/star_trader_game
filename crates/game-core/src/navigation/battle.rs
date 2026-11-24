@@ -202,6 +202,8 @@ impl TravelState {
             police: encounter.police.map(|police| police.faction),
             plunder: 0,
             shakedown: encounter.kind == EncounterKind::Shakedown,
+            rescue: encounter.rescue,
+            rescue_reward: crate::economy::Credits(0),
         };
         self.apply_engagement(&fleet, &mut report)?;
         // Raiders, a corsair (or the police, impounding it) take every cargo
@@ -280,6 +282,7 @@ impl TravelState {
                         | EncounterKind::Trader
                         | EncounterKind::Police
                         | EncounterKind::Shakedown
+                        | EncounterKind::TraderDistress
                 )
             })
             .filter(|encounter| encounter.fleet == open.fleet)

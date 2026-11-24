@@ -67,6 +67,12 @@ pub struct CombatReport {
     /// The trader was a corsair that tried to shake you down (no piracy).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub shakedown: bool,
+    /// The NPC trader you fought this band for, answering its distress call.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rescue: Option<u64>,
+    /// What that trader paid you for the rescue (credits in cents).
+    #[serde(default, skip_serializing_if = "is_zero_credits")]
+    pub rescue_reward: crate::economy::Credits,
     /// The faction whose police fought, for a battle against a patrol.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub police: Option<crate::factions::Faction>,
@@ -114,4 +120,8 @@ impl CombatReport {
     pub fn side(&self, side: Side) -> impl Iterator<Item = &CombatantResult> {
         self.combatants.iter().filter(move |ship| ship.side == side)
     }
+}
+
+fn is_zero_credits(credits: &crate::economy::Credits) -> bool {
+    credits.0 == 0
 }

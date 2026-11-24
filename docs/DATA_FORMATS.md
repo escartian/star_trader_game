@@ -155,8 +155,9 @@ fleet strength, as a share of the trader's, that makes it yield to a demand)
 `raid_escape_percent` (0–100: chance to slip past raiders) and
 `approach_percent` (0–100, default 0: chance per run to approach your
 flagship), plus `approaches` (`offer_price_percent` 10–200,
-`shakedown_strength_percent` 100–1,000, `cooldown_runs` 0–1,000; defaults
-85, 150 and 10) and
+`shakedown_strength_percent` 100–1,000, `cooldown_runs` 0–1,000,
+`distress_percent` 0–100, `rescue_reward_percent` 0–100, `rescue_standing`
+0–100; defaults 85, 150, 10, 60, 10 and 3) and
 `spawn_cycle` (1–64 personalities dealt to new traders in turn; independents
 dealt a loyalist become smugglers). It is embedded as a fallback, loaded from
 the project file when present, and saved in the economy rules as
@@ -230,7 +231,10 @@ the saved NPC trader, which cannot be refitting. A combat report from an attack
 on a trader names it in `trader` and records `plunder` (cargo units taken).
 A trader that approaches your flagship opens a `TraderOffer` or `Shakedown`
 contact stored the same way (`trader` and its hull as `hostiles`); a report
-from resisting a shakedown also sets `shakedown`. NPC traders record
+from resisting a shakedown also sets `shakedown`. A `TraderDistress` contact
+stores the stalking band in `band` (its ships as `hostiles`) and the trader in
+`rescue`; its battle report keeps `rescue` and records `rescue_reward` (cents
+paid by the trader on victory). Both must name an existing trader. NPC traders record
 `last_approach` (the run of their last approach, at most the current run).
 `navigation.piracies` counts demands and attacks. Ships (player and NPC) may
 list fitted `gear` (`afterburners`, `point_defense`, each at most once), and so

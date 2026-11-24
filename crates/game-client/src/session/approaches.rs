@@ -1,12 +1,12 @@
-//! Cards for NPC traders that come to you: a trade offer and a corsair's
-//! shakedown. Display only; the rules live in `game_core::approach`.
+//! Cards for NPC traders that come to you: a trade offer, a corsair's
+//! shakedown and a stalked trader's distress call. Display only; the rules live in `game_core::approach`.
 use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use game_core::{
     approach,
     economy::Commodity,
     fleet::Fleet,
-    navigation::{Encounter, EncounterChoice, TraderContact},
+    navigation::{Encounter, EncounterChoice},
 };
 use game_protocol::ClientCommand;
 
@@ -36,7 +36,7 @@ impl LocalSession {
             .offer_price_percent;
         ui.label(format!(
             "{} comes alongside and offers its hold below list price ({percent}%): {}.",
-            describe(self, contact),
+            describe(self, contact.id, &contact.name),
             goods.join(", ")
         ));
         ui.small(
@@ -77,7 +77,7 @@ impl LocalSession {
             .sum();
         ui.label(format!(
             "{} runs out its guns and demands half your cargo ({} of {aboard} units).",
-            describe(self, contact),
+            describe(self, contact.id, &contact.name),
             aboard.div_ceil(2)
         ));
         ui.small("Resisting is self-defence: it costs no standing, and a destroyed corsair's hold is yours.");
@@ -112,6 +112,67 @@ impl LocalSession {
         self.resolve_approach(encounter, choice);
     }
 
+    /// A stalked trader's call for help: the band, the reward, then fight
+    /// or leave it.
+    pub(super) fn distress_ui(&mut self, ui: &mut egui::Ui, encounter: &Encounter) {
+        if self
+            .state
+            .navigation
+            .battle
+            .as_ref()
+            .is_some_and(|open| open.encounter == encounter.id)
+        {
+            ui.label("Battle in progress against the raider band.");
+            return;
+        }
+        let Some(npc) = encounter
+            .rescue
+            .and_then(|id| self.economy.traders.iter().find(|npc| npc.id == id))
+        else {
+            return;
+        };
+        let rules = &self.economy.rules;
+        let approaches = &rules.personality_catalog.approaches;
+        let reward =
+            game_core::economy::Credits(npc.credits.0 / 100 * approaches.rescue_reward_percent);
+        let band: Vec<_> = encounter.hostiles.iter().map(|kind| kind.label()).collect();
+        ui.label(format!(
+            "{} calls for help: a raider band ({}) is stalking it.",
+            describe(self, npc.id, &npc.name),
+            band.join(", ")
+        ));
+        let thanks = match npc.affiliation {
+            Some(faction) => format!(
+                " and +{} standing with the {}",
+                approaches.rescue_standing,
+                rules.faction_catalog.get(faction).name
+            ),
+            None => String::new(),
+        };
+        ui.small(format!(
+            "Drive the band off and it pays you about {reward} cr{thanks}. The raiders' bounty is yours too."
+        ));
+        let mut choice = None;
+        ui.horizontal_wrapped(|ui| {
+            if icons::button(ui, Icon::Weapon, "Fight the band")
+                .on_hover_text("Command your ships turn by turn.")
+                .clicked()
+            {
+                choice = Some(EncounterChoice::Fight);
+            }
+            if icons::button(ui, Icon::Execute, "Auto-resolve")
+                .on_hover_text("Let the AI fight it out.")
+                .clicked()
+            {
+                choice = Some(EncounterChoice::AutoResolve);
+            }
+            if icons::button(ui, Icon::Bypass, "Leave it").clicked() {
+                choice = Some(EncounterChoice::Bypass);
+            }
+        });
+        self.resolve_approach(encounter, choice);
+    }
+
     fn resolve_approach(&mut self, encounter: &Encounter, choice: Option<EncounterChoice>) {
         if let Some(choice) = choice {
             self.command(ClientCommand::ResolveEncounter {
@@ -124,14 +185,9 @@ impl LocalSession {
 }
 
 /// "Name (corsair, Federation)": who it is and whom it flies for.
-fn describe(session: &LocalSession, contact: &TraderContact) -> String {
-    let Some(npc) = session
-        .economy
-        .traders
-        .iter()
-        .find(|npc| npc.id == contact.id)
-    else {
-        return contact.name.clone();
+fn describe(session: &LocalSession, id: u64, name: &str) -> String {
+    let Some(npc) = session.economy.traders.iter().find(|npc| npc.id == id) else {
+        return name.to_owned();
     };
     let rules = &session.economy.rules;
     let temper = rules
@@ -141,10 +197,9 @@ fn describe(session: &LocalSession, contact: &TraderContact) -> String {
         .to_lowercase();
     match npc.affiliation {
         Some(faction) => format!(
-            "{} ({temper}, {})",
-            contact.name,
+            "{name} ({temper}, {})",
             rules.faction_catalog.get(faction).name
         ),
-        None => format!("{} ({temper}, independent)", contact.name),
+        None => format!("{name} ({temper}, independent)"),
     }
 }

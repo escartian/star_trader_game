@@ -196,3 +196,73 @@ fn a_corsair_leaves_an_empty_fleet_alone_or_trades_with_it() {
     let (_, kind) = approached(&mut session).unwrap();
     assert_eq!(kind, EncounterKind::TraderOffer);
 }
+
+/// Trader 0 (flying for the Federation, which holds every system) alongside
+/// the flagship, a lone raider scout stalking it, and a lethal flagship.
+fn stalked(session: &mut Session) -> (u64, u64) {
+    let (_, trader) = meet_trader(session, 0);
+    session.economy.traders[0].affiliation = Some(Faction::Federation);
+    session
+        .economy
+        .rules
+        .personality_catalog
+        .approaches
+        .distress_percent = 100;
+    let band = &mut session.state.navigation.bands[0];
+    band.ships = vec![game_core::fleet::ShipKind::Scout];
+    band.stalking = Some(trader);
+    band.hunting = None;
+    let band = band.id;
+    session.state.ships[0].kind = game_core::fleet::ShipKind::Patrol;
+    (trader, band)
+}
+
+#[test]
+fn a_stalked_trader_calls_for_help_and_pays_its_rescuers() {
+    let mut session = claimed([Some(Faction::Federation); 3]);
+    let (trader, band) = stalked(&mut session);
+    let (contact, kind) = approached(&mut session).unwrap();
+    assert_eq!(kind, EncounterKind::TraderDistress);
+    let found = session.state.navigation.encounters[0].clone();
+    assert_eq!((found.band, found.rescue), (Some(band), Some(trader)));
+    reload(&session);
+    let npc_credits = session.economy.traders[0].credits.0;
+    let wallet = session.economy.credits.0;
+    choose(&mut session, contact, EncounterChoice::AutoResolve);
+    let report = session.state.navigation.last_combat.clone().unwrap();
+    assert_eq!(report.outcome, game_core::combat::CombatOutcome::Victory);
+    assert_eq!(report.rescue, Some(trader));
+    let reward = npc_credits / 100 * 10;
+    assert_eq!(report.rescue_reward.0, reward);
+    assert_eq!(session.economy.traders[0].credits.0, npc_credits - reward);
+    assert_eq!(session.economy.credits.0, wallet + report.bounty.0 + reward);
+    // Gratitude (+3) on top of the usual standing for raiders destroyed.
+    assert!(session.economy.factions.standing(Faction::Federation) >= 3);
+    assert!(
+        session
+            .state
+            .navigation
+            .bands
+            .iter()
+            .all(|known| known.stalking != Some(trader))
+    );
+    reload(&session);
+}
+
+#[test]
+fn leaving_a_stalked_trader_to_the_raiders_costs_nothing() {
+    let mut session = claimed([Some(Faction::Federation); 3]);
+    let (trader, band) = stalked(&mut session);
+    let (contact, _) = approached(&mut session).unwrap();
+    // A distress call is fought or left, never outrun.
+    let refused = choose(&mut session, contact, EncounterChoice::Evade);
+    assert!(matches!(refused, ServerMessage::CommandRejected(_)));
+    let (wallet, standing) = (session.economy.credits, session.economy.factions.standing);
+    choose(&mut session, contact, EncounterChoice::Bypass);
+    assert!(session.state.navigation.encounters.is_empty());
+    assert_eq!(session.economy.credits, wallet);
+    assert_eq!(session.economy.factions.standing, standing);
+    let still = session.state.navigation.bands.iter().find(|b| b.id == band);
+    assert_eq!(still.unwrap().stalking, Some(trader));
+    reload(&session);
+}

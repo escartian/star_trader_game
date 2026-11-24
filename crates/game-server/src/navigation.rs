@@ -117,9 +117,12 @@ impl Session {
                     .find(|known| known.id == encounter);
                 let resolve = match known.map(|known| (known.kind, known.police.is_some())) {
                     Some((_, true)) => game_core::police::resolve,
-                    Some((EncounterKind::TraderOffer | EncounterKind::Shakedown, _)) => {
-                        game_core::approach::resolve
-                    }
+                    Some((
+                        EncounterKind::TraderOffer
+                        | EncounterKind::Shakedown
+                        | EncounterKind::TraderDistress,
+                        _,
+                    )) => game_core::approach::resolve,
                     _ => piracy::resolve,
                 };
                 vec![resolve(

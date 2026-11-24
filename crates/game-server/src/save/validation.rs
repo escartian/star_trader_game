@@ -133,6 +133,21 @@ impl SaveData {
         }) {
             return Err("A raider band stalks an unknown trader".into());
         }
+        let navigation = &self.player.navigation;
+        let calls = navigation
+            .encounters
+            .iter()
+            .filter_map(|contact| contact.rescue);
+        let reports = navigation
+            .last_combat
+            .iter()
+            .filter_map(|report| report.rescue);
+        if calls
+            .chain(reports)
+            .any(|id| !traders.iter().any(|trader| trader.id == id))
+        {
+            return Err("A distress call names an unknown trader".into());
+        }
         Ok(())
     }
 }

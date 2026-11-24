@@ -68,6 +68,9 @@ pub enum EncounterKind {
     /// A corsair that outguns you demands half your cargo (see `approach`):
     /// comply, fight, or try to outrun it.
     Shakedown,
+    /// An NPC trader stalked by a raider band calls for help (see
+    /// `approach`): fight the band or leave the trader to it.
+    TraderDistress,
 }
 impl EncounterKind {
     /// Every contact a run can roll besides raiders (see `contacts`).
@@ -101,6 +104,7 @@ impl EncounterKind {
             Self::Police => "Police patrol",
             Self::TraderOffer => "Trader alongside",
             Self::Shakedown => "Corsair shakedown",
+            Self::TraderDistress => "Trader in distress",
         }
     }
 
@@ -178,6 +182,10 @@ pub struct Encounter {
     /// The faction patrol that stopped you, for a `Police` contact.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub police: Option<crate::police::PoliceContact>,
+    /// The NPC trader (`npc::Trader::id`) calling for help against the band
+    /// in `band`, for a `TraderDistress` contact.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rescue: Option<u64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

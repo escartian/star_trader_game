@@ -12,6 +12,8 @@
 //! - a newly finished battle against a faction's police costs that faction
 //!   its `piracy_penalty` per patrol ship destroyed; surrendering to them
 //!   (their cargo impounded) clears your record instead;
+//! - a won rescue (a trader's distress call answered) earns the rescued
+//!   trader's faction its catalog `rescue_standing`;
 //! - sales already earned their points in `Economy::trade`.
 //!
 //! Then every faction whose standing moved, for any of these reasons, gets a
@@ -102,6 +104,15 @@ impl Session {
                 let surrendered = report.outcome == CombatOutcome::Surrendered;
                 (report.fleet, destroyed, report.police, surrendered)
             });
+        // A won rescue: the rescued trader's faction is grateful.
+        let rescued = navigation
+            .last_combat
+            .as_ref()
+            .filter(|report| Some(report.encounter) != watch.combat)
+            .filter(|report| report.outcome == CombatOutcome::Victory)
+            .and_then(|report| report.rescue)
+            .and_then(|id| self.economy.traders.iter().find(|npc| npc.id == id))
+            .and_then(|npc| npc.affiliation);
         if let Some((_, destroyed, Some(faction), surrendered)) = finished {
             let penalty = i64::from(catalog.get(faction).piracy_penalty) * destroyed as i64;
             let delta = i32::try_from(-penalty).unwrap_or(i32::MIN);
@@ -117,6 +128,11 @@ impl Session {
             let per_raider = catalog.get(faction).raider_kill_standing as usize;
             let gain = i32::try_from(per_raider * destroyed).unwrap_or(i32::MAX);
             self.economy.factions.adjust(faction, gain);
+        }
+        if let Some(faction) = rescued {
+            let approaches = &self.economy.rules.personality_catalog.approaches;
+            let thanks = i32::try_from(approaches.rescue_standing).unwrap_or(0);
+            self.economy.factions.adjust(faction, thanks);
         }
         let factions = &self.economy.factions;
         let mut changes: Vec<SessionEvent> = factions

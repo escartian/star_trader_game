@@ -65,12 +65,25 @@ impl Session {
     }
 
     /// For the approach captures: the trader `trader` (one the flagship can
-    /// hail) approaches it at once. With `shakedown` it is a corsair and the
+    /// hail) approaches it at once. `shakedown`: it is a corsair and the
     /// flagship is battered enough to be outgunned (and given food if its
-    /// hold is empty); otherwise it offers its
-    /// hold (given some ore and medicine if empty). Returns whether a contact
-    /// opened.
-    pub fn stage_approach(&mut self, trader: u64, shakedown: bool) -> Result<bool, String> {
+    /// hold is empty). `distress`: the first raider band stalks it. Otherwise
+    /// it offers its hold (given some ore and medicine if empty). Returns
+    /// whether a contact opened.
+    pub fn stage_approach(&mut self, trader: u64, kind: &str) -> Result<bool, String> {
+        let shakedown = kind == "shakedown";
+        if kind == "distress" {
+            let band = self
+                .state
+                .navigation
+                .bands
+                .first_mut()
+                .ok_or("No raider band")?;
+            band.stalking = Some(trader);
+            band.hunting = None;
+            let rules = &mut self.economy.rules.personality_catalog.approaches;
+            rules.distress_percent = 100;
+        }
         let index = self
             .economy
             .traders

@@ -1,12 +1,13 @@
 //! The approach captures: the flagship brought within hailing range of a
-//! trader, which then comes alongside to trade or, as a corsair, to shake the
-//! battered flagship down, so the contact card shows.
+//! trader, which then comes alongside to trade, shakes the battered flagship
+//! down as a corsair, or calls for help against a band, so the card shows.
 use super::LocalSession;
 use game_core::navigation::EncounterChoice;
 use game_protocol::ClientCommand;
 
 impl LocalSession {
-    pub fn capture_approach(&mut self, shakedown: bool) -> Result<(), String> {
+    /// `kind`: "offer", "shakedown" or "distress".
+    pub fn capture_approach(&mut self, kind: &str) -> Result<(), String> {
         // The hail capture brings a trader within reach; let that one go.
         self.capture_hail()?;
         let hail = self.state.navigation.encounters.first().cloned();
@@ -21,7 +22,7 @@ impl LocalSession {
             choice: EncounterChoice::Bypass,
             expected_revision: self.state.revision,
         });
-        if !self.authority.stage_approach(trader, shakedown)? {
+        if !self.authority.stage_approach(trader, kind)? {
             return Err("The trader did not approach".into());
         }
         self.command(ClientCommand::GetSession);

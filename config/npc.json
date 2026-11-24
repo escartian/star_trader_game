@@ -93,6 +93,9 @@
   "approaches": {
     "offer_price_percent": 85,
     "shakedown_strength_percent": 150,
-    "cooldown_runs": 10
+    "cooldown_runs": 10,
+    "distress_percent": 60,
+    "rescue_reward_percent": 10,
+    "rescue_standing": 3
   }
 }

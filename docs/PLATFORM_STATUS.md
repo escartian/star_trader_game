@@ -227,7 +227,12 @@ galaxy (`--seed 3 --systems 60 --capture-view system:N`), were inspected: all
 nine star kinds and every planet, giant, moon and asteroid variant render with
 their own art. The captures showed generated moons drawn across the star (the
 schematic moon spacing pushed them 40 million km from inner planets); fixed so
-inward pushes stay short, checked in the captures and by a galaxy-wide test.
+inward pushes stay short, checked in the captures and by a galaxy-wide test. Moons
+near the star then jumped as they orbited, because that inward cap applied only
+on the star's side; the push now uses one distance all the way round (at most
+45% of the planet's distance from the star), so their drawn orbits stay
+circular. A test follows every generated moon through its orbit, and a system
+capture (`--new --capture-view system`) shows Luna clear of Terra and the sun.
 
 Faction police: offscreen captures of a patrol stopping a wanted fleet
 (`--capture-view police`, 1280 × 800 and 390 × 844) and the Factions panel with

@@ -74,7 +74,9 @@ fn schematic_moon_is_separate_pickable_and_keeps_saved_coordinates() {
     let planet_point = local
         .camera
         .project(display_position(&system, parent), rect);
-    assert!(moon_point.distance(planet_point) > 35.0);
+    // Clear of each other even zoomed in: a rocky planet's and a moon's
+    // markers (11 and 5 points, scaled by up to 1.5) touch at 24 points.
+    assert!(moon_point.distance(planet_point) > 26.0);
     assert_eq!(
         pick(&system, &local.camera, rect, moon_point),
         vec![moon.id]
@@ -121,6 +123,46 @@ fn every_generated_moon_is_drawn_beside_its_planet_never_across_the_star() {
         }
     }
     assert!(moons > 20, "{moons} moons checked");
+}
+
+#[test]
+fn a_moon_keeps_one_drawn_distance_from_its_planet_all_the_way_round() {
+    let mut systems = game_core::generation::generate_galaxy_with(
+        3,
+        game_core::generation::GalaxyConfig::default(),
+    )
+    .unwrap();
+    // The drawn distance of each moon at every placement through its orbit.
+    let mut distances: std::collections::HashMap<String, Vec<f64>> = Default::default();
+    for tick in (0..2_000).step_by(25) {
+        game_core::orbits::place(&mut systems, tick);
+        for system in &systems {
+            for moon in system
+                .bodies
+                .iter()
+                .filter(|body| body.kind == BodyKind::Moon)
+            {
+                let parent = moon_parent(system, moon).unwrap();
+                let shown = display_position(system, moon);
+                distances
+                    .entry(format!("{} in {}", moon.name, system.name))
+                    .or_default()
+                    .push(shown.distance(display_position(system, parent)));
+            }
+        }
+    }
+    for (moon, seen) in &distances {
+        let (low, high) = seen.iter().fold((f64::MAX, f64::MIN), |(low, high), d| {
+            (low.min(*d), high.max(*d))
+        });
+        // Planets drift a little as they orbit the star, so allow a small
+        // change; the old inward cap jumped by far more.
+        assert!(
+            high - low < 0.25 * high,
+            "{moon} jumps between {low:.2} and {high:.2}"
+        );
+    }
+    assert!(distances.len() > 20);
 }
 
 #[test]

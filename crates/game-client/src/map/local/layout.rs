@@ -6,10 +6,13 @@ use glam::DVec3;
 /// How far apart a moon is drawn from its planet at most, in view units
 /// (10 million km each), so their markers never overlap.
 const MIN_MOON_SEPARATION: f64 = 4.0;
-/// A push toward the star never exceeds this share of the planet's own
-/// distance from the star, so a moon is never thrown across the star (an inner
-/// planet 35 million km out would otherwise get a moon 40 million km away).
-const MAX_SEPARATION_SHARE: f64 = 0.4;
+/// The push never exceeds this share of the planet's own distance from the
+/// star, so a moon is never thrown across the star (an inner planet 35 million
+/// km out would otherwise get a moon 40 million km away). Below one half, even
+/// a moon between the planet and the star stays nearer its planet. It applies
+/// in every direction, so a moon near the star keeps a regular, circular orbit
+/// instead of jumping when it passes between the planet and the star.
+const MAX_SEPARATION_SHARE: f64 = 0.45;
 
 pub(super) fn moon_parent<'a>(system: &'a StarSystem, moon: &LocalBody) -> Option<&'a LocalBody> {
     system
@@ -37,12 +40,9 @@ pub(super) fn display_position(system: &StarSystem, body: &LocalBody) -> DVec3 {
     let direction = offset
         .try_normalize()
         .unwrap_or(DVec3::new(1.0, 0.5, -0.8).normalize());
-    // Outward pushes cannot cross the star; inward ones are kept short.
-    let separation = if direction.dot(parent) < 0.0 {
-        MIN_MOON_SEPARATION.min(parent.length() * MAX_SEPARATION_SHARE)
-    } else {
-        MIN_MOON_SEPARATION
-    };
+    // One distance all the way round: short enough near the star never to
+    // reach it, and the same on every side so the orbit stays circular.
+    let separation = MIN_MOON_SEPARATION.min(parent.length() * MAX_SEPARATION_SHARE);
     if offset.length() >= separation {
         return actual;
     }

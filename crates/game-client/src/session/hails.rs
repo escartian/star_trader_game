@@ -14,6 +14,12 @@ use game_core::{
 use game_protocol::ClientCommand;
 use game_server::LOCAL_PLAYER;
 
+/// What a traffic row's button asked for.
+enum Row {
+    Hail,
+    Pursue,
+}
+
 impl LocalSession {
     /// The roster's TRAFFIC section: traders near the flagship first (those
     /// it can hail, with a Hail button once battles are unlocked, then the
@@ -29,6 +35,7 @@ impl LocalSession {
                     .font(crate::theme::fonts::display(ui.ctx(), 12.0)),
             );
         });
+        self.pursuit_status(ui);
         let placed = game_core::orbits::placed(systems, self.state.tick);
         let reach = if self.unlocked(Feature::Battles) {
             piracy::in_reach(&self.state, &self.economy, LOCAL_PLAYER, &placed)
@@ -43,23 +50,33 @@ impl LocalSession {
             });
         near.sort_by_key(|trader| (!reach.contains(&trader.id), trader.id));
         let mut hail = None;
+        let mut chase = None;
         if near.is_empty() {
             ui.small("No traders near your flagship.");
         }
+        let pursue = self.can_pursue();
         for trader in near {
-            if self.trader_row(ui, trader, reach.contains(&trader.id)) {
-                hail = Some(trader.id);
+            let in_system = here.is_some() && trader.state.ships[0].location.system() == here;
+            match self.trader_row(ui, trader, reach.contains(&trader.id), pursue && in_system) {
+                Some(Row::Hail) => hail = Some(trader.id),
+                Some(Row::Pursue) => chase = Some(trader.id),
+                None => {}
             }
         }
+        let band = self.raider_rows(ui, here);
         if !far.is_empty() {
             egui::CollapsingHeader::new(format!("Elsewhere ({})", far.len()))
                 .id_salt("traffic-elsewhere")
                 .default_open(false)
                 .show(ui, |ui| {
                     for trader in far {
-                        self.trader_row(ui, trader, false);
+                        self.trader_row(ui, trader, false, false);
                     }
                 });
+        }
+        use game_core::pursuit::Quarry;
+        if let Some(quarry) = chase.map(Quarry::Trader).or(band.map(Quarry::Band)) {
+            self.pursue(quarry);
         }
         if let (Some(trader), Some(fleet)) = (hail, self.state.flagship(LOCAL_PLAYER)) {
             self.command(ClientCommand::HailTrader {
@@ -78,10 +95,16 @@ impl LocalSession {
         lead.location.system()
     }
 
-    /// One trader: name, faction, defences and (if `can_hail`) a Hail button,
-    /// then its latest news. Returns whether Hail was clicked.
-    fn trader_row(&self, ui: &mut egui::Ui, trader: &Trader, can_hail: bool) -> bool {
-        let mut clicked = false;
+    /// One trader: name, faction, defences, a Hail button (when in reach) or
+    /// a Pursue button (when in the flagship's system), then its latest news.
+    fn trader_row(
+        &self,
+        ui: &mut egui::Ui,
+        trader: &Trader,
+        can_hail: bool,
+        can_pursue: bool,
+    ) -> Option<Row> {
+        let mut clicked = None;
         ui.horizontal(|ui| {
             let temper = self
                 .economy
@@ -105,10 +128,15 @@ impl LocalSession {
                 ui.small(armed)
                     .on_hover_text("Anti-piracy gear and hired escort");
             }
-            clicked = can_hail
+            if can_hail
                 && icons::button(ui, Icon::Contact, "Hail")
                     .on_hover_text("Stop this trader: let it go, demand cargo or attack it.")
-                    .clicked();
+                    .clicked()
+            {
+                clicked = Some(Row::Hail);
+            } else if !can_hail && can_pursue && Self::pursue_button(ui, "this trader") {
+                clicked = Some(Row::Pursue);
+            }
         });
         // Raid and piracy news stands out from routine hauling.
         let news = &trader.last_action;

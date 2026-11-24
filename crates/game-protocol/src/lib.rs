@@ -125,6 +125,13 @@ pub enum ClientCommand {
         trader: u64,
         expected_revision: u64,
     },
+    /// The flagship chases a trader or raider band in its own system until it
+    /// catches it (the contact opens) or loses it (`game_core::pursuit`).
+    Pursue {
+        fleet: FleetId,
+        quarry: game_core::pursuit::Quarry,
+        expected_revision: u64,
+    },
     /// Take direct command of `fleet`; every other fleet runs standing orders.
     SetFlagship {
         fleet: FleetId,

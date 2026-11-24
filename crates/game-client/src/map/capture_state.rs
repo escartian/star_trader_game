@@ -65,6 +65,11 @@ impl Map {
             "factions" => self.session.capture_factions(true)?,
             "factions-map" => self.session.capture_factions(false)?,
             "roster" => self.sheet = crate::session::SheetTab::Fleets,
+            "pursue" => {
+                // A trader and a raider band to chase in the flagship's system.
+                self.session.capture_pursuit_quarry()?;
+                self.sheet = crate::session::SheetTab::Fleets;
+            }
             "game-menu" => self.sheet = crate::session::SheetTab::Menu,
             "card-closed" => {
                 // The card closed and the latest message popping up.
@@ -262,6 +267,7 @@ mod tests {
             "card-closed",
             "traffic-system",
             "traffic-flight",
+            "pursue",
             "game-songbook",
             "menu-songbook",
             "menu-songbook@cruise_a",

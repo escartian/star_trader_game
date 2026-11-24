@@ -1,5 +1,5 @@
 //! Plot fleet courses, then advance all fleets through one shared navigation run.
-mod band_motion;
+pub(crate) mod band_motion;
 mod band_roaming;
 mod battle;
 mod contacts;
@@ -245,6 +245,9 @@ pub struct NavigationState {
     /// Faction police patrols (see `police`).
     #[serde(default, skip_serializing_if = "crate::police::PoliceState::is_empty")]
     pub police: crate::police::PoliceState,
+    /// The flagship's chase of a trader or raider band (see `pursuit`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pursuit: Option<crate::pursuit::Pursuit>,
 }
 
 fn is_zero_count(value: &u64) -> bool {
@@ -282,6 +285,7 @@ impl Default for NavigationState {
             piracies: 0,
             escorts: Vec::new(),
             police: Default::default(),
+            pursuit: None,
         }
     }
 }
@@ -358,6 +362,11 @@ pub enum NavigationEvent {
     },
     /// A patrol was ordered, or could not set off this run.
     PatrolNote {
+        fleet: FleetId,
+        note: String,
+    },
+    /// The flagship's pursuit ended without a contact (see `pursuit`).
+    PursuitNote {
         fleet: FleetId,
         note: String,
     },

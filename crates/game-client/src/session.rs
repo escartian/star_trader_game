@@ -9,6 +9,8 @@ mod capture;
 mod capture_approach;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture_police;
+#[cfg(any(test, feature = "dev-tools"))]
+mod capture_traffic;
 mod combat_report;
 mod contacts;
 mod factions;
@@ -18,6 +20,7 @@ pub use factions::tier_color;
 pub use fleets::TradeOption;
 pub use map_traffic::MapTrader;
 pub use police::PatrolMarker;
+pub use pursuit::crew;
 mod approaches;
 mod course_control;
 mod guide;
@@ -33,6 +36,7 @@ mod navigation;
 mod outfitting;
 mod panel;
 mod police;
+mod pursuit;
 mod routes;
 mod runs;
 mod saves;

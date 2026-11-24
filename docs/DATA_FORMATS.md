@@ -36,6 +36,7 @@ Each `data/slot-N.json` stores:
   `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner and ship membership), monotonic ID counters,
   the Raider `haven` in navigation (`system`, `body`, `garrison`, `sunk`, `destroyed_run`; contacts against it carry `haven: true`)
   the `flagship` fleet and secondary fleets' `patrols` (`fleet`, `system`, `stops`) in navigation,
+  the flagship's `pursuit` (`fleet`, `quarry`: `{"Trader": id}` or `{"Band": id}`; omitted when none),
   and `campaign` (`run_limit`, `ended` as `won` with its `road`, `lost` or `time_up`, each with its `run`).
 - `economy`: shared player credits, current markets and exact session rules,
   including ship/planet/combat catalogs and `campaign` goals

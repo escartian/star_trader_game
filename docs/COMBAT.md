@@ -283,9 +283,11 @@ Raiders also roam as persistent bands you can see coming
   lies low for 12 runs. Stalking bands show a dashed line and "STALKING TRADER"
   on the system map.
 - With `encounter_chance_percent` at 0 bands still roam but never strike.
-- The system map shows bands as red diamonds tagged with their ships ("HUNTING"
-  while chasing), with a dashed line toward their heading; the galaxy map marks
-  systems that hold one; a hunted fleet's card warns "Raiders closing in".
+- Both maps show bands as red-ringed ship markers (the heaviest hull, with a
+  ship count); the system map tags them with their ships ("HUNTING" while
+  chasing) and a dashed line toward their heading, the galaxy map puts them
+  beside the system that holds them (or on the red line while crossing); you
+  can **Pursue** a band in your flagship's system ([pursuit](NAVIGATION_RUNS.md#pursuit)); a hunted fleet's card warns "Raiders closing in".
 
 ### Bands crossing systems
 

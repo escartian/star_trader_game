@@ -315,7 +315,7 @@ impl TravelState {
             .min_by_key(|(gap, fleet, _)| (*gap, fleet.0))
     }
 
-    fn strike(
+    pub(crate) fn strike(
         &mut self,
         band: &RaiderBand,
         fleet: FleetId,

@@ -53,6 +53,9 @@ impl Session {
             }
             | ClientCommand::HailTrader {
                 expected_revision, ..
+            }
+            | ClientCommand::Pursue {
+                expected_revision, ..
             } => *expected_revision,
             _ => unreachable!("only navigation commands reach this handler"),
         };
@@ -141,6 +144,17 @@ impl Session {
                     player,
                     fleet,
                     trader,
+                    &candidate.systems,
+                )?]
+            }
+            ClientCommand::Pursue { fleet, quarry, .. } => {
+                candidate.require_flagship(player, fleet)?;
+                vec![game_core::pursuit::pursue(
+                    &mut candidate.state,
+                    &candidate.economy,
+                    player,
+                    fleet,
+                    quarry,
                     &candidate.systems,
                 )?]
             }
@@ -235,6 +249,13 @@ impl Session {
                     player,
                     &candidate.systems,
                 )?);
+                // The flagship catches its quarry, loses it or steers for it.
+                events.extend(game_core::pursuit::service_pursuit(
+                    &mut candidate.state,
+                    &candidate.economy,
+                    player,
+                    &candidate.systems,
+                )?);
                 // Secondary fleets settle their own contacts.
                 candidate.settle_new_battle(&mut paid)?;
                 events.extend(candidate.settle_secondary_contacts(player, &mut paid)?);
@@ -247,6 +268,12 @@ impl Session {
                 events.push(NavigationEvent::RouteEnded {
                     fleet,
                     reason: "Route ended by new orders.".into(),
+                });
+            }
+            if game_core::pursuit::end_pursuit(&mut candidate.state, fleet) {
+                events.push(NavigationEvent::PursuitNote {
+                    fleet,
+                    note: "Pursuit ended by new orders.".into(),
                 });
             }
             if candidate.state.end_patrol(fleet) {

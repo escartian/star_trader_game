@@ -16,6 +16,7 @@ mod menu_flights;
 mod menu_motion;
 mod menu_scene;
 mod menu_trails;
+mod npc_marker;
 mod orbit_view;
 mod panels;
 mod recovery;
@@ -27,7 +28,6 @@ mod songbook;
 mod songbook_graph;
 mod songbook_parts;
 mod toolbar;
-mod trader_marker;
 mod visuals;
 
 use camera::Camera;

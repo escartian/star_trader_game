@@ -161,8 +161,9 @@ the fine and the consequences:
 
 Secondary fleets always comply, paying from your wallet.
 
-The system map draws each patrol as a hexagon in its faction's colour, tagged
-with its ships, and a dashed line toward the fleet it is pursuing ("PURSUING
+The system map draws each patrol as a ship marker (its heaviest hull, with a
+count) ringed friend-or-foe (red while it pursues you) with a pip in its
+faction's colour, tagged with its ships, and a dashed line toward the fleet it is pursuing ("PURSUING
 YOU") or the band it is engaging. The Factions panel shows your record with each
 faction and its rates; the log announces when a faction starts wanting you, when
 the status grows and when it ends.

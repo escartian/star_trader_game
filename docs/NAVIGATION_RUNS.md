@@ -179,6 +179,28 @@ same run produces the same contacts. Resolving a contact cannot duplicate reward
 through retries or reloads. A contact's credits (`payout`) are settled into the
 wallet by the host in the same command, so saves always hold zero.
 
+## Pursuit
+
+Once battles are unlocked, the Fleets page's traffic list offers **Pursue** on
+NPC traders in your flagship's star system that are out of hailing range, and on
+the raider bands there. The flagship then chases its quarry:
+
+- At once, and after every run (once everything has moved), a flagship within
+  reach opens the contact and Advance stops: a trader the hail card (trade,
+  demand cargo, attack, let go; within 20 million km and not docked), a band
+  the raider fight (within 20 million km). A quarry already in reach is
+  contacted immediately.
+- Otherwise the course is re-plotted to where the quarry is now (a trader at a
+  body is followed to that body). While a leg is under way it is finished
+  first. If the quarry sits inside a body's collision zone or at the
+  flagship's own spot, the flagship waits a run.
+- The pursuit ends, with a log note, when the quarry leaves the system or is
+  gone, when no course can reach it, when a contact (any kind) stops the
+  flagship, or when you give the flagship any other order (**Stop** issues a
+  Wait). Only the flagship pursues.
+
+Saved as `pursuit` in navigation state and validated on load.
+
 ## Saves and multiplayer
 
 Save schema 7 stores run number, queued/active courses, Wait orders, encounters,

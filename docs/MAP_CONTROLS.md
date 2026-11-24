@@ -57,7 +57,9 @@ colours: **red** for raiders, corsairs, police chasing you and factions that
 count you Hostile or want you; **green** for your fleets and factions that
 count you Friendly or better; **blue-grey** for everyone else (independents
 included). A trader's faction shows as a small pip in its colour (grey if
-independent); a police hexagon is filled in its faction's colour. NPC traders
+independent). Raider bands and police patrols are ship markers too (their
+heaviest hull, with a ship count): bands ringed red, patrols ringed
+friend-or-foe with a pip in their faction's colour. NPC traders
 appear in both views: resting ones beside their body or star on a tether
 (below-right, then around it), flying ones on their position, and on the galaxy
 map a faint dashed line in their colour to the system they are bound for. The

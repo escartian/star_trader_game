@@ -1,13 +1,13 @@
 //! What the galaxy map draws besides systems: own fleets as stacked chips (all
 //! fleets in one system share a chip, tethered beside its star; in flight, a
 //! faint green line to their heading), NPC traders as small ship markers, and
-//! a red marker beside each system that holds a raider band (or, for a band
-//! crossing to another system, on the red line between the two).
+//! a red-ringed ship marker beside each system that holds a raider band (or,
+//! for a band crossing to another system, on the red line between the two).
 use super::{Map, position};
 use super::{
     art::Artwork,
     fleets::{Berth, StackEntry},
-    trader_marker,
+    npc_marker,
 };
 use egui::{Painter, Rect, Stroke, Vec2};
 
@@ -94,7 +94,7 @@ impl Map {
             super::fleets::paint_stacks(painter, &art, rect, &entries, selected, labels);
     }
 
-    /// NPC traders (`trader_marker`): resting ones spread around their star
+    /// NPC traders (`npc_marker`): resting ones spread around their star
     /// on short tethers, flying ones on their gliding position with a faint
     /// dashed line, in their friend-or-foe colour, to the system they are
     /// bound for. Raider bands crossing between systems follow, in red.
@@ -134,7 +134,7 @@ impl Map {
                     let anchor = self.camera.project(position(system), rect);
                     // Clear of the star and of own chips (lower left).
                     let at = clear_of(
-                        trader_marker::berth_spot(anchor, STAR_CLEARANCE, count),
+                        npc_marker::berth_spot(anchor, STAR_CLEARANCE, count),
                         &placed,
                     );
                     super::fleets::tether(
@@ -142,7 +142,7 @@ impl Map {
                         anchor,
                         STAR_CLEARANCE,
                         at,
-                        trader_marker::TRADER,
+                        npc_marker::TRADER,
                         ring,
                     );
                     at
@@ -168,15 +168,16 @@ impl Map {
                     at
                 }
             };
-            placed.push((at, trader_marker::TRADER));
-            if rect.expand(trader_marker::TRADER).contains(at) {
-                trader_marker::paint(
+            placed.push((at, npc_marker::TRADER));
+            if rect.expand(npc_marker::TRADER).contains(at) {
+                npc_marker::paint(
                     painter,
                     &art,
                     at,
                     ship.kind,
                     ring,
-                    self.session.trader_color(trader),
+                    Some(self.session.trader_color(trader)),
+                    1,
                 );
             }
         }
@@ -200,19 +201,14 @@ impl Map {
                     );
                     origin.lerp(destination, transit.progress())
                 }
-                None => destination + Vec2::new(-15.0, -15.0),
+                None => destination + Vec2::new(-24.0, -24.0),
             };
-            let points = vec![
-                at + Vec2::new(0.0, -5.0),
-                at + Vec2::new(5.0, 0.0),
-                at + Vec2::new(0.0, 5.0),
-                at + Vec2::new(-5.0, 0.0),
-            ];
-            painter.add(egui::Shape::convex_polygon(
-                points,
-                red.gamma_multiply(0.5),
-                Stroke::new(1.0_f32, red),
-            ));
+            // Clear of own chips and traders already drawn there.
+            let at = clear_of(at, &placed);
+            placed.push((at, npc_marker::TRADER));
+            if let Some(kind) = npc_marker::lead(&band.ships) {
+                npc_marker::paint(painter, &art, at, kind, red, None, band.ships.len());
+            }
         }
     }
 }
@@ -227,7 +223,7 @@ fn clear_of(at: egui::Pos2, placed: &[(egui::Pos2, f32)]) -> egui::Pos2 {
     for _ in 0..4 {
         let mut moved = false;
         for (centre, radius) in placed {
-            let gap = radius + trader_marker::TRADER + 3.0;
+            let gap = radius + npc_marker::TRADER + 3.0;
             let offset = at - *centre;
             if offset.length() >= gap - 0.01 {
                 continue;

@@ -3,7 +3,7 @@
 //! position. Display only; traders are hailed from the Fleets page. Also
 //! the double-click that opens the market where your fleet rests.
 use super::{LocalView, scale::SymbolScale};
-use crate::map::{fleets::tether, trader_marker};
+use crate::map::{fleets::tether, npc_marker};
 use egui::{Painter, Rect};
 use game_core::{BodyId, BodyKind, travel::Location};
 
@@ -34,21 +34,29 @@ impl LocalView {
                         }
                     };
                     let clearance = scale.body_radius(kind);
-                    let at = trader_marker::berth_spot(anchor, clearance, count);
+                    let at = npc_marker::berth_spot(anchor, clearance, count);
                     tether(
                         painter,
                         anchor,
                         clearance,
                         at,
-                        trader_marker::TRADER,
+                        npc_marker::TRADER,
                         trader.ring,
                     );
                     at
                 }
                 None => anchor,
             };
-            if rect.expand(trader_marker::TRADER).contains(at) {
-                trader_marker::paint(painter, art, at, trader.kind, trader.ring, trader.pip);
+            if rect.expand(npc_marker::TRADER).contains(at) {
+                npc_marker::paint(
+                    painter,
+                    art,
+                    at,
+                    trader.kind,
+                    trader.ring,
+                    Some(trader.pip),
+                    1,
+                );
             }
         }
     }

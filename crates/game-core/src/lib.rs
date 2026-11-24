@@ -17,6 +17,7 @@ pub mod piracy;
 pub mod planet;
 pub mod police;
 pub mod progress;
+pub mod pursuit;
 pub mod routes;
 pub mod travel;
 

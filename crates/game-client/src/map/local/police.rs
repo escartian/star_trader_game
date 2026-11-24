@@ -1,11 +1,12 @@
-//! Faction police patrols on the system map: a hexagon filled in the
-//! faction's colour and outlined friend-or-foe (`theme::iff`), tagged with its
+//! Faction police patrols on the system map: a ship marker (`npc_marker`)
+//! ringed friend-or-foe with a pip in the faction's colour, tagged with its
 //! ships, and, while it pursues one of your fleets or closes on a raider band,
 //! a dashed friend-or-foe line toward its quarry. Positions are
 //! true kilometres, like raider bands.
 use super::raiders::{TAG_GAP, crew, dash};
 use super::{KM_PER_VIEW_UNIT, LocalView, kilometers};
-use egui::{Color32, Painter, Pos2, Rect, Stroke, Vec2};
+use crate::map::npc_marker;
+use egui::{Color32, Painter, Rect, Stroke, Vec2};
 
 impl LocalView {
     pub(super) fn draw_police(&self, painter: &Painter, rect: Rect) {
@@ -34,7 +35,17 @@ impl LocalView {
                     Stroke::new(1.2_f32, color.gamma_multiply(0.9)),
                 );
             }
-            hexagon(painter, at, 8.0, marker.faction, *color);
+            if let (Some(art), Some(kind)) = (&self.art, npc_marker::lead(&patrol.ships)) {
+                npc_marker::paint(
+                    painter,
+                    art,
+                    at,
+                    kind,
+                    *color,
+                    Some(marker.faction),
+                    patrol.ships.len(),
+                );
+            }
             let label = format!(
                 "{}{} POLICE · {}",
                 match (patrol.pursuing.is_some(), patrol.answering.is_some()) {
@@ -55,19 +66,4 @@ impl LocalView {
             painter.galley(origin, galley, *color);
         }
     }
-}
-
-/// Filled in the faction's colour, outlined friend-or-foe.
-fn hexagon(painter: &Painter, at: Pos2, size: f32, fill: Color32, color: Color32) {
-    let points = (0..6)
-        .map(|corner| {
-            let angle = std::f32::consts::FRAC_PI_3 * corner as f32;
-            at + Vec2::new(angle.cos(), angle.sin()) * size
-        })
-        .collect();
-    painter.add(egui::Shape::convex_polygon(
-        points,
-        fill.gamma_multiply(0.45),
-        Stroke::new(1.6_f32, color),
-    ));
 }

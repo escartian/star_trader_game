@@ -1,9 +1,9 @@
-//! Roaming raider bands on the system map: a red diamond tagged with the band's
-//! ships, and, only while it hunts one of your fleets or stalks an NPC trader,
+//! Roaming raider bands on the system map: a red-ringed ship marker (its
+//! heaviest hull and a count, `npc_marker`) tagged with the band's ships, and, only while it hunts one of your fleets or stalks an NPC trader,
 //! a dashed line toward its quarry. Positions are true kilometres, like fleets in flight.
 use super::{KM_PER_VIEW_UNIT, LocalView, kilometers};
+use crate::map::npc_marker;
 use egui::{Color32, Painter, Pos2, Rect, Stroke, Vec2};
-use game_core::fleet::ShipKind;
 
 const RAIDER: Color32 = crate::theme::iff::HOSTILE;
 /// Gap between a band's or patrol's marker and its tag, in points: clear of a
@@ -35,7 +35,9 @@ impl LocalView {
                     Stroke::new(1.2_f32, RAIDER.gamma_multiply(0.9)),
                 );
             }
-            diamond(painter, at, 9.0);
+            if let (Some(art), Some(kind)) = (&self.art, npc_marker::lead(&band.ships)) {
+                npc_marker::paint(painter, art, at, kind, RAIDER, None, band.ships.len());
+            }
             let label = format!(
                 "{}RAIDERS · {}",
                 match (band.hunting.is_some(), stalking) {
@@ -67,46 +69,4 @@ pub(crate) fn dash(painter: &Painter, from: Pos2, to: Pos2, stroke: Stroke) {
     }
 }
 
-fn diamond(painter: &Painter, at: Pos2, size: f32) {
-    let points = vec![
-        at + Vec2::new(0.0, -size),
-        at + Vec2::new(size, 0.0),
-        at + Vec2::new(0.0, size),
-        at + Vec2::new(-size, 0.0),
-    ];
-    painter.add(egui::Shape::convex_polygon(
-        points,
-        RAIDER.gamma_multiply(0.35),
-        Stroke::new(1.6_f32, RAIDER),
-    ));
-}
-
-/// "2 scouts", "patrol + scout".
-pub(super) fn crew(ships: &[ShipKind]) -> String {
-    let count = |kind| ships.iter().filter(|ship| **ship == kind).count();
-    let parts: Vec<String> = [
-        (ShipKind::Patrol, "patrol", "patrols"),
-        (ShipKind::Scout, "scout", "scouts"),
-        (ShipKind::Freighter, "freighter", "freighters"),
-        (ShipKind::Prospector, "prospector", "prospectors"),
-    ]
-    .into_iter()
-    .filter_map(|(kind, one, many)| match count(kind) {
-        0 => None,
-        1 => Some(one.to_owned()),
-        n => Some(format!("{n} {many}")),
-    })
-    .collect();
-    parts.join(" + ")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn crews_read_naturally() {
-        assert_eq!(crew(&[ShipKind::Scout, ShipKind::Scout]), "2 scouts");
-        assert_eq!(crew(&[ShipKind::Patrol, ShipKind::Scout]), "patrol + scout");
-    }
-}
+pub(super) use crate::session::crew;

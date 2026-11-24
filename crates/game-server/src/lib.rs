@@ -12,6 +12,8 @@ mod setup;
 pub use setup::{DangerLevel, GameSetup, InflationLevel, STARTING_CREDITS, WEALTH_SHARES};
 #[cfg(any(test, feature = "dev-tools"))]
 mod scenarios;
+#[cfg(any(test, feature = "dev-tools"))]
+mod scenarios_pursuit;
 mod shipyard;
 mod standing;
 use game_core::economy::Economy;
@@ -148,7 +150,8 @@ impl Session {
             | ClientCommand::LiftOff { .. }
             | ClientCommand::SetFlagship { .. }
             | ClientCommand::SetPatrol { .. }
-            | ClientCommand::HailTrader { .. }) => self.navigation_command(player, command),
+            | ClientCommand::HailTrader { .. }
+            | ClientCommand::Pursue { .. }) => self.navigation_command(player, command),
             command @ (ClientCommand::BuyShip { .. }
             | ClientCommand::SellShip { .. }
             | ClientCommand::RenameFleet { .. }
@@ -262,6 +265,8 @@ mod landing_tests;
 mod navigation_tests;
 #[cfg(test)]
 mod orbit_tests;
+#[cfg(test)]
+mod pursuit_tests;
 #[cfg(test)]
 mod raid_tests;
 #[cfg(test)]

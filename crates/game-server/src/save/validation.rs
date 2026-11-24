@@ -148,6 +148,25 @@ impl SaveData {
         {
             return Err("A distress call names an unknown trader".into());
         }
+        if let Some(pursuit) = navigation.pursuit {
+            use game_core::pursuit::Quarry;
+            let known = match pursuit.quarry {
+                Quarry::Trader(id) => traders.iter().any(|trader| trader.id == id),
+                Quarry::Band(id) => navigation.bands.iter().any(|band| band.id == id),
+            };
+            if !known
+                || navigation
+                    .flagship
+                    .is_some_and(|flagship| flagship != pursuit.fleet)
+                || !self
+                    .player
+                    .fleets
+                    .iter()
+                    .any(|fleet| fleet.id == pursuit.fleet)
+            {
+                return Err("The pursuit names an unknown fleet or quarry".into());
+            }
+        }
         Ok(())
     }
 }

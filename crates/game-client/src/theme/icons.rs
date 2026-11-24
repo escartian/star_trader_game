@@ -82,7 +82,7 @@ pub fn paint_sized(painter: &Painter, icon: Icon, center: Pos2, size: f32, color
     svg::paint(painter, icon, center, size, color);
 }
 
-fn accent(ui: &Ui) -> Color32 {
+pub(super) fn accent(ui: &Ui) -> Color32 {
     if ui.is_enabled() {
         super::GREEN
     } else {
@@ -90,7 +90,7 @@ fn accent(ui: &Ui) -> Color32 {
     }
 }
 
-fn frame(ui: &Ui, rect: egui::Rect, response: &Response, selected: bool) {
+pub(super) fn frame(ui: &Ui, rect: egui::Rect, response: &Response, selected: bool) {
     let visual = ui.style().interact_selectable(response, selected);
     ui.painter().rect(
         rect,

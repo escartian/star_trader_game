@@ -69,8 +69,11 @@ Campaign (phone-first phase 5): offscreen captures of the Victory panel (390 ×
 844) and of a fleet orbiting the Raider Haven (1280 × 800, 1024 × 768, 390 ×
 844) were visually inspected: road progress and the score are readable, the
 Haven's fortress and garrison label sit beside its body, and the ASSAULT card
-leads the sheet. Not yet seen on screen: the end card (victory, defeat or
-campaign complete), the market's charter row and lane lines; their rules are
+leads the sheet. The GAME OVER screen (`--capture-view game-over`, 1024 × 768)
+and the shakedown and distress event cards (1024 × 768, 390 × 844) were
+inspected: every choice is visible and the scene shows both sides. Not yet seen
+on screen: the victory and campaign-complete screens, the market's charter row
+and lane lines; their rules are
 covered by core and server tests, and manual play remains open.
 
 Original Blender 5.2.3 models and baked transparent sprites cover nine star classes,

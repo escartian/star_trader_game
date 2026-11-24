@@ -3,6 +3,7 @@ mod advance;
 mod battle;
 mod battle_cards;
 mod battle_controls;
+mod campaign_end;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture;
 #[cfg(any(test, feature = "dev-tools"))]
@@ -12,6 +13,7 @@ mod capture_police;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture_traffic;
 mod combat_report;
+mod contact_card;
 mod contacts;
 mod factions;
 mod fleets;

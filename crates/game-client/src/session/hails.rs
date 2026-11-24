@@ -2,6 +2,7 @@
 //! reach, and a hailed trader's contact card. Rules live in `game_core::piracy`.
 use super::LocalSession;
 use crate::theme::AMBER;
+use crate::theme::event_card;
 use crate::theme::icons::{self, Icon};
 use game_core::{
     StarSystem,
@@ -209,24 +210,24 @@ impl LocalSession {
             format!("It gives way only to a fleet with {threshold}% of its fighting strength.")
         });
         let mut choice = None;
-        ui.horizontal_wrapped(|ui| {
+        event_card::choices(ui, |ui| {
             let blocked = (!yields).then(|| "It is not outgunned enough to give way.".to_owned());
-            if icons::labeled_action(ui, Icon::Cargo, "Demand cargo", blocked).clicked() {
+            if event_card::choice_action(ui, Icon::Cargo, "Demand cargo", blocked).clicked() {
                 choice = Some(EncounterChoice::Demand);
             }
-            if icons::button(ui, Icon::Weapon, "Attack")
+            if event_card::choice(ui, Icon::Weapon, "Attack")
                 .on_hover_text("Fight it turn by turn; destroy it to plunder its hold.")
                 .clicked()
             {
                 choice = Some(EncounterChoice::Fight);
             }
-            if icons::button(ui, Icon::Execute, "Auto-resolve")
+            if event_card::choice(ui, Icon::Execute, "Auto-resolve")
                 .on_hover_text("Fight the whole attack at once with the AI on both sides.")
                 .clicked()
             {
                 choice = Some(EncounterChoice::AutoResolve);
             }
-            if icons::button(ui, Icon::Bypass, "Let it go").clicked() {
+            if event_card::choice(ui, Icon::Bypass, "Let it go").clicked() {
                 choice = Some(EncounterChoice::Bypass);
             }
         });

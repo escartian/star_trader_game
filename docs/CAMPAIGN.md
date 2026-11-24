@@ -8,8 +8,8 @@ factions and missions (milestones 5 and 6).
 Code: `game-core/src/campaign.rs` (roads, net worth, score, ends),
 `economy/charters.rs` (charters, port share, lanes), `navigation/haven.rs`
 (the Haven); commands and the end-of-game gate in `game-server/src/campaign.rs`;
-the Victory panel, end card, charter row and Assault prompt in
-`game-client/src/session/victory.rs`; map marks in `map/local/campaign.rs` and
+the Victory panel, charter row and Assault prompt in
+`game-client/src/session/victory.rs`; the end screen in `session/campaign_end.rs`; map marks in `map/local/campaign.rs` and
 `map/galaxy_campaign.rs`.
 
 ## Roads to victory
@@ -51,15 +51,23 @@ Faction standing will add points once factions exist.
 
 ## Ends
 
-- **Victory:** a road completed. The end card offers *Keep playing*.
+Each end opens the end screen once, after any open combat report: an
+illustrated card over the dimmed map with how it ended, runs played, net
+worth, the score and its parts, each road's progress and faction standings.
+
+- **Victory:** a road completed. The end screen offers *Keep playing*.
 - **Defeat:** your last ship was destroyed. Fleeing is always possible
   (Evade, withdrawing from your edge, Surrender), so losing it means a lost
   battle. The game freezes: only queries, saves and loads work. The wreck stays
   on record at 1 hull point so the final state still saves and loads. This
-  replaces the earlier rule that spared the last ship crippled.
+  replaces the earlier rule that spared the last ship crippled. Every fleet
+  counts: losing one fleet while another still flies is not a defeat. The
+  **GAME OVER** screen shows the last ship facing what destroyed it and offers
+  *Start a new game*, *Load a save*, *Main menu* (without saving over the
+  autosave) or *View the final map*. Loading a lost game shows it again.
 - **Campaign complete:** with a campaign length set (Victory panel: 200, 400 or
   800 runs; open-ended by default), the game ends on score at that run and
-  freezes. The length can be changed while the campaign runs, to any later run.
+  freezes, with the same choices as a defeat. The length can be changed while the campaign runs, to any later run.
 
 ## The Raider Haven
 

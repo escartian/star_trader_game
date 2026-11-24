@@ -62,6 +62,7 @@ impl Map {
             "battle" => self.session.capture_battle()?,
             "battle-close" => self.session.capture_battle_close()?,
             "victory" => self.session.capture_victory(),
+            "game-over" => self.session.capture_game_over()?,
             "factions" => self.session.capture_factions(true)?,
             "factions-map" => self.session.capture_factions(false)?,
             "roster" => self.sheet = crate::session::SheetTab::Fleets,

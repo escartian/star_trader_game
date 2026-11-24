@@ -361,6 +361,26 @@ impl LocalSession {
         self.capture_raiders(false)
     }
 
+    /// The game-over screen after a raider fight, as if it sank the last ship
+    /// (client state only: the authority's game goes on).
+    pub fn capture_game_over(&mut self) -> Result<(), String> {
+        self.capture_raiders(false)?;
+        let run = self.state.navigation.run;
+        let report = self
+            .state
+            .navigation
+            .last_combat
+            .as_mut()
+            .ok_or("No combat report")?;
+        let lost = report
+            .side(game_core::combat::Side::Player)
+            .find_map(|entry| entry.ship);
+        report.crippled = lost;
+        self.state.campaign.ended = Some(game_core::campaign::CampaignEnd::Lost { run });
+        self.combat_report.open = false;
+        Ok(())
+    }
+
     /// Shuttle until raiders appear, then fight them turn by turn.
     pub fn capture_battle(&mut self) -> Result<(), String> {
         self.capture_raiders(true)

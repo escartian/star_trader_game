@@ -298,6 +298,7 @@ impl Map {
         {
             self.music.play_effect(cue.into());
         }
+        self.session.show_contact_card(ctx);
         self.session.show_combat_report(ctx);
         self.session.show_victory(ctx, &self.session_systems);
         self.session.show_factions(ctx, &self.session_systems);

@@ -1,7 +1,8 @@
 //! Cards for NPC traders that come to you: a trade offer, a corsair's
 //! shakedown and a stalked trader's distress call. Display only; the rules live in `game_core::approach`.
 use super::LocalSession;
-use crate::theme::icons::{self, Icon};
+use crate::theme::event_card;
+use crate::theme::icons::Icon;
 use game_core::{
     approach,
     economy::Commodity,
@@ -52,11 +53,11 @@ impl LocalSession {
             "Buying takes the most valuable goods first, as far as your holds and wallet allow.",
         );
         let mut choice = None;
-        ui.horizontal_wrapped(|ui| {
-            if icons::button(ui, Icon::Cargo, "Buy its cargo").clicked() {
+        event_card::choices(ui, |ui| {
+            if event_card::choice(ui, Icon::Cargo, "Buy its cargo").clicked() {
                 choice = Some(EncounterChoice::Trade);
             }
-            if icons::button(ui, Icon::Bypass, "Decline").clicked() {
+            if event_card::choice(ui, Icon::Bypass, "Decline").clicked() {
                 choice = Some(EncounterChoice::Bypass);
             }
         });
@@ -95,23 +96,23 @@ impl LocalSession {
             .evade_chance(fleet, &encounter.hostiles, &self.economy.rules)
             .unwrap_or(0);
         let mut choice = None;
-        ui.horizontal_wrapped(|ui| {
-            if icons::button(ui, Icon::Confirm, "Hand it over").clicked() {
+        event_card::choices(ui, |ui| {
+            if event_card::choice(ui, Icon::Confirm, "Hand it over").clicked() {
                 choice = Some(EncounterChoice::Comply);
             }
-            if icons::button(ui, Icon::Weapon, "Fight")
+            if event_card::choice(ui, Icon::Weapon, "Fight")
                 .on_hover_text("Command your ships turn by turn.")
                 .clicked()
             {
                 choice = Some(EncounterChoice::Fight);
             }
-            if icons::button(ui, Icon::Execute, "Auto-resolve")
+            if event_card::choice(ui, Icon::Execute, "Auto-resolve")
                 .on_hover_text("Let the AI fight it out.")
                 .clicked()
             {
                 choice = Some(EncounterChoice::AutoResolve);
             }
-            if icons::button(ui, Icon::Engine, &format!("Evade {chance}%"))
+            if event_card::choice(ui, Icon::Engine, &format!("Evade {chance}%"))
                 .on_hover_text("Run for it; a failed escape starts the battle.")
                 .clicked()
             {
@@ -162,20 +163,20 @@ impl LocalSession {
             "Drive the band off and it pays you about {reward} cr{thanks}. The raiders' bounty is yours too."
         ));
         let mut choice = None;
-        ui.horizontal_wrapped(|ui| {
-            if icons::button(ui, Icon::Weapon, "Fight the band")
+        event_card::choices(ui, |ui| {
+            if event_card::choice(ui, Icon::Weapon, "Fight the band")
                 .on_hover_text("Command your ships turn by turn.")
                 .clicked()
             {
                 choice = Some(EncounterChoice::Fight);
             }
-            if icons::button(ui, Icon::Execute, "Auto-resolve")
+            if event_card::choice(ui, Icon::Execute, "Auto-resolve")
                 .on_hover_text("Let the AI fight it out.")
                 .clicked()
             {
                 choice = Some(EncounterChoice::AutoResolve);
             }
-            if icons::button(ui, Icon::Bypass, "Leave it").clicked() {
+            if event_card::choice(ui, Icon::Bypass, "Leave it").clicked() {
                 choice = Some(EncounterChoice::Bypass);
             }
         });

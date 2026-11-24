@@ -21,15 +21,16 @@ const HOSTILE: Color32 = crate::battle::scene::HOSTILE;
 pub(super) struct VictoryPanel {
     pub(super) open: bool,
     /// The campaign end the player has already been shown.
-    seen_end: Option<CampaignEnd>,
+    pub(super) seen_end: Option<CampaignEnd>,
 }
 
 impl VictoryPanel {
-    /// A loaded session's existing end is not announced again.
+    /// A loaded session's win is not announced again; a loaded defeat or
+    /// completed campaign shows its end screen, since nothing else can be done.
     pub(super) fn seen(state: &TravelState) -> Self {
         Self {
             open: false,
-            seen_end: state.campaign.ended,
+            seen_end: state.campaign.ended.filter(|end| end.playable()),
         }
     }
 }
@@ -66,7 +67,7 @@ impl LocalSession {
             self.victory_ui(ui, systems)
         });
         self.victory.open = open;
-        self.end_card(ctx);
+        self.campaign_end_screen(ctx);
     }
 
     fn victory_ui(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
@@ -179,64 +180,6 @@ impl LocalSession {
                 runs,
                 expected_revision: self.state.revision,
             });
-        }
-    }
-
-    /// Announces a new campaign end once, with the score.
-    fn end_card(&mut self, ctx: &egui::Context) {
-        let Some(end) = self.state.campaign.ended else {
-            return;
-        };
-        if self.victory.seen_end == Some(end) || self.battle_open() {
-            return;
-        }
-        let (title, color) = match end {
-            CampaignEnd::Won { .. } => ("VICTORY", GREEN),
-            CampaignEnd::Lost { .. } => ("DEFEAT", HOSTILE),
-            CampaignEnd::TimeUp { .. } => ("CAMPAIGN COMPLETE", AMBER),
-        };
-        let score = campaign::score(&self.state, &self.economy, LOCAL_PLAYER).total();
-        let mut close = false;
-        egui::Window::new("campaign-end")
-            .title_bar(false)
-            .resizable(false)
-            .collapsible(false)
-            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
-            .frame(egui::Frame::NONE)
-            .show(ctx, |ui| {
-                metal::frame(ui, 255, |ui| {
-                    ui.set_width(320.0_f32.min(ctx.screen_rect().width() - 40.0));
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            RichText::new(title)
-                                .font(crate::theme::fonts::display(ui.ctx(), 24.0))
-                                .color(color),
-                        );
-                        ui.label(end.label());
-                        ui.label(RichText::new(format!("Score {score}")).color(GREEN));
-                        ui.add_space(8.0);
-                        let next = if end.playable() {
-                            "Keep playing"
-                        } else {
-                            "Close"
-                        };
-                        if ui
-                            .add(egui::Button::new(next).min_size(Vec2::new(140.0, 40.0)))
-                            .clicked()
-                        {
-                            close = true;
-                        }
-                        if !end.playable() {
-                            ui.label(
-                                RichText::new("Load a save or start a new game from Menu.").small(),
-                            );
-                        }
-                    });
-                });
-            });
-        if close {
-            self.victory.seen_end = Some(end);
-            self.victory.open = true;
         }
     }
 

@@ -1,5 +1,7 @@
 //! Shared native command-console styling; no runtime art or animation dependency.
 use egui::{Color32, Context, FontFamily, FontId, Stroke, TextStyle, Vec2};
+pub mod event_art;
+pub mod event_card;
 pub mod fonts;
 pub mod icons;
 pub mod iff;

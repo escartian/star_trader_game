@@ -91,7 +91,8 @@ takes the screen, framed by two panels.
 | Part | Position | Contents |
 | --- | --- | --- |
 | Status strip | top | Back (system view), place name, **Fleets**, **ADVANCE** / **STOP** with the single-run clock, **Menu**, the card toggle (ⓘ), then credits, run number and alert badge; below 720 points wide the actions take a second row |
-| Context card | bottom, or docked on the right when the window is wider than tall; can be closed | **Close**, the guide and any contact decision first, then one page |
+| Context card | bottom, or docked on the right when the window is wider than tall; can be closed | **Close**, the guide and a contact reminder first, then one page |
+| Event card | centred over the map | a contact's decision: an illustrated scene of both sides, the story and the choices as full-width rows; **×** hides it until **Decide** on the card's contact line |
 | Message pop-up | bottom of the map | each new message for about 3 s, then fades over 1 s |
 | Search | galaxy map buttons (magnifier, top of the column) | opens a name box beside the buttons (also Ctrl/Cmd+F); Escape, a pick or the button closes it |
 | Map buttons | map's top-right corner | overview or reset, focus selection and fleet |

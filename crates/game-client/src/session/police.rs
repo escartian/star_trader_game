@@ -3,6 +3,7 @@
 //! messages. Display only; the rules live in `game_core::police` and
 //! `game_core::factions::wanted`.
 use super::LocalSession;
+use crate::theme::event_card;
 use crate::theme::icons::{self, Icon};
 use crate::theme::{AMBER, CYAN};
 use egui::RichText;
@@ -122,23 +123,23 @@ impl LocalSession {
             .evade_chance(fleet, &encounter.hostiles, &self.economy.rules)
             .unwrap_or(0);
         let mut choice = None;
-        ui.horizontal_wrapped(|ui| {
-            if icons::button(ui, Icon::Confirm, &format!("Comply · {fine}")).clicked() {
+        event_card::choices(ui, |ui| {
+            if event_card::choice(ui, Icon::Confirm, &format!("Comply · {fine}")).clicked() {
                 choice = Some(EncounterChoice::Comply);
             }
-            if icons::button(ui, Icon::Weapon, "Fight")
+            if event_card::choice(ui, Icon::Weapon, "Fight")
                 .on_hover_text("Resist arrest: command your ships turn by turn.")
                 .clicked()
             {
                 choice = Some(EncounterChoice::Fight);
             }
-            if icons::button(ui, Icon::Execute, "Auto-resolve")
+            if event_card::choice(ui, Icon::Execute, "Auto-resolve")
                 .on_hover_text("Resist arrest and let the AI fight it out.")
                 .clicked()
             {
                 choice = Some(EncounterChoice::AutoResolve);
             }
-            if icons::button(ui, Icon::Engine, &format!("Evade {chance}%"))
+            if event_card::choice(ui, Icon::Engine, &format!("Evade {chance}%"))
                 .on_hover_text("Run for it; a failed escape starts the battle.")
                 .clicked()
             {

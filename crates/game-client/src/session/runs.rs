@@ -3,6 +3,7 @@ use super::{
     LocalSession,
     navigation::{location_chip, location_label},
 };
+use crate::theme::event_card;
 use crate::theme::icons::{self, Icon, stat};
 use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{
@@ -225,7 +226,7 @@ impl LocalSession {
         if let Some(command) = action {
             self.command(command);
         }
-        self.encounter_ui(ui);
+        self.contact_panel(ui);
         ui.separator();
     }
 
@@ -239,104 +240,55 @@ impl LocalSession {
             .collect()
     }
 
-    /// Decision panel shown beside Execute run while the selected fleet is paused
-    /// by a contact, so the choice never hides inside the Navigation window.
-    pub(super) fn contact_panel(&mut self, ui: &mut egui::Ui) {
-        let Ok(fleet) = self.state.fleet_for_ship(self.active_ship).cloned() else {
-            return;
-        };
-        if !self.contact_fleets().contains(&fleet.id) {
-            return;
+    /// The contact's story and choices, inside its event card.
+    pub(super) fn encounter_body(
+        &mut self,
+        ui: &mut egui::Ui,
+        fleet: &game_core::fleet::Fleet,
+        encounter: &game_core::navigation::Encounter,
+    ) {
+        let (fleet, encounter) = (fleet.clone(), encounter.clone());
+        match encounter.kind {
+            EncounterKind::Raiders => return self.raider_ui(ui, &fleet, &encounter),
+            EncounterKind::Trader => return self.trader_ui(ui, &encounter),
+            EncounterKind::Police => return self.police_ui(ui, &fleet, &encounter),
+            EncounterKind::TraderOffer => return self.trader_offer_ui(ui, &encounter),
+            EncounterKind::Shakedown => return self.shakedown_ui(ui, &fleet, &encounter),
+            EncounterKind::TraderDistress => return self.distress_ui(ui, &encounter),
+            _ => {}
         }
-        ui.separator();
-        ui.horizontal(|ui| {
-            icons::glyph(ui, Icon::Warning, AMBER, "Decision needed");
-            ui.colored_label(AMBER, format!("CONTACT · {}", fleet.name));
-        });
-        ui.small("Paused until you decide; its course continues on the next run.");
-        self.encounter_ui(ui);
-    }
-
-    fn encounter_ui(&mut self, ui: &mut egui::Ui) {
-        let Ok(fleet) = self.state.fleet_for_ship(self.active_ship).cloned() else {
-            return;
+        let mut choice = None;
+        let carries = |test: &dyn Fn(&game_core::travel::Ship) -> bool| {
+            fleet
+                .ships
+                .iter()
+                .any(|id| self.state.ship(*id).is_ok_and(test))
         };
-        let Some(encounter) = self
-            .state
-            .navigation
-            .encounters
-            .iter()
-            .find(|encounter| encounter.fleet == fleet.id)
-            .cloned()
-        else {
-            return;
-        };
-        ui.group(|ui| {
-            ui.horizontal(|ui| {
-                icons::glyph(ui, Icon::Contact, AMBER, "Contact");
-                ui.strong(if encounter.haven {
-                    "Raider Haven assault"
-                } else {
-                    encounter.kind.label()
-                });
-            });
-            if encounter.kind == EncounterKind::Raiders {
-                self.raider_ui(ui, &fleet, &encounter);
-                return;
+        let offer = super::contacts::offer(
+            encounter.kind,
+            &super::contacts::Aboard {
+                free_space: carries(&|ship| ship.cargo_used() < u64::from(ship.cargo_capacity)),
+                medicine: carries(&|ship| ship.cargo[Commodity::Medicine.index()] > 0),
+                cargo: carries(&|ship| ship.cargo_used() > 0),
+            },
+        );
+        ui.label(offer.text);
+        event_card::choices(ui, |ui| {
+            let blocked = offer.blocked.map(str::to_owned);
+            if event_card::choice_action(ui, offer.icon, offer.act, blocked).clicked() {
+                choice = Some(offer.choice);
             }
-            if encounter.kind == EncounterKind::Trader {
-                self.trader_ui(ui, &encounter);
-                return;
-            }
-            if encounter.kind == EncounterKind::Police {
-                self.police_ui(ui, &fleet, &encounter);
-                return;
-            }
-            if encounter.kind == EncounterKind::TraderOffer {
-                self.trader_offer_ui(ui, &encounter);
-                return;
-            }
-            if encounter.kind == EncounterKind::Shakedown {
-                self.shakedown_ui(ui, &fleet, &encounter);
-                return;
-            }
-            if encounter.kind == EncounterKind::TraderDistress {
-                self.distress_ui(ui, &encounter);
-                return;
-            }
-            let mut choice = None;
-            let carries = |test: &dyn Fn(&game_core::travel::Ship) -> bool| {
-                fleet
-                    .ships
-                    .iter()
-                    .any(|id| self.state.ship(*id).is_ok_and(test))
-            };
-            let offer = super::contacts::offer(
-                encounter.kind,
-                &super::contacts::Aboard {
-                    free_space: carries(&|ship| ship.cargo_used() < u64::from(ship.cargo_capacity)),
-                    medicine: carries(&|ship| ship.cargo[Commodity::Medicine.index()] > 0),
-                    cargo: carries(&|ship| ship.cargo_used() > 0),
-                },
-            );
-            ui.label(offer.text);
-            ui.horizontal(|ui| {
-                let blocked = offer.blocked.map(str::to_owned);
-                if icons::labeled_action(ui, offer.icon, offer.act, blocked).clicked() {
-                    choice = Some(offer.choice);
-                }
-                if icons::button(ui, Icon::Bypass, offer.pass).clicked() {
-                    choice = Some(EncounterChoice::Bypass);
-                }
-            });
-            if let Some(choice) = choice {
-                self.command(ClientCommand::ResolveEncounter {
-                    encounter: encounter.id,
-                    choice,
-                    expected_revision: self.state.revision,
-                });
+            if event_card::choice(ui, Icon::Bypass, offer.pass).clicked() {
+                choice = Some(EncounterChoice::Bypass);
             }
         });
+        if let Some(choice) = choice {
+            self.command(ClientCommand::ResolveEncounter {
+                encounter: encounter.id,
+                choice,
+                expected_revision: self.state.revision,
+            });
+        }
     }
 
     fn raider_ui(
@@ -375,16 +327,16 @@ impl LocalSession {
         let mut choice = None;
         // A captain's first raider contact offers Auto-resolve first.
         let first_fight = self.unlock_card_open(game_core::progress::Feature::Battles);
-        ui.horizontal(|ui| {
+        event_card::choices(ui, |ui| {
             let auto = |ui: &mut egui::Ui| {
-                icons::button(ui, Icon::Execute, "Auto-resolve")
+                event_card::choice(ui, Icon::Execute, "Auto-resolve")
                     .on_hover_text("Fight the whole battle at once with the AI on both sides.")
                     .clicked()
             };
             if first_fight && auto(ui) {
                 choice = Some(EncounterChoice::AutoResolve);
             }
-            if icons::button(ui, Icon::Weapon, "Fight")
+            if event_card::choice(ui, Icon::Weapon, "Fight")
                 .on_hover_text("Command your ships turn by turn on the battle board.")
                 .clicked()
             {
@@ -398,7 +350,7 @@ impl LocalSession {
             } else {
                 format!("Evade {chance}%")
             };
-            if icons::button(ui, Icon::Engine, &evade).clicked() {
+            if event_card::choice(ui, Icon::Engine, &evade).clicked() {
                 choice = Some(EncounterChoice::Evade);
             }
         });

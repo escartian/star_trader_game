@@ -201,12 +201,13 @@ impl TravelState {
             trader: encounter.trader.as_ref().map(|trader| trader.id),
             police: encounter.police.map(|police| police.faction),
             plunder: 0,
+            shakedown: encounter.kind == EncounterKind::Shakedown,
         };
         self.apply_engagement(&fleet, &mut report)?;
-        // Raiders (or the police, impounding it) take every cargo unit still
-        // aboard a fleet that gives up; a trader the player attacked just
-        // breaks away.
-        if open.battle.surrendered && encounter.trader.is_none() {
+        // Raiders, a corsair (or the police, impounding it) take every cargo
+        // unit still aboard a fleet that gives up; a trader the player
+        // attacked just breaks away.
+        if open.battle.surrendered && encounter.kind != EncounterKind::Trader {
             for id in &fleet.ships {
                 if let Ok(ship) = self.ship_mut(*id) {
                     report.cargo_lost += ship.cargo.iter().sum::<u32>();
@@ -275,7 +276,10 @@ impl TravelState {
             .filter(|encounter| {
                 matches!(
                     encounter.kind,
-                    EncounterKind::Raiders | EncounterKind::Trader | EncounterKind::Police
+                    EncounterKind::Raiders
+                        | EncounterKind::Trader
+                        | EncounterKind::Police
+                        | EncounterKind::Shakedown
                 )
             })
             .filter(|encounter| encounter.fleet == open.fleet)

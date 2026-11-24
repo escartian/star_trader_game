@@ -135,13 +135,13 @@ impl TravelState {
                 || !encounter_fleets.insert(encounter.fleet)
                 || encounter.run == 0
                 || encounter.run > self.navigation.run
-                || matches!(
-                    encounter.kind,
-                    super::EncounterKind::Raiders
-                        | super::EncounterKind::Trader
-                        | super::EncounterKind::Police
-                ) == encounter.hostiles.is_empty()
-                || (encounter.kind == super::EncounterKind::Trader) != encounter.trader.is_some()
+                || (encounter.kind.with_trader()
+                    || matches!(
+                        encounter.kind,
+                        super::EncounterKind::Raiders | super::EncounterKind::Police
+                    ))
+                    == encounter.hostiles.is_empty()
+                || encounter.kind.with_trader() != encounter.trader.is_some()
                 || encounter.hostiles.len() > super::hostile::MAX_SAVED_RAIDERS
                 || !self.encounter_source_valid(encounter)
             {

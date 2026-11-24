@@ -1,7 +1,7 @@
 //! Solo navigation-run commands. Multiplayer readiness will wrap this same resolver.
 use super::Session;
 use game_core::{
-    navigation::NavigationEvent,
+    navigation::{EncounterKind, NavigationEvent},
     piracy, routes,
     travel::{PlayerId, TravelError},
 };
@@ -104,20 +104,23 @@ impl Session {
                 vec![NavigationEvent::CourseCancelled(fleet)]
             }
             // A hailed trader's contact settles against the trader's hold, a
-            // police contact against the wallet and your record.
+            // police contact against the wallet and your record, and a
+            // trader's own approach (offer or shakedown) against both holds.
             ClientCommand::ResolveEncounter {
                 encounter, choice, ..
             } => {
-                let police = candidate
+                let known = candidate
                     .state
                     .navigation
                     .encounters
                     .iter()
-                    .any(|known| known.id == encounter && known.police.is_some());
-                let resolve = if police {
-                    game_core::police::resolve
-                } else {
-                    piracy::resolve
+                    .find(|known| known.id == encounter);
+                let resolve = match known.map(|known| (known.kind, known.police.is_some())) {
+                    Some((_, true)) => game_core::police::resolve,
+                    Some((EncounterKind::TraderOffer | EncounterKind::Shakedown, _)) => {
+                        game_core::approach::resolve
+                    }
+                    _ => piracy::resolve,
                 };
                 vec![resolve(
                     &mut candidate.state,
@@ -217,6 +220,13 @@ impl Session {
                 )?);
                 // Wanted status runs down; faction police hunt and patrol.
                 events.extend(game_core::police::patrol_run(
+                    &mut candidate.state,
+                    &mut candidate.economy,
+                    player,
+                    &candidate.systems,
+                )?);
+                // A trader near the flagship may come to trade or to rob it.
+                events.extend(game_core::approach::approach_run(
                     &mut candidate.state,
                     &mut candidate.economy,
                     player,

@@ -54,6 +54,41 @@ pub struct PersonalityDefinition {
     pub yield_percent: u64,
     /// Percent chance to slip past raiders that strike it under way.
     pub raid_escape_percent: u64,
+    /// Percent chance per run to approach your flagship when within hailing
+    /// range (see `approach`).
+    #[serde(default)]
+    pub approach_percent: u64,
+}
+
+/// How NPC traders deal with you when they approach (see `approach`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ApproachRules {
+    /// A trade offer's price, in percent of the galaxy list price.
+    pub offer_price_percent: u64,
+    /// A corsair shakes you down only with this much of your fleet's
+    /// strength, in percent; otherwise it trades like anyone.
+    pub shakedown_strength_percent: u64,
+    /// Runs before the same trader approaches you again.
+    pub cooldown_runs: u64,
+}
+
+impl Default for ApproachRules {
+    fn default() -> Self {
+        Self {
+            offer_price_percent: 85,
+            shakedown_strength_percent: 150,
+            cooldown_runs: 10,
+        }
+    }
+}
+
+impl ApproachRules {
+    fn valid(&self) -> bool {
+        (10..=200).contains(&self.offer_price_percent)
+            && (100..=1_000).contains(&self.shakedown_strength_percent)
+            && self.cooldown_runs <= 1_000
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,6 +101,9 @@ pub struct PersonalityCatalog {
     /// first). Independent traders never get a loyalist (see
     /// [`PersonalityCatalog::for_independent`]).
     pub spawn_cycle: Vec<Personality>,
+    /// How approaching traders deal with you.
+    #[serde(default)]
+    pub approaches: ApproachRules,
 }
 
 impl Default for PersonalityCatalog {
@@ -97,11 +135,13 @@ impl PersonalityCatalog {
                 && (1..=1_000).contains(&definition.haul_units)
                 && (100..=1_000).contains(&definition.yield_percent)
                 && definition.raid_escape_percent <= 100
+                && definition.approach_percent <= 100
         });
         if self.schema_version != CATALOG_SCHEMA
             || !ordered
             || !sound
             || !(1..=64).contains(&self.spawn_cycle.len())
+            || !self.approaches.valid()
         {
             return Err("Invalid NPC personality catalog".into());
         }

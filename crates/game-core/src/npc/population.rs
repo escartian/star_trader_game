@@ -87,6 +87,7 @@ impl Economy {
                 escort_runs: 0,
                 home: Some(home),
                 affiliation: None,
+                last_approach: 0,
             });
         }
     }

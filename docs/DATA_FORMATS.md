@@ -152,7 +152,11 @@ each with `id`, `label` (1–64 bytes), `description` (up to 256),
 `margin_percent` (0–100: least profit as a share of the haul's cost),
 `haul_units` (1–1,000, capped by the hold), `yield_percent` (100–1,000: your
 fleet strength, as a share of the trader's, that makes it yield to a demand)
-and `raid_escape_percent` (0–100: chance to slip past raiders), plus
+`raid_escape_percent` (0–100: chance to slip past raiders) and
+`approach_percent` (0–100, default 0: chance per run to approach your
+flagship), plus `approaches` (`offer_price_percent` 10–200,
+`shakedown_strength_percent` 100–1,000, `cooldown_runs` 0–1,000; defaults
+85, 150 and 10) and
 `spawn_cycle` (1–64 personalities dealt to new traders in turn; independents
 dealt a loyalist become smugglers). It is embedded as a fallback, loaded from
 the project file when present, and saved in the economy rules as
@@ -224,6 +228,10 @@ A hailed trader's contact (`kind` `Trader`) stores `trader` (`id`, `name`,
 `hull_damage`) and the trader's hull as its one `hostiles` entry; both must match
 the saved NPC trader, which cannot be refitting. A combat report from an attack
 on a trader names it in `trader` and records `plunder` (cargo units taken).
+A trader that approaches your flagship opens a `TraderOffer` or `Shakedown`
+contact stored the same way (`trader` and its hull as `hostiles`); a report
+from resisting a shakedown also sets `shakedown`. NPC traders record
+`last_approach` (the run of their last approach, at most the current run).
 `navigation.piracies` counts demands and attacks. Ships (player and NPC) may
 list fitted `gear` (`afterburners`, `point_defense`, each at most once), and so
 may battle units; `navigation.escorts` holds hired escorts (`fleet`, `runs_left`

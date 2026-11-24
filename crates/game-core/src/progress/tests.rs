@@ -108,6 +108,7 @@ fn raiders_moons_and_bounties_open_battles_landing_and_victory() {
         trader: None,
         police: None,
         plunder: 0,
+        shakedown: false,
     }));
     let found = unlocks(&state, &economy, &systems);
     assert!(found.contains(&Feature::Victory) && found.contains(&Feature::Battles));

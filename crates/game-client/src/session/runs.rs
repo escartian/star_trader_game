@@ -291,6 +291,14 @@ impl LocalSession {
                 self.police_ui(ui, &fleet, &encounter);
                 return;
             }
+            if encounter.kind == EncounterKind::TraderOffer {
+                self.trader_offer_ui(ui, &encounter);
+                return;
+            }
+            if encounter.kind == EncounterKind::Shakedown {
+                self.shakedown_ui(ui, &fleet, &encounter);
+                return;
+            }
             let mut choice = None;
             let carries = |test: &dyn Fn(&game_core::travel::Ship) -> bool| {
                 fleet

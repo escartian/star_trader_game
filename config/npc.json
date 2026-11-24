@@ -11,7 +11,8 @@
       "margin_percent": 10,
       "haul_units": 4,
       "yield_percent": 150,
-      "raid_escape_percent": 0
+      "raid_escape_percent": 0,
+      "approach_percent": 5
     },
     {
       "id": "Opportunist",
@@ -23,7 +24,8 @@
       "margin_percent": 0,
       "haul_units": 4,
       "yield_percent": 300,
-      "raid_escape_percent": 0
+      "raid_escape_percent": 0,
+      "approach_percent": 15
     },
     {
       "id": "BulkHauler",
@@ -35,7 +37,8 @@
       "margin_percent": 3,
       "haul_units": 12,
       "yield_percent": 200,
-      "raid_escape_percent": 0
+      "raid_escape_percent": 0,
+      "approach_percent": 10
     },
     {
       "id": "Loyalist",
@@ -47,7 +50,8 @@
       "margin_percent": 5,
       "haul_units": 6,
       "yield_percent": 250,
-      "raid_escape_percent": 0
+      "raid_escape_percent": 0,
+      "approach_percent": 5
     },
     {
       "id": "Smuggler",
@@ -59,7 +63,8 @@
       "margin_percent": 5,
       "haul_units": 6,
       "yield_percent": 250,
-      "raid_escape_percent": 50
+      "raid_escape_percent": 50,
+      "approach_percent": 15
     },
     {
       "id": "Corsair",
@@ -71,7 +76,8 @@
       "margin_percent": 0,
       "haul_units": 4,
       "yield_percent": 400,
-      "raid_escape_percent": 20
+      "raid_escape_percent": 20,
+      "approach_percent": 30
     }
   ],
   "spawn_cycle": [
@@ -83,5 +89,10 @@
     "Cautious",
     "Opportunist",
     "Corsair"
-  ]
+  ],
+  "approaches": {
+    "offer_price_percent": 85,
+    "shakedown_strength_percent": 150,
+    "cooldown_runs": 10
+  }
 }

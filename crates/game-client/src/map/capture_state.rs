@@ -37,6 +37,8 @@ impl Map {
             "trade-route" => self.session.capture_trade_route()?,
             "encounter" => self.session.capture_encounter()?,
             "hail" => self.session.capture_hail()?,
+            "trader-offer" => self.session.capture_approach(false)?,
+            "shakedown" => self.session.capture_approach(true)?,
             "combat" => self.session.capture_combat()?,
             "battle" => self.session.capture_battle()?,
             "battle-close" => self.session.capture_battle_close()?,

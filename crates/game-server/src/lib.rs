@@ -268,6 +268,8 @@ mod raid_tests;
 mod setup_tests;
 
 #[cfg(test)]
+mod approach_tests;
+#[cfg(test)]
 mod npc_faction_tests;
 #[cfg(test)]
 mod npc_personality_tests;

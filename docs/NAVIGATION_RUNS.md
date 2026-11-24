@@ -156,6 +156,20 @@ Credits are at a new game's prices and scale with inflation; a fine never takes
 the wallet below zero. These random law contacts do not touch faction standing;
 faction police contacts do (see [the law](FACTIONS.md#the-law-wanted-status-and-police)).
 
+**Traders that come to you.** After a run, an NPC trader within hailing
+range of your flagship (in open space or orbit, not docked or landed) may
+approach it, at most one per run and each trader at most once per 10 runs
+(chance by personality, see [traffic](MAP_CONTROLS.md)):
+
+| Contact | Who | Act | Outcome |
+| --- | --- | --- | --- |
+| Trader alongside | any trader with cargo | Buy its cargo | its hold at 85% of list price, most valuable first, as far as your holds and wallet allow; the trader keeps the money |
+| Corsair shakedown | a corsair with 150% of your fleet's strength, when you carry cargo | Hand it over, Fight, Auto-resolve or Evade | half your cargo, rounded up; or a battle as with raiders |
+
+Resisting a shakedown is self-defence: no standing lost, no wanted status,
+no bounty, and a destroyed corsair's hold is yours. Only the flagship is
+approached; secondary fleets never are.
+
 Random state is seeded and saved. Rolls use stable fleet-ID order, not the order
 in which you plotted courses. Reloading the same planning state and executing the
 same run produces the same contacts. Resolving a contact cannot duplicate rewards

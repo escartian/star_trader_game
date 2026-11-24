@@ -64,6 +64,62 @@ impl Session {
         Ok(faction)
     }
 
+    /// For the approach captures: the trader `trader` (one the flagship can
+    /// hail) approaches it at once. With `shakedown` it is a corsair and the
+    /// flagship is battered enough to be outgunned (and given food if its
+    /// hold is empty); otherwise it offers its
+    /// hold (given some ore and medicine if empty). Returns whether a contact
+    /// opened.
+    pub fn stage_approach(&mut self, trader: u64, shakedown: bool) -> Result<bool, String> {
+        let index = self
+            .economy
+            .traders
+            .iter()
+            .position(|npc| npc.id == trader)
+            .ok_or("No such trader")?;
+        let npc = &mut self.economy.traders[index];
+        npc.last_approach = 0;
+        let hold = &mut npc.state.ships[0].cargo;
+        if hold.iter().all(|units| *units == 0) {
+            hold[game_core::economy::Commodity::Ore.index()] = 6;
+            hold[game_core::economy::Commodity::Medicine.index()] = 3;
+        }
+        if shakedown {
+            npc.personality = game_core::npc::Personality::Corsair;
+            let fleet = self
+                .state
+                .flagship(super::LOCAL_PLAYER)
+                .ok_or("No flagship")?;
+            let ships = self
+                .state
+                .fleets
+                .iter()
+                .find(|record| record.id == fleet)
+                .ok_or("No flagship fleet")?
+                .ships
+                .clone();
+            for id in ships {
+                let ship = self.state.ship_mut(id).map_err(|e| e.to_string())?;
+                ship.hull_damage = 50;
+                if ship.cargo_used() == 0 {
+                    ship.cargo[game_core::economy::Commodity::Food.index()] = 6;
+                }
+            }
+        }
+        let catalog = &mut self.economy.rules.personality_catalog;
+        for definition in &mut catalog.personalities {
+            definition.approach_percent = 100;
+        }
+        let events = game_core::approach::approach_run(
+            &mut self.state,
+            &mut self.economy,
+            super::LOCAL_PLAYER,
+            &self.systems,
+        )
+        .map_err(|error| error.to_string())?;
+        Ok(!events.is_empty())
+    }
+
     /// Four fleets in different states, for testing multi-fleet management:
     /// - "Home Guard": the starting freighter, docked at the home trade port.
     /// - "Scout Wing": a scout in orbit of the first planet with a market.

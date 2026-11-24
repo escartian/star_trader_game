@@ -60,9 +60,13 @@ pub struct CombatReport {
     /// pays it once, when the battle ends.
     #[serde(default)]
     pub bounty: crate::economy::Credits,
-    /// The NPC trader attacked, for a piracy battle (`npc::Trader::id`).
+    /// The NPC trader fought (`npc::Trader::id`): one you attacked, or a
+    /// corsair whose shakedown you resisted (`shakedown`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trader: Option<u64>,
+    /// The trader was a corsair that tried to shake you down (no piracy).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub shakedown: bool,
     /// The faction whose police fought, for a battle against a patrol.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub police: Option<crate::factions::Faction>,

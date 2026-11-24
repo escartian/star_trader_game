@@ -228,11 +228,12 @@ impl TravelState {
             .revision
             .checked_add(1)
             .ok_or(TravelError::TimeOverflow)?;
-        // A police patrol is fought or evaded like raiders; complying needs
-        // the wallet, so `police::resolve` handles it.
+        // A police patrol or a corsair's shakedown is fought or evaded like
+        // raiders; complying needs the wallet or the corsair's hold, so
+        // `police::resolve` and `approach::resolve` handle it.
         if matches!(
             encounter.kind,
-            EncounterKind::Raiders | EncounterKind::Police
+            EncounterKind::Raiders | EncounterKind::Police | EncounterKind::Shakedown
         ) {
             if !matches!(
                 choice,

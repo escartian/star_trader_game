@@ -138,7 +138,6 @@ pub fn hail(
 ) -> Result<NavigationEvent, FleetMovementError> {
     hail_check(state, economy, player, fleet, trader, systems)?;
     let npc = find(economy, trader)?;
-    let ship = &npc.state.ships[0];
     let navigation = &mut state.navigation;
     let next = navigation
         .next_encounter_id
@@ -148,11 +147,7 @@ pub fn hail(
         .revision
         .checked_add(1)
         .ok_or(TravelError::TimeOverflow)?;
-    let escort = npc.escort_runs > 0;
-    let mut hostiles = vec![ship.kind];
-    if escort {
-        hostiles.push(ESCORT_KIND);
-    }
+    let (contact, hostiles) = contact_of(npc);
     let encounter = Encounter {
         id: navigation.next_encounter_id,
         fleet,
@@ -161,19 +156,32 @@ pub fn hail(
         hostiles,
         band: None,
         haven: false,
-        trader: Some(TraderContact {
-            id: npc.id,
-            name: npc.name.clone(),
-            hull_damage: ship.hull_damage,
-            gear: ship.gear.clone(),
-            escort,
-        }),
+        trader: Some(contact),
         police: None,
     };
     navigation.next_encounter_id = next;
     navigation.encounters.push(encounter.clone());
     state.revision = revision;
     Ok(NavigationEvent::EncounterFound(encounter))
+}
+
+/// A contact's view of `npc` as it stands, and its hostiles: its hull, then
+/// its hired escort if it has one.
+pub(crate) fn contact_of(npc: &Trader) -> (TraderContact, Vec<ShipKind>) {
+    let ship = &npc.state.ships[0];
+    let escort = npc.escort_runs > 0;
+    let mut hostiles = vec![ship.kind];
+    if escort {
+        hostiles.push(ESCORT_KIND);
+    }
+    let contact = TraderContact {
+        id: npc.id,
+        name: npc.name.clone(),
+        hull_damage: ship.hull_damage,
+        gear: ship.gear.clone(),
+        escort,
+    };
+    (contact, hostiles)
 }
 
 /// Whether the hailed trader would hand cargo over to the contact's fleet.
@@ -273,7 +281,7 @@ pub fn resolve(
     })
 }
 
-/// After a piracy battle is filed: the trader takes its damage, or, if it was
+/// After a battle with a trader is filed (piracy, or a corsair's shakedown): the trader takes its damage, or, if it was
 /// destroyed, its hold is plundered and it is refitted at its home port. Call
 /// once per newly filed report.
 pub fn settle_battle(
@@ -288,6 +296,7 @@ pub fn settle_battle(
         return Ok(());
     };
     let fleet = report.fleet;
+    let shakedown = report.shakedown;
     // The trader is the first hostile; a second one is its escort.
     let Some(result) = report.side(Side::Hostile).next().cloned() else {
         return Err(FleetError::InvalidSelection.into());
@@ -309,10 +318,18 @@ pub fn settle_battle(
             plunder = take_cargo(state, economy, fleet, &mut npc, u32::MAX)?;
         }
         let port = economy.refit(&mut npc, systems);
-        npc.last_action = format!("Destroyed by pirates; refitting at {port}");
+        npc.last_action = if shakedown {
+            format!("Destroyed in a failed shakedown; refitting at {port}")
+        } else {
+            format!("Destroyed by pirates; refitting at {port}")
+        };
     } else {
         npc.state.ships[0].hull_damage = result.final_damage;
-        npc.last_action = format!("Survived a pirate attack ({hull})");
+        npc.last_action = if shakedown {
+            format!("Beaten off in a shakedown ({hull})")
+        } else {
+            format!("Survived a pirate attack ({hull})")
+        };
     }
     economy.traders[index] = npc;
     if let Some(report) = state.navigation.last_combat.as_deref_mut() {
@@ -323,7 +340,7 @@ pub fn settle_battle(
 
 /// Moves up to `limit` units from the trader's hold into the fleet's free
 /// space, most valuable goods first. Returns the units moved.
-fn take_cargo(
+pub(crate) fn take_cargo(
     state: &mut TravelState,
     economy: &Economy,
     fleet: FleetId,
@@ -388,7 +405,7 @@ pub fn validate_contacts(state: &TravelState, economy: &Economy) -> Result<(), S
     Ok(())
 }
 
-fn find(economy: &Economy, trader: u64) -> Result<&Trader, NavigationError> {
+pub(crate) fn find(economy: &Economy, trader: u64) -> Result<&Trader, NavigationError> {
     economy
         .traders
         .iter()
@@ -396,7 +413,7 @@ fn find(economy: &Economy, trader: u64) -> Result<&Trader, NavigationError> {
         .ok_or(NavigationError::UnknownTrader)
 }
 
-fn position(economy: &Economy, trader: u64) -> Result<usize, NavigationError> {
+pub(crate) fn position(economy: &Economy, trader: u64) -> Result<usize, NavigationError> {
     economy
         .traders
         .iter()

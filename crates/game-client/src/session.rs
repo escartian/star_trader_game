@@ -6,6 +6,8 @@ mod battle_controls;
 #[cfg(any(test, feature = "dev-tools"))]
 mod capture;
 #[cfg(any(test, feature = "dev-tools"))]
+mod capture_approach;
+#[cfg(any(test, feature = "dev-tools"))]
 mod capture_police;
 mod combat_report;
 mod contacts;
@@ -13,6 +15,7 @@ mod factions;
 mod fleets;
 mod victory;
 pub use fleets::TradeOption;
+mod approaches;
 mod guide;
 mod hails;
 mod landing;

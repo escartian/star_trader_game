@@ -12,7 +12,7 @@ use crate::{
     fleet::FleetId,
     travel::{Location, PlayerId, ShipId, TravelState},
 };
-pub use personality::{Personality, PersonalityCatalog, PersonalityDefinition};
+pub use personality::{ApproachRules, Personality, PersonalityCatalog, PersonalityDefinition};
 pub use population::{MAX_TRADERS, trader_count};
 pub use raids::REFIT_RUNS;
 use serde::{Deserialize, Serialize};
@@ -41,6 +41,13 @@ pub struct Trader {
     /// were set up, or none (independent).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub affiliation: Option<Faction>,
+    /// The run it last approached your flagship (0: never; see `approach`).
+    #[serde(default, skip_serializing_if = "is_zero_run")]
+    pub last_approach: u64,
+}
+
+fn is_zero_run(value: &u64) -> bool {
+    *value == 0
 }
 
 fn is_zero(value: &u32) -> bool {
@@ -77,6 +84,7 @@ impl Economy {
                 || trader.state.fleets.len() != 1
                 || trader.state.navigation.run != run
                 || trader.refit_runs > REFIT_RUNS
+                || trader.last_approach > run
                 || trader.escort_runs > crate::combat::gear::ESCORT_RUNS
             {
                 return Err("Invalid NPC trader".into());

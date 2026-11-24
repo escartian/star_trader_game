@@ -55,8 +55,6 @@ const instruments = {
   lift: { sound: "gm_epiano2:1", boost: 1.7 },
   lead: { sound: "gm_lead_2_sawtooth:3", boost: 1.2 },
   guitar: { sound: "gm_electric_guitar_clean:2", boost: 3 },
-  // The solo's overdriven rock guitar (FluidR3's only version, `:0`).
-  rockGuitar: { sound: "gm_overdriven_guitar:0", boost: 0.8 },
   organ: { sound: "gm_drawbar_organ:3", boost: 3.5 },
   horns: { sound: "gm_french_horn:1", boost: 1.15 },
   woodwinds: { sound: "gm_flute:2", boost: 1.4 },
@@ -103,6 +101,9 @@ const instruments = {
   // Space-jazz colours in the funk pieces.
   vibes: { sound: "gm_vibraphone:3", boost: 1.6 },
   trumpet: { sound: "gm_muted_trumpet:3", boost: 1.4 },
+  // Fullness in the funk pieces: a held "ooh" choir and a Moog-style bass.
+  oohs: { sound: "gm_voice_oohs:2", boost: 1.33 },
+  moog: { sound: "sawtooth", boost: 0.68 },
 }
 const play = (pattern, name) => pattern.s(instruments[name].sound).postgain(instruments[name].boost)
 
@@ -211,7 +212,7 @@ function block(settings) {
     cowbell: 0, cowbellNotes: '', bass808: 0, trap: 0, clap: 0, clapPattern: "~ pink ~ pink", groove: 0,
     congas: 0, tambourine: 0, slide808: false, phonkKit: 0, crackle: 0, dark: 0, darkNotes: '',
     bassGuitar: 0, bassGuitarNotes: '', vibes: 0, vibesNotes: '', trumpet: 0, trumpetNotes: '',
-    swingRide: 0, rim: 0,
+    swingRide: 0, rim: 0, oohs: 0, moog: 0, brassLine: 0, brassLineNotes: '', glue: 0,
     ...settings }
   const from = o.from
   const to = o.to ?? o.from
@@ -665,7 +666,7 @@ function block(settings) {
       .attack(0.02).decay(0.25).sustain(0.55).release(0.2)
       .lpf(2600)
       .delay(0.25).delaytime(echo).delayfeedback(0.3)
-      .pan(0.5).room(0.4).size(hall)
+      .pan(0.5).room(0.4 + 0.2 * o.glue).size(hall)
       .gain(level(o.talk)))
   }
   if (on(o.clav)) {
@@ -673,7 +674,8 @@ function block(settings) {
     layers.push(play(note(o.clavNotes), 'clav')
       .attack(0.002).decay(0.12).sustain(0.1).release(0.05)
       .hpf(250).lpf(sine.range(1200, 3800).fast(2)).lpq(4)
-      .pan(0.62).room(0.25).size(hall)
+      .delay(0.22 * o.glue).delaytime(0.09).delayfeedback(0.15)
+      .pan(0.62).room(0.25 + 0.25 * o.glue).size(hall)
       .gain(level(o.clav)))
   }
   if (on(o.scratch)) {
@@ -682,7 +684,8 @@ function block(settings) {
       .struct("[~ x]*8")
       .attack(0.002).decay(0.05).sustain(0).release(0.03)
       .hpf(600).lpf(sine.range(900, 2800).fast(1)).lpq(6)
-      .pan(0.35).room(0.2).size(hall)
+      .delay(0.2 * o.glue).delaytime(0.09).delayfeedback(0.15)
+      .pan(0.35).room(0.2 + 0.25 * o.glue).size(hall)
       .gain(level(o.scratch)))
   }
   if (on(o.slap)) {
@@ -699,7 +702,7 @@ function block(settings) {
       .struct("~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ x ~ ~ ~")
       .attack(0.01).decay(0.18).sustain(0).release(0.08)
       .lpf(3200)
-      .pan(0.45).room(0.35).size(hall)
+      .pan(0.45).room(0.35 + 0.25 * o.glue).size(hall)
       .gain(level(o.brass)))
   }
   if (on(o.cowbell)) {
@@ -848,6 +851,32 @@ function block(settings) {
       .pan(0.6).room(0.2).size(hall)
       .gain(level(o.rim)))
   }
+  if (on(o.oohs)) {
+    // A held "ooh" choir, one chord a bar, filling the middle softly.
+    layers.push(play(chord(o.chords).voicing(), 'oohs')
+      .attack(0.4).decay(0.8).sustain(0.7).release(0.8)
+      .lpf(2600)
+      .pan(0.5).room(0.55).size(hall)
+      .gain(level(o.oohs)))
+  }
+  if (on(o.moog)) {
+    // A warm Moog-style bass doubling the slap line an octave down: a filtered
+    // sawtooth for weight under the slap's attack.
+    layers.push(play(note(o.slapNotes).transpose(-12), 'moog')
+      .attack(0.004).decay(0.25).sustain(0.5).release(0.08)
+      .lpf(380).lpq(3)
+      .room(0.1).size(hall)
+      .gain(level(o.moog)))
+  }
+  if (on(o.brassLine)) {
+    // Horn-section lines answering the melody, in octaves.
+    const horns = (pattern) => play(pattern, 'brass')
+      .attack(0.02).decay(0.25).sustain(0.5).release(0.15)
+      .lpf(3400)
+      .pan(0.42).room(0.35 + 0.25 * o.glue).size(hall)
+      .gain(level(o.brassLine))
+    layers.push(horns(note(o.brassLineNotes)), horns(note(o.brassLineNotes).transpose(-12)))
+  }
   return { from, to, bpm, next: o.next, pattern: stack(...layers) }
 }
 
@@ -924,11 +953,11 @@ const arrive = { keys: 0.1, ensemble: 0.13, arp: 0.13, arpLpf: 3200,
   counter: 0.12, stabs: 0.075, ostinato: 0.055, drums: 1,
   hats: 0.18, shaker: 0.16, ride: 0.055, toms: 0.07, lift: 0.12 }
 
-// The solo plays a sustaining, overdriven rock guitar with a little extra drive.
-const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarSound: 'rockGuitar', guitarDrive: 0.2,
-  guitarDecay: 1.4, guitarSustain: 0.65, guitarRelease: 0.9,
-  guitarLpf: 4500, guitarDelay: 0.18, guitarFeedback: 0.28, guitarRoom: 0.3, rhythm: 0.085,
-  drums: 1, hats: 0.13, pad: 0.04, pump: 0, pluck: 0 }
+// The solo plays the clean electric guitar with long sustain and a light
+// reverb and echo.
+const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarDecay: 1.6, guitarSustain: 0.7,
+  guitarRelease: 1.1, guitarLpf: 4000, guitarDelay: 0.15, guitarFeedback: 0.25, guitarRoom: 0.3,
+  rhythm: 0.085, drums: 1, hats: 0.13, pad: 0.04, pump: 0, pluck: 0 }
 
 
 window.musicStart = 'drift_a'
@@ -1161,11 +1190,17 @@ const vibesLine = '<' +
 const trumpetLine = '<~ [~ ~ [a5 g5] [e5 d5]] ~ [~ ~ [d5 e5] [f5 a5]] ' +
   '~ [~ ~ [c6 a5] [g5 e5]] ~ [~ ~ [d5 e5] a5]>'
 
+// Horn lines answering the melody, one bar per chord: pickups at the end of a
+// bar and replies where the melody holds a long note.
+const hornAnswers = '<~ [~ ~ ~ ~ ~ ~ [a4 c5] d5] ~ [~ [b4 d5] ~ [f5 e5] ~ d5 ~ ~] ' +
+  '~ [~ ~ ~ ~ ~ ~ [f5 g5] a5] ~ [~ [g5 e5] ~ [d5 e5] ~ a4 ~ ~]>'
+
 // The funk pieces' settings, shared by the pieces and the ramps between them.
 const funkAt = {
   // Theme C, slow and sultry space jazz: talkbox lead, Rhodes, vibraphone and
   // a muted trumpet over slap bass, a swung ride and the laser harp.
   60: {
+    oohs: 0.05, moog: 0.06, glue: 0.5,
     keys: 0.13, ensemble: 0.15, bass: 0, slap: 0.16, slapNotes: slapLine, talk: 0.12,
     talkNotes: themeC, laser: 0.06, scratch: 0.04, groove: 0.3, swingRide: 0.025, pad: 0.09,
     halo: 0.075, vibes: 0.07, vibesNotes: vibesLine, trumpet: 0.08, trumpetNotes: trumpetLine,
@@ -1174,6 +1209,7 @@ const funkAt = {
   // Theme D: the clavinet riff with slap bass, chicken scratch and horn stabs,
   // the trumpet answering and vibraphone above.
   80: {
+    oohs: 0.04, moog: 0.08, glue: 0.6, brassLine: 0.05, brassLineNotes: hornAnswers,
     keys: 0.1, ensemble: 0.12, bass: 0, slap: 0.18, slapNotes: slapLine, clav: 0.12,
     clavNotes: funkRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.06, swingRide: 0.02,
     organ: 0.06, laser: 0.03, pad: 0.06, vibes: 0.05, vibesNotes: vibesLine, trumpet: 0.08,
@@ -1181,14 +1217,18 @@ const funkAt = {
   },
   // Theme D, fuller: organ, congas and tambourine join the band.
   100: {
+    oohs: 0.05, moog: 0.1, glue: 0.8, brassLine: 0.06, brassLineNotes: hornAnswers, openhat: 0.015,
     keys: 0.09, ensemble: 0.12, bass: 0, slap: 0.17, slapNotes: slapLine, clav: 0.12,
     clavNotes: funkRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.06,
     swingRide: 0.02, congas: 0.08, tambourine: 0.04, laser: 0.03, vibes: 0.04,
     vibesNotes: vibesLine, trumpet: 0.07, trumpetNotes: trumpetLine
   },
   // Theme C at double time: talkbox and clavinet in unison over the full band,
-  // congas, tambourine and the swung ride, with the laser harp above.
+  // horns answering, a held choir and a Moog bass under the slap bass, congas,
+  // tambourine, open hats and the swung ride, glued by more reverb and a
+  // slapback echo, with the laser harp above.
   120: {
+    oohs: 0.06, moog: 0.12, glue: 1, brassLine: 0.08, brassLineNotes: hornAnswers, openhat: 0.02,
     keys: 0.09, ensemble: 0.09, bass: 0, slap: 0.17, slapNotes: slapLine, talk: 0.11,
     talkNotes: themeC, clav: 0.08, clavNotes: themeC, scratch: 0.07, brass: 0.1, organ: 0.06,
     groove: 0.585, hats: 0.06, swingRide: 0.025, congas: 0.12, tambourine: 0.06, laser: 0.06,

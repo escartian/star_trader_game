@@ -57,8 +57,8 @@ and fades on the descent. Chords in guitar parts are strummed: each string
 starts slightly after the one before. The solo is a single 16-bar block: a
 singing single-note line with six bends up into held notes, strummed chords
 and double-stops at the phrase peaks, rests between phrases, and three short
-note-by-note runs at 1.8 times the eighth-note rate on an overdriven rock
-guitar with extra drive, long sustain and more echo, slurred legato: each run
+note-by-note runs at 1.8 times the eighth-note rate on the clean guitar with
+long sustain and a light reverb and echo, slurred legato: each run
 is picked once and its other notes are hammer-ons and pull-offs (`h` in the
 source's guitar notation), softer and with a gentler attack. A quiet arpeggio, the
 rhythm guitar, organ and horns support it, and it has less echo and room effect.
@@ -74,7 +74,12 @@ time on the talkbox and clavinet in unison over the full band, congas and
 tambourine. Theme D, a syncopated clavinet riff that uses the B natural of
 D dorian, plays at 80 and 100 BPM with slap bass, chicken scratch, horn-section
 stabs, the trumpet and vibraphone; `funk_100` adds organ, congas and
-tambourine.
+tambourine. To fill out the band without clutter, horn-section lines (in
+octaves) answer the melody in its gaps, a held "ooh" choir sits in the middle,
+a Moog-style filtered sawtooth doubles the slap bass an octave down, and a
+`glue` setting sends the clav, guitar, horns, talkbox and keys further into
+the shared reverb with a short slapback echo on clav and guitar. These grow
+towards 120 BPM, where quiet open hats join too.
 
 **Phonk pieces.** Dark Memphis and drift phonk in space, over a minor cycle of
 two bars per chord (Dm, B♭, Gm, A7, whose C sharp pulls back to D minor).
@@ -83,8 +88,9 @@ values at 60 and 120 BPM: slow and eerie over sliding 808s, a dark pad, a
 lowpassed choir and vinyl crackle at 60, and drift phonk over the full kit at
 120. Theme F, sparser, plays on a dark, distorted supersaw lead at 80 and 100
 BPM; at 100 the cowbell doubles it an octave up. A picked bass guitar plays a
-syncopated line above the 808s, which slide up into each bar's last notes. The
-drums sit under the music: a phonk kit (a heavy kick and a half-time snare),
+syncopated line above the 808s, which slide up into each bar's last notes, and
+horn-section stabs punctuate each bar. The drums sit well under the bass: a
+phonk kit (a heavy kick and a half-time snare),
 trap hats with triplet rolls, a half-time clap, rimshots, toms, shaker and
 open hats, growing with the tempo.
 

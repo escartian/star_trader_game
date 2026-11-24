@@ -48,11 +48,17 @@ const vibesLine = '<' +
 const trumpetLine = '<~ [~ ~ [a5 g5] [e5 d5]] ~ [~ ~ [d5 e5] [f5 a5]] ' +
   '~ [~ ~ [c6 a5] [g5 e5]] ~ [~ ~ [d5 e5] a5]>'
 
+// Horn lines answering the melody, one bar per chord: pickups at the end of a
+// bar and replies where the melody holds a long note.
+const hornAnswers = '<~ [~ ~ ~ ~ ~ ~ [a4 c5] d5] ~ [~ [b4 d5] ~ [f5 e5] ~ d5 ~ ~] ' +
+  '~ [~ ~ ~ ~ ~ ~ [f5 g5] a5] ~ [~ [g5 e5] ~ [d5 e5] ~ a4 ~ ~]>'
+
 // The funk pieces' settings, shared by the pieces and the ramps between them.
 const funkAt = {
   // Theme C, slow and sultry space jazz: talkbox lead, Rhodes, vibraphone and
   // a muted trumpet over slap bass, a swung ride and the laser harp.
   60: {
+    oohs: 0.05, moog: 0.06, glue: 0.5,
     keys: 0.13, ensemble: 0.15, bass: 0, slap: 0.16, slapNotes: slapLine, talk: 0.12,
     talkNotes: themeC, laser: 0.06, scratch: 0.04, groove: 0.3, swingRide: 0.025, pad: 0.09,
     halo: 0.075, vibes: 0.07, vibesNotes: vibesLine, trumpet: 0.08, trumpetNotes: trumpetLine,
@@ -61,6 +67,7 @@ const funkAt = {
   // Theme D: the clavinet riff with slap bass, chicken scratch and horn stabs,
   // the trumpet answering and vibraphone above.
   80: {
+    oohs: 0.04, moog: 0.08, glue: 0.6, brassLine: 0.05, brassLineNotes: hornAnswers,
     keys: 0.1, ensemble: 0.12, bass: 0, slap: 0.18, slapNotes: slapLine, clav: 0.12,
     clavNotes: funkRiff, scratch: 0.06, brass: 0.07, groove: 0.455, hats: 0.06, swingRide: 0.02,
     organ: 0.06, laser: 0.03, pad: 0.06, vibes: 0.05, vibesNotes: vibesLine, trumpet: 0.08,
@@ -68,14 +75,18 @@ const funkAt = {
   },
   // Theme D, fuller: organ, congas and tambourine join the band.
   100: {
+    oohs: 0.05, moog: 0.1, glue: 0.8, brassLine: 0.06, brassLineNotes: hornAnswers, openhat: 0.015,
     keys: 0.09, ensemble: 0.12, bass: 0, slap: 0.17, slapNotes: slapLine, clav: 0.12,
     clavNotes: funkRiff, scratch: 0.06, brass: 0.09, organ: 0.07, groove: 0.52, hats: 0.06,
     swingRide: 0.02, congas: 0.08, tambourine: 0.04, laser: 0.03, vibes: 0.04,
     vibesNotes: vibesLine, trumpet: 0.07, trumpetNotes: trumpetLine
   },
   // Theme C at double time: talkbox and clavinet in unison over the full band,
-  // congas, tambourine and the swung ride, with the laser harp above.
+  // horns answering, a held choir and a Moog bass under the slap bass, congas,
+  // tambourine, open hats and the swung ride, glued by more reverb and a
+  // slapback echo, with the laser harp above.
   120: {
+    oohs: 0.06, moog: 0.12, glue: 1, brassLine: 0.08, brassLineNotes: hornAnswers, openhat: 0.02,
     keys: 0.09, ensemble: 0.09, bass: 0, slap: 0.17, slapNotes: slapLine, talk: 0.11,
     talkNotes: themeC, clav: 0.08, clavNotes: themeC, scratch: 0.07, brass: 0.1, organ: 0.06,
     groove: 0.585, hats: 0.06, swingRide: 0.025, congas: 0.12, tambourine: 0.06, laser: 0.06,

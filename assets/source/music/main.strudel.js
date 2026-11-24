@@ -32,11 +32,11 @@ const arrive = { keys: 0.1, ensemble: 0.13, arp: 0.13, arpLpf: 3200,
   counter: 0.12, stabs: 0.075, ostinato: 0.055, drums: 1,
   hats: 0.18, shaker: 0.16, ride: 0.055, toms: 0.07, lift: 0.12 }
 
-// The solo plays a sustaining, overdriven rock guitar with a little extra drive.
-const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarSound: 'rockGuitar', guitarDrive: 0.2,
-  guitarDecay: 1.4, guitarSustain: 0.65, guitarRelease: 0.9,
-  guitarLpf: 4500, guitarDelay: 0.18, guitarFeedback: 0.28, guitarRoom: 0.3, rhythm: 0.085,
-  drums: 1, hats: 0.13, pad: 0.04, pump: 0, pluck: 0 }
+// The solo plays the clean electric guitar with long sustain and a light
+// reverb and echo.
+const soloGuitar = { keys: 0.12, arpLpf: [1600, 2200], guitarDecay: 1.6, guitarSustain: 0.7,
+  guitarRelease: 1.1, guitarLpf: 4000, guitarDelay: 0.15, guitarFeedback: 0.25, guitarRoom: 0.3,
+  rhythm: 0.085, drums: 1, hats: 0.13, pad: 0.04, pump: 0, pluck: 0 }
 
 
 window.musicStart = 'drift_a'

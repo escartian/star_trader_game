@@ -85,7 +85,7 @@ pub(super) const PARTS: &[Part] = &[
         section: "Cruise",
         title: "Guitar Solo",
         tempo: "100 BPM",
-        detail: "16 bars of rock guitar: bends, strummed chords and slurred runs",
+        detail: "16 bars of bends, strummed chords and slurred runs, with long sustain",
     },
     Part {
         id: "rise_110",

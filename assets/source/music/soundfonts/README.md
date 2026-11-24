@@ -17,7 +17,6 @@ and do not change if the remote copies do.
 | `0160_FluidR3_GM_sf2_file.js` | `gm_drawbar_organ:3` | organ |
 | `0270_FluidR3_GM_sf2_file.js` | `gm_electric_guitar_clean:2` | guitar, rhythm guitar |
 | `0281_FluidR3_GM_sf2_file.js` | `gm_electric_guitar_muted:7` | chicken-scratch guitar (funk pieces) |
-| `0290_FluidR3_GM_sf2_file.js` | `gm_overdriven_guitar:0` | the solo's rock guitar |
 | `0340_FluidR3_GM_sf2_file.js` | `gm_electric_bass_pick:1` | bass guitar (phonk pieces) |
 | `0360_FluidR3_GM_sf2_file.js` | `gm_slap_bass_1:2` | slap bass (funk pieces) |
 | `0380_FluidR3_GM_sf2_file.js` | `gm_synth_bass_1:1` | bass |

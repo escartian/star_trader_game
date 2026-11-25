@@ -50,14 +50,7 @@ pub fn refresh_offers(state: &mut TravelState, economy: &Economy, systems: &[Sta
                 ^ (id.system.0 << 32)
                 ^ (id.body.0 << 8)
                 ^ u64::from(slot);
-            let board = Board {
-                rng: Rng(seed),
-                state,
-                economy,
-                systems,
-                issuer: market,
-                reach: &reach,
-            };
+            let board = Board::new(state, economy, systems, market, &reach, seed);
             if let Some(mut job) = board.post() {
                 job.id = state.jobs.next_id;
                 state.jobs.next_id = state.jobs.next_id.saturating_add(1);
@@ -95,8 +88,8 @@ impl Rng {
     }
 }
 
-/// One port's board while it posts an offer.
-struct Board<'a> {
+/// One port's board while it posts an offer (quests draft through it too).
+pub(super) struct Board<'a> {
     rng: Rng,
     state: &'a TravelState,
     economy: &'a Economy,
@@ -107,7 +100,11 @@ struct Board<'a> {
 }
 
 /// The issuer's system and its `count - 1` nearest neighbours.
-fn reach<'a>(issuer: &Market, count: usize, systems: &'a [StarSystem]) -> Vec<&'a StarSystem> {
+pub(super) fn reach<'a>(
+    issuer: &Market,
+    count: usize,
+    systems: &'a [StarSystem],
+) -> Vec<&'a StarSystem> {
     let Some(home) = systems.iter().find(|system| system.id == issuer.id.system) else {
         return Vec::new();
     };
@@ -118,14 +115,33 @@ fn reach<'a>(issuer: &Market, count: usize, systems: &'a [StarSystem]) -> Vec<&'
 }
 
 /// A task with its size (units, raiders or light-years) and text fields.
-struct Draft {
-    task: Task,
-    size: u64,
-    goods: Credits,
-    fields: Vec<(&'static str, String)>,
+pub(super) struct Draft {
+    pub(super) task: Task,
+    pub(super) size: u64,
+    /// The goods' asking price at a delivery's destination (else 0).
+    pub(super) goods: Credits,
+    pub(super) fields: Vec<(&'static str, String)>,
 }
 
-impl Board<'_> {
+impl<'a> Board<'a> {
+    pub(super) fn new(
+        state: &'a TravelState,
+        economy: &'a Economy,
+        systems: &'a [StarSystem],
+        issuer: &'a Market,
+        reach: &'a [&'a StarSystem],
+        seed: u64,
+    ) -> Self {
+        Self {
+            rng: Rng(seed),
+            state,
+            economy,
+            systems,
+            issuer,
+            reach,
+        }
+    }
+
     fn post(mut self) -> Option<Job> {
         let catalog = &self.economy.rules.job_catalog;
         let total: u32 = catalog.kinds.iter().map(|rules| rules.weight).sum();
@@ -146,7 +162,7 @@ impl Board<'_> {
         Some(self.finish(catalog.rules(kind), draft))
     }
 
-    fn draft(&mut self, kind: JobKind) -> Option<Draft> {
+    pub(super) fn draft(&mut self, kind: JobKind) -> Option<Draft> {
         match kind {
             JobKind::Deliver => self.deliver(),
             JobKind::Hunt => self.hunt(),
@@ -185,6 +201,11 @@ impl Board<'_> {
         let commodity = *self.rng.pick(&Commodity::ALL)?;
         let hold = self.economy.rules.cargo_capacity.max(4);
         let quantity = 4 + self.rng.below(hold.min(16) as usize - 3) as u32;
+        Some(self.deliver_to(target, commodity, quantity))
+    }
+
+    /// A delivery of `quantity` `commodity` to `target`.
+    pub(super) fn deliver_to(&self, target: &Market, commodity: Commodity, quantity: u32) -> Draft {
         let good = &target.goods[commodity.index()];
         let goods = Credits(
             good.price(TradeSide::Buy, good.stock)
@@ -194,7 +215,7 @@ impl Board<'_> {
         let mut fields = self.place_fields(target.id);
         fields.push(("cargo", commodity.label().to_owned()));
         fields.push(("units", quantity.to_string()));
-        Some(Draft {
+        Draft {
             task: Task::Deliver {
                 commodity,
                 quantity,
@@ -203,7 +224,7 @@ impl Board<'_> {
             size: u64::from(quantity),
             goods,
             fields,
-        })
+        }
     }
 
     fn hunt(&mut self) -> Option<Draft> {
@@ -346,11 +367,12 @@ impl Board<'_> {
             deadline,
             title,
             brief,
+            quest: None,
         }
     }
 }
 
-fn distance_squared(a: &StarSystem, b: &StarSystem) -> i64 {
+pub(super) fn distance_squared(a: &StarSystem, b: &StarSystem) -> i64 {
     let (dx, dy, dz) = (
         a.position.x - b.position.x,
         a.position.y - b.position.y,
@@ -372,7 +394,7 @@ pub(crate) fn place(system: &StarSystem, body: &str) -> String {
 }
 
 /// Replaces each `{key}` in `template` with its value.
-fn fill(template: &str, fields: &[(&'static str, String)]) -> String {
+pub(super) fn fill(template: &str, fields: &[(&'static str, String)]) -> String {
     let mut text = template.to_owned();
     for (key, value) in fields {
         text = text.replace(&format!("{{{key}}}"), value);

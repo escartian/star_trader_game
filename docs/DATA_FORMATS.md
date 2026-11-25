@@ -40,7 +40,7 @@ Each `data/slot-N.json` stores:
   `campaign` (`run_limit`, `ended` as `won` with its `road`, `lost` or `time_up`, each with its `run`),
   and `jobs` (board offers, accepted jobs and their record; see [JOBS.md](JOBS.md#saves); omitted when empty).
 - `economy`: shared player credits, current markets and exact session rules,
-  including ship/planet/combat catalogs, the `job_catalog` (`config/jobs.json`) and `campaign` goals
+  including ship/planet/combat catalogs, the `job_catalog` (`config/jobs.json`), the `quest_catalog` (`config/quests.json`) and `campaign` goals
   (`wealth_share_percent`, `charter_price`, `charters_to_win`,
   `port_share_percent`; an older `net_worth_goal` is read and ignored) and `dynamics`
   (`local_income_percent`, `trade_income_ppm`, `upkeep_ppm_per_tick`,

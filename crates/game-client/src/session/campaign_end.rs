@@ -151,11 +151,12 @@ impl LocalSession {
                 row(
                     "Score",
                     format!(
-                        "{}  (net worth {} · charters {} · Haven {})",
+                        "{}  (net worth {} · charters {} · Haven {} · diplomacy {})",
                         score.total(),
                         score.net_worth,
                         score.charters,
-                        score.haven
+                        score.haven,
+                        score.diplomacy
                     ),
                 );
             });

@@ -2,8 +2,8 @@
 
 Status: **victory framework implemented** (phone-first phase 5). The game has
 roads to victory, a score, an optional campaign length, a Raider Haven to
-destroy and port charters to buy. Diplomat/Spy and Pirate roads wait for
-factions and missions (milestones 5 and 6).
+destroy, port charters to buy and a Diplomat road through faction story
+quests ([JOBS.md](JOBS.md#story-quests)). The Pirate road waits for missions.
 
 Code: `game-core/src/campaign.rs` (roads, net worth, score, ends),
 `economy/charters.rs` (charters, port share, lanes), `navigation/haven.rs`
@@ -21,7 +21,7 @@ toward a second road.
 | --- | --- | --- |
 | Trader | Net worth of **10% of all galaxy wealth**, or **3 port charters** | Playable |
 | Soldier | Destroy the Raider Haven | Playable |
-| Diplomat / Spy | Highest standing with a great power, then the frontier treaty | Locked until factions and missions |
+| Diplomat | Carry a great power's treaty: the last step of its story quests, offered at Honored standing | Playable with factions |
 | Pirate | Take over the Raider Haven | Locked until factions and missions |
 
 **Galaxy wealth** = your net worth + every market treasury + every NPC
@@ -45,9 +45,10 @@ for multiplayer):
 
 - 1 point per 100 cr of net worth;
 - 100 points per port charter;
-- 20 points per Haven garrison ship sunk, and 500 for destroying the Haven.
+- 20 points per Haven garrison ship sunk, and 500 for destroying the Haven;
+- 2 points per point of positive standing with each faction, and 50 per story
+  quest step completed (*diplomacy* in the Victory panel).
 
-Faction standing will add points once factions exist.
 
 ## Ends
 
@@ -106,7 +107,7 @@ A port authority's licence, bought once in the port's market (**Buy charter**,
 ## Not yet
 
 - Unlock order and guide cards for these systems (phase 6).
-- Faction standing in the score; Diplomat/Spy and Pirate roads.
+- The Spy side of the Diplomat road, and the Pirate road.
 - The Haven's own defences as a distinct hull (it fields existing hulls today).
 - Balance from playtests: the Trader goals, charter price and garrison size are
   first-pass numbers.

@@ -1,13 +1,14 @@
 # Jobs
 
-Status: **job board implemented** (roadmap milestone 6, first part). Story
-quests and the Diplomat road build on this lifecycle next.
+Status: **job boards and story quests implemented** (roadmap milestone 6,
+first part). Story quests lead to the Diplomat road (see [CAMPAIGN.md](CAMPAIGN.md)).
 
 Code: `game-core/src/jobs.rs` (types, accept, catalog), `jobs/board.rs`
-(offers), `jobs/settle.rs` (completion, failure, payout); commands and the
+(offers), `jobs/settle.rs` (completion, failure, payout), `jobs/quests.rs`
+(story quests); commands and the
 after-command pass in `game-server/src/jobs.rs`; the port's Jobs tab, the Jobs
-window and the outcome card in `game-client/src/session/jobs.rs`. Tuning and
-text: `config/jobs.json`.
+window and the outcome card in `game-client/src/session/jobs.rs`, quest cards
+in `session/quests.rs`. Tuning and text: `config/jobs.json`, `config/quests.json`.
 
 ## Finding and taking jobs
 
@@ -50,10 +51,33 @@ settles each accepted job once:
 Standing moves through the usual faction rules, so allies and rivals share
 half of each change. Nothing settles once the campaign is lost or complete.
 
+## Story quests
+
+Each great power has a chain of hand-written steps (four today): requests that
+tell its side of the frontier's story, ending with a treaty. They run on the
+job lifecycle above.
+
+- With factions in play, a faction offers its next step when your standing
+  with it reaches the step's tier: **Friendly** (15) for the requests,
+  **Honored** (50) for the treaty. One step per faction at a time.
+- The offer arrives as an event card with its story: **Accept** or **Later**
+  (it then waits under *Requests* in Menu → Jobs). Quest steps are accepted
+  anywhere, never count against the job limit, and their deadline starts when
+  accepted.
+- A step's task is drafted from the faction's port nearest your flagship: a
+  delivery of a set good to one of its ports, a bounty, an escort or a survey
+  nearby. The treaty is a delivery to the nearest port of the faction's rival
+  (or of another faction when it has none).
+- Completing a step pays like a job and opens the next one; failing it costs
+  its penalty and the step returns after `retry_runs` (6).
+- **Carrying a treaty wins the Diplomat road.** The Jobs window shows each
+  faction's story progress, and the score counts every step done.
+
 ## Saves
 
 The player state's `jobs` holds standing `boards` (port and posting run),
 `offers`, `active` jobs, `next_id`, a short `history`, the completed and failed
-counts, and `cleared_bands` (bands your fleets wiped out). It is omitted when
+counts, `cleared_bands` (bands your fleets wiped out), and for quests
+`quest_offers`, `quest_steps` and `quest_retry` (by faction) and `treaty`. It is omitted when
 empty; older saves load without it (loading never changes the state), and the
 first order after loading posts the current port's board.

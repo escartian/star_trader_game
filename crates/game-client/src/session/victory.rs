@@ -85,15 +85,16 @@ impl LocalSession {
             );
             ui.label(
                 RichText::new(format!(
-                    "net worth {} · charters {} · Haven {}",
-                    score.net_worth, score.charters, score.haven
+                    "net worth {} · charters {} · Haven {} · diplomacy {}",
+                    score.net_worth, score.charters, score.haven, score.diplomacy
                 ))
                 .small(),
             )
             .on_hover_text(
                 "1 point per 100 cr of net worth (credits, hulls at resale, cargo at \
-                 the best bid), 100 per charter, 20 per Haven garrison ship sunk and \
-                 500 for destroying the Haven.",
+                 the best bid), 100 per charter, 20 per Haven garrison ship sunk, \
+                 500 for destroying the Haven, 2 per point of positive faction standing \
+                 and 50 per story quest step.",
             );
         });
         ui.add_space(6.0);

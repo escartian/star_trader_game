@@ -260,9 +260,12 @@ repairs, access and reputation changes persist and cannot duplicate credits/item
 The current first-delivery guide is trader onboarding, not a mission engine.
 Build common objective/deadline/reward rules after movement/combat foundations.
 
-- [ ] Authoritative saved contract lifecycle with run/tick deadlines and JSON content.
+- [x] Authoritative saved contract lifecycle with run/tick deadlines and JSON content
+  (port job boards and faction story quests; see docs/JOBS.md).
 - [ ] Transport/logistics, combat/escort, exploration/anomalies, bounty hunting and
   piracy of goods/people, matching the original README's mission categories.
+  Done so far: deliveries, bounties, escorts and surveys; story quests lead to
+  the Diplomat road. Still open: piracy and smuggling jobs.
 - [ ] Trader, spy/espionage, soldier and pirate routes with appropriate onboarding.
 - [ ] Mixable specializations; shared control/save introduction, route-specific goals.
 - [ ] Candidate additions: explorer/scout, prospector/salvager, smuggler and

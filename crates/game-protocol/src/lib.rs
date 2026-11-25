@@ -284,6 +284,10 @@ pub enum SessionEvent {
     },
     /// An active job was completed (paid) or failed.
     JobFinished(game_core::jobs::JobOutcome),
+    /// A faction offers its next story quest step (`TravelState::jobs.quest_offers`).
+    QuestOffered {
+        job: u64,
+    },
     StandingChanged {
         faction: game_core::factions::Faction,
         change: i32,

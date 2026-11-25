@@ -34,7 +34,8 @@ impl SaveData {
                             .haven
                             .as_ref()
                             .is_some_and(|haven| haven.destroyed_run == Some(ended)),
-                        Road::Diplomat | Road::Pirate => false,
+                        Road::Diplomat => state.jobs.treaty.is_some(),
+                        Road::Pirate => false,
                     }
             }
         };

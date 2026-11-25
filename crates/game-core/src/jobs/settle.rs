@@ -73,6 +73,18 @@ fn close(
         let change = if success { job.standing } else { -job.penalty };
         economy.factions.adjust(faction, change);
     }
+    if let Some(quest) = &job.quest {
+        let index = quest.faction.index();
+        if success {
+            state.jobs.quest_steps[index] = state.jobs.quest_steps[index].max(quest.step + 1);
+            if quest.treaty && state.jobs.treaty.is_none() {
+                state.jobs.treaty = Some(quest.faction);
+            }
+        } else {
+            let retry = economy.rules.quest_catalog.retry_runs;
+            state.jobs.quest_retry[index] = state.navigation.run.saturating_add(retry);
+        }
+    }
     state
         .jobs
         .record(job.title.clone(), success, state.navigation.run);

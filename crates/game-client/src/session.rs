@@ -41,6 +41,7 @@ mod outfitting;
 mod panel;
 mod police;
 mod pursuit;
+mod quests;
 mod routes;
 mod runs;
 mod saves;
@@ -371,6 +372,17 @@ impl LocalSession {
                         }
                         SessionEvent::JobAccepted { title, .. } => {
                             format!("Job taken: {title}. See Menu → Jobs.")
+                        }
+                        SessionEvent::QuestOffered { job } => {
+                            self.jobs.quest_cards.push_back(job);
+                            let title = self
+                                .state
+                                .jobs
+                                .quest_offers
+                                .iter()
+                                .find(|offer| offer.id == job)
+                                .map_or_else(String::new, |offer| offer.title.clone());
+                            format!("A faction has a request: {title}. See Menu → Jobs.")
                         }
                         SessionEvent::JobFinished(outcome) => {
                             let line = if outcome.success {

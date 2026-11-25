@@ -31,6 +31,10 @@ pub const CHARTER_POINTS: u64 = 100;
 pub const HAVEN_SHIP_POINTS: u64 = 20;
 /// Score points for destroying the Raider Haven.
 pub const HAVEN_POINTS: u64 = 500;
+/// Score points per point of positive standing with a faction.
+pub const STANDING_POINTS: u64 = 2;
+/// Score points per story quest step completed.
+pub const QUEST_STEP_POINTS: u64 = 50;
 /// Credits (in cents) per score point of net worth: 100 cr.
 pub const NET_WORTH_PER_POINT: u64 = 10_000;
 /// Run limits the Victory panel offers (0 = none).
@@ -118,11 +122,13 @@ pub struct Score {
     pub net_worth: u64,
     pub charters: u64,
     pub haven: u64,
+    /// Positive faction standing and story quest steps.
+    pub diplomacy: u64,
 }
 
 impl Score {
     pub fn total(self) -> u64 {
-        self.net_worth + self.charters + self.haven
+        self.net_worth + self.charters + self.haven + self.diplomacy
     }
 }
 
@@ -186,10 +192,57 @@ pub fn score(state: &TravelState, economy: &Economy, player: PlayerId) -> Score 
     let haven = state.navigation.haven.as_ref().map_or(0, |haven| {
         u64::from(haven.sunk) * HAVEN_SHIP_POINTS + if haven.standing() { 0 } else { HAVEN_POINTS }
     });
+    let factions = &economy.factions;
+    let standing: u64 = factions
+        .in_play
+        .iter()
+        .map(|faction| u64::from(factions.standing(*faction).max(0).unsigned_abs()))
+        .sum();
+    let steps: u64 = state
+        .jobs
+        .quest_steps
+        .iter()
+        .map(|steps| u64::from(*steps))
+        .sum();
     Score {
         net_worth: net_worth(state, economy, player).0 / NET_WORTH_PER_POINT,
         charters: charters * CHARTER_POINTS,
         haven,
+        diplomacy: standing * STANDING_POINTS + steps * QUEST_STEP_POINTS,
+    }
+}
+
+/// The Diplomat road: carry a great power's treaty, the last step of its
+/// story quests (see `jobs::quests`). Progress is the furthest chain.
+fn diplomat(state: &TravelState, economy: &Economy) -> RoadProgress {
+    let factions = &economy.factions;
+    let best = factions
+        .in_play
+        .iter()
+        .map(|faction| {
+            let (done, total) = crate::jobs::quests::chain_progress(state, economy, *faction);
+            (done, total, *faction)
+        })
+        .filter(|(_, total, _)| *total > 0)
+        .max_by_key(|(done, total, _)| u64::from(*done) * 1_000 / u64::from(*total));
+    let complete = state.jobs.treaty.is_some();
+    let (percent, detail) = match (state.jobs.treaty, best) {
+        (Some(faction), _) => (100, format!("You carried the {} treaty.", faction.label())),
+        (None, Some((done, total, faction))) => (
+            (done * 100 / total).min(100),
+            format!(
+                "Win a great power's trust: its story quests open at Friendly standing and its                  treaty at Honored. Furthest: the {}, {done} of {total} steps.",
+                faction.label()
+            ),
+        ),
+        (None, None) => (0, "No faction in this game offers story quests.".into()),
+    };
+    RoadProgress {
+        road: Road::Diplomat,
+        open: factions.is_active() && best.is_some(),
+        percent,
+        complete,
+        detail,
     }
 }
 
@@ -214,7 +267,7 @@ pub fn progress(state: &TravelState, economy: &Economy, player: PlayerId) -> Vec
         open: false,
         percent: 0,
         complete: false,
-        detail: "Opens with factions and missions.".into(),
+        detail: "Opens with a later update.".into(),
     };
     vec![
         RoadProgress {
@@ -248,7 +301,7 @@ pub fn progress(state: &TravelState, economy: &Economy, player: PlayerId) -> Vec
                 None => "No Raider Haven in this galaxy.".into(),
             },
         },
-        locked(Road::Diplomat),
+        diplomat(state, economy),
         locked(Road::Pirate),
     ]
 }

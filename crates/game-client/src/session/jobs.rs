@@ -20,6 +20,8 @@ pub(super) struct JobsPanel {
     pub(super) open: bool,
     /// Jobs that ended and have not been acknowledged yet, oldest first.
     pub(super) finished: VecDeque<JobOutcome>,
+    /// Quest offers whose event card has not been answered, oldest first.
+    pub(super) quest_cards: VecDeque<u64>,
 }
 
 fn kind_icon(kind: JobKind) -> Icon {
@@ -163,9 +165,11 @@ impl LocalSession {
         });
         self.jobs.open = open;
         self.job_outcome_card(ctx);
+        self.quest_offer_card(ctx);
     }
 
     fn jobs_ui(&mut self, ui: &mut egui::Ui, systems: &[StarSystem]) {
+        self.quests_ui(ui);
         let jobs = self.state.jobs.clone();
         ui.label(
             RichText::new(format!(
@@ -231,7 +235,7 @@ impl LocalSession {
         } else {
             ("Job failed", Mood::Distress)
         };
-        let mut art = Illustration::new(mood, outcome.title.len() as u64 * 977);
+        let mut art = Illustration::new(mood, (outcome.title.len() as u64).wrapping_mul(977));
         art.station = outcome.success;
         art.ours = vec![self.selected_ship().kind];
         let mut done = false;

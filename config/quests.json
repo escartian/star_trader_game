@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "retry_runs": 6,
+  "chains": [
+    {
+      "faction": "Federation",
+      "steps": [
+        {
+          "kind": "deliver",
+          "unlock": "Friendly",
+          "destination": "own",
+          "cargo": "medicine",
+          "units": 8,
+          "title": "Fever on the Core Worlds",
+          "intro": "A Concord liaison finds you between runs. \"A fever is moving through our outer stations faster than our own freighters can. The Council has noticed your conduct. Help us now and it will remember.\"",
+          "brief": "Bring {units} {cargo} to {port} within {runs} runs.",
+          "reward": 60000,
+          "standing": 8,
+          "penalty": 5,
+          "runs": 16
+        },
+        {
+          "kind": "hunt",
+          "unlock": "Friendly",
+          "title": "The Marshal's Request",
+          "intro": "A Concord marshal speaks plainly: raiders have learned that Federation patrols cannot be everywhere. \"We need a captain who will go where our cutters cannot, and leave nothing behind.\"",
+          "brief": "Break the raider band of {ships} in {system} within {runs} runs.",
+          "reward": 120000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 20
+        },
+        {
+          "kind": "survey",
+          "unlock": "Friendly",
+          "title": "A Quiet Listening Post",
+          "intro": "\"Not every war is fought with guns.\" The Council wants a quiet relay where the frontier meets its rivals, and it wants someone it trusts to choose the place.",
+          "brief": "Survey {body} for a listening post within {runs} runs.",
+          "reward": 80000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 18
+        },
+        {
+          "kind": "deliver",
+          "unlock": "Honored",
+          "destination": "rival",
+          "cargo": "electronics",
+          "units": 10,
+          "treaty": true,
+          "title": "The Frontier Treaty",
+          "intro": "The Concord Council has drafted a treaty to end the frontier wars, and it will not trust a Federation courier to carry it into {rival} space. It trusts you. Arrive with the treaty and the Council's gift of secure comms gear, and the frontier may know peace.",
+          "brief": "Carry the treaty and {units} {cargo} to {port} within {runs} runs.",
+          "reward": 300000,
+          "standing": 15,
+          "penalty": 10,
+          "runs": 24
+        }
+      ]
+    },
+    {
+      "faction": "Empire",
+      "steps": [
+        {
+          "kind": "hunt",
+          "unlock": "Friendly",
+          "title": "Blood for the Throne",
+          "intro": "An Imperial herald salutes you. \"The Throne counts every raider you have sent to the dark. It would like to count more.\"",
+          "brief": "Destroy the raider band of {ships} in {system} within {runs} runs.",
+          "reward": 100000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 20
+        },
+        {
+          "kind": "deliver",
+          "unlock": "Friendly",
+          "destination": "own",
+          "cargo": "machinery",
+          "units": 10,
+          "title": "Arms for the Legions",
+          "intro": "\"Our shipyards hunger.\" The herald's request is an order in all but name: machinery for the forges that build the Empire's cutters.",
+          "brief": "Deliver {units} {cargo} to {port} within {runs} runs.",
+          "reward": 90000,
+          "standing": 8,
+          "penalty": 5,
+          "runs": 16
+        },
+        {
+          "kind": "survey",
+          "unlock": "Friendly",
+          "title": "Ground for a Fortress",
+          "intro": "The Empire means to raise a fortress on the frontier. Its engineers want fresh readings before the first stone is laid.",
+          "brief": "Survey {body} within {runs} runs.",
+          "reward": 80000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 18
+        },
+        {
+          "kind": "deliver",
+          "unlock": "Honored",
+          "destination": "rival",
+          "cargo": "electronics",
+          "units": 10,
+          "treaty": true,
+          "title": "The Emperor's Peace",
+          "intro": "The Emperor offers {rival} a peace, and peace from a throne is a dangerous gift to carry. You are the Empire's Honored friend; the court asks you to bear the treaty and its gift of secure comms gear.",
+          "brief": "Carry the Emperor's treaty and {units} {cargo} to {port} within {runs} runs.",
+          "reward": 300000,
+          "standing": 15,
+          "penalty": 10,
+          "runs": 24
+        }
+      ]
+    },
+    {
+      "faction": "Republic",
+      "steps": [
+        {
+          "kind": "deliver",
+          "unlock": "Friendly",
+          "destination": "own",
+          "cargo": "textiles",
+          "units": 12,
+          "title": "A Merchant House's Favour",
+          "intro": "A Republic merchant house has watched your ledgers with approval. \"Fill an order that our own haulers cannot, and our doors open to you.\"",
+          "brief": "Bring {units} {cargo} to {port} within {runs} runs.",
+          "reward": 70000,
+          "standing": 8,
+          "penalty": 5,
+          "runs": 16
+        },
+        {
+          "kind": "survey",
+          "unlock": "Friendly",
+          "title": "Charting a New Lane",
+          "intro": "The houses want a faster trade lane, and a faster lane needs fresh charts. They will pay for the first good readings.",
+          "brief": "Survey {body} within {runs} runs.",
+          "reward": 80000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 18
+        },
+        {
+          "kind": "hunt",
+          "unlock": "Friendly",
+          "title": "Bad for Business",
+          "intro": "\"Raiders are bad for business.\" The houses have pooled a bounty on the band that has been bleeding their convoys.",
+          "brief": "Break the raider band of {ships} in {system} within {runs} runs.",
+          "reward": 120000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 20
+        },
+        {
+          "kind": "deliver",
+          "unlock": "Honored",
+          "destination": "rival",
+          "cargo": "electronics",
+          "units": 10,
+          "treaty": true,
+          "title": "The Free Trade Accord",
+          "intro": "The Republic proposes an open-market accord with {rival}: no tariffs, no blockades, no wars of trade. The houses want their most trusted captain to deliver it, along with a gift of secure comms gear.",
+          "brief": "Carry the accord and {units} {cargo} to {port} within {runs} runs.",
+          "reward": 300000,
+          "standing": 15,
+          "penalty": 10,
+          "runs": 24
+        }
+      ]
+    },
+    {
+      "faction": "Alliance",
+      "steps": [
+        {
+          "kind": "deliver",
+          "unlock": "Friendly",
+          "destination": "own",
+          "cargo": "food",
+          "units": 12,
+          "title": "A Hard Winter",
+          "intro": "The frontier clans do not ask for help often. A clan elder hails you anyway: their harvest failed, and the long dark is coming.",
+          "brief": "Bring {units} {cargo} to {port} within {runs} runs.",
+          "reward": 60000,
+          "standing": 8,
+          "penalty": 5,
+          "runs": 16
+        },
+        {
+          "kind": "hunt",
+          "unlock": "Friendly",
+          "title": "Clan Vengeance",
+          "intro": "Raiders burned a clan outpost. The clans do not forget, and they would honour whoever settles the debt.",
+          "brief": "Wipe out the raider band of {ships} in {system} within {runs} runs.",
+          "reward": 110000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 20
+        },
+        {
+          "kind": "survey",
+          "unlock": "Friendly",
+          "title": "The Old Routes",
+          "intro": "The clans remember routes the charts have forgotten. They want proof that one of them still runs past {body}.",
+          "brief": "Survey {body} within {runs} runs.",
+          "reward": 80000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 18
+        },
+        {
+          "kind": "deliver",
+          "unlock": "Honored",
+          "destination": "rival",
+          "cargo": "electronics",
+          "units": 10,
+          "treaty": true,
+          "title": "The Clan Moot",
+          "intro": "For the first time in a century the clans will sit with {rival}. They ask their Honored friend to carry the invitation, with a gift of secure comms gear so that the talks cannot be overheard.",
+          "brief": "Carry the invitation and {units} {cargo} to {port} within {runs} runs.",
+          "reward": 300000,
+          "standing": 15,
+          "penalty": 10,
+          "runs": 24
+        }
+      ]
+    }
+  ]
+}

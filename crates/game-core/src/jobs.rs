@@ -14,9 +14,12 @@ use crate::{BodyId, SystemId};
 use serde::{Deserialize, Serialize};
 
 mod board;
+mod catalog;
+pub mod quests;
 mod settle;
 
 pub use board::refresh_offers;
+pub use catalog::{JobCatalog, KindRules};
 pub use settle::{JobOutcome, abandon, settle};
 
 /// Finished jobs kept for the log, newest last.
@@ -83,6 +86,9 @@ pub struct Job {
     pub deadline: u64,
     pub title: String,
     pub brief: String,
+    /// The story quest step this job is (none for board jobs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quest: Option<quests::QuestRef>,
 }
 
 /// A finished job, for the log.
@@ -117,6 +123,18 @@ pub struct Jobs {
     /// never reused).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cleared_bands: Vec<u64>,
+    /// Quest steps offered and not yet accepted (at most one per faction).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub quest_offers: Vec<Job>,
+    /// Quest steps completed, by [`Faction::index`].
+    #[serde(default)]
+    pub quest_steps: [u32; 4],
+    /// The run from which a faction's failed step is offered again.
+    #[serde(default)]
+    pub quest_retry: [u64; 4],
+    /// The faction whose treaty you carried: the Diplomat road is won.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub treaty: Option<Faction>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -144,14 +162,23 @@ impl Jobs {
         *self == Self::default()
     }
 
-    /// Accepts offer `id`; `at` is the market where one of the player's
-    /// ships is. `max_active` comes from the catalog.
+    /// Accepts board offer `id` (`at`: the market where the accepting ship
+    /// is; `max_active` from the catalog) or quest offer `id` (anywhere, no
+    /// limit; its deadline starts on `run`).
     pub fn accept(
         &mut self,
         id: u64,
         at: Option<MarketId>,
         max_active: usize,
+        run: u64,
     ) -> Result<&Job, JobError> {
+        if let Some(index) = self.quest_offers.iter().position(|job| job.id == id) {
+            let mut job = self.quest_offers.remove(index);
+            let runs = job.quest.as_ref().map_or(0, |quest| quest.runs);
+            job.deadline = run.saturating_add(runs);
+            self.active.push(job);
+            return Ok(self.active.last().expect("just pushed"));
+        }
         let index = self
             .offers
             .iter()
@@ -160,7 +187,8 @@ impl Jobs {
         if at != Some(self.offers[index].issuer) {
             return Err(JobError::NotAtPort);
         }
-        if self.active.len() >= max_active {
+        let board_jobs = self.active.iter().filter(|job| job.quest.is_none()).count();
+        if board_jobs >= max_active {
             return Err(JobError::TooManyJobs);
         }
         if self
@@ -199,7 +227,11 @@ impl Jobs {
 
     /// Save consistency: bounded lists, ids below `next_id`, sane rewards.
     pub fn validate(&self, catalog: &JobCatalog) -> Result<(), String> {
-        let jobs = self.offers.iter().chain(&self.active);
+        let jobs = self
+            .offers
+            .iter()
+            .chain(&self.active)
+            .chain(&self.quest_offers);
         let mut ids = std::collections::HashSet::new();
         for job in jobs {
             if job.id >= self.next_id
@@ -213,7 +245,9 @@ impl Jobs {
                 return Err("Invalid saved job".into());
             }
         }
-        if self.active.len() > catalog.max_active as usize
+        if self.active.iter().filter(|job| job.quest.is_none()).count()
+            > catalog.max_active as usize
+            || self.quest_offers.len() > Faction::ALL.len()
             || self.offers.len() > 4_096
             || self.boards.len() > 1_024
             || self.history.len() > HISTORY
@@ -233,98 +267,7 @@ impl Jobs {
     }
 }
 
-/// One job kind's tuning and text. `reward` is the base pay; `reward_step`
-/// adds per unit delivered, per raider in the band, or per light-year of
-/// distance (escort, survey). A delivery also pays the goods' asking price
-/// at the destination.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct KindRules {
-    pub kind: JobKind,
-    /// Relative chance of this kind on a board.
-    pub weight: u32,
-    pub deadline_runs: u64,
-    pub reward: Credits,
-    pub reward_step: Credits,
-    pub standing: i32,
-    pub penalty: i32,
-    /// Templates: {port} {system} {cargo} {units} {ships} {trader} {body} {deadline}.
-    pub titles: Vec<String>,
-    pub briefs: Vec<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct JobCatalog {
-    pub schema_version: u32,
-    pub offers_per_port: u32,
-    /// Runs between board refreshes (accepted jobs stay).
-    pub refresh_runs: u64,
-    pub max_active: u32,
-    /// How many nearest systems (the port's own included) a job may send you to.
-    pub reach_systems: u32,
-    pub kinds: Vec<KindRules>,
-}
-
-impl Default for JobCatalog {
-    fn default() -> Self {
-        Self::from_json(include_str!("../../../config/jobs.json"))
-            .expect("the embedded job definitions must pass validation")
-    }
-}
-
-impl JobCatalog {
-    pub fn from_json(json: &str) -> Result<Self, String> {
-        let catalog: Self = serde_json::from_str(json).map_err(|error| error.to_string())?;
-        catalog.validate()?;
-        Ok(catalog)
-    }
-
-    pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 1 {
-            return Err("Unsupported job catalog schema version".into());
-        }
-        if self.offers_per_port > 8
-            || !(1..=1_000).contains(&self.refresh_runs)
-            || !(1..=20).contains(&self.max_active)
-            || !(1..=64).contains(&self.reach_systems)
-        {
-            return Err("Invalid job board limits".into());
-        }
-        for kind in JobKind::ALL {
-            let Some(rules) = self.kinds.iter().find(|rules| rules.kind == kind) else {
-                return Err(format!("No job rules for {}", kind.label()));
-            };
-            if rules.weight > 100
-                || !(1..=1_000).contains(&rules.deadline_runs)
-                || rules.reward.0 > 100_000_000
-                || rules.reward_step.0 > 10_000_000
-                || !(0..=50).contains(&rules.standing)
-                || !(0..=50).contains(&rules.penalty)
-                || rules.titles.is_empty()
-                || rules.briefs.is_empty()
-                || rules
-                    .titles
-                    .iter()
-                    .chain(&rules.briefs)
-                    .any(|text| text.len() > 400)
-            {
-                return Err(format!("Invalid {} job rules", kind.label()));
-            }
-        }
-        if self.kinds.len() != JobKind::ALL.len() {
-            return Err("Each job kind needs exactly one rule set".into());
-        }
-        Ok(())
-    }
-
-    pub fn rules(&self, kind: JobKind) -> &KindRules {
-        self.kinds
-            .iter()
-            .find(|rules| rules.kind == kind)
-            .expect("validated: every kind has rules")
-    }
-}
-
+#[cfg(test)]
+mod quest_tests;
 #[cfg(test)]
 mod tests;

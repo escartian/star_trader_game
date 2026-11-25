@@ -89,6 +89,7 @@ fn a_survey_pays_once_when_the_fleet_reaches_its_body() {
         deadline: 1_000,
         title: "Survey".into(),
         brief: String::new(),
+        quest: None,
     });
     let credits = session.economy.credits;
     move_fleet(&mut session, ShipId(1), MoveTarget::Body { system, body });
@@ -110,6 +111,49 @@ fn accepted_jobs_survive_save_and_load() {
     });
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("jobs.json");
+    session.save(&path).unwrap();
+    let (loaded, _) = Session::load(&path).unwrap();
+    assert_eq!(loaded.state.jobs, session.state.jobs);
+}
+
+#[test]
+fn friendly_standing_brings_a_quest_offer_with_the_next_order_and_it_saves() {
+    let mut session = Session::with_galaxy(
+        5,
+        game_core::economy::EconomyRules::default(),
+        game_core::generation::GalaxyConfig::default(),
+    )
+    .unwrap();
+    session
+        .set_up_factions(5, &game_core::factions::FactionSetup::default())
+        .unwrap();
+    let faction = game_core::factions::Faction::Federation;
+    session.economy.factions.standing[faction.index()] = 20;
+    let held = events(session.handle(ClientCommand::HoldFleet {
+        fleet: game_core::fleet::FleetId(1),
+        expected_revision: session.state.revision,
+    }));
+    let Some(SessionEvent::QuestOffered { job }) = held
+        .iter()
+        .find(|event| matches!(event, SessionEvent::QuestOffered { .. }))
+        .cloned()
+    else {
+        panic!("no quest offered: {held:?}");
+    };
+    // Accepted from wherever the ship is.
+    events(session.handle(ClientCommand::AcceptJob {
+        job,
+        ship: ShipId(1),
+        expected_revision: session.state.revision,
+    }));
+    let active = &session.state.jobs.active;
+    assert!(
+        active
+            .iter()
+            .any(|taken| taken.id == job && taken.quest.is_some())
+    );
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("quest.json");
     session.save(&path).unwrap();
     let (loaded, _) = Session::load(&path).unwrap();
     assert_eq!(loaded.state.jobs, session.state.jobs);

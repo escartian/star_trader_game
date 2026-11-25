@@ -45,6 +45,7 @@ fn delivery(id: u64, market: MarketId, quantity: u32) -> Job {
         deadline: 5,
         title: "Supply run".into(),
         brief: String::new(),
+        quest: None,
     }
 }
 
@@ -110,14 +111,17 @@ fn accepting_needs_a_ship_at_the_issuing_port() {
     assert_eq!(
         state
             .jobs
-            .accept(job.id, Some(elsewhere.id), 5)
+            .accept(job.id, Some(elsewhere.id), 5, 0)
             .unwrap_err(),
         JobError::NotAtPort
     );
-    state.jobs.accept(job.id, Some(job.issuer), 5).unwrap();
+    state.jobs.accept(job.id, Some(job.issuer), 5, 0).unwrap();
     assert_eq!(state.jobs.active, vec![job.clone()]);
     assert_eq!(
-        state.jobs.accept(job.id, Some(job.issuer), 5).unwrap_err(),
+        state
+            .jobs
+            .accept(job.id, Some(job.issuer), 5, 0)
+            .unwrap_err(),
         JobError::UnknownJob
     );
 }

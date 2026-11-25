@@ -8,6 +8,7 @@ pub mod economy;
 pub mod factions;
 pub mod fleet;
 pub mod generation;
+pub mod jobs;
 pub mod movement;
 pub mod navigation;
 pub mod npc;

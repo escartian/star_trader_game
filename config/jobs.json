@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "offers_per_port": 3,
+  "refresh_runs": 8,
+  "max_active": 5,
+  "reach_systems": 6,
+  "kinds": [
+    {
+      "kind": "deliver",
+      "weight": 4,
+      "deadline_runs": 16,
+      "reward": 20000,
+      "reward_step": 1500,
+      "standing": 3,
+      "penalty": 4,
+      "titles": ["Supply run: {cargo}", "Short of {cargo}", "Urgent {cargo}"],
+      "briefs": [
+        "{port} is running short of {cargo}. Bring {units} units there by run {deadline}; you are paid for the goods and the trouble.",
+        "The quartermaster at {port} needs {units} units of {cargo} before run {deadline}. Buy them wherever they are cheap and deliver them there."
+      ]
+    },
+    {
+      "kind": "hunt",
+      "weight": 2,
+      "deadline_runs": 20,
+      "reward": 40000,
+      "reward_step": 25000,
+      "standing": 6,
+      "penalty": 3,
+      "titles": ["Bounty: raiders in {system}", "Break the {system} band"],
+      "briefs": [
+        "A raider band of {ships} ships preys on shipping in {system}. Destroy it before run {deadline}.",
+        "Traders out of {port} have stopped flying to {system}: a band of {ships} raiders waits there. Wipe it out by run {deadline}."
+      ]
+    },
+    {
+      "kind": "escort",
+      "weight": 2,
+      "deadline_runs": 14,
+      "reward": 30000,
+      "reward_step": 2000,
+      "standing": 4,
+      "penalty": 4,
+      "titles": ["Escort the {trader}", "Safe passage to {system}"],
+      "briefs": [
+        "The {trader} is bound for {port} and fears raiders on the way. Have a fleet in {system} when it docks there, before run {deadline}.",
+        "Its owners pay well to see the {trader} safely into {port}. Be in {system} when it arrives, by run {deadline}."
+      ]
+    },
+    {
+      "kind": "survey",
+      "weight": 2,
+      "deadline_runs": 18,
+      "reward": 15000,
+      "reward_step": 2500,
+      "standing": 2,
+      "penalty": 2,
+      "titles": ["Survey {body}", "Readings from {system}"],
+      "briefs": [
+        "The port authority wants fresh sensor readings of {body}. Put a ship in orbit there by run {deadline}.",
+        "Charts of {body} are out of date. Fly there and orbit or land on it before run {deadline}."
+      ]
+    }
+  ]
+}

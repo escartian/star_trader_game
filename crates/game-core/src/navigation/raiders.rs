@@ -347,6 +347,9 @@ impl TravelState {
     /// leave it, and it backs off, or it is gone and will return later.
     pub(crate) fn band_after_contact(&mut self, band: u64, destroyed: &[ShipKind]) {
         self.band_after_fight(band, destroyed, COOLDOWN_RUNS);
+        if self.navigation.bands.iter().all(|known| known.id != band) {
+            self.jobs.record_cleared_band(band);
+        }
     }
 
     /// After a band strikes an NPC trader: as [`Self::band_after_contact`],

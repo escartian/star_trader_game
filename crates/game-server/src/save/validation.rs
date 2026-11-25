@@ -54,6 +54,7 @@ impl SaveData {
         self.economy.validate_charters()?;
         self.economy.validate_dynamics()?;
         self.validate_campaign()?;
+        self.player.jobs.validate(&self.economy.rules.job_catalog)?;
         for ship in &self.player.ships {
             let hull = self
                 .economy

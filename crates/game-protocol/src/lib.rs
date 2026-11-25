@@ -143,6 +143,17 @@ pub enum ClientCommand {
         system: game_core::SystemId,
         expected_revision: u64,
     },
+    /// Take offer `job` from the board of the port where `ship` is.
+    AcceptJob {
+        job: u64,
+        ship: ShipId,
+        expected_revision: u64,
+    },
+    /// Give up active `job`; it fails with its standing penalty.
+    AbandonJob {
+        job: u64,
+        expected_revision: u64,
+    },
     /// End the campaign on score at this run (`None`: open-ended).
     SetRunLimit {
         runs: Option<u64>,
@@ -191,6 +202,20 @@ pub enum ClientCommand {
         action: game_core::navigation::BattleAction,
         expected_revision: u64,
     },
+}
+
+impl ClientCommand {
+    /// Read-only requests: they never change the session.
+    pub fn is_query(&self) -> bool {
+        matches!(
+            self,
+            Self::GetGalaxy
+                | Self::GetSession
+                | Self::PreviewDestination { .. }
+                | Self::PreviewMove { .. }
+                | Self::PreviewTrade { .. }
+        )
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -252,6 +277,13 @@ pub enum SessionEvent {
     },
     /// Your standing with a faction moved by `change` to `standing`
     /// (see `game_core::factions`).
+    /// A job was taken from a port's board (see `game_core::jobs`).
+    JobAccepted {
+        job: u64,
+        title: String,
+    },
+    /// An active job was completed (paid) or failed.
+    JobFinished(game_core::jobs::JobOutcome),
     StandingChanged {
         faction: game_core::factions::Faction,
         change: i32,

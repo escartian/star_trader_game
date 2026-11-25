@@ -7,6 +7,7 @@ pub enum CommandError {
     Fleet(FleetError),
     Movement(game_core::movement::MovementError),
     Navigation(game_core::navigation::NavigationError),
+    Job(game_core::jobs::JobError),
 }
 
 impl From<FleetError> for CommandError {
@@ -33,6 +34,7 @@ impl std::fmt::Display for CommandError {
             Self::Fleet(error) => error.fmt(f),
             Self::Movement(error) => error.fmt(f),
             Self::Navigation(error) => error.fmt(f),
+            Self::Job(error) => f.write_str(error.message()),
         }
     }
 }
@@ -51,5 +53,11 @@ impl From<game_core::fleet::FleetMovementError> for CommandError {
 impl From<game_core::navigation::NavigationError> for CommandError {
     fn from(error: game_core::navigation::NavigationError) -> Self {
         Self::Navigation(error)
+    }
+}
+
+impl From<game_core::jobs::JobError> for CommandError {
+    fn from(error: game_core::jobs::JobError) -> Self {
+        Self::Job(error)
     }
 }

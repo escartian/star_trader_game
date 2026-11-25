@@ -17,15 +17,7 @@ impl Session {
     /// Rejects every command but queries once the campaign is lost or out of time.
     pub(super) fn campaign_gate(&self, command: &ClientCommand) -> Result<(), CommandError> {
         let over = self.state.campaign.ended.is_some_and(|end| !end.playable());
-        let query = matches!(
-            command,
-            ClientCommand::GetGalaxy
-                | ClientCommand::GetSession
-                | ClientCommand::PreviewDestination { .. }
-                | ClientCommand::PreviewMove { .. }
-                | ClientCommand::PreviewTrade { .. }
-        );
-        if over && !query {
+        if over && !command.is_query() {
             return Err(NavigationError::CampaignOver.into());
         }
         Ok(())

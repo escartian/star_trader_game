@@ -27,6 +27,7 @@ mod approaches;
 mod course_control;
 mod guide;
 mod hails;
+mod jobs;
 mod landing;
 mod map_controls;
 mod map_traffic;
@@ -99,6 +100,7 @@ pub struct LocalSession {
     saves: saves::SavePanel,
     victory: victory::VictoryPanel,
     factions: factions::FactionsPanel,
+    jobs: jobs::JobsPanel,
     /// Guide cards for features unlocked this session, until dismissed.
     unlock_cards: Vec<game_core::progress::Feature>,
     log: VecDeque<String>,
@@ -140,6 +142,7 @@ impl LocalSession {
             saves: saves::SavePanel::default(),
             victory,
             factions: factions::FactionsPanel::default(),
+            jobs: jobs::JobsPanel::default(),
             unlock_cards: Vec::new(),
             log: VecDeque::new(),
             loaded_galaxy: None,
@@ -365,6 +368,21 @@ impl LocalSession {
                         ),
                         SessionEvent::RunLimitSet { runs: Some(runs) } => {
                             format!("The campaign now ends on score at run {runs}.")
+                        }
+                        SessionEvent::JobAccepted { title, .. } => {
+                            format!("Job taken: {title}. See Menu → Jobs.")
+                        }
+                        SessionEvent::JobFinished(outcome) => {
+                            let line = if outcome.success {
+                                format!(
+                                    "Job complete: {}. Paid {} cr.",
+                                    outcome.title, outcome.reward
+                                )
+                            } else {
+                                format!("Job failed: {}. {}", outcome.title, outcome.reason)
+                            };
+                            self.jobs.finished.push_back(outcome);
+                            line
                         }
                         SessionEvent::RunLimitSet { runs: None } => {
                             "The campaign is open-ended.".into()

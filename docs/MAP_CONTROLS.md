@@ -134,7 +134,7 @@ purchases, fleet changes and landing need no plotted course. Double-clicking a
 body (or chip) where one of your fleets can trade opens that market.
 The amber alert badge counts fleets needing a decision or orders: tap it to
 select the next one, which also switches to the page that fleet needs. When
-Advance stops, the sheet does the same. Market (with its **Shipyard** tab), Fleets, Navigation,
+Advance stops, the sheet does the same. Market (with its **Shipyard** and **Jobs** tabs), Fleets, Navigation, Jobs,
 Session and the combat report open as centred windows on a wide screen, and
 full screen with a **Back** button on a narrow one (below 700 points), scrolling
 sideways where a table is wider than the screen. The system overview frames

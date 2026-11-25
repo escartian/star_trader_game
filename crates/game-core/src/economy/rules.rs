@@ -61,6 +61,9 @@ pub struct EconomyRules {
     /// NPC trader personalities (`config/npc.json`).
     #[serde(default)]
     pub personality_catalog: crate::npc::PersonalityCatalog,
+    /// Job board tuning and text (`config/jobs.json`).
+    #[serde(default)]
+    pub job_catalog: crate::jobs::JobCatalog,
 }
 
 /// The player's 12% contact chance × one contact in three being raiders.
@@ -107,6 +110,7 @@ impl EconomyRules {
         self.planet_catalog.validate()?;
         self.faction_catalog.validate()?;
         self.personality_catalog.validate()?;
+        self.job_catalog.validate()?;
         if !(1..=90).contains(&self.ship_resale_percent)
             || self.market_starting_credits.0 > 1_000_000_000_000
             || self

@@ -24,8 +24,16 @@ pub(super) struct MarketPanel {
     /// Where the best-margin column looks for a sale.
     pub(super) scope: super::market_scope::TradeScope,
     pub(super) reach: super::market_scope::ReachCache,
-    /// The market window's page: trade, or the port's shipyard.
-    shipyard: bool,
+    /// The market window's page.
+    page: MarketPage,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum MarketPage {
+    #[default]
+    Trade,
+    Shipyard,
+    Jobs,
 }
 impl Default for MarketPanel {
     fn default() -> Self {
@@ -35,7 +43,7 @@ impl Default for MarketPanel {
             fuel_units: 1,
             scope: Default::default(),
             reach: Default::default(),
-            shipyard: false,
+            page: MarketPage::Trade,
         }
     }
 }
@@ -45,7 +53,14 @@ impl LocalSession {
     #[cfg(any(test, feature = "dev-tools"))]
     pub fn open_shipyard(&mut self) {
         self.market.open = true;
-        self.market.shipyard = true;
+        self.market.page = MarketPage::Shipyard;
+    }
+
+    /// Opens the market window on its Jobs tab (captures).
+    #[cfg(any(test, feature = "dev-tools"))]
+    pub(super) fn open_market_page_jobs(&mut self) {
+        self.market.open = true;
+        self.market.page = MarketPage::Jobs;
     }
 
     pub fn show_market(&mut self, ctx: &egui::Context, systems: &[StarSystem]) {
@@ -84,31 +99,39 @@ impl LocalSession {
             self.wanted_banner(ui, &ship);
         }
         // A port with hulls for sale has a Shipyard tab; hulls are bought
-        // only there, where the ship is docked.
+        // only there, where the ship is docked. Every port has a job board.
         let yard = market.ship_stock.iter().any(|stock| *stock > 0);
-        self.market.shipyard &= yard;
-        if yard {
-            ui.horizontal(|ui| {
-                if icons::labeled_toggle(ui, Icon::Market, "Trade", !self.market.shipyard).clicked()
-                {
-                    self.market.shipyard = false;
-                }
-                if icons::labeled_toggle(ui, Icon::Shipyard, "Shipyard", self.market.shipyard)
-                    .clicked()
-                {
-                    self.market.shipyard = true;
-                }
-            });
-            ui.separator();
+        if !yard && self.market.page == MarketPage::Shipyard {
+            self.market.page = MarketPage::Trade;
         }
-        if self.market.shipyard {
-            // Hulls join or leave the fleet only while it has no course.
-            self.pending_course_ui(ui, systems);
-            if let Some(command) = self.shipyard_ui(ui) {
-                self.command(command);
-                ui.ctx().request_repaint();
+        ui.horizontal(|ui| {
+            let mut tab = |ui: &mut egui::Ui, icon, label, page| {
+                if icons::labeled_toggle(ui, icon, label, self.market.page == page).clicked() {
+                    self.market.page = page;
+                }
+            };
+            tab(ui, Icon::Market, "Trade", MarketPage::Trade);
+            if yard {
+                tab(ui, Icon::Shipyard, "Shipyard", MarketPage::Shipyard);
             }
-            return;
+            tab(ui, Icon::Log, "Jobs", MarketPage::Jobs);
+        });
+        ui.separator();
+        match self.market.page {
+            MarketPage::Trade => {}
+            MarketPage::Shipyard => {
+                // Hulls join or leave the fleet only while it has no course.
+                self.pending_course_ui(ui, systems);
+                if let Some(command) = self.shipyard_ui(ui) {
+                    self.command(command);
+                    ui.ctx().request_repaint();
+                }
+                return;
+            }
+            MarketPage::Jobs => {
+                self.jobs_board_ui(ui, market.id);
+                return;
+            }
         }
         ui.horizontal_wrapped(|ui| {
             stat(ui, Icon::Funds, AMBER, &market.credits.to_string(), "Market funds available to buy your cargo");

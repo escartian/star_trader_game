@@ -169,6 +169,11 @@ impl LocalSession {
                 "Courses, readiness and contacts",
             ),
             (
+                Icon::Log,
+                "Jobs",
+                "Jobs you took, where to go and when they are due (new ones: a port's Jobs tab)",
+            ),
+            (
                 Icon::Star,
                 "Victory",
                 "Roads to victory, score, the Raider Haven and campaign length",
@@ -200,6 +205,7 @@ impl LocalSession {
             true,
             true,
             true,
+            true,
             self.factions_active(),
             true,
             true,
@@ -217,10 +223,11 @@ impl LocalSession {
                     0 => self.market.open = true,
                     1 => self.fleet_panel.open = true,
                     2 => self.open_navigation(),
-                    3 => self.victory.open = true,
-                    4 => self.factions.open = true,
-                    5 => self.saves.open = true,
-                    6 => self.saves.new_open = true,
+                    3 => self.jobs.open = true,
+                    4 => self.victory.open = true,
+                    5 => self.factions.open = true,
+                    6 => self.saves.open = true,
+                    7 => self.saves.new_open = true,
                     _ => self.open_settings(),
                 }
             }

@@ -129,6 +129,9 @@ pub struct TravelState {
     /// load with everything unlocked.
     #[serde(default)]
     pub progress: crate::progress::Progress,
+    /// Job board offers and accepted jobs (see `jobs`); omitted when empty.
+    #[serde(default, skip_serializing_if = "crate::jobs::Jobs::is_empty")]
+    pub jobs: crate::jobs::Jobs,
 }
 
 impl Default for TravelState {
@@ -164,6 +167,7 @@ impl Default for TravelState {
             next_fleet_id: 2,
             campaign: crate::campaign::Campaign::default(),
             progress: crate::progress::Progress::default(),
+            jobs: crate::jobs::Jobs::default(),
         }
     }
 }

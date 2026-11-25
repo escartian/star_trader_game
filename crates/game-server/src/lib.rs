@@ -3,6 +3,7 @@ mod automation;
 mod campaign;
 mod commerce;
 mod fleets;
+mod jobs;
 mod movement;
 mod navigation;
 mod offline;
@@ -85,6 +86,7 @@ impl Session {
         state.ships[0].base_cargo_capacity = economy.rules.cargo_capacity;
         economy.spawn_traders(&systems, &state.movement_rules);
         state.spawn_raider_bands(&systems);
+        game_core::jobs::refresh_offers(&mut state, &economy, &systems);
         Ok(Self {
             systems,
             economy,
@@ -121,7 +123,14 @@ impl Session {
         // Every rule reads body positions for the current tick.
         game_core::orbits::place(&mut self.systems, self.state.tick);
         let watch = self.watch_standing();
+        let query = command.is_query();
         let message = self.dispatch(player, command)?;
+        // Queries never change the world, so jobs settle only after orders.
+        let message = if query {
+            message
+        } else {
+            self.record_jobs(player, message)
+        };
         let message = self.record_standing(watch, message);
         let message = self.record_unlocks(player, message);
         Ok(self.record_campaign_end(player, message))
@@ -190,6 +199,9 @@ impl Session {
             | ClientCommand::FitGear { .. }
             | ClientCommand::HireEscort { .. }
             | ClientCommand::PayFine { .. }) => self.commerce(player, command),
+            command @ (ClientCommand::AcceptJob { .. } | ClientCommand::AbandonJob { .. }) => {
+                self.job_command(player, command)
+            }
             command @ (ClientCommand::BuyCharter { .. }
             | ClientCommand::AssaultHaven { .. }
             | ClientCommand::SetRunLimit { .. }) => self.campaign_command(player, command),
@@ -299,3 +311,5 @@ mod band_trader_tests;
 
 #[cfg(test)]
 mod gear_tests;
+#[cfg(test)]
+mod job_tests;

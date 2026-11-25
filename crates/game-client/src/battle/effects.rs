@@ -4,7 +4,7 @@
 use super::{
     camera::ScenePoint,
     canvas::Canvas,
-    particles::{Kind, Particles},
+    particles::{self, Kind},
     scene::side_color,
 };
 use crate::audio::Effect;
@@ -242,33 +242,31 @@ fn flash(canvas: &Canvas, beam: &Beam, t: f32) {
         (false, false) => (0.55, CYAN),
     };
     let radius = at.scale * size * (0.3 + 0.7 * t);
-    if let Some(particles) = Particles::preload(canvas.painter.ctx()) {
-        let tint = color.gamma_multiply(0.8 * fade);
-        if beam.destroyed {
-            particles.paint(
+    let tint = color.gamma_multiply(0.8 * fade);
+    if beam.destroyed {
+        particles::paint(
+            canvas.painter,
+            Kind::Smoke,
+            at.pos,
+            radius * 3.0,
+            AMBER.gamma_multiply(0.55 * fade),
+        );
+        // Several fragments drift away from the target as the blast expands.
+        for index in 0..5 {
+            let angle = index as f32 * std::f32::consts::TAU / 5.0;
+            let offset = egui::Vec2::new(angle.cos(), angle.sin()) * radius * (0.3 + t);
+            particles::paint(
                 canvas.painter,
-                Kind::Smoke,
-                at.pos,
-                radius * 3.0,
-                AMBER.gamma_multiply(0.55 * fade),
+                Kind::Spark,
+                at.pos + offset,
+                radius * 0.8,
+                tint,
             );
-            // Several fragments drift away from the target as the blast expands.
-            for index in 0..5 {
-                let angle = index as f32 * std::f32::consts::TAU / 5.0;
-                let offset = egui::Vec2::new(angle.cos(), angle.sin()) * radius * (0.3 + t);
-                particles.paint(
-                    canvas.painter,
-                    Kind::Spark,
-                    at.pos + offset,
-                    radius * 0.8,
-                    tint,
-                );
-            }
-        } else if beam.hull {
-            particles.paint(canvas.painter, Kind::Spark, at.pos, radius * 2.0, tint);
-        } else {
-            particles.paint(canvas.painter, Kind::Ring, at.pos, radius * 2.6, tint);
         }
+    } else if beam.hull {
+        particles::paint(canvas.painter, Kind::Spark, at.pos, radius * 2.0, tint);
+    } else {
+        particles::paint(canvas.painter, Kind::Ring, at.pos, radius * 2.6, tint);
     }
     canvas
         .painter

@@ -27,6 +27,7 @@ mod shell_card;
 mod songbook;
 mod songbook_graph;
 mod songbook_parts;
+mod territory;
 mod toolbar;
 mod visuals;
 

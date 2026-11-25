@@ -34,9 +34,12 @@ defaults. Captures and tests start without factions unless they set them up
 - Influence is the share of all systems a faction holds (shown in the panel).
   Territory does not change during play yet.
 
-The galaxy map rings each claimed system in its holder's colour. Hovering a
-system names its holder and your standing there; the destination card shows the
-holder's name.
+The galaxy map draws each connected group of a faction's nearby claimed
+systems as one translucent territory. Borders follow the midway line
+between nearby stars and stop ten light-years from a holding; independent
+systems cut into the region. These outlines show ownership only and do not
+change travel or faction influence. Hovering a system names its holder and your
+standing there; the destination card shows the holder's name.
 
 ## Relations
 

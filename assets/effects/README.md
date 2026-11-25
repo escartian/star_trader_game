@@ -1,11 +1,16 @@
-# Kenney effects
+# Game effects
 
-These are unmodified originals from Kenney's [Sci-Fi Sounds](https://kenney.nl/assets/sci-fi-sounds), [UI Audio](https://kenney.nl/assets/ui-audio), and [Particle Pack](https://kenney.nl/assets/particle-pack). Each pack is CC0; its original license is in `licenses/`. The OGGs and transparent PNGs are embedded in the desktop executable at build time.
+The five Ogg files in `sounds/` are original sounds synthesized for this game.
+They cover the UI click (also pitched up for selection), laser shot, shield hit,
+hull hit and explosion. They are exported from 44.1 kHz mono PCM to stereo Ogg
+Vorbis and embedded in the desktop executable. No samples or sound packs are used.
 
-To reproduce the selection, download the three official ZIP archives in that order and run:
+Regenerate them with Python and ffmpeg:
 
 ```sh
-python3 tools/art/import_kenney_effects.py sci-fi-sounds.zip ui-audio.zip particle-pack.zip
+python3 assets/source/effects/generate.py
 ```
 
-The particle PNGs are the original 512-pixel source images and runtime images. The game tints and scales them while drawing.
+Battle ring, spark and smoke visuals are drawn directly in
+`crates/game-client/src/battle/particles.rs`; there are no particle sprites to
+export.

@@ -1,5 +1,6 @@
-//! Kenney's transparent source sprites, tinted at draw time for combat hits.
-use egui::{Color32, Painter, Pos2, Rect, TextureHandle, Vec2};
+//! Original, code-drawn hit details. No sprite textures or asset loading.
+use egui::{Color32, Mesh, Painter, Pos2, Shape, Stroke, Vec2};
+use std::f32::consts::TAU;
 
 #[derive(Clone, Copy)]
 pub enum Kind {
@@ -8,72 +9,74 @@ pub enum Kind {
     Smoke,
 }
 
-#[derive(Clone)]
-pub struct Particles {
-    ring: TextureHandle,
-    spark: TextureHandle,
-    smoke: TextureHandle,
+pub fn paint(painter: &Painter, kind: Kind, center: Pos2, diameter: f32, tint: Color32) {
+    if diameter <= 0.0 || tint.a() == 0 {
+        return;
+    }
+    match kind {
+        Kind::Ring => ring(painter, center, diameter, tint),
+        Kind::Spark => spark(painter, center, diameter, tint),
+        Kind::Smoke => smoke(painter, center, diameter, tint),
+    }
 }
 
-impl Particles {
-    pub fn preload(ctx: &egui::Context) -> Option<Self> {
-        let key = egui::Id::new("battle-particles");
-        if let Some(cached) = ctx.data(|data| data.get_temp::<Self>(key)) {
-            return Some(cached);
-        }
-        let load = |name, bytes: &[u8]| {
-            let rgba = image::load_from_memory(bytes).ok()?.into_rgba8();
-            let pixels = egui::ColorImage::from_rgba_unmultiplied(
-                [rgba.width() as usize, rgba.height() as usize],
-                rgba.as_raw(),
-            );
-            Some(ctx.load_texture(name, pixels, egui::TextureOptions::LINEAR))
-        };
-        let particles = Self {
-            ring: load(
-                "battle-ring",
-                include_bytes!("../../../../assets/effects/particles/circle_03.png"),
-            )?,
-            spark: load(
-                "battle-spark",
-                include_bytes!("../../../../assets/effects/particles/spark_01.png"),
-            )?,
-            smoke: load(
-                "battle-smoke",
-                include_bytes!("../../../../assets/effects/particles/smoke_03.png"),
-            )?,
-        };
-        ctx.data_mut(|data| data.insert_temp(key, particles.clone()));
-        Some(particles)
-    }
+fn ring(painter: &Painter, center: Pos2, diameter: f32, tint: Color32) {
+    painter.circle_stroke(
+        center,
+        diameter * 0.40,
+        Stroke::new(1.3_f32, tint.gamma_multiply(0.75)),
+    );
+    painter.circle_stroke(
+        center,
+        diameter * 0.48,
+        Stroke::new(2.2_f32, tint.gamma_multiply(0.18)),
+    );
+}
 
-    pub fn paint(&self, painter: &Painter, kind: Kind, center: Pos2, diameter: f32, tint: Color32) {
-        let texture = match kind {
-            Kind::Ring => &self.ring,
-            Kind::Spark => &self.spark,
-            Kind::Smoke => &self.smoke,
-        };
-        painter.image(
-            texture.id(),
-            Rect::from_center_size(center, Vec2::splat(diameter)),
-            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-            tint,
+fn spark(painter: &Painter, center: Pos2, diameter: f32, tint: Color32) {
+    let radius = diameter * 0.5;
+    soft_disc(painter, center, radius * 0.35, tint.gamma_multiply(0.55));
+    for index in 0..6 {
+        let angle = TAU * index as f32 / 6.0 + 0.22;
+        let direction = Vec2::angled(angle);
+        let length = radius * if index % 2 == 0 { 0.90 } else { 0.56 };
+        painter.line_segment(
+            [
+                center + direction * radius * 0.13,
+                center + direction * length,
+            ],
+            Stroke::new(1.1_f32, tint.gamma_multiply(0.8)),
         );
     }
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn source_sprites_have_transparent_and_visible_pixels() {
-        for bytes in [
-            include_bytes!("../../../../assets/effects/particles/circle_03.png").as_slice(),
-            include_bytes!("../../../../assets/effects/particles/spark_01.png").as_slice(),
-            include_bytes!("../../../../assets/effects/particles/smoke_03.png").as_slice(),
-        ] {
-            let image = image::load_from_memory(bytes).unwrap().into_rgba8();
-            assert!(image.pixels().any(|pixel| pixel[3] == 0));
-            assert!(image.pixels().any(|pixel| pixel[3] > 0));
+fn smoke(painter: &Painter, center: Pos2, diameter: f32, tint: Color32) {
+    let radius = diameter * 0.5;
+    let gray = Color32::from_rgba_unmultiplied(78, 83, 92, tint.a());
+    for (offset, size, opacity) in [
+        (Vec2::new(-0.25, 0.10), 0.45, 0.38),
+        (Vec2::new(0.18, -0.17), 0.52, 0.32),
+        (Vec2::new(0.07, 0.25), 0.40, 0.25),
+    ] {
+        soft_disc(
+            painter,
+            center + offset * radius,
+            size * radius,
+            gray.gamma_multiply(opacity),
+        );
+    }
+}
+
+/// Soft radial fan: opaque at the center, transparent at its edge.
+fn soft_disc(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
+    let mut mesh = Mesh::default();
+    mesh.colored_vertex(center, color);
+    for index in 0..=20 {
+        let angle = TAU * index as f32 / 20.0;
+        mesh.colored_vertex(center + Vec2::angled(angle) * radius, Color32::TRANSPARENT);
+        if index > 0 {
+            mesh.add_triangle(0, index, index + 1);
         }
     }
+    painter.add(Shape::mesh(mesh));
 }

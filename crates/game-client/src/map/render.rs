@@ -13,12 +13,15 @@ impl Map {
         // Every background, glow and label shares the map's clip rectangle.
         let painter = painter.with_clip_rect(rect.intersect(ui.clip_rect()));
         // Move the camera before drawing anything, so every layer this frame
-        // (stars, fleets) uses the same view.
+        // (territory, stars, fleets) uses the same view.
         if response.dragged() {
             self.camera.pan += ui.input(|i| i.pointer.delta());
         }
         self.camera.zoom_toward_pointer(ui, &response, 0.15);
         visuals::background(&painter, rect, "GALAXY / light-years");
+        if self.scene == super::fixtures::Scene::Session {
+            self.draw_territory(&painter, rect);
+        }
         let hover = response
             .hover_pos()
             .map(|p| pick(&self.systems, &self.camera, rect, p))

@@ -78,11 +78,12 @@ stereo frame edge and crossfades for two seconds, then resumes weighted valid
 transitions. Right-clicking a part sends a separate queue request that replaces
 the drawn successor, so it plays at the next block boundary. Browser audio is
 still pending.
-Kenney CC0 effects are embedded from `assets/effects/`; the same rodio output
-mixes short UI and battle cues with music. Battle view state schedules each cue
-at the matching beam start or hit time. Kenney particle sprites are loaded once
-per egui context and tinted for shield, hull and destruction flashes. Effects
-and their timing never change combat rules.
+Original Ogg effects are embedded from `assets/effects/sounds/`; the same rodio
+output mixes short UI and battle cues with music. Their reproducible synthesizer
+is in `assets/source/effects/`. Battle view state schedules each cue at the
+matching beam start or hit time. Shield, hull and destruction particles are
+drawn procedurally by the client. Effects and their timing never change combat
+rules.
 
 Library selection is provisional until the desktop/mobile spike passes. Keep
 versions mutually compatible, pin resolved dependencies in Cargo.lock, and avoid

@@ -170,14 +170,12 @@ mod output {
     pub(super) fn effect_bytes(effect: Effect) -> &'static [u8] {
         match effect {
             Effect::Click | Effect::Select => {
-                include_bytes!("../../../assets/effects/sounds/click3.ogg")
+                include_bytes!("../../../assets/effects/sounds/ui-click.ogg")
             }
-            Effect::Laser => include_bytes!("../../../assets/effects/sounds/laserLarge_000.ogg"),
-            Effect::Shield => include_bytes!("../../../assets/effects/sounds/forceField_000.ogg"),
-            Effect::Hull => include_bytes!("../../../assets/effects/sounds/impactMetal_001.ogg"),
-            Effect::Explosion => {
-                include_bytes!("../../../assets/effects/sounds/explosionCrunch_000.ogg")
-            }
+            Effect::Laser => include_bytes!("../../../assets/effects/sounds/laser.ogg"),
+            Effect::Shield => include_bytes!("../../../assets/effects/sounds/shield.ogg"),
+            Effect::Hull => include_bytes!("../../../assets/effects/sounds/hull.ogg"),
+            Effect::Explosion => include_bytes!("../../../assets/effects/sounds/explosion.ogg"),
         }
     }
 
@@ -338,7 +336,7 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn every_embedded_effect_decodes() {
+    fn every_embedded_effect_decodes_to_sound() {
         for effect in [
             Effect::Click,
             Effect::Select,
@@ -347,8 +345,12 @@ mod tests {
             Effect::Hull,
             Effect::Explosion,
         ] {
-            let source = rodio::Decoder::new(std::io::Cursor::new(output::effect_bytes(effect)));
-            assert!(source.is_ok(), "{effect:?}");
+            let source = rodio::Decoder::new(std::io::Cursor::new(output::effect_bytes(effect)))
+                .unwrap_or_else(|error| panic!("{effect:?}: {error}"));
+            assert!(
+                source.take(4_000).any(|sample| sample.abs() > 0.01),
+                "{effect:?} is silent"
+            );
         }
     }
 

@@ -7,6 +7,72 @@ use crate::{
 use std::collections::HashSet;
 
 impl TravelState {
+    /// Cargo aboard `ship` and free space on other owned ships at its exact
+    /// berth. Ships in other locations cannot receive a sale's cargo.
+    pub fn sale_cargo_room(
+        &self,
+        player: PlayerId,
+        ship: ShipId,
+    ) -> Result<(u64, u64), FleetError> {
+        let selected = self.ship(ship).map_err(|_| FleetError::NotOwner)?;
+        if selected.owner != player {
+            return Err(FleetError::NotOwner);
+        }
+        let open = self
+            .ships
+            .iter()
+            .filter(|other| {
+                other.id != ship && other.owner == player && other.location == selected.location
+            })
+            .map(|other| u64::from(other.cargo_capacity).saturating_sub(other.cargo_used()))
+            .sum();
+        Ok((selected.cargo_used(), open))
+    }
+
+    /// Move cargo to co-located ships in ID order, goods in commodity order.
+    /// If allowed, only the overflow is discarded. The caller removes `ship`
+    /// after this succeeds; the session stages the entire sale atomically.
+    pub fn redistribute_sale_cargo(
+        &mut self,
+        player: PlayerId,
+        ship: ShipId,
+        allow_discard: bool,
+    ) -> Result<u64, FleetError> {
+        let (cargo, open) = self.sale_cargo_room(player, ship)?;
+        if cargo > open && !allow_discard {
+            return Err(FleetError::SaleCargoOverflow);
+        }
+        let selected = self.ship(ship).map_err(|_| FleetError::NotOwner)?.clone();
+        let mut recipients: Vec<_> = self
+            .ships
+            .iter()
+            .filter(|other| {
+                other.id != ship && other.owner == player && other.location == selected.location
+            })
+            .map(|other| other.id)
+            .collect();
+        recipients.sort_by_key(|id| id.0);
+        let mut discarded = 0_u64;
+        for (good, units) in selected.cargo.iter().copied().enumerate() {
+            let mut left = units;
+            for id in &recipients {
+                if left == 0 {
+                    break;
+                }
+                let target = self.ship_mut(*id).map_err(|_| FleetError::NotOwner)?;
+                let room = u64::from(target.cargo_capacity).saturating_sub(target.cargo_used());
+                let moved = left.min(u32::try_from(room).unwrap_or(u32::MAX));
+                target.cargo[good] = target.cargo[good]
+                    .checked_add(moved)
+                    .ok_or(FleetError::ArithmeticOverflow)?;
+                left -= moved;
+            }
+            discarded += u64::from(left);
+        }
+        self.ship_mut(ship).map_err(|_| FleetError::NotOwner)?.cargo = [0; 6];
+        Ok(discarded)
+    }
+
     pub fn fleet_for_ship(&self, ship: ShipId) -> Result<&Fleet, FleetError> {
         self.fleets
             .iter()

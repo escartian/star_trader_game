@@ -347,8 +347,10 @@ goes to that market's treasury.
 | Armored bulkheads | large ships (Prospector) | +3 armor against hull hits | 1000 cr |
 | Escort | a fleet | a patrol ship joins every battle the fleet fights, on its side, for 10 runs; you command it like your own ships. If it is destroyed the contract ends. Hiring again renews it to 10 runs | 250 cr |
 
-Each item is fitted once per ship and stays fitted; selling the ship sells its
-upgrades back at the hull's resale share of today's price. The Market's *Ship
+Each item is fitted once per ship. At a shipyard it can be removed for the
+hull's resale share of today's price, or swapped for another applicable
+upgrade in one transaction. Selling the ship also sells its fitted upgrades.
+The Market's *Ship
 upgrades* section has a row for every ship of the selected ship's fleet at that
 port (the selected ship first), each listing only the upgrades that fit its
 model and size, so every ship is outfitted on its own; unaffordable ones are

@@ -25,6 +25,7 @@ impl Session {
         &mut self,
         player: PlayerId,
         ship: ShipId,
+        discard_overflow: bool,
     ) -> Result<SessionEvent, CommandError> {
         self.state.authorize(player, ship)?;
         if self
@@ -38,6 +39,10 @@ impl Session {
             return Err(FleetError::LastShip.into());
         }
         let selected = self.state.ship(ship)?.clone();
+        self.economy.quote_ship_sale(&selected)?;
+        let discarded = self
+            .state
+            .redistribute_sale_cargo(player, ship, discard_overflow)?;
         let price = self.economy.sell_hull(&selected)?;
         let fleet = self.state.fleet_for_ship(ship)?.id;
         self.state.ships.retain(|record| record.id != ship);
@@ -49,6 +54,10 @@ impl Session {
             .ships
             .retain(|id| *id != ship);
         self.state.fleets.retain(|fleet| !fleet.ships.is_empty());
-        Ok(SessionEvent::ShipSold { ship, price })
+        Ok(SessionEvent::ShipSold {
+            ship,
+            price,
+            discarded,
+        })
     }
 }

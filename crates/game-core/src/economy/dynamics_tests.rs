@@ -49,6 +49,7 @@ fn recent_trade_raises_a_port_and_fades_when_trade_stops() {
 #[test]
 fn inflation_compounds_into_goods_services_and_hulls() {
     let mut economy = Economy::new(&crate::demo_galaxy());
+    economy.rules.dynamics.inflation_ppm_per_tick = 125;
     let food = economy.markets[0].goods[0].clone();
     let before = food.price(TradeSide::Buy, food.stock);
     let fuel = economy.fuel_price();
@@ -70,6 +71,30 @@ fn inflation_compounds_into_goods_services_and_hulls() {
     assert!(economy.validate_dynamics().is_ok());
     economy.markets[1].goods[2].price_level_ppm = PRICE_LEVEL_UNIT;
     assert!(economy.validate_dynamics().is_err(), "out of step");
+}
+
+#[test]
+fn a_hundredth_percent_custom_rate_survives_fractional_ticks() {
+    let mut stepped = Economy::new(&crate::demo_galaxy());
+    stepped.rules.dynamics.inflation_basis_points_per_100_runs = 1;
+    stepped.rules.dynamics.inflation_ppb_per_tick = 250;
+    stepped.advance(1);
+    assert_eq!(stepped.price_level_ppm, PRICE_LEVEL_UNIT);
+    assert!(stepped.inflation_remainder > 0);
+    let json = serde_json::to_string(&stepped).unwrap();
+    stepped = serde_json::from_str(&json).unwrap();
+    assert!(stepped.inflation_remainder > 0);
+    for _ in 1..400 {
+        stepped.advance(1);
+    }
+    let mut batched = Economy::new(&crate::demo_galaxy());
+    batched.rules.dynamics.inflation_basis_points_per_100_runs = 1;
+    batched.rules.dynamics.inflation_ppb_per_tick = 250;
+    batched.advance(400);
+    assert_eq!(stepped.price_level_ppm, PRICE_LEVEL_UNIT + 100);
+    assert_eq!(stepped.price_level_ppm, batched.price_level_ppm);
+    assert_eq!(stepped.inflation_remainder, batched.inflation_remainder);
+    assert!(stepped.validate_dynamics().is_ok());
 }
 
 #[test]

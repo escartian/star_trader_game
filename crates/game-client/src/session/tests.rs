@@ -197,6 +197,7 @@ fn selling_the_selected_ship_keeps_selection_and_preferences_valid() {
     assert_eq!(host.selected_ship().id, ShipId(2));
     host.command(ClientCommand::SellShip {
         ship: ShipId(2),
+        discard_overflow: false,
         expected_revision: 1,
     });
     assert_eq!(host.selected_ship().id, ShipId(1));
@@ -206,6 +207,7 @@ fn selling_the_selected_ship_keeps_selection_and_preferences_valid() {
     let saved = host.state.clone();
     host.command(ClientCommand::SellShip {
         ship: ShipId(2),
+        discard_overflow: false,
         expected_revision: 1,
     });
     assert_eq!(host.state, saved);

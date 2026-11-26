@@ -55,6 +55,7 @@ mod standing_orders;
 mod unlocks;
 pub use shell::SheetTab;
 mod shipyard;
+mod shipyard_refit;
 use game_core::economy::Economy;
 use game_core::{
     SystemId,
@@ -318,8 +319,22 @@ impl LocalSession {
                     self.forget_cancelled_target(&event);
                     let message = match event {
                         SessionEvent::Navigation(event) => runs::event_label(event),
-                        SessionEvent::ShipSold { ship, price } => {
-                            format!("Sold ship {} for {price} cr.", ship.0)
+                        SessionEvent::ShipSold {
+                            ship,
+                            price,
+                            discarded,
+                        } => {
+                            if discarded == 0 {
+                                format!(
+                                    "Sold ship {} for {price} cr; cargo moved to other ships.",
+                                    ship.0
+                                )
+                            } else {
+                                format!(
+                                    "Sold ship {} for {price} cr; {discarded} cargo units discarded.",
+                                    ship.0
+                                )
+                            }
                         }
                         SessionEvent::FleetRenamed { fleet } => {
                             format!("Renamed fleet {}.", fleet.0)
@@ -377,6 +392,22 @@ impl LocalSession {
                         SessionEvent::GearFitted { gear, cost, .. } => {
                             format!("{} fitted for {cost} cr.", gear.label())
                         }
+                        SessionEvent::ShipRefitted {
+                            removed,
+                            installed,
+                            refund,
+                            cost,
+                            ..
+                        } => match installed {
+                            Some(new) => format!(
+                                "Swapped {} for {}: {refund} cr refunded, {cost} cr charged.",
+                                removed.label(),
+                                new.label()
+                            ),
+                            None => {
+                                format!("Removed {} for a {refund} cr refund.", removed.label())
+                            }
+                        },
                         SessionEvent::EscortHired { cost } => format!(
                             "Escort hired for {cost} cr: it joins this fleet's battles for {} runs.",
                             game_core::combat::gear::ESCORT_RUNS

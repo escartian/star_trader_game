@@ -6,7 +6,7 @@ use game_core::{
     economy::Credits,
     factions::{Coverage, Faction, RelationMode},
 };
-use game_server::{DangerLevel, GameSetup, InflationLevel, STARTING_CREDITS, WEALTH_SHARES};
+use game_server::{DangerLevel, GameSetup, STARTING_CREDITS, WEALTH_SHARES};
 
 /// Campaign lengths offered (0: open-ended).
 const RUN_LIMITS: [u64; 4] = [0, 200, 400, 800];
@@ -33,13 +33,24 @@ pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
                 STARTING_CREDITS.map(Credits),
                 |credits| format!("{credits} cr"),
             );
-            choice_row(
-                ui,
-                "Inflation",
-                &mut setup.inflation,
-                InflationLevel::ALL,
-                |level| level.label().to_owned(),
-            );
+            ui.label("Inflation / 100 runs");
+            ui.add(
+                egui::DragValue::new(&mut setup.inflation_basis_points)
+                    .range(0..=10_000)
+                    .speed(1)
+                    .custom_formatter(|value, _| format!("{:.2}%", value / 100.0))
+                    .custom_parser(|text| {
+                        text.trim()
+                            .trim_end_matches('%')
+                            .trim()
+                            .parse::<f64>()
+                            .ok()
+                            .filter(|value| value.is_finite())
+                            .map(|value| (value * 100.0).round())
+                    }),
+            )
+            .on_hover_text("Compounds across navigation ticks; 0.00% keeps prices steady.");
+            ui.end_row();
             choice_row(ui, "Danger", &mut setup.danger, DangerLevel::ALL, |level| {
                 level.label().to_owned()
             });
@@ -160,19 +171,15 @@ fn choice_row<T: Copy + PartialEq>(
 
 /// One line describing a new game, for the log.
 pub(crate) fn setup_summary(seed: u64, setup: &GameSetup) -> String {
+    let inflation_whole = setup.inflation_basis_points / 100;
+    let inflation_fraction = setup.inflation_basis_points % 100;
     format!(
         "New map (seed {seed}, {} systems, {} ly radius, up to {} objects per system; \
-         {} cr to start, {} inflation, {} danger; {}).",
+         {} cr to start, {inflation_whole}.{inflation_fraction:02}% per 100 runs inflation, {} danger; {}).",
         setup.galaxy.systems,
         setup.galaxy.radius_ly,
         setup.galaxy.max_objects,
         setup.starting_credits,
-        setup
-            .inflation
-            .label()
-            .split(' ')
-            .next()
-            .unwrap_or("standard"),
         format!("{:?}", setup.danger).to_lowercase(),
         faction_summary(&setup.factions),
     )

@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 14;
+pub const PROTOCOL_VERSION: u32 = 15;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -21,6 +21,8 @@ pub enum ClientCommand {
     },
     SellShip {
         ship: ShipId,
+        /// Accept loss of cargo that will not fit aboard co-located ships.
+        discard_overflow: bool,
         expected_revision: u64,
     },
     RenameFleet {
@@ -106,6 +108,13 @@ pub enum ClientCommand {
     FitGear {
         ship: ShipId,
         gear: game_core::combat::gear::Gear,
+        expected_revision: u64,
+    },
+    /// Remove or replace a fitted upgrade at a shipyard.
+    RefitShip {
+        ship: ShipId,
+        remove: game_core::economy::ShipUpgrade,
+        install: Option<game_core::economy::ShipUpgrade>,
         expected_revision: u64,
     },
     /// Hire (or renew) an escort for the fleet `ship` leads, at its market.
@@ -238,6 +247,7 @@ pub enum SessionEvent {
     ShipSold {
         ship: ShipId,
         price: game_core::economy::Credits,
+        discarded: u64,
     },
     FleetRenamed {
         fleet: FleetId,
@@ -285,6 +295,13 @@ pub enum SessionEvent {
     GearFitted {
         ship: ShipId,
         gear: game_core::combat::gear::Gear,
+        cost: game_core::economy::Credits,
+    },
+    ShipRefitted {
+        ship: ShipId,
+        removed: game_core::economy::ShipUpgrade,
+        installed: Option<game_core::economy::ShipUpgrade>,
+        refund: game_core::economy::Credits,
         cost: game_core::economy::Credits,
     },
     EscortHired {

@@ -154,6 +154,7 @@ pub enum FleetError {
     InvalidQuantity,
     MissingCargo,
     CargoFull,
+    SaleCargoOverflow,
     LastShip,
     InvalidName,
     ArithmeticOverflow,
@@ -176,6 +177,7 @@ impl std::fmt::Display for FleetError {
             Self::LastShip => "Keep at least one owned ship.",
             Self::InvalidName => "Fleet names must contain 1–64 readable characters.",
             Self::CargoFull => "The target ship has insufficient cargo space.",
+            Self::SaleCargoOverflow => "Other ships here cannot hold all the cargo. Choose the discard option to sell anyway.",
             Self::ArithmeticOverflow => "Fleet identity or quantity limit reached.",
         })
     }

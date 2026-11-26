@@ -346,6 +346,7 @@ fn selling_a_ship_sells_its_fitted_upgrades_back_with_the_hull() {
     let (credits, money) = (session.economy.credits.0, total(&session));
     ok(session.handle(ClientCommand::SellShip {
         ship: bought,
+        discard_overflow: false,
         expected_revision: session.state.revision,
     }));
     assert_eq!(session.economy.credits.0, credits + hull + upgrades);

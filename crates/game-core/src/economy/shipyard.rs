@@ -40,9 +40,6 @@ impl Economy {
     }
 
     pub fn quote_ship_sale(&self, ship: &Ship) -> Result<Credits, EconomyError> {
-        if ship.cargo_used() != 0 {
-            return Err(EconomyError::NonEmptyHold);
-        }
         let market = self.current_market(ship)?;
         self.require_open_port(ship)?;
         if market.ship_stock[ship.kind.index()] >= 1000 {

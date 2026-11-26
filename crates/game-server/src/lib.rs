@@ -10,7 +10,7 @@ mod offline;
 mod progress;
 mod save;
 mod setup;
-pub use setup::{DangerLevel, GameSetup, InflationLevel, STARTING_CREDITS, WEALTH_SHARES};
+pub use setup::{DangerLevel, GameSetup, STARTING_CREDITS, WEALTH_SHARES};
 #[cfg(any(test, feature = "dev-tools"))]
 mod scenarios;
 #[cfg(any(test, feature = "dev-tools"))]
@@ -198,6 +198,7 @@ impl Session {
             | ClientCommand::UpgradeHold { .. }
             | ClientCommand::RepairShip { .. }
             | ClientCommand::FitGear { .. }
+            | ClientCommand::RefitShip { .. }
             | ClientCommand::HireEscort { .. }
             | ClientCommand::PayFine { .. }) => self.commerce(player, command),
             command @ (ClientCommand::AcceptJob { .. } | ClientCommand::AbandonJob { .. }) => {
@@ -288,6 +289,8 @@ mod pursuit_tests;
 mod raid_tests;
 #[cfg(test)]
 mod setup_tests;
+#[cfg(test)]
+mod shipyard_tests;
 
 #[cfg(test)]
 mod approach_tests;

@@ -8,9 +8,10 @@ mod market;
 mod rules;
 pub use bounties::RaiderBounties;
 pub use charters::{CampaignRules, Charter};
-pub use dynamics::{MarketDynamics, MarketFlow, PRICE_LEVEL_UNIT};
+pub use dynamics::{MarketDynamics, MarketFlow, PRICE_LEVEL_UNIT, custom_inflation_ppb};
 pub use rules::{EconomyRules, MarketTemplate};
 mod outfitting;
+pub use outfitting::ShipUpgrade;
 mod services;
 mod shipyard;
 mod transactions;
@@ -134,6 +135,10 @@ pub struct Economy {
     /// Galaxy-wide price level in parts per million of a new game's prices.
     #[serde(default = "unit_price_level")]
     pub price_level_ppm: u64,
+    /// Fractional custom inflation carried across ticks, so 0.01% settings
+    /// still take effect. The denominator comes from `MarketDynamics`.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub inflation_remainder: u64,
     /// Port charters bought so far (see `charters`). Omitted from saves when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub charters: Vec<Charter>,
@@ -162,7 +167,6 @@ pub enum EconomyError {
     InsufficientCredits,
     MarketInsufficientCredits,
     ShipOutOfStock,
-    NonEmptyHold,
     CargoFull,
     InsufficientStock,
     InsufficientCargo,
@@ -173,6 +177,8 @@ pub enum EconomyError {
     AlreadyChartered,
     /// That gear is already fitted to this ship.
     AlreadyFitted,
+    NotFitted,
+    NoShipyard,
     /// The fitting is restricted to another hull model or size.
     IncompatibleGear,
     /// This port's faction is hostile to you (`factions::Tier::Hostile`).
@@ -188,7 +194,6 @@ impl std::fmt::Display for EconomyError {
             Self::MustBeDocked => "Arrive at a market before trading or refuelling.",
             Self::UnknownMarket => "There is no market at this body.",
             Self::MarketInsufficientCredits => "The local market cannot afford this purchase.",
-            Self::NonEmptyHold => "Empty this ship’s cargo before selling it.",
             Self::ShipOutOfStock => "This ship class is out of stock here.",
             Self::InvalidQuantity => "Choose a positive quantity.",
             Self::InsufficientCredits => "Not enough credits.",
@@ -201,6 +206,8 @@ impl std::fmt::Display for EconomyError {
             Self::NoDamage => "This ship has no hull damage to repair.",
             Self::AlreadyChartered => "This port's charter has already been sold.",
             Self::AlreadyFitted => "This ship already has that gear fitted.",
+            Self::NotFitted => "That upgrade is not fitted to this ship.",
+            Self::NoShipyard => "This port has no active shipyard.",
             Self::IncompatibleGear => "This upgrade does not fit this ship model or size.",
             Self::PortClosed => {
                 "This port's faction is hostile to you, or wants you for your crimes, and refuses your business."

@@ -38,6 +38,11 @@ impl Session {
                 expected_revision,
                 ..
             }
+            | ClientCommand::RefitShip {
+                ship,
+                expected_revision,
+                ..
+            }
             | ClientCommand::HireEscort {
                 ship,
                 expected_revision,
@@ -121,6 +126,18 @@ impl Session {
             ClientCommand::FitGear { gear, .. } => {
                 let cost = economy.fit_gear(state.ship_mut(ship)?, gear)?;
                 SessionEvent::GearFitted { ship, gear, cost }
+            }
+            ClientCommand::RefitShip {
+                remove, install, ..
+            } => {
+                let (refund, cost) = economy.refit_ship(state.ship_mut(ship)?, remove, install)?;
+                SessionEvent::ShipRefitted {
+                    ship,
+                    removed: remove,
+                    installed: install,
+                    refund,
+                    cost,
+                }
             }
             ClientCommand::HireEscort { .. } => {
                 // The fleet's lead ship pays at its market; renewing restores

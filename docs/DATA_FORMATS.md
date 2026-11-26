@@ -44,8 +44,10 @@ Each `data/slot-N.json` stores:
   (`wealth_share_percent`, `charter_price`, `charters_to_win`,
   `port_share_percent`; an older `net_worth_goal` is read and ignored) and `dynamics`
   (`local_income_percent`, `trade_income_ppm`, `upkeep_ppm_per_tick`,
-  `inflation_ppm_per_tick`), the
-  galaxy `price_level_ppm`, port `charters`
+  `inflation_ppm_per_tick`, `inflation_basis_points_per_100_runs`,
+  `inflation_ppb_per_tick`,
+  `inflation_ticks_per_100_runs`), the galaxy `price_level_ppm` and saved
+  `inflation_remainder`, port `charters`
   (`market`, `owner`; omitted when none) and `factions` (`in_play`,
   `allegiance`, `territory`, `relations`, `standing`, `sales_cents`, `wanted`; see
   [factions](FACTIONS.md); absent means no factions). Each market records a composite system/body ID,

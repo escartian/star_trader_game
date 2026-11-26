@@ -1,4 +1,4 @@
-use super::{DangerLevel, GameSetup, InflationLevel, Session};
+use super::{DangerLevel, GameSetup, Session};
 use game_core::{economy::Credits, economy::EconomyRules, generation::GalaxyConfig};
 
 fn game(setup: &GameSetup) -> Result<Session, String> {
@@ -14,7 +14,7 @@ fn every_setup_choice_becomes_a_session_rule() {
             max_objects: 9,
         },
         starting_credits: Credits(500_000),
-        inflation: InflationLevel::High,
+        inflation_basis_points: 1_000,
         danger: DangerLevel::Perilous,
         run_limit: Some(400),
         wealth_share_percent: 25,
@@ -39,7 +39,9 @@ fn every_setup_choice_becomes_a_session_rule() {
     assert_eq!(session.systems.len(), 12);
     assert_eq!(session.economy.credits, Credits(500_000));
     let rules = &session.economy.rules;
-    assert_eq!(rules.dynamics.inflation_ppm_per_tick, 250);
+    assert_eq!(rules.dynamics.inflation_ppm_per_tick, 0);
+    assert_eq!(rules.dynamics.inflation_basis_points_per_100_runs, 1_000);
+    assert!(rules.dynamics.inflation_ppb_per_tick > 0);
     assert_eq!(rules.campaign.wealth_share_percent, 25);
     assert_eq!(rules.npc_raid_chance_percent, 8);
     assert_eq!(session.state.movement_rules.encounter_chance_percent, 20);
@@ -56,12 +58,19 @@ fn every_setup_choice_becomes_a_session_rule() {
     session.export_json().unwrap();
     let calm = game(&GameSetup {
         danger: DangerLevel::Calm,
-        inflation: InflationLevel::None,
+        inflation_basis_points: 0,
         ..GameSetup::default()
     })
     .unwrap();
     assert_eq!(calm.state.movement_rules.encounter_chance_percent, 6);
     assert_eq!(calm.economy.rules.dynamics.inflation_ppm_per_tick, 0);
+    assert_eq!(
+        calm.economy
+            .rules
+            .dynamics
+            .inflation_basis_points_per_100_runs,
+        0
+    );
     assert!(
         calm.state
             .navigation
@@ -73,6 +82,14 @@ fn every_setup_choice_becomes_a_session_rule() {
 
 #[test]
 fn impossible_setups_are_rejected() {
+    assert_eq!(GameSetup::default().inflation_basis_points, 0);
+    assert!(
+        game(&GameSetup {
+            inflation_basis_points: 10_001,
+            ..GameSetup::default()
+        })
+        .is_err()
+    );
     let bad_length = GameSetup {
         run_limit: Some(0),
         ..GameSetup::default()
@@ -86,6 +103,17 @@ fn impossible_setups_are_rejected() {
         ..GameSetup::default()
     };
     assert!(game(&bad_galaxy).is_err());
+}
+
+#[test]
+fn custom_inflation_compounds_to_its_chosen_hundred_run_rate() {
+    let mut session = game(&GameSetup {
+        inflation_basis_points: 10_000,
+        ..GameSetup::default()
+    })
+    .unwrap();
+    session.economy.advance(400);
+    assert!(session.economy.price_level_ppm.abs_diff(2_000_000) <= 2);
 }
 
 #[test]

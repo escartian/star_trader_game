@@ -3,45 +3,11 @@
 //! creation, so the save carries it and the game plays by it throughout.
 use super::Session;
 use game_core::{
-    economy::{Credits, EconomyRules},
+    economy::{Credits, EconomyRules, custom_inflation_ppb},
     factions::FactionSetup,
     generation::GalaxyConfig,
     movement::MovementRules,
 };
-
-/// How fast prices rise.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum InflationLevel {
-    None,
-    Low,
-    #[default]
-    Standard,
-    High,
-}
-
-impl InflationLevel {
-    pub const ALL: [Self; 4] = [Self::None, Self::Low, Self::Standard, Self::High];
-
-    /// Price-level growth per tick, in parts per million.
-    pub fn ppm_per_tick(self) -> u32 {
-        match self {
-            Self::None => 0,
-            Self::Low => 60,
-            Self::Standard => 125,
-            Self::High => 250,
-        }
-    }
-
-    /// Roughly how much prices rise per 100 runs (four ticks per run).
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::None => "None",
-            Self::Low => "Low (≈2.5% / 100 runs)",
-            Self::Standard => "Standard (≈5% / 100 runs)",
-            Self::High => "High (≈10% / 100 runs)",
-        }
-    }
-}
 
 /// How often contacts happen and how strong raiders are.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -79,7 +45,8 @@ pub struct GameSetup {
     pub galaxy: GalaxyConfig,
     /// Credits in cents.
     pub starting_credits: Credits,
-    pub inflation: InflationLevel,
+    /// Inflation per 100 navigation runs, in hundredths of a percent.
+    pub inflation_basis_points: u32,
     pub danger: DangerLevel,
     /// End on score at this run; `None` is open-ended.
     pub run_limit: Option<u64>,
@@ -94,7 +61,7 @@ impl Default for GameSetup {
         Self {
             galaxy: GalaxyConfig::default(),
             starting_credits: Credits(100_000),
-            inflation: InflationLevel::default(),
+            inflation_basis_points: 0,
             danger: DangerLevel::default(),
             run_limit: None,
             wealth_share_percent: 10,
@@ -112,7 +79,16 @@ impl GameSetup {
     /// The session rules this setup implies, from base economy and movement rules.
     pub fn apply(&self, rules: &mut EconomyRules, movement: &mut MovementRules) {
         rules.starting_credits = self.starting_credits;
-        rules.dynamics.inflation_ppm_per_tick = self.inflation.ppm_per_tick();
+        rules.dynamics.inflation_ppm_per_tick = 0;
+        rules.dynamics.inflation_basis_points_per_100_runs = self.inflation_basis_points;
+        rules.dynamics.inflation_ticks_per_100_runs =
+            u32::try_from(movement.ticks_per_navigation_run)
+                .unwrap_or(u32::MAX)
+                .saturating_mul(100);
+        rules.dynamics.inflation_ppb_per_tick = custom_inflation_ppb(
+            self.inflation_basis_points,
+            rules.dynamics.inflation_ticks_per_100_runs,
+        );
         rules.campaign.wealth_share_percent = self.wealth_share_percent;
         let (contacts, raids, extra) = self.danger.settings();
         rules.npc_raid_chance_percent = raids;
@@ -143,6 +119,9 @@ impl Session {
         setup: &GameSetup,
     ) -> Result<Self, String> {
         setup.apply(&mut rules, &mut movement);
+        if setup.inflation_basis_points > 10_000 {
+            return Err("Inflation must be 0.00–100.00% per 100 runs".into());
+        }
         rules.validate()?;
         setup.factions.validate()?;
         movement.validate().map_err(|error| error.to_string())?;

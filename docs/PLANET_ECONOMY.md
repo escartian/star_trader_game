@@ -78,16 +78,19 @@ taxes and spending; with bounties they are the only way money enters or leaves
 the galaxy. Trades still only move money. The market header shows whether the
 port's economy is growing or shrinking, with its income and upkeep per tick.
 
-**Inflation:** the galaxy's price level compounds from its current value by 125
-parts per million per tick (about 5% per 100 runs). Goods, fuel, repairs, hold
-upgrades, hulls, charters and bounties all scale with it.
+**Inflation:** new games default to 0.00%. Setup accepts a custom percentage per
+100 navigation runs to two decimal places (0.00–100.00%). The rate is spread
+across navigation ticks with a saved fractional remainder, so even 0.01% takes
+effect. Prices compound from the current level. Goods, fuel, repairs, upgrades,
+hulls, charters and bounties all scale with it.
 
 Tuning lives in the session rules (`dynamics`); `MarketDynamics::frozen()`
 gives a static economy. In the three-system default world with two NPC traders
 (measured before the population scaled with the galaxy; that world now fields
 four) and the player idle, galaxy wealth went from 65,000 cr to about 56,000 cr by
 run 50 as treasuries settled to their ports' industry and trade (2,000–8,000
-cr), then rose with inflation to about 91,000 cr by run 400 (price level 1.22).
+cr). An earlier 5% inflation setup rose to about 91,000 cr by run 400
+(price level 1.22); the new default remains at a price level of 1.00.
 
 ## Identity and production
 
@@ -119,7 +122,10 @@ production changes goods, not money. Fuel service currently has unlimited supply
   cannot afford an order rejects it without taking cargo.
 - Hull purchases consume one local inventory unit and transfer the price into
   that market. They join the selected fleet at its actual location.
-- Hull sales require an empty hold, another owned ship and sufficient local funds.
+- Hull sales require another owned ship and sufficient local funds. Cargo moves
+  to other owned ships at the same berth, in ship ID and commodity order. If
+  they lack space, the sale is rejected until the player explicitly chooses
+  **Sell and discard**; then only the overflow is lost.
   The default offer is 60% of catalog price, configured by `ship_resale_percent`,
   plus the same share of today's price for every upgrade on the ship (fitted
   gear and a bought hold upgrade); the Sell button's hover shows that part.
@@ -127,6 +133,11 @@ production changes goods, not money. Fuel service currently has unlimited supply
 - Returned hulls are refurbished catalog stock: upgrades are sold back with the
   ship and stripped, fuel is not refunded. There are no used-hull
   identities/loadouts in shipyards yet.
+- A shipyard can remove a fitted upgrade, including the original cargo hold
+  upgrade, for its current resale value. A one-step swap refunds the removed
+  item and charges for the new one atomically. Capacity can be swapped without
+  unloading if cargo fits the final hold; removal that leaves too little room
+  is rejected. The shipyard needs funds for the refund.
 - Ship stock is finite and does not replenish automatically. Selling hulls restocks
   it; NPC hull manufacturing/trading remains future work.
 - Credits transfer between accounts rather than being created or discarded.

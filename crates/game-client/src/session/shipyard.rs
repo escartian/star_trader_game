@@ -3,6 +3,7 @@ use super::LocalSession;
 use crate::theme::icons::{self, Icon, stat};
 use crate::theme::{AMBER, CYAN, GREEN};
 use game_protocol::ClientCommand;
+use game_server::LOCAL_PLAYER;
 
 impl LocalSession {
     pub(super) fn shipyard_ui(&self, ui: &mut egui::Ui) -> Option<ClientCommand> {
@@ -16,7 +17,7 @@ impl LocalSession {
                 Icon::Info,
                 CYAN,
                 &format!(
-                    "New hulls join {}'s fleet.\nSales require an empty hold. Fuel and hold upgrades are not refunded; hulls sell at catalog specifications.",
+                    "New hulls join {}'s fleet. Cargo moves to other ships at this berth when you sell. Fitted upgrades are included in the ship's resale value.",
                     ship.name
                 ),
             );
@@ -101,6 +102,9 @@ impl LocalSession {
                 combat_chips(ui, &spec.combat, &self.economy.rules.combat_catalog, None);
             });
         }
+        if let Some(command) = self.shipyard_refit_ui(ui, ship) {
+            action = Some(command);
+        }
         let quote = self.economy.quote_ship_sale(ship);
         let label = quote.as_ref().map_or_else(
             |_| format!("Sell {}", ship.name),
@@ -113,29 +117,61 @@ impl LocalSession {
                 self.economy.rules.ship_resale_percent
             )
         });
+        let (cargo, open) = self
+            .state
+            .sale_cargo_room(LOCAL_PLAYER, ship.id)
+            .unwrap_or((0, 0));
+        let overflow = cargo.saturating_sub(open);
         let blocked = if self.state.ships.len() <= 1 {
             Some("Keep at least one owned ship.".to_string())
         } else {
             quote.as_ref().err().map(ToString::to_string)
         };
-        let enabled = blocked.is_none();
+        let enabled = blocked.is_none() && overflow == 0;
         let button = ui
             .add_enabled_ui(enabled, |ui| icons::button(ui, Icon::Sell, &label))
             .inner;
         if button.clicked() {
             action = Some(ClientCommand::SellShip {
                 ship: ship.id,
+                discard_overflow: false,
                 expected_revision: self.state.revision,
             });
+        }
+        if overflow > 0 {
+            ui.colored_label(AMBER, format!(
+                "{} cargo units aboard; {} open spaces on other ships here. {} units cannot fit.",
+                cargo, open, overflow
+            ));
+            let discard = ui
+                .add_enabled_ui(blocked.is_none(), |ui| {
+                    icons::button(
+                        ui,
+                        Icon::Sell,
+                        &format!("Sell and discard {overflow} units"),
+                    )
+                })
+                .inner;
+            if discard.clicked() {
+                action = Some(ClientCommand::SellShip {
+                    ship: ship.id,
+                    discard_overflow: true,
+                    expected_revision: self.state.revision,
+                });
+            }
         }
         match (blocked, breakdown) {
             (Some(reason), _) => {
                 button.on_disabled_hover_text(reason);
             }
             (None, Some(text)) => {
-                button.on_hover_text(text);
+                button.on_hover_text(format!(
+                    "{text} {cargo} cargo units move to other ships here."
+                ));
             }
-            (None, None) => {}
+            (None, None) => {
+                button.on_hover_text(format!("{cargo} cargo units move to other ships here."));
+            }
         }
         action
     }

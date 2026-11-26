@@ -66,7 +66,11 @@ impl Session {
         }
         let event = match command {
             ClientCommand::BuyShip { ship, kind, .. } => candidate.buy_ship(player, ship, kind)?,
-            ClientCommand::SellShip { ship, .. } => candidate.sell_ship(player, ship)?,
+            ClientCommand::SellShip {
+                ship,
+                discard_overflow,
+                ..
+            } => candidate.sell_ship(player, ship, discard_overflow)?,
             ClientCommand::RenameFleet { fleet, name, .. } => {
                 let name = name.trim();
                 if name.is_empty()

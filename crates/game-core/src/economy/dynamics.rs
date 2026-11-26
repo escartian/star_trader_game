@@ -33,6 +33,8 @@ pub const MAX_PRICE_LEVEL: u64 = 100 * PRICE_LEVEL_UNIT;
 /// Activity loses 1/40 of itself each tick.
 pub const ACTIVITY_DECAY_DIVISOR: u64 = 40;
 const PER_MILLION: u64 = 1_000_000;
+/// Fractional custom inflation uses billionths of the current price level.
+const PER_BILLION: u64 = 1_000_000_000;
 
 /// Tuning for living markets and inflation, carried with the session rules.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -47,19 +49,47 @@ pub struct MarketDynamics {
     pub upkeep_ppm_per_tick: u32,
     /// Price-level growth per tick, in ppm (0: no inflation).
     pub inflation_ppm_per_tick: u32,
+    /// Custom percentage per 100 navigation runs, in hundredths of a percent.
+    /// When nonzero this takes precedence over the legacy ppm rate.
+    #[serde(default)]
+    pub inflation_basis_points_per_100_runs: u32,
+    /// Compounding growth for one tick, in parts per billion; calculated once
+    /// from the chosen percentage and saved for deterministic continuation.
+    #[serde(default)]
+    pub inflation_ppb_per_tick: u32,
+    /// Ticks in 100 runs when the custom rate was chosen.
+    #[serde(default = "default_inflation_ticks")]
+    pub inflation_ticks_per_100_runs: u32,
+}
+
+fn default_inflation_ticks() -> u32 {
+    400
+}
+
+/// Convert a two-decimal percentage per 100 runs into a saved per-tick
+/// compounding rate. Rounding to billionths keeps the smallest choice useful.
+pub fn custom_inflation_ppb(basis_points: u32, ticks_per_100_runs: u32) -> u32 {
+    if basis_points == 0 || ticks_per_100_runs == 0 {
+        return 0;
+    }
+    let fraction = f64::from(basis_points) / 10_000.0;
+    let ticks = f64::from(ticks_per_100_runs);
+    (((1.0 + fraction).powf(1.0 / ticks) - 1.0) * 1_000_000_000.0).round() as u32
 }
 
 impl Default for MarketDynamics {
     /// Upkeep of 0.5% per tick; local industry and trade income sized so a
     /// port of the default template settles near 4,600 cr with no trade and
-    /// gains roughly half again with a full freighter hold traded each run;
-    /// prices rise about 5% per 100 runs (four ticks per run).
+    /// gains roughly half again with a full freighter hold traded each run.
     fn default() -> Self {
         Self {
             local_income_percent: 4,
             trade_income_ppm: 1_500,
             upkeep_ppm_per_tick: 5_000,
-            inflation_ppm_per_tick: 125,
+            inflation_ppm_per_tick: 0,
+            inflation_basis_points_per_100_runs: 0,
+            inflation_ppb_per_tick: 0,
+            inflation_ticks_per_100_runs: default_inflation_ticks(),
         }
     }
 }
@@ -72,6 +102,9 @@ impl MarketDynamics {
             trade_income_ppm: 0,
             upkeep_ppm_per_tick: 0,
             inflation_ppm_per_tick: 0,
+            inflation_basis_points_per_100_runs: 0,
+            inflation_ppb_per_tick: 0,
+            inflation_ticks_per_100_runs: default_inflation_ticks(),
         }
     }
 
@@ -80,6 +113,15 @@ impl MarketDynamics {
             && self.trade_income_ppm <= 100_000
             && self.upkeep_ppm_per_tick <= 100_000
             && self.inflation_ppm_per_tick <= 10_000
+            && self.inflation_basis_points_per_100_runs <= 10_000
+            && self.inflation_ppb_per_tick <= 10_000_000
+            && (self.inflation_basis_points_per_100_runs == 0) == (self.inflation_ppb_per_tick == 0)
+            && (100..=10_000).contains(&self.inflation_ticks_per_100_runs)
+            && self.inflation_ppb_per_tick
+                == custom_inflation_ppb(
+                    self.inflation_basis_points_per_100_runs,
+                    self.inflation_ticks_per_100_runs,
+                )
     }
 }
 
@@ -202,12 +244,24 @@ impl Economy {
 
     /// One tick of inflation, market income and upkeep, and fading activity.
     pub(super) fn advance_dynamics(&mut self) {
-        let level = scale(
-            self.price_level_ppm,
-            PRICE_LEVEL_UNIT + u64::from(self.rules.dynamics.inflation_ppm_per_tick),
-            PRICE_LEVEL_UNIT,
-        )
-        .min(MAX_PRICE_LEVEL);
+        let custom = self.rules.dynamics.inflation_basis_points_per_100_runs;
+        let level = if custom > 0 {
+            let earned = self.price_level_ppm
+                * u64::from(self.rules.dynamics.inflation_ppb_per_tick)
+                + self.inflation_remainder;
+            self.inflation_remainder = earned % PER_BILLION;
+            self.price_level_ppm
+                .saturating_add(earned / PER_BILLION)
+                .min(MAX_PRICE_LEVEL)
+        } else {
+            self.inflation_remainder = 0;
+            scale(
+                self.price_level_ppm,
+                PRICE_LEVEL_UNIT + u64::from(self.rules.dynamics.inflation_ppm_per_tick),
+                PRICE_LEVEL_UNIT,
+            )
+            .min(MAX_PRICE_LEVEL)
+        };
         self.price_level_ppm = level;
         for index in 0..self.markets.len() {
             for good in &mut self.markets[index].goods {
@@ -232,6 +286,9 @@ impl Economy {
     pub fn validate_dynamics(&self) -> Result<(), String> {
         let level = self.price_level_ppm;
         let bad = !(PRICE_LEVEL_UNIT..=MAX_PRICE_LEVEL).contains(&level)
+            || self.inflation_remainder >= PER_BILLION
+            || (self.rules.dynamics.inflation_basis_points_per_100_runs == 0
+                && self.inflation_remainder != 0)
             || self.markets.iter().any(|market| {
                 market
                     .goods

@@ -227,6 +227,7 @@ fn fleet_changes_keep_waits_only_for_fleets_that_still_exist() {
         &mut session,
         ClientCommand::SellShip {
             ship: ShipId(3),
+            discard_overflow: false,
             expected_revision: revision,
         },
     );

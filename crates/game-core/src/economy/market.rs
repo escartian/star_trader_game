@@ -62,6 +62,7 @@ impl Economy {
             markets,
             rules,
             price_level_ppm: super::PRICE_LEVEL_UNIT,
+            inflation_remainder: 0,
             charters: Vec::new(),
             factions: Default::default(),
         })

@@ -196,6 +196,7 @@ fn planet_shipyards_buy_sell_and_restock_without_reusing_ids_or_fleets() {
         &mut session,
         ClientCommand::SellShip {
             ship: ShipId(2),
+            discard_overflow: false,
             expected_revision: revision,
         },
     );
@@ -233,6 +234,7 @@ fn rejected_sales_and_renames_preserve_complete_state() {
     assert!(matches!(
         session.handle_offline(ClientCommand::SellShip {
             ship: ShipId(1),
+            discard_overflow: false,
             expected_revision: 0
         }),
         ServerMessage::CommandRejected(_)
@@ -247,10 +249,12 @@ fn rejected_sales_and_renames_preserve_complete_state() {
         },
     );
     session.state.ships[1].cargo[0] = 1;
+    session.state.ships[0].cargo[0] = session.state.ships[0].cargo_capacity;
     let before = session.snapshot(Vec::new());
     assert!(matches!(
         session.handle_offline(ClientCommand::SellShip {
             ship: ShipId(2),
+            discard_overflow: false,
             expected_revision: 1
         }),
         ServerMessage::CommandRejected(_)

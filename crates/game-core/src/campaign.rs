@@ -135,9 +135,11 @@ impl Score {
     }
 }
 
-/// Credits, hulls at resale and cargo at the best current bid.
+/// Credits, ships (hull and fitted upgrades) at resale and cargo at the best
+/// current bid.
 pub fn net_worth(state: &TravelState, economy: &Economy, player: PlayerId) -> Credits {
-    let hull = |kind| economy.ship_resale(kind).map_or(0, |price| price.0);
+    let hull =
+        |ship: &crate::travel::Ship| economy.ship_sale_value(ship).map_or(0, |price| price.0);
     let best_bid = |good: Commodity| {
         economy
             .markets
@@ -159,7 +161,7 @@ pub fn net_worth(state: &TravelState, economy: &Economy, player: PlayerId) -> Cr
             .fold(0_u64, |sum, (units, bid)| {
                 sum.saturating_add(u64::from(*units).saturating_mul(*bid))
             });
-        total.saturating_add(hull(ship.kind)).saturating_add(cargo)
+        total.saturating_add(hull(ship)).saturating_add(cargo)
     });
     Credits(economy.credits.0.saturating_add(assets))
 }

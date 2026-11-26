@@ -106,6 +106,13 @@ impl LocalSession {
             |_| format!("Sell {}", ship.name),
             |price| format!("Sell {} · {} cr", ship.name, price),
         );
+        let upgrades = self.economy.upgrade_resale(ship);
+        let breakdown = (upgrades.0 > 0).then(|| {
+            format!(
+                "Includes {upgrades} cr for its fitted upgrades, sold back with the hull at {}%.",
+                self.economy.rules.ship_resale_percent
+            )
+        });
         let blocked = if self.state.ships.len() <= 1 {
             Some("Keep at least one owned ship.".to_string())
         } else {
@@ -121,8 +128,14 @@ impl LocalSession {
                 expected_revision: self.state.revision,
             });
         }
-        if let Some(reason) = blocked {
-            button.on_disabled_hover_text(reason);
+        match (blocked, breakdown) {
+            (Some(reason), _) => {
+                button.on_disabled_hover_text(reason);
+            }
+            (None, Some(text)) => {
+                button.on_hover_text(text);
+            }
+            (None, None) => {}
         }
         action
     }

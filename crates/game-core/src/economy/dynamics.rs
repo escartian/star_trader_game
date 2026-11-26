@@ -23,6 +23,7 @@
 //! All integer arithmetic, so a run replays exactly.
 use super::{Credits, Economy, Market, MarketId};
 use crate::fleet::ShipKind;
+use crate::travel::Ship;
 use serde::{Deserialize, Serialize};
 
 /// The price level of a new game: 1.0 in parts per million.
@@ -144,6 +145,29 @@ impl Economy {
             u64::from(self.rules.ship_resale_percent),
             100,
         )))
+    }
+
+    /// What a shipyard pays today for the upgrades fitted to `ship`: the same
+    /// resale share as the hull of each fitted gear's price, and of the hold
+    /// upgrade's if it was bought. (Escorts are hired per fleet, not fitted.)
+    pub fn upgrade_resale(&self, ship: &Ship) -> Credits {
+        let fitted = ship
+            .gear
+            .iter()
+            .map(|gear| self.gear_price(*gear).0)
+            .chain(ship.upgraded.then(|| self.hold_upgrade_price().0))
+            .fold(0_u64, u64::saturating_add);
+        Credits(scale(
+            fitted,
+            u64::from(self.rules.ship_resale_percent),
+            100,
+        ))
+    }
+
+    /// What a shipyard pays for `ship` today: its hull plus its upgrades.
+    pub fn ship_sale_value(&self, ship: &Ship) -> Option<Credits> {
+        let hull = self.ship_resale(ship.kind)?;
+        Some(Credits(hull.0.saturating_add(self.upgrade_resale(ship).0)))
     }
 
     /// What `market` earns and spends this tick, from its current state.

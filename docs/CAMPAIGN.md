@@ -36,8 +36,9 @@ rules (`economy.rules.campaign`), so they can be rebalanced in data.
 Galaxy wealth changes over a game: markets grow and shrink with trade and
 prices inflate (see [planet economies](PLANET_ECONOMY.md#living-markets-and-inflation)).
 
-**Net worth** = credits + each owned hull at its resale price (60% of the
-shipyard price) + cargo at the best price any market currently pays.
+**Net worth** = credits + each owned ship at its sale price (60% of the
+shipyard price, plus 60% of today's price for each fitted upgrade and a bought
+hold upgrade) + cargo at the best price any market currently pays.
 
 ## Score
 

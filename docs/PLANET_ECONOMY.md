@@ -120,10 +120,13 @@ production changes goods, not money. Fuel service currently has unlimited supply
 - Hull purchases consume one local inventory unit and transfer the price into
   that market. They join the selected fleet at its actual location.
 - Hull sales require an empty hold, another owned ship and sufficient local funds.
-  The default offer is 60% of catalog price, configured by `ship_resale_percent`.
+  The default offer is 60% of catalog price, configured by `ship_resale_percent`,
+  plus the same share of today's price for every upgrade on the ship (fitted
+  gear and a bought hold upgrade); the Sell button's hover shows that part.
   Sales replenish one hull of that class, remove empty fleets and never reuse IDs.
-- Returned hulls are refurbished catalog stock. Fuel and hold upgrades are not
-  separately refunded. There are no used-hull identities/loadouts in shipyards yet.
+- Returned hulls are refurbished catalog stock: upgrades are sold back with the
+  ship and stripped, fuel is not refunded. There are no used-hull
+  identities/loadouts in shipyards yet.
 - Ship stock is finite and does not replenish automatically. Selling hulls restocks
   it; NPC hull manufacturing/trading remains future work.
 - Credits transfer between accounts rather than being created or discarded.

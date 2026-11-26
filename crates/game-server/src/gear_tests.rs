@@ -312,3 +312,47 @@ fn hailing_an_escorted_trader_brings_its_escort_into_the_fight() {
     assert_eq!(hostile[0].gear, vec![Gear::PointDefense]);
     reload(&session);
 }
+
+#[test]
+fn selling_a_ship_sells_its_fitted_upgrades_back_with_the_hull() {
+    let mut session = Session::default();
+    session.economy.credits = Credits(10_000_000);
+    ok(session.handle(ClientCommand::BuyShip {
+        ship: ShipId(1),
+        kind: ShipKind::Freighter,
+        expected_revision: session.state.revision,
+    }));
+    let bought = session.state.ships.last().unwrap().id;
+    for gear in [Gear::Afterburners, Gear::FreighterRacks] {
+        ok(session.handle(ClientCommand::FitGear {
+            ship: bought,
+            gear,
+            expected_revision: session.state.revision,
+        }));
+    }
+    let economy = &session.economy;
+    let ship = session.state.ship(bought).unwrap().clone();
+    let percent = u64::from(economy.rules.ship_resale_percent);
+    let upgrades = (economy.gear_price(Gear::Afterburners).0
+        + economy.gear_price(Gear::FreighterRacks).0)
+        * percent
+        / 100;
+    assert_eq!(economy.upgrade_resale(&ship).0, upgrades);
+    let hull = economy.ship_resale(ShipKind::Freighter).unwrap().0;
+    let market = economy.current_market(&ship).unwrap().id;
+    let total = |session: &Session| {
+        session.economy.credits.0 + session.economy.market(market).unwrap().credits.0
+    };
+    let (credits, money) = (session.economy.credits.0, total(&session));
+    ok(session.handle(ClientCommand::SellShip {
+        ship: bought,
+        expected_revision: session.state.revision,
+    }));
+    assert_eq!(session.economy.credits.0, credits + hull + upgrades);
+    assert_eq!(
+        total(&session),
+        money,
+        "the shipyard pays from its treasury"
+    );
+    reload(&session);
+}

@@ -48,8 +48,9 @@ impl Economy {
         if market.ship_stock[ship.kind.index()] >= 1000 {
             return Err(EconomyError::StockFull);
         }
+        // Fitted upgrades sell back with the hull.
         let price = self
-            .ship_resale(ship.kind)
+            .ship_sale_value(ship)
             .ok_or(EconomyError::UnknownMarket)?;
         if market.credits < price {
             return Err(EconomyError::MarketInsufficientCredits);

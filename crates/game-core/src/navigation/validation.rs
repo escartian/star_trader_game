@@ -10,6 +10,20 @@ impl TravelState {
         if crate::travel::clean_captain_name(&self.captain_name) != self.captain_name {
             return Err("Invalid captain name".into());
         }
+        // Chase trails are display paths of at most one point per step.
+        let steps = super::chase::STEPS as usize;
+        let trails = std::iter::once(self.navigation.chase_trail.len())
+            .chain(self.navigation.bands.iter().map(|band| band.trail.len()))
+            .chain(
+                self.navigation
+                    .police
+                    .patrols
+                    .iter()
+                    .map(|patrol| patrol.trail.len()),
+            );
+        if trails.into_iter().any(|len| len > steps) {
+            return Err("Invalid chase trail".into());
+        }
         if self.navigation.orders.len() > self.fleets.len()
             || self.navigation.encounters.len() > self.fleets.len()
             || u128::from(self.navigation.run)

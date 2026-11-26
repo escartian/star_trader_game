@@ -70,6 +70,10 @@ pub struct RaiderBand {
     /// Runs left backing off (no hunting) after a fight or an escape.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub cooldown: u32,
+    /// Its last run's chase of your fleet, step by step (`chase::Chase::path`),
+    /// for the map's glide; empty when it did not hunt you.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trail: Vec<LocalPosition>,
     /// Set while the band crosses to `system` from another system; it then
     /// neither hunts nor strikes, and `position` is where it will arrive.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -127,6 +131,7 @@ impl TravelState {
             hunting: None,
             stalking: None,
             cooldown: 0,
+            trail: Vec::new(),
             transit: None,
         });
     }
@@ -279,7 +284,7 @@ impl TravelState {
                 }
                 _ => None,
             };
-            let position = match hunt {
+            let position = match &hunt {
                 Some(hunt) => hunt.end,
                 None => step_toward(&self.movement_rules, world, band.position, heading),
             };
@@ -292,8 +297,12 @@ impl TravelState {
             };
             record.heading = heading;
             record.position = position;
+            record.trail = hunt
+                .as_ref()
+                .map(|hunt| hunt.path.clone())
+                .unwrap_or_default();
             if let (Some((Quarry::Fleet(fleet), _)), Some(true)) =
-                (quarry, hunt.map(|hunt| hunt.caught))
+                (quarry, hunt.as_ref().map(|hunt| hunt.caught))
             {
                 events.push(self.strike(&band, fleet, run)?);
             }

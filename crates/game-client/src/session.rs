@@ -36,6 +36,7 @@ mod market;
 mod market_scope;
 mod market_table;
 mod motion;
+mod motion_paths;
 mod navigation;
 mod npc_card;
 mod outfitting;

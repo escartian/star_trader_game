@@ -179,6 +179,10 @@ fn steer(
     systems: &[StarSystem],
     ran: bool,
 ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
+    if ran {
+        // Only this run's chase is drawn (see `curve`).
+        state.navigation.chase_trail.clear();
+    }
     let Some(Pursuit {
         fleet,
         quarry,

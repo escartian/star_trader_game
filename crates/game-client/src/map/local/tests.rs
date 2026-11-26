@@ -361,6 +361,7 @@ fn a_police_patrol_here_is_tappable_and_focusable() {
         answering: None,
         stops: 0,
         cooldown: 0,
+        trail: Vec::new(),
     };
     let mut local = LocalView::new(system);
     local.set_police(vec![crate::session::PatrolMarker {

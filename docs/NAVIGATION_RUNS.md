@@ -88,7 +88,13 @@ integer kilometers. Galaxy coordinates are displayed in light-years. Rendering
 interpolates active course positions from saved progress; it never advances time.
 After each run, own ships and NPC traders glide for one run's time (Run speed) from their pre-run to
 their post-run positions (the Advance interval, so an advance reads as one
-continuous voyage). The glide is display-only; camera-follow, saves and rules use
+continuous voyage). Raider bands and police patrols glide too on the system
+map. A chase curves (`navigation::chase`): a flagship flying an in-system
+pursuit, and a band or patrol hunting your fleet, glide through each of their
+last run's 16 chase steps (`navigation.chase_trail`, and each band's or
+patrol's `trail`) instead of straight from start to end
+(`game-client/src/session/motion_paths.rs`). The glide is display-only;
+camera-follow, saves and rules use
 the authoritative positions, and captures (animations off) show final positions.
 Existing paid voyages from older saves progress on navigation runs too.
 

@@ -256,6 +256,11 @@ pub struct NavigationState {
     /// The flagship's chase of a trader or raider band (see `pursuit`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pursuit: Option<crate::pursuit::Pursuit>,
+    /// The flagship's last in-system chase, step by step, in the system of
+    /// `pursuit.seen` (`navigation::chase`), for the map's glide; empty when
+    /// the last run did not fly one.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub chase_trail: Vec<crate::LocalPosition>,
 }
 
 fn is_zero_count(value: &u64) -> bool {
@@ -297,6 +302,7 @@ impl Default for NavigationState {
             escorts: Vec::new(),
             police: Default::default(),
             pursuit: None,
+            chase_trail: Vec::new(),
         }
     }
 }

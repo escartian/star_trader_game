@@ -78,7 +78,7 @@ pub fn patrol_run(
             }
             _ => None,
         };
-        let position = match hunt {
+        let position = match &hunt {
             Some(hunt) => hunt.end,
             None => step_toward(&state.movement_rules, world, patrol.position, heading),
         };
@@ -93,6 +93,10 @@ pub fn patrol_run(
             record.stops = stops;
             record.heading = heading;
             record.position = position;
+            record.trail = hunt
+                .as_ref()
+                .map(|hunt| hunt.path.clone())
+                .unwrap_or_default();
             (record.pursuing, record.answering) = match quarry {
                 Some((Quarry::Fleet(fleet), _)) => (Some(fleet), None),
                 Some((Quarry::Band(band), _)) => (None, Some(band)),
@@ -100,7 +104,7 @@ pub fn patrol_run(
             };
         }
         match quarry {
-            Some((Quarry::Fleet(fleet), _)) if hunt.is_some_and(|hunt| hunt.caught) => {
+            Some((Quarry::Fleet(fleet), _)) if hunt.as_ref().is_some_and(|hunt| hunt.caught) => {
                 events.push(stop_fleet(state, &patrol, fleet, false)?);
             }
             Some((Quarry::Band(band), at))

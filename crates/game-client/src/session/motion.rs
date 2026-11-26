@@ -2,7 +2,8 @@
 //! run left them, so a run reads as movement instead of a jump. Display only: the
 //! authoritative state, saves and camera-follow logic never see these positions.
 //! Courses are straight within a leg and a run never starts a second leg, so a
-//! straight glide between the two positions stays on the plotted path.
+//! straight glide between the two positions stays on the plotted path. Chases
+//! curve; those glide along their recorded path (`motion_paths`).
 use super::LocalSession;
 use game_core::{
     StarSystem,
@@ -20,7 +21,7 @@ pub(super) const GLIDE_SECONDS: f64 = super::advance::RUN_INTERVAL_SECONDS;
 /// The latest run's glide.
 pub(super) struct Motion {
     /// Own state before the run: where each ship's glide starts.
-    before: TravelState,
+    pub(super) before: TravelState,
     /// NPC traders before the run, matched to current traders by ID.
     traders_before: Vec<Trader>,
     /// UI clock (seconds) when the glide began; set on the first frame after the run.
@@ -54,6 +55,9 @@ impl LocalSession {
 
     /// Galaxy-space drawing position of an own ship; glides after each run.
     pub fn display_position(&self, ship: ShipId, systems: &[StarSystem]) -> Option<SpacePosition> {
+        if let Some(curve) = self.chase_glide(ship, systems) {
+            return Some(curve);
+        }
         let target = self.state.navigation_position(ship, systems)?;
         let start = self
             .motion
@@ -109,7 +113,7 @@ impl LocalSession {
     }
 
     /// Fraction of the latest glide shown this frame: 0 until its first frame, 1 when done.
-    fn glide_progress(&self) -> f64 {
+    pub(super) fn glide_progress(&self) -> f64 {
         let Some(motion) = &self.motion else {
             return 1.0;
         };

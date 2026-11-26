@@ -110,6 +110,10 @@ pub struct FactionPatrol {
     /// Runs left backing off.
     #[serde(default)]
     pub cooldown: u32,
+    /// Its last run's chase of your fleet, step by step (`chase::Chase::path`),
+    /// for the map's glide; empty when it did not hunt you.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trail: Vec<LocalPosition>,
 }
 
 /// The patrol behind a `Police` contact.
@@ -188,6 +192,7 @@ impl TravelState {
             answering: None,
             stops: 0,
             cooldown: 0,
+            trail: Vec::new(),
         });
         police.next_id += 1;
     }

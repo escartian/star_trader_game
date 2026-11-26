@@ -377,9 +377,16 @@ impl Map {
         let show_traffic = self.session.client_options().show_traffic;
         let mut bands = self.session.raider_bands().to_vec();
         bands.retain(|band| self.session.npc_shown(Quarry::Band(band.id)));
+        // Drawn where the latest run's glide has them (along a chase curve).
+        for band in &mut bands {
+            band.position = self.session.band_display_position(band);
+        }
         local.set_bands(bands);
         let mut police = self.session.police_patrols();
         police.retain(|marker| self.session.npc_shown(Quarry::Patrol(marker.patrol.id)));
+        for marker in &mut police {
+            marker.patrol.position = self.session.patrol_display_position(&marker.patrol);
+        }
         local.set_police(police);
         let mut traders = self
             .session

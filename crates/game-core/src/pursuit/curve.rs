@@ -46,6 +46,7 @@ pub(super) fn close_in(
         .filter(|(system, _)| *system == closing.system)
         .map_or(closing.quarry_now, |(_, at)| at);
     remember(state, closing.system, closing.quarry_now);
+    state.navigation.chase_trail.clear();
     // Hold during runs: the chase, not a course, moves the flagship.
     if state
         .navigation
@@ -99,6 +100,7 @@ pub(super) fn close_in(
         state.navigation.pursuit = None;
         return Ok(vec![note("Pursuit ended: not enough fuel to keep up.")]);
     }
+    state.navigation.chase_trail = flight.path.clone();
     for id in &members.0 {
         let ship = state.ship_mut(*id)?;
         ship.fuel -= fuel;

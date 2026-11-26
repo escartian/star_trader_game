@@ -17,7 +17,7 @@ use crate::LocalPosition;
 pub const STEPS: i64 = 16;
 
 /// Where a chase left the chaser.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Chase {
     /// The chaser's position at the end of the run.
     pub end: LocalPosition,
@@ -25,6 +25,9 @@ pub struct Chase {
     pub caught: bool,
     /// Distance flown, in km (for fuel).
     pub flown_km: i64,
+    /// Where the chaser was at the end of each step ([`STEPS`] points, the
+    /// last one `end`): the curve the map draws its glide along.
+    pub path: Vec<LocalPosition>,
 }
 
 /// One run of a chase: the chaser at `from` covers up to `budget_km` while
@@ -39,35 +42,34 @@ pub fn chase(
     let step_km = budget_km / STEPS;
     let mut at = from;
     let mut flown_km = 0;
-    if distance(at, seen) <= reach_km {
-        flown_km += distance(seen, now);
-        return alongside(now, flown_km);
-    }
+    let mut path = Vec::with_capacity(STEPS as usize);
+    let mut caught = distance(at, seen) <= reach_km;
     for step in 1..=STEPS {
         let quarry = lerp(seen, now, step, STEPS);
-        let gap = distance(at, quarry);
-        let moved = gap.min(step_km);
-        at = clear_of_star(toward(at, quarry, moved, gap), star_exclusion_km);
-        flown_km += moved;
-        if distance(at, quarry) <= reach_km {
-            // Caught: keep pace with it for the rest of the run.
-            flown_km += distance(quarry, now);
-            return alongside(now, flown_km);
+        if caught {
+            // Alongside: keep pace with it for the rest of the run.
+            flown_km += distance(at, quarry);
+            at = quarry;
+        } else {
+            let gap = distance(at, quarry);
+            let moved = gap.min(step_km);
+            at = clear_of_star(toward(at, quarry, moved, gap), star_exclusion_km);
+            flown_km += moved;
+            caught = distance(at, quarry) <= reach_km;
+        }
+        path.push(at);
+    }
+    if caught {
+        at = now;
+        if let Some(last) = path.last_mut() {
+            *last = now;
         }
     }
     Chase {
         end: at,
-        caught: false,
+        caught,
         flown_km,
-    }
-}
-
-/// Caught: alongside the quarry where it ends the run.
-fn alongside(now: LocalPosition, flown_km: i64) -> Chase {
-    Chase {
-        end: now,
-        caught: true,
-        flown_km,
+        path,
     }
 }
 
@@ -139,6 +141,8 @@ mod tests {
         assert!(result.caught);
         assert_eq!(result.end, at(0, 50_000_000));
         assert!(result.flown_km <= RUN);
+        assert_eq!(result.path.len(), STEPS as usize);
+        assert_eq!(result.path.last(), Some(&result.end));
     }
 
     #[test]
@@ -155,6 +159,20 @@ mod tests {
         );
         assert!(result.caught, "{result:?}");
         assert_eq!(result.end, now);
+        // The path bends: its points do not all lie on the start–end line.
+        let start = at(-120_000_000, -60_000_000);
+        let off_line = result.path.iter().any(|point| {
+            let (dx, dz) = (
+                (now.x_km - start.x_km) as f64,
+                (now.z_km - start.z_km) as f64,
+            );
+            let (px, pz) = (
+                (point.x_km - start.x_km) as f64,
+                (point.z_km - start.z_km) as f64,
+            );
+            (dx * pz - dz * px).abs() / dx.hypot(dz) > 1_000_000.0
+        });
+        assert!(off_line, "{:?}", result.path);
     }
 
     #[test]

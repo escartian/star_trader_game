@@ -309,3 +309,21 @@ fn a_new_captain_sees_every_control_and_a_tip_card_per_milestone() {
         assert!(texts.iter().any(|text| text == entry), "{entry}: {texts:?}");
     }
 }
+
+#[test]
+fn map_layers_start_shown_and_toggle_independently() {
+    use crate::preferences::MapLayer;
+    let mut host = LocalSession::new(game_server::Session::default());
+    let options = host.client_options();
+    assert!(options.show_traffic && options.show_territory);
+    host.toggle_map_layer(MapLayer::Traffic);
+    assert!(!host.client_options().show_traffic);
+    assert!(host.client_options().show_territory);
+    host.toggle_map_layer(MapLayer::Territory);
+    host.toggle_map_layer(MapLayer::Traffic);
+    let options = host.client_options();
+    assert!(options.show_traffic && !options.show_territory);
+    // Older preference files without the fields load with both layers shown.
+    let old: crate::preferences::ClientOptions = serde_json::from_str("{}").unwrap();
+    assert!(old.show_traffic && old.show_territory);
+}

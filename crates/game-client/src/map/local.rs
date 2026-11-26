@@ -100,6 +100,10 @@ pub struct LocalView {
     move_request: Option<game_core::movement::MoveTarget>,
     /// The map's area last frame; the sheet (drawn before the map) uses it.
     last_rect: Rect,
+    /// Whether NPC traffic is drawn (the player's map option).
+    show_traffic: bool,
+    /// The traffic button was pressed this frame (see `take_traffic_toggle`).
+    traffic_toggled: bool,
 }
 
 impl LocalView {
@@ -129,6 +133,8 @@ impl LocalView {
             selection_request: None,
             move_request: None,
             last_rect: Rect::NOTHING,
+            show_traffic: true,
+            traffic_toggled: false,
             frame_overview: true,
             active_ship: game_core::travel::ShipId(1),
         }
@@ -168,6 +174,15 @@ impl LocalView {
 
     pub fn set_landing(&mut self, landing: game_core::movement::LandingRules) {
         self.landing = landing;
+    }
+
+    pub fn set_show_traffic(&mut self, show: bool) {
+        self.show_traffic = show;
+    }
+
+    /// True once after the player pressed the traffic button.
+    pub fn take_traffic_toggle(&mut self) -> bool {
+        std::mem::take(&mut self.traffic_toggled)
     }
 
     pub fn set_preview_route(&mut self, route: Vec<LocalPosition>) {

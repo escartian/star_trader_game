@@ -168,11 +168,17 @@ impl Map {
             rect,
             "galaxy-map-buttons",
             &[
-                CameraAction::Search,
-                CameraAction::Reset,
-                CameraAction::FocusSelection,
-                CameraAction::FocusFleet,
-            ],
+                (CameraAction::Search, None),
+                (CameraAction::Reset, None),
+                (CameraAction::FocusSelection, None),
+                (CameraAction::FocusFleet, None),
+            ]
+            .into_iter()
+            .chain(self.session.factions_active().then_some((
+                CameraAction::ToggleTerritory,
+                Some(self.session.client_options().show_territory),
+            )))
+            .collect::<Vec<_>>(),
         );
         match action {
             Some(CameraAction::Reset) => {
@@ -181,6 +187,9 @@ impl Map {
             }
             Some(CameraAction::FocusSelection) => self.focus_selection(),
             Some(CameraAction::Search) => super::search::toggle(ctx),
+            Some(CameraAction::ToggleTerritory) => self
+                .session
+                .toggle_map_layer(crate::preferences::MapLayer::Territory),
             Some(CameraAction::FocusFleet) => {
                 if let Some(position) = self.route_position() {
                     self.camera.focus_on(position);

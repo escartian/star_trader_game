@@ -19,7 +19,9 @@ impl Map {
         }
         self.camera.zoom_toward_pointer(ui, &response, 0.15);
         visuals::background(&painter, rect, "GALAXY / light-years");
-        if self.scene == super::fixtures::Scene::Session {
+        if self.scene == super::fixtures::Scene::Session
+            && self.session.client_options().show_territory
+        {
             self.draw_territory(&painter, rect);
         }
         let hover = response

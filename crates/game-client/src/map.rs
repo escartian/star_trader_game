@@ -72,6 +72,8 @@ pub struct Map {
     songbook: (bool, songbook::View),
     /// Whether the context card is open, and the message pop-up.
     card: shell_card::CardState,
+    /// Traced faction regions, rebuilt when ownership changes.
+    territory: std::cell::RefCell<Option<territory::TerritoryCache>>,
 }
 
 fn position(system: &StarSystem) -> DVec3 {
@@ -143,6 +145,7 @@ impl Map {
             applied_options: None,
             songbook: (false, songbook::View::default()),
             card: shell_card::CardState::default(),
+            territory: std::cell::RefCell::new(None),
         }
     }
 
@@ -378,6 +381,7 @@ impl Map {
         let (selected, pursued) = self.session.npc_focus();
         local.set_npc_focus((selected, pursued, self.session.flagship_fleet()));
         local.set_landing(self.session.landing_rules().clone());
+        local.set_show_traffic(self.session.client_options().show_traffic);
         local.set_campaign_marks(self.session.campaign_marks());
         local.set_headings(self.session.fleet_headings(&self.session_systems));
         local.set_trade_options(self.session.trade_options(local.system().id));
@@ -386,6 +390,10 @@ impl Map {
             .ships_for_map(local.system(), &self.session_systems);
         let fleet_records = self.session.fleets().to_vec();
         let back = local.ui(ctx, &display_ships, &fleet_records);
+        if local.take_traffic_toggle() {
+            self.session
+                .toggle_map_layer(crate::preferences::MapLayer::Traffic);
+        }
         if let Some(ship) = local.take_market_request() {
             // Trading from another fleet in this system switches the selection first.
             self.session.select_map_fleet(ship);

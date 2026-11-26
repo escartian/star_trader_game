@@ -35,9 +35,10 @@ impl LocalView {
             rect,
             "local-map-buttons",
             &[
-                CameraAction::Overview,
-                CameraAction::FocusFleet,
-                CameraAction::Reset,
+                (CameraAction::Overview, None),
+                (CameraAction::FocusFleet, None),
+                (CameraAction::Reset, None),
+                (CameraAction::ToggleTraffic, Some(self.show_traffic)),
             ],
         );
         match action {
@@ -47,6 +48,7 @@ impl LocalView {
             }
             Some(CameraAction::Overview) => self.frame_overview = true,
             Some(CameraAction::FocusSelection) => self.focus(),
+            Some(CameraAction::ToggleTraffic) => self.traffic_toggled = true,
             Some(CameraAction::FocusFleet) => {
                 if let Some(anchor) = ships
                     .iter()
@@ -56,8 +58,8 @@ impl LocalView {
                     self.camera.focus_on(anchor);
                 }
             }
-            // Search lives on the galaxy map only.
-            Some(CameraAction::Search) | None => {}
+            // Search and territory live on the galaxy map only.
+            Some(CameraAction::Search | CameraAction::ToggleTerritory) | None => {}
         }
         if !ctx.wants_keyboard_input()
             && !crate::battle::keyboard_claimed(ctx)

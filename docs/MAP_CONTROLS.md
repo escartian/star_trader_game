@@ -95,7 +95,7 @@ takes the screen, framed by two panels.
 | Event card | centred over the map | a contact's decision: an illustrated scene of both sides, the story and the choices as full-width rows; **×** hides it until **Decide** on the card's contact line |
 | Message pop-up | bottom of the map | each new message for about 3 s, then fades over 1 s |
 | Search | galaxy map buttons (magnifier, top of the column) | opens a name box beside the buttons (also Ctrl/Cmd+F); Escape, a pick or the button closes it |
-| Map buttons | map's top-right corner | overview or reset, focus selection and fleet |
+| Map buttons | map's top-right corner | overview or reset, focus selection and fleet; then layer toggles, lit while shown and saved with the display settings: **other fleets** on the system map (NPC traders, police and raider bands; hidden ones cannot be tapped either) and **faction territory** on the galaxy map (when factions are in play) |
 
 The sheet's pages:
 

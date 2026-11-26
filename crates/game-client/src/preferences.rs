@@ -49,6 +49,17 @@ pub struct ClientOptions {
     pub run_pace: RunPace,
     /// How market orders are split among the fleet's ships at a port.
     pub load_order: game_core::fleet_trade::LoadOrder,
+    /// System map: draw NPC traders, police patrols and raider bands.
+    pub show_traffic: bool,
+    /// Galaxy map: draw faction territory.
+    pub show_territory: bool,
+}
+
+/// A map layer the player can switch on and off from the map's buttons.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MapLayer {
+    Traffic,
+    Territory,
 }
 
 /// Seconds per navigation run on the map: the ships' glide and the pause
@@ -102,6 +113,8 @@ impl Default for ClientOptions {
             animations: true,
             run_pace: RunPace::default(),
             load_order: Default::default(),
+            show_traffic: true,
+            show_territory: true,
         }
     }
 }

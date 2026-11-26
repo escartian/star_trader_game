@@ -36,9 +36,15 @@ defaults. Captures and tests start without factions unless they set them up
   Territory does not change during play yet.
 
 The galaxy map draws each connected group of a faction's nearby claimed
-systems as one translucent territory. Borders follow the midway line
-between nearby stars and stop ten light-years from a holding; independent
-systems cut into the region. These outlines show ownership only and do not
+systems as one translucent territory with smooth, rounded edges. Each star
+spreads an influence that fades out at 14 ly; a point belongs to the faction
+whose stars' summed influence there is strongest and strong enough, so a lone
+holding reaches about ten light-years, holdings up to about 20 ly apart merge
+into one region, borders between rivals run near the midway line, and
+independent systems cut into the region (`game-client/src/map/territory.rs`;
+outlines are traced on a 1.25 ly grid and cached until ownership changes). The
+shield button in the galaxy map's button column hides or shows the
+territories; the choice is saved with the display settings. These outlines show ownership only and do not
 change travel or faction influence. Hovering a system names its holder and your
 standing there; the destination card shows the holder's name.
 

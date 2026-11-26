@@ -317,3 +317,36 @@ fn double_clicking_the_body_a_fleet_trades_at_opens_its_market() {
         "the selected fleet's market"
     );
 }
+
+#[test]
+fn hidden_traffic_is_neither_drawn_nor_tappable() {
+    let ctx = egui::Context::default();
+    let system = game_core::demo_galaxy().remove(0);
+    let host = crate::session::LocalSession::new(game_server::Session::default());
+    let mut band = host.raider_bands()[0].clone();
+    band.system = system.id;
+    band.transit = None;
+    band.position = game_core::LocalPosition {
+        x_km: 60_000_000,
+        y_km: 0,
+        z_km: 0,
+    };
+    let mut local = LocalView::new(system);
+    local.set_bands(vec![band]);
+    let frame = |local: &mut LocalView| {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1000.0, 720.0))),
+                ..Default::default()
+            },
+            |ctx| {
+                local.ui(ctx, &[], &[]);
+            },
+        );
+    };
+    frame(&mut local);
+    assert!(!local.npc_hits.is_empty(), "the band is drawn and tappable");
+    local.set_show_traffic(false);
+    frame(&mut local);
+    assert!(local.npc_hits.is_empty());
+}

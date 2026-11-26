@@ -142,9 +142,12 @@ impl LocalView {
         }
         self.draw_campaign(&painter, rect);
         self.npc_hits.clear();
-        self.draw_bands(&painter, rect);
-        self.draw_police(&painter, rect);
-        self.draw_traders(&painter, rect);
+        // Hidden traffic draws nothing and so cannot be tapped either.
+        if self.show_traffic {
+            self.draw_bands(&painter, rect);
+            self.draw_police(&painter, rect);
+            self.draw_traders(&painter, rect);
+        }
         self.draw_fleets(&painter, rect, ships, fleets, &label_bounds);
         self.draw_npc_focus(&painter);
         if response.double_clicked()

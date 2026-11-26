@@ -54,6 +54,18 @@ impl LocalSession {
         self.saves.options
     }
 
+    /// Shows or hides a map layer and remembers the choice.
+    pub fn toggle_map_layer(&mut self, layer: crate::preferences::MapLayer) {
+        let options = &mut self.saves.options;
+        match layer {
+            crate::preferences::MapLayer::Traffic => options.show_traffic ^= true,
+            crate::preferences::MapLayer::Territory => options.show_territory ^= true,
+        }
+        if let Err(error) = self.persist_preferences() {
+            self.notify(format!("Map setting could not be saved: {error}"));
+        }
+    }
+
     #[cfg(not(target_arch = "wasm32"))]
     pub fn save_path(&self) -> PathBuf {
         self.saves.path.clone()

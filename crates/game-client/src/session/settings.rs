@@ -191,7 +191,9 @@ fn options_controls(ui: &mut egui::Ui, options: &mut ClientOptions) {
     ui.checkbox(&mut options.music_in_game, "Play music during the game")
         .on_hover_text("Off: the theme plays on the main menu only");
     if cfg!(target_arch = "wasm32") {
-        ui.small("The browser build has no audio yet.");
+        ui.small(
+            "In the browser, sound starts after your first click; music loads in the background.",
+        );
     }
     section(ui, Icon::Overview, "Display");
     if !cfg!(target_arch = "wasm32") {

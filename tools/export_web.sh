@@ -12,8 +12,12 @@ trap 'rm -rf "$build"' EXIT
 (cd "$root/crates/game-client" && trunk build --release --public-url ./ --dist "$build")
 
 mkdir -p "$dest"
-# Remove only the previous bundle: hashed game-client files and the page.
+# Remove only the previous bundle: hashed game-client files, the page and
+# the music folder (fetched by the game after it starts).
 rm -f "$dest"/game-client-*.js "$dest"/game-client-*_bg.wasm "$dest"/index.html
+rm -rf "$dest"/music
 cp "$build"/index.html "$build"/game-client-*.js "$build"/game-client-*_bg.wasm "$dest"/
+mkdir -p "$dest"/music
+cp "$build"/music/*.ogg "$build"/music/manifest.json "$dest"/music/
 echo "Exported to $dest:"
 ls -lh "$dest"

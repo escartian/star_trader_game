@@ -132,7 +132,8 @@ deletion of it and its backup; the menu never autosaves over it. In game,
 [Settings](docs/previews/settings.png) (main menu, or **Menu → Settings** in game)
 hold master and music volume, mute, music during play, fullscreen, interface scale
 (75–200%), animations, the guide and autosave. They are saved immediately with
-the other client preferences. The browser build has no audio yet. `data/settings.json` remembers the
+the other client preferences. In the browser, sound starts on the first click
+and the soundtrack streams in, slowest tempo first. `data/settings.json` remembers the
 selected save, and `--save PATH` selects another file. `--continue` loads the
 selected file directly, while `--new` starts a session directly. **Session / saves**
 provides New, Save, Load and slot selection after entering a game. Autosave runs on

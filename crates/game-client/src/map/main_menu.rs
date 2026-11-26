@@ -257,10 +257,13 @@ fn title_page(
     message(ui, menu);
     ui.add_space(12.0);
     ui.vertical_centered(|ui| {
-        ui.small(format!(
-            "v{} · offline prototype",
-            env!("CARGO_PKG_VERSION")
-        ));
+        // The browser build says where its saves live.
+        let build = if cfg!(target_arch = "wasm32") {
+            "browser prototype · saves stay in this browser"
+        } else {
+            "offline prototype"
+        };
+        ui.small(format!("v{} · {build}", env!("CARGO_PKG_VERSION")));
     });
     choice
 }

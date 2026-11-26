@@ -27,15 +27,17 @@ fastrand = "=2.5.0"
 # Compresses saves kept in a browser's storage (`storage::codec`); pure Rust.
 flate2 = "=1.1.10"
 
-# Desktop music playback (Ogg Vorbis decoding through symphonia, output via cpal).
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Music and effects (Ogg Vorbis decoding through symphonia, output via cpal).
 rodio = { version = "=0.21.1", default-features = false, features = ["playback", "vorbis"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 egui-wgpu = { version = "=0.31.1", default-features = false, features = ["fragile-send-sync-non-atomic-wasm"] }
 wasm-bindgen = "=0.2.129"
 wasm-bindgen-futures = "=0.4.79"
-web-sys = { version = "=0.3.106", features = ["console", "Document", "HtmlCanvasElement", "Storage", "Window"] }
+# Browser audio output (Web Audio) for rodio; music is fetched after start.
+cpal = { version = "=0.16.0", features = ["wasm-bindgen"] }
+js-sys = "=0.3.106"
+web-sys = { version = "=0.3.106", features = ["console", "Document", "HtmlCanvasElement", "Response", "Storage", "Window"] }
 web-time = "=1.1.0"
 wgpu = { version = "=24.0.1", default-features = false, features = ["fragile-send-sync-non-atomic-wasm", "webgl", "webgpu", "wgsl"] }
 

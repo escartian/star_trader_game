@@ -53,7 +53,8 @@ only the embedded ship GLBs used by battle and NPC traffic.
 Music is client I/O in `game-client/src/audio.rs`. The map decides which track
 should play (the main menu theme, or in game when the player enables it) and
 the gain from the Settings sliders; `audio` owns the device through rodio
-(desktop only; the browser build is silent). `main` opens the device and hands
+(on desktop, and in the browser through Web Audio, opened on the player's
+first click or key press as browsers require). `main` opens the device and hands
 it to the map, so tests and captures never touch audio hardware. The music is
 an original Strudel composition kept in `assets/source/music/` (a shared
 library, one file per family of blocks (main, space, Space Disco and Night Drift) and a
@@ -76,8 +77,13 @@ with arrows and chances from the embedded manifest. Selecting a part
 in the Songbook sends an atomic request to the audio source; it switches on a
 stereo frame edge and crossfades for two seconds, then resumes weighted valid
 transitions. Right-clicking a part sends a separate queue request that replaces
-the drawn successor, so it plays at the next block boundary. Browser audio is
-still pending.
+the drawn successor, so it plays at the next block boundary. Desktop embeds the
+blocks; the browser build fetches them from `music/` beside the page
+(`audio/library.rs`; Trunk copies `assets/music`), slowest tempo first so the
+opening 60 bpm music can begin while faster parts arrive
+(`music_graph/catalog.rs` `load_order`). The sequencer only moves to loaded
+blocks, playing another loaded block at the same tempo (or repeating) until a
+successor has arrived.
 Original Ogg effects are embedded from `assets/effects/sounds/`; the same rodio
 output mixes short UI and battle cues with music. Their reproducible synthesizer
 is in `assets/source/effects/`. Battle view state schedules each cue at the

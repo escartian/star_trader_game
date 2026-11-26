@@ -169,3 +169,36 @@ fn joins_on_the_exact_stereo_sample() {
         old.next().unwrap() + new.next().unwrap() * sequencer.ramp.start_gain
     );
 }
+
+#[test]
+fn the_browser_fetches_the_slow_start_first_and_every_block_once() {
+    let order = load_order().unwrap();
+    let graph = Manifest::embedded().unwrap();
+    assert_eq!(order.len(), NAMES.len());
+    let mut seen = order.clone();
+    seen.sort_unstable();
+    seen.dedup();
+    assert_eq!(seen.len(), NAMES.len(), "each block once");
+    let name = |index: usize| NAMES[index].strip_suffix(".ogg").unwrap();
+    assert_eq!(
+        name(order[0]),
+        graph.start,
+        "the start block (drift_a) first"
+    );
+    let tempo = |index: usize| {
+        let block = &graph.blocks[name(index)];
+        (block.from_bpm, block.to_bpm)
+    };
+    // Tempo never drops along the order, and every 60 bpm block comes first.
+    let top = |index: &usize| {
+        let (from, to) = tempo(*index);
+        from.max(to)
+    };
+    assert!(
+        order.windows(2).all(|pair| top(&pair[0]) <= top(&pair[1])),
+        "{order:?}"
+    );
+    let slow = order.iter().take_while(|index| top(index) == 60).count();
+    assert!(slow >= 5, "the opening tempo's blocks lead: {slow}");
+    assert_eq!(tempo(order[0]), (60, 60));
+}

@@ -43,9 +43,8 @@ fn run() -> Result<()> {
     };
     let selected = settings.save_path.clone();
     map.apply_preferences(settings, Some(settings_path))?;
-    // Silent for now: the browser build has no audio output yet.
-    let (music, _) = crate::audio::Music::open();
-    map.set_music(music);
+    // Music downloads now; sound starts on the first input (`App::audio`).
+    crate::audio::start_loading_music();
     // As on desktop: the main menu, with Continue for the last game.
     map.open_save_chooser(selected, None);
     if let Some(message) = notice {
@@ -58,6 +57,7 @@ fn run() -> Result<()> {
         map,
         next_redraw: None,
         last_autosave: Instant::now(),
+        audio: false,
     };
     event_loop.spawn_app(app);
     Ok(())
@@ -70,6 +70,9 @@ struct App {
     next_redraw: Option<Instant>,
     /// When the game was last autosaved (see `autosave`).
     last_autosave: Instant,
+    /// Audio output is open. Browsers allow sound only after the player's
+    /// first click, tap or key press, so it opens then.
+    audio: bool,
 }
 
 /// A tab can be closed without warning, so the game also saves this often.
@@ -135,6 +138,21 @@ impl ApplicationHandler for App {
         let Some(window) = self.window.as_ref().filter(|window| window.id() == id) else {
             return;
         };
+        if !self.audio
+            && matches!(
+                event,
+                WindowEvent::MouseInput { .. }
+                    | WindowEvent::Touch(_)
+                    | WindowEvent::KeyboardInput { .. }
+            )
+        {
+            self.audio = true;
+            let (music, problem) = crate::audio::Music::open();
+            self.map.set_music(music);
+            if let Some(message) = problem {
+                web_sys::console::warn_1(&JsValue::from_str(&message));
+            }
+        }
         // Switching tabs or minimising hides the page: save before it may go.
         if matches!(event, WindowEvent::Occluded(true)) {
             self.last_autosave = Instant::now();

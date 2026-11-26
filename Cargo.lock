@@ -702,6 +702,7 @@ dependencies = [
 name = "game-client"
 version = "0.1.0"
 dependencies = [
+ "cpal",
  "egui",
  "egui-wgpu",
  "egui-winit",
@@ -713,6 +714,7 @@ dependencies = [
  "glam",
  "gltf",
  "image",
+ "js-sys",
  "pollster",
  "resvg",
  "rodio",

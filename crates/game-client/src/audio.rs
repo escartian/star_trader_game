@@ -1,13 +1,22 @@
 //! Music playback. The map decides which track should play and how loud; this
-//! module owns the audio device. Desktop builds play through rodio; the browser
-//! build (and any machine without an output device) stays silent.
+//! module owns the audio device, through rodio on desktop and in the browser
+//! (Web Audio). A machine without an output device stays silent. In the
+//! browser the music is fetched after start (`library`) and sound begins on
+//! the player's first input, as browsers require.
 //!
 //! Volumes are slider percentages (0-100). Loudness is roughly logarithmic, so a
 //! slider fraction `f` maps to the linear amplitude gain `f²`: half the slider is
 //! about -12 dB rather than -6 dB, which sounds closer to "half as loud".
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(target_arch = "wasm32")]
+mod library;
 mod music_graph;
+
+/// Browser: starts fetching the music in the background (see `library`).
+#[cfg(target_arch = "wasm32")]
+pub fn start_loading_music() {
+    library::start();
+}
 
 /// Seconds for music to fade in after starting and out before stopping.
 const FADE_SECONDS: f32 = 1.2;
@@ -107,11 +116,15 @@ impl Music {
         } else if self.playing.is_some() {
             self.fade = (self.fade + step).min(1.0);
         }
-        if let Some(output) = &self.output {
-            output.set_gain(self.gain * self.fade);
+        let level = self.gain * self.fade;
+        let mut waiting = false;
+        if let Some(output) = &mut self.output {
+            output.retry(level);
+            output.set_gain(level);
+            waiting = output.waiting();
         }
         let settled_level = if self.playing.is_some() { 1.0 } else { 0.0 };
-        self.playing != self.wanted || self.fade != settled_level
+        self.playing != self.wanted || self.fade != settled_level || waiting
     }
 
     pub fn set_effects_gain(&mut self, gain: f32) {
@@ -154,7 +167,6 @@ impl Music {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 mod output {
     use super::{
         Effect, Track,
@@ -182,6 +194,9 @@ mod output {
     pub struct Output {
         // Field order matters: the sink must drop before its stream.
         sink: Option<Sink>,
+        /// A track that could not start yet (its first block still loading in
+        /// the browser); retried until it can.
+        pending: Option<Track>,
         part: Option<Arc<AtomicUsize>>,
         up_next: Option<Arc<AtomicUsize>>,
         selection: Option<Arc<AtomicUsize>>,
@@ -198,6 +213,7 @@ mod output {
             stream.log_on_drop(false);
             Ok(Self {
                 sink: None,
+                pending: None,
                 part: None,
                 up_next: None,
                 selection: None,
@@ -208,6 +224,7 @@ mod output {
         }
 
         pub fn play(&mut self, track: Option<Track>) {
+            self.pending = None;
             self.sink = None;
             self.part = None;
             self.up_next = None;
@@ -227,7 +244,26 @@ mod output {
                     sink.append(source);
                     self.sink = Some(sink);
                 }
-                Err(error) => eprintln!("The music could not be started: {error}"),
+                Err(error) => {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    eprintln!("The music could not be started: {error}");
+                    #[cfg(target_arch = "wasm32")]
+                    let _ = error;
+                    self.pending = track;
+                }
+            }
+        }
+
+        /// Whether a track is waiting to start (see `pending`).
+        pub fn waiting(&self) -> bool {
+            self.pending.is_some()
+        }
+
+        /// Starts a waiting track once it can, at `gain`.
+        pub fn retry(&mut self, gain: f32) {
+            if let Some(track) = self.pending {
+                self.play(Some(track));
+                self.set_gain(gain);
             }
         }
 
@@ -289,44 +325,6 @@ mod output {
                 Err(error) => eprintln!("Effect {effect:?} could not be played: {error}"),
             }
         }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-mod output {
-    use super::{Effect, Track};
-
-    /// The browser build has no music yet (see ROADMAP.md).
-    pub struct Output;
-
-    impl Output {
-        pub fn open() -> Result<Self, String> {
-            Err("the browser build has no audio yet".into())
-        }
-
-        pub fn play(&mut self, _: Option<Track>) {}
-
-        pub fn set_gain(&self, _: f32) {}
-
-        pub fn current_block(&self) -> Option<&'static str> {
-            None
-        }
-
-        pub fn next_block(&self) -> Option<&'static str> {
-            None
-        }
-
-        pub fn select_part(&self, _: &str) -> bool {
-            false
-        }
-
-        pub fn queue_part(&self, _: &str) -> bool {
-            false
-        }
-
-        pub fn set_effects_gain(&mut self, _: f32) {}
-
-        pub fn play_effect(&mut self, _: Effect, _: f32) {}
     }
 }
 

@@ -1,189 +1,30 @@
-//! Embedded music blocks and a sample aligned, weighted sequencer.
+//! Music blocks and a sample aligned, weighted sequencer.
 //! The manifest's `frames` excludes the nine second reverb tail in each Ogg.
 //! All files are stereo 48 kHz; a transition occurs before sample `frames * 2`.
+//!
+//! Desktop builds embed every block. The browser build fetches them after
+//! start (`library`), nearest the start block first ([`load_order`]); the
+//! sequencer only moves to blocks already loaded, repeating the current one
+//! until a successor arrives.
 
-use rodio::{Decoder, Source};
-use serde::Deserialize;
-use std::collections::BTreeMap;
-use std::io::Cursor;
+use rodio::Source;
 use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
 };
 use std::time::Duration;
 
-type BlockDecoder = Decoder<Cursor<&'static [u8]>>;
-
-const MANIFEST: &str = include_str!("../../../../assets/music/manifest.json");
-/// Embeds `assets/music/<name>.ogg` for each block name, in this order.
-macro_rules! blocks {
-    ($($name:ident),* $(,)?) => {
-        &[$((
-            concat!(stringify!($name), ".ogg"),
-            include_bytes!(concat!("../../../../assets/music/", stringify!($name), ".ogg")),
-        )),*]
-    };
-}
-
-const AUDIO: &[(&str, &[u8])] = blocks![
-    drift_a,
-    drift_b,
-    space,
-    rise_70,
-    rise_80,
-    space_80,
-    depart_a,
-    depart_b,
-    rise_90,
-    rise_100,
-    cruise_a,
-    cruise_b,
-    space_100,
-    solo,
-    rise_110,
-    rise_120,
-    arrive_a,
-    arrive_b,
-    space_120,
-    space_rise_80,
-    space_rise_100,
-    space_rise_120,
-    space_fall_100,
-    space_fall_80,
-    space_fall_60,
-    disco_60,
-    disco_rise_80,
-    disco_80,
-    disco_rise_100,
-    disco_100,
-    disco_rise_120,
-    disco_120,
-    disco_fall_100,
-    disco_fall_80,
-    disco_fall_60,
-    night_60,
-    night_rise_80,
-    night_80,
-    night_rise_100,
-    night_100,
-    night_rise_120,
-    night_120,
-    night_fall_100,
-    night_fall_80,
-    night_fall_60,
-    fanfare,
-    fall_110,
-    fall_100,
-    fall_90,
-    fall_80,
-    wind,
-    fall_70,
-    fall_60,
-];
+mod catalog;
+use catalog::{Block, BlockDecoder, Manifest, audio_index, block_bytes, decoder};
+#[cfg(test)]
+use catalog::{NAMES, load_order};
+#[cfg(target_arch = "wasm32")]
+pub(super) use catalog::{file_name, load_order};
+pub(super) use catalog::{part_index, part_name};
 
 const NO_SELECTION: usize = usize::MAX;
 /// Two seconds for an explicitly chosen part to replace the current one.
 const SELECTION_FADE_SAMPLES: usize = 48_000 * 2 * 2;
-
-/// Stable names for the UI; the audio thread publishes an index into `AUDIO`.
-pub(super) fn part_name(index: usize) -> Option<&'static str> {
-    AUDIO
-        .get(index)
-        .and_then(|(file, _)| file.strip_suffix(".ogg"))
-}
-
-pub(super) fn part_index(name: &str) -> Option<usize> {
-    AUDIO
-        .iter()
-        .position(|(file, _)| file.strip_suffix(".ogg") == Some(name))
-}
-
-fn audio_index(file: &str) -> usize {
-    AUDIO
-        .iter()
-        .position(|(name, _)| *name == file)
-        .expect("validated manifest references embedded audio")
-}
-
-#[derive(Deserialize)]
-struct Manifest {
-    sample_rate: u32,
-    start: String,
-    blocks: BTreeMap<String, Block>,
-}
-
-#[derive(Deserialize)]
-struct Block {
-    file: String,
-    frames: usize,
-    /// Leveled active RMS before the shared peak gain; only ratios are used.
-    rms: f32,
-    from_bpm: u32,
-    to_bpm: u32,
-    next: BTreeMap<String, u32>,
-}
-
-impl Manifest {
-    fn embedded() -> Result<Self, String> {
-        let graph: Self = serde_json::from_str(MANIFEST).map_err(|error| error.to_string())?;
-        graph.validate()?;
-        Ok(graph)
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.sample_rate != 48_000 || !self.blocks.contains_key(&self.start) {
-            return Err("invalid music sample rate or start block".into());
-        }
-        if self.blocks.len() != AUDIO.len() {
-            return Err("music block count does not match embedded files".into());
-        }
-        for (name, block) in &self.blocks {
-            if block.frames == 0
-                || !block.rms.is_finite()
-                || block.rms <= 0.0
-                || block.next.is_empty()
-                || block.from_bpm == 0
-                || block.to_bpm == 0
-            {
-                return Err(format!("invalid music block {name}"));
-            }
-            if AUDIO.iter().all(|(file, _)| *file != block.file) {
-                return Err(format!("missing embedded audio for {name}"));
-            }
-            for (next, weight) in &block.next {
-                let Some(target) = self.blocks.get(next) else {
-                    return Err(format!("unknown successor {next} for {name}"));
-                };
-                if *weight == 0 || block.to_bpm != target.from_bpm {
-                    return Err(format!("invalid tempo transition {name} to {next}"));
-                }
-            }
-        }
-        Ok(())
-    }
-
-    fn choose_next<'a>(&'a self, name: &str) -> &'a str {
-        let next = &self.blocks[name].next;
-        let total: u32 = next.values().sum();
-        let mut draw = fastrand::u32(0..total);
-        for (name, weight) in next {
-            if draw < *weight {
-                return name;
-            }
-            draw -= weight;
-        }
-        unreachable!("positive transition weights sum to total")
-    }
-}
-
-fn decoder(file: &str) -> Result<BlockDecoder, String> {
-    let bytes = AUDIO
-        .iter()
-        .find(|(name, _)| *name == file)
-        .ok_or_else(|| format!("missing embedded music file {file}"))?
-        .1;
-    Decoder::new(Cursor::new(bytes)).map_err(|error| error.to_string())
-}
 
 /// Counts interleaved samples, so both stereo channels cross at one frame edge.
 struct JoinClock {
@@ -336,7 +177,7 @@ impl MusicGraph {
     /// tempos. Its own successor is drawn as usual once it starts.
     fn queue(&mut self, index: usize) {
         let Some(name) = part_name(index) else { return };
-        if self.graph.blocks.contains_key(name) {
+        if self.graph.blocks.contains_key(name) && block_bytes(index).is_some() {
             self.upcoming = name.to_owned();
             self.up_next.store(index, Ordering::Release);
         }

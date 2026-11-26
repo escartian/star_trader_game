@@ -7,9 +7,10 @@ use super::{
 };
 use game_core::{
     campaign::{CampaignEnd, Road},
-    economy::Commodity,
+    economy::{Commodity, Credits},
     factions::Faction,
     fleet::{FleetId, ShipKind},
+    jobs::{Job, JobKind, Task, quests::QuestRef},
     navigation::{EncounterChoice, EncounterKind, NavigationError},
     npc::{REFIT_RUNS, market_location},
     piracy,
@@ -167,20 +168,41 @@ fn an_outgunned_trader_hands_over_half_its_cargo_most_valuable_first() {
 }
 
 #[test]
-fn a_cargo_seizure_completes_the_pirate_road_after_a_police_escape() {
+fn a_seizure_that_completes_the_free_captains_last_step_wins_the_pirate_road() {
     let mut session = Session::default();
     let (fleet, trader) = meet_trader(&mut session, 0);
     session.economy.factions = claimed([None, Some(Faction::Federation), None])
         .economy
         .factions;
-    session.state.navigation.piracies = 2;
-    session.state.navigation.pirate_seizures = 2;
-    session.state.navigation.pirate_cargo = 12;
-    session.state.navigation.pirate_escapes = 1;
+    let steps = session.economy.rules.quest_catalog.steps(None).len() as u32;
+    let jobs = &mut session.state.jobs;
+    jobs.pirate_steps = steps - 1;
+    let id = jobs.next_id;
+    jobs.next_id += 1;
+    jobs.active.push(Job {
+        id,
+        kind: JobKind::Raid,
+        issuer: session.economy.markets[0].id,
+        faction: None,
+        task: Task::Raid { units: 4, taken: 0 },
+        reward: Credits(200_000),
+        standing: 0,
+        penalty: 0,
+        deadline: 50,
+        title: "The Free Port Charter".into(),
+        brief: String::new(),
+        quest: Some(QuestRef {
+            faction: None,
+            step: steps - 1,
+            runs: 20,
+            intro: String::new(),
+            treaty: false,
+        }),
+    });
     session.economy.traders[0].state.ships[0].hull_damage = 40;
     let contact = hailed(&mut session, fleet, trader);
     choose(&mut session, contact, EncounterChoice::Demand);
-    assert_eq!(session.state.navigation.pirate_cargo, 20);
+    assert_eq!(session.state.jobs.pirate_steps, steps);
     assert_eq!(
         session.state.campaign.ended,
         Some(CampaignEnd::Won {

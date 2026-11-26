@@ -60,13 +60,7 @@ pub fn resolve(
     npc.last_action = format!("Handed {taken} cargo to pirates under threat");
     economy.traders[index] = npc;
     state.navigation.piracies = piracies;
-    if taken > 0 {
-        state.navigation.pirate_seizures = state.navigation.pirate_seizures.saturating_add(1);
-        state.navigation.pirate_cargo = state
-            .navigation
-            .pirate_cargo
-            .saturating_add(u64::from(taken));
-    }
+    record_seizure(state, taken);
     state
         .navigation
         .encounters
@@ -129,17 +123,25 @@ pub fn settle_battle(
         };
     }
     economy.traders[index] = npc;
-    if !shakedown && plunder > 0 {
-        state.navigation.pirate_seizures = state.navigation.pirate_seizures.saturating_add(1);
-        state.navigation.pirate_cargo = state
-            .navigation
-            .pirate_cargo
-            .saturating_add(u64::from(plunder));
+    if !shakedown {
+        record_seizure(state, plunder);
     }
     if let Some(report) = state.navigation.last_combat.as_deref_mut() {
         report.plunder = plunder;
     }
     Ok(())
+}
+
+/// A successful seizure of `units` units from a trader (none when 0): it
+/// advances your pirate record and every active raid job.
+fn record_seizure(state: &mut TravelState, units: u32) {
+    if units == 0 {
+        return;
+    }
+    let record = &mut state.navigation;
+    record.pirate_seizures = record.pirate_seizures.saturating_add(1);
+    record.pirate_cargo = record.pirate_cargo.saturating_add(u64::from(units));
+    state.jobs.record_seizure(units);
 }
 
 /// Moves up to `limit` units from the trader's hold into the fleet's free

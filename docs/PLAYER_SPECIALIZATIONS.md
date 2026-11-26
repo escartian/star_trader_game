@@ -19,12 +19,12 @@ routes; exact unlocks and starting choices still need design/playtesting.
 | Soldier | Military service, patrol, escort, defense and combat | Patrol assignment → convoy escort → contested-system deployment | Combat resolution, equipment/damage/repair, military reputation, rules of engagement |
 | Pirate | Robbery, boarding demands, combat, illicit sales and police evasion | Intercept cargo → escape pursuit → establish illicit contacts | Legal status, wanted/heat, inspections/pursuit, stolen cargo, fencing and faction hostility |
 
-The Pirate victory road is playable through three successful cargo seizures from
-traders, 20 stolen units, and one successful police evasion after a seizure when
-factions are active. Demands that transfer no cargo and attacks without plunder
-do not count as seizures. Progress survives saves and the Victory panel shows
-the goals. The guide introduces pursuit, hailing, seizures and police evasion;
-a dedicated pirate mission chain is still planned.
+The Pirate victory road is playable: complete the Free Captains' story chain
+(see [jobs](JOBS.md#the-free-captains)). Its steps open with successful cargo
+seizures from traders and, when factions are active, a police evasion after a
+seizure. Demands that transfer no cargo and attacks without plunder do not
+count as seizures. Lawless ports also post fence work: raids and smuggling
+runs. The guide introduces pursuit, hailing, seizures and police evasion.
 
 These chains are design examples, not existing missions or promises of a separate
 real-time tactical combat game. Initial encounters should use understandable choices

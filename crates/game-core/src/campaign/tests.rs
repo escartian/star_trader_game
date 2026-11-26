@@ -171,22 +171,26 @@ fn the_haven_stands_in_the_farthest_system_and_falls_with_its_garrison() {
 }
 
 #[test]
-fn pirate_progress_counts_successful_seizures_and_stolen_units() {
+fn the_pirate_road_opens_with_traders_and_is_won_by_the_free_captains_chain() {
     let (systems, mut state, mut economy) = world();
-    economy.spawn_traders(&systems, &state.movement_rules);
     let pirate = |state: &TravelState, economy: &Economy| {
         progress(state, economy, PLAYER)
             .into_iter()
             .find(|road| road.road == Road::Pirate)
             .unwrap()
     };
+    assert!(!pirate(&state, &economy).open, "no traders to rob");
+    economy.spawn_traders(&systems, &state.movement_rules);
     assert!(pirate(&state, &economy).open);
-    state.navigation.piracies = 3;
-    assert_eq!(pirate(&state, &economy).percent, 0);
-    state.navigation.pirate_seizures = 3;
-    state.navigation.pirate_cargo = 19;
+    // A pirate record alone is not the road: it only opens the chain's steps.
+    state.navigation.piracies = 5;
+    state.navigation.pirate_seizures = 5;
+    state.navigation.pirate_cargo = 40;
     assert!(!pirate(&state, &economy).complete);
-    state.navigation.pirate_cargo = 20;
+    let steps = economy.rules.quest_catalog.steps(None).len() as u32;
+    state.jobs.pirate_steps = steps - 1;
+    assert_eq!(pirate(&state, &economy).percent, (steps - 1) * 100 / steps);
+    state.jobs.pirate_steps = steps;
     assert!(pirate(&state, &economy).complete);
     assert_eq!(
         check_end(&state, &economy, PLAYER),

@@ -2,7 +2,8 @@
 //! and its last board has expired (`refresh_runs` after posting), drawn from
 //! the world around it (its `reach_systems` nearest systems): goods another
 //! port there needs, a raider band nearby, a trader bound for a port, a body
-//! to survey. Only boards where you have been recently are kept, so saves
+//! to survey; ports in systems no faction holds also post fence work
+//! (raids and smuggling, see `fence`). Only boards where you have been recently are kept, so saves
 //! stay small in the largest galaxies. Offers are a pure function of the
 //! saved RNG state, the run and the port. Accepted jobs are never touched.
 use super::{Job, JobKind, KindRules, Task};
@@ -10,6 +11,8 @@ use crate::economy::{Commodity, Credits, Economy, Market, MarketId, TradeSide};
 use crate::movement::MoveTarget;
 use crate::travel::TravelState;
 use crate::{BodyKind, StarSystem};
+
+mod fence;
 
 /// Drops expired boards, then posts one at each port where your ships are
 /// and none stands. Returns whether anything changed.
@@ -144,10 +147,16 @@ impl<'a> Board<'a> {
 
     fn post(mut self) -> Option<Job> {
         let catalog = &self.economy.rules.job_catalog;
-        let total: u32 = catalog.kinds.iter().map(|rules| rules.weight).sum();
+        let lawless = self.economy.factions.owner(self.issuer.id.system).is_none();
+        let allowed: Vec<&KindRules> = catalog
+            .kinds
+            .iter()
+            .filter(|rules| lawless || !rules.lawless)
+            .collect();
+        let total: u32 = allowed.iter().map(|rules| rules.weight).sum();
         let mut roll = self.rng.below(total as usize) as u32;
         let mut kind = JobKind::Deliver;
-        for rules in &catalog.kinds {
+        for rules in allowed {
             if roll < rules.weight {
                 kind = rules.kind;
                 break;
@@ -168,6 +177,8 @@ impl<'a> Board<'a> {
             JobKind::Hunt => self.hunt(),
             JobKind::Escort => self.escort(),
             JobKind::Survey => self.survey(),
+            JobKind::Raid => self.raid(),
+            JobKind::Smuggle => self.smuggle(),
         }
     }
 

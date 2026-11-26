@@ -60,6 +60,36 @@
         "The port authority wants fresh sensor readings of {body}. Put a ship in orbit there by run {deadline}.",
         "Charts of {body} are out of date. Fly there and orbit or land on it before run {deadline}."
       ]
+    },
+    {
+      "kind": "raid",
+      "weight": 3,
+      "lawless": true,
+      "deadline_runs": 16,
+      "reward": 25000,
+      "reward_step": 4000,
+      "standing": 0,
+      "penalty": 0,
+      "titles": ["Fence order: {units} units", "A full hold, no questions"],
+      "briefs": [
+        "A fence at {port} buys whatever falls off a trader's hold. Seize {units} units from traders, by demand or plunder, before run {deadline}.",
+        "Nobody at {port} asks where cargo comes from. Take {units} units from passing traders by run {deadline} and the fence pays for the trouble."
+      ]
+    },
+    {
+      "kind": "smuggle",
+      "weight": 3,
+      "lawless": true,
+      "deadline_runs": 14,
+      "reward": 30000,
+      "reward_step": 3000,
+      "standing": 0,
+      "penalty": 0,
+      "titles": ["Run {cargo} into {system}", "Quiet cargo for {port}"],
+      "briefs": [
+        "A buyer at {port} wants {units} {cargo} that never passed a {faction} customs office. Deliver them by run {deadline}; if their police stop you on the way, the deal is off.",
+        "Carry {units} {cargo} into {faction} space and hand them over at {port} by run {deadline}. Stay clear of their patrols: one inspection and the buyer vanishes."
+      ]
     }
   ]
 }

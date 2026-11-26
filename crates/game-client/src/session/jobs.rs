@@ -30,6 +30,8 @@ fn kind_icon(kind: JobKind) -> Icon {
         JobKind::Hunt => Icon::Weapon,
         JobKind::Escort => Icon::Fleets,
         JobKind::Survey => Icon::Orbit,
+        JobKind::Raid => Icon::Danger,
+        JobKind::Smuggle => Icon::Transfer,
     }
 }
 
@@ -60,6 +62,21 @@ fn destination(systems: &[StarSystem], task: &Task) -> String {
             commodity.label(),
             port(*market)
         ),
+        Task::Smuggle {
+            commodity,
+            quantity,
+            market,
+        } => format!(
+            "Run {quantity} {} into {}; avoid its police",
+            commodity.label(),
+            port(*market)
+        ),
+        Task::Raid { units, taken } => {
+            format!(
+                "Seize cargo from traders: {}/{units} units",
+                taken.min(units)
+            )
+        }
         Task::Hunt { system, .. } => {
             format!("Raider band last seen in {}", system_name(systems, *system))
         }

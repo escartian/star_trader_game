@@ -28,7 +28,7 @@ fn quest_offer(state: &TravelState) -> Option<&Job> {
     state.jobs.quest_offers.iter().find(|job| {
         job.quest
             .as_ref()
-            .is_some_and(|quest| quest.faction == FACTION)
+            .is_some_and(|quest| quest.faction == Some(FACTION))
     })
 }
 

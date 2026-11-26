@@ -249,7 +249,8 @@ save tests. NPC actions will resolve at navigation-run boundaries.
   a patrol), wanted ports refusing trade and police contacts (Comply, Fight, Evade).
 - [ ] Faction inspections for contraband, bribes and bounty hunters.
 - [ ] Repairs (full hull repair at markets exists), maintenance, detailed ship
-  statistics, equipment and customization.
+  statistics, equipment and customization. Model-specific utility upgrades and
+  size-specific combat fittings are available at markets.
 - [ ] Fleet summaries and batch management that remain readable as ownership grows.
 
 **Acceptance:** allegiance, equipment and damage affect actionable decisions;
@@ -265,11 +266,13 @@ Build common objective/deadline/reward rules after movement/combat foundations.
 - [ ] Transport/logistics, combat/escort, exploration/anomalies, bounty hunting and
   piracy of goods/people, matching the original README's mission categories.
   Done so far: deliveries, bounties, escorts and surveys; story quests lead to
-  the Diplomat road. Still open: piracy and smuggling jobs.
+  the Diplomat road. Lawless ports post fence work (raids, smuggling), and the
+  Free Captains' chain leads to the Pirate road.
 - [ ] Trader, spy/espionage, soldier and pirate routes with appropriate onboarding.
-  Pirate victory is playable: three successful trader cargo seizures, 20 stolen
-  units and, when factions are active, one police escape after a seizure. The
-  Victory panel explains the route and the guide has a pirate introduction.
+  Pirate victory is playable: the Free Captains' story chain, whose steps open
+  with trader cargo seizures and, when factions are active, a police escape
+  after a seizure. The Victory panel explains the route and the guide has a
+  pirate introduction.
 - [ ] Mixable specializations; shared control/save introduction, route-specific goals.
 - [ ] Candidate additions: explorer/scout, prospector/salvager, smuggler and
   diplomat/fixer. Explorer and prospector are the preferred first additions.

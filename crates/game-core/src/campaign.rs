@@ -7,7 +7,8 @@
 //!   port charters.
 //! - **Soldier:** destroy the Raider Haven (`navigation::haven`).
 //! - **Diplomat / Spy:** carry a great power's treaty.
-//! - **Pirate:** seize cargo from traders and escape a police patrol.
+//! - **Pirate:** complete the Free Captains' story chain, whose steps open
+//!   with successful cargo seizures and a police escape (`jobs::quests`).
 //! - **Lost:** the player's last ship was destroyed.
 //! - **Time up:** with a run limit, the game ends on score at that run.
 //!
@@ -25,6 +26,8 @@ use crate::economy::{Commodity, Credits, Economy, TradeSide};
 use crate::travel::{PlayerId, TravelState};
 use serde::{Deserialize, Serialize};
 
+mod roads;
+
 /// Score points per port charter held.
 pub const CHARTER_POINTS: u64 = 100;
 /// Score points per Haven garrison ship destroyed.
@@ -37,10 +40,6 @@ pub const STANDING_POINTS: u64 = 2;
 pub const QUEST_STEP_POINTS: u64 = 50;
 /// Credits (in cents) per score point of net worth: 100 cr.
 pub const NET_WORTH_PER_POINT: u64 = 10_000;
-/// Successful seizures needed for the Pirate road.
-pub const PIRATE_SEIZURES_TO_WIN: u64 = 3;
-/// Stolen cargo units needed for the Pirate road.
-pub const PIRATE_CARGO_TO_WIN: u64 = 20;
 /// Run limits the Victory panel offers (0 = none).
 pub const RUN_LIMIT_CHOICES: [u64; 4] = [0, 200, 400, 800];
 
@@ -206,6 +205,7 @@ pub fn score(state: &TravelState, economy: &Economy, player: PlayerId) -> Score 
         .jobs
         .quest_steps
         .iter()
+        .chain([&state.jobs.pirate_steps])
         .map(|steps| u64::from(*steps))
         .sum();
     Score {
@@ -213,40 +213,6 @@ pub fn score(state: &TravelState, economy: &Economy, player: PlayerId) -> Score 
         charters: charters * CHARTER_POINTS,
         haven,
         diplomacy: standing * STANDING_POINTS + steps * QUEST_STEP_POINTS,
-    }
-}
-
-/// The Diplomat road: carry a great power's treaty, the last step of its
-/// story quests (see `jobs::quests`). Progress is the furthest chain.
-fn diplomat(state: &TravelState, economy: &Economy) -> RoadProgress {
-    let factions = &economy.factions;
-    let best = factions
-        .in_play
-        .iter()
-        .map(|faction| {
-            let (done, total) = crate::jobs::quests::chain_progress(state, economy, *faction);
-            (done, total, *faction)
-        })
-        .filter(|(_, total, _)| *total > 0)
-        .max_by_key(|(done, total, _)| u64::from(*done) * 1_000 / u64::from(*total));
-    let complete = state.jobs.treaty.is_some();
-    let (percent, detail) = match (state.jobs.treaty, best) {
-        (Some(faction), _) => (100, format!("You carried the {} treaty.", faction.label())),
-        (None, Some((done, total, faction))) => (
-            (done * 100 / total).min(100),
-            format!(
-                "Win a great power's trust: its story quests open at Friendly standing and its                  treaty at Honored. Furthest: the {}, {done} of {total} steps.",
-                faction.label()
-            ),
-        ),
-        (None, None) => (0, "No faction in this game offers story quests.".into()),
-    };
-    RoadProgress {
-        road: Road::Diplomat,
-        open: factions.is_active() && best.is_some(),
-        percent,
-        complete,
-        detail,
     }
 }
 
@@ -266,22 +232,6 @@ pub fn progress(state: &TravelState, economy: &Economy, player: PlayerId) -> Vec
         let left = haven.garrison.len() as u64;
         (u64::from(haven.sunk), left + u64::from(haven.sunk))
     });
-    let piracy = &state.navigation;
-    let seizures = piracy.pirate_seizures;
-    let cargo = piracy.pirate_cargo;
-    let escapes = piracy.pirate_escapes;
-    let police_goal = economy.factions.is_active();
-    let pirate_complete = seizures >= PIRATE_SEIZURES_TO_WIN
-        && cargo >= PIRATE_CARGO_TO_WIN
-        && (!police_goal || escapes > 0);
-    let pirate_percent = if police_goal {
-        (share(seizures, PIRATE_SEIZURES_TO_WIN)
-            + share(cargo, PIRATE_CARGO_TO_WIN)
-            + share(escapes, 1))
-            / 3
-    } else {
-        (share(seizures, PIRATE_SEIZURES_TO_WIN) + share(cargo, PIRATE_CARGO_TO_WIN)) / 2
-    };
     vec![
         RoadProgress {
             road: Road::Trader,
@@ -314,22 +264,8 @@ pub fn progress(state: &TravelState, economy: &Economy, player: PlayerId) -> Vec
                 None => "No Raider Haven in this galaxy.".into(),
             },
         },
-        diplomat(state, economy),
-        RoadProgress {
-            road: Road::Pirate,
-            open: !economy.traders.is_empty(),
-            percent: pirate_percent,
-            complete: pirate_complete,
-            detail: if police_goal {
-                format!(
-                    "Hail traders in open space and demand cargo or attack: {seizures}/{PIRATE_SEIZURES_TO_WIN} successful seizures, {cargo}/{PIRATE_CARGO_TO_WIN} units taken. Evade a faction police patrol: {escapes}/1."
-                )
-            } else {
-                format!(
-                    "Hail traders in open space and demand cargo or attack: {seizures}/{PIRATE_SEIZURES_TO_WIN} successful seizures, {cargo}/{PIRATE_CARGO_TO_WIN} units taken."
-                )
-            },
-        },
+        roads::diplomat(state, economy),
+        roads::pirate(state, economy),
     ]
 }
 

@@ -5,20 +5,23 @@ use serde::{Deserialize, Serialize};
 
 /// One job kind's tuning and text. `reward` is the base pay; `reward_step`
 /// adds per unit delivered, per raider in the band, or per light-year of
-/// distance (escort, survey). A delivery also pays the goods' asking price
-/// at the destination.
+/// distance (escort, survey), or per unit to seize (raid). A delivery or a
+/// smuggling run also pays the goods' asking price at the destination.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct KindRules {
     pub kind: JobKind,
     /// Relative chance of this kind on a board.
     pub weight: u32,
+    /// Fence work: posted only at ports in systems no faction holds.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub lawless: bool,
     pub deadline_runs: u64,
     pub reward: Credits,
     pub reward_step: Credits,
     pub standing: i32,
     pub penalty: i32,
-    /// Templates: {port} {system} {cargo} {units} {ships} {trader} {body} {deadline}.
+    /// Templates: {port} {system} {faction} {cargo} {units} {ships} {trader} {body} {deadline}.
     pub titles: Vec<String>,
     pub briefs: Vec<String>,
 }

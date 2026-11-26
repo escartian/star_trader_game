@@ -72,7 +72,9 @@ impl LocalSession {
                     "Leave port, then use Fleets → Traffic to Pursue or Hail a trader in open space. \
                      Demand cargo from an outgunned trader, or attack and plunder its hold. \
                      A seizure makes you wanted in faction space; evade a police patrol after \
-                     your first seizure. Menu → Victory tracks the Pirate road. \
+                     your first seizure. Seizures bring the Free Captains' story requests, and \
+                     finishing them wins the road; lawless ports post fence work. \
+                     Menu → Victory tracks the Pirate road. \
                      Trading and the first delivery are optional for this road.",
                 );
             });

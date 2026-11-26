@@ -226,5 +226,59 @@
         }
       ]
     }
-  ]
+  ],
+  "pirate": {
+    "name": "Free Captains",
+    "steps": [
+      {
+        "kind": "raid",
+        "seizures": 1,
+        "units": 8,
+        "title": "A Name on the Free Channel",
+        "intro": "A voice cuts into your comms on a frequency no navy uses. \"We heard about that trader. Clean work. The Free Captains always have room for a captain with nerve. Prove it was not luck.\"",
+        "brief": "Seize {units} units from traders, by demand or plunder, within {runs} runs. The fence at {port} vouches for you.",
+        "reward": 50000,
+        "standing": 0,
+        "penalty": 0,
+        "runs": 16
+      },
+      {
+        "kind": "smuggle",
+        "seizures": 2,
+        "cargo": "medicine",
+        "units": 8,
+        "title": "Running the Cordon",
+        "intro": "The Free Captains have friends behind the lines who cannot buy medicine without questions. \"Customs would seize it. We would rather you delivered it.\"",
+        "brief": "Run {units} {cargo} into {faction} space and hand them over at {port} within {runs} runs. If their police stop you on the way, the deal is off.",
+        "reward": 80000,
+        "standing": 0,
+        "penalty": 0,
+        "runs": 16
+      },
+      {
+        "kind": "survey",
+        "seizures": 2,
+        "escapes": 1,
+        "title": "The Hidden Anchorage",
+        "intro": "You have shaken off the law at least once; the Captains trust you with a secret. They need a quiet anchorage where no patrol will look, and someone to make sure nobody is already there.",
+        "brief": "Survey {body} for a hidden anchorage within {runs} runs.",
+        "reward": 60000,
+        "standing": 0,
+        "penalty": 0,
+        "runs": 18
+      },
+      {
+        "kind": "raid",
+        "seizures": 3,
+        "units": 12,
+        "title": "The Free Port Charter",
+        "intro": "The Free Captains meet at last, and they want a prize worthy of a charter: a hold full of other people's cargo, laid on the council table. Bring it, and you will sail as one of them, answerable to no throne, council or house.",
+        "brief": "Seize {units} units from traders within {runs} runs and bring the Free Captains their prize.",
+        "reward": 200000,
+        "standing": 0,
+        "penalty": 0,
+        "runs": 20
+      }
+    ]
+  }
 }

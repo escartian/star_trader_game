@@ -1,7 +1,8 @@
 //! Settling active jobs. After every command the host checks each one: a
 //! finished task pays its reward and standing once and leaves the list; one
 //! that can no longer succeed, or whose deadline run has passed, fails and
-//! costs standing. Abandoning a job fails it the same way.
+//! costs standing. Abandoning a job fails it the same way. Fence work pays
+//! no standing: its issuer is a lawless port.
 use super::{Job, Task};
 use crate::economy::{Credits, Economy};
 use crate::travel::{Location, PlayerId, TravelState};
@@ -37,7 +38,7 @@ pub fn settle(state: &mut TravelState, economy: &mut Economy, player: PlayerId) 
         match verdict {
             Verdict::Pending => state.jobs.active.push(job),
             Verdict::Done(reason) => {
-                if let Task::Deliver { .. } = job.task {
+                if let Task::Deliver { .. } | Task::Smuggle { .. } = job.task {
                     hand_over(&job.task, state, economy, player);
                 }
                 outcomes.push(close(job, true, reason, state, economy));
@@ -74,15 +75,22 @@ fn close(
         economy.factions.adjust(faction, change);
     }
     if let Some(quest) = &job.quest {
-        let index = quest.faction.index();
+        let jobs = &mut state.jobs;
+        let (steps, retry) = match quest.faction {
+            Some(faction) => (
+                &mut jobs.quest_steps[faction.index()],
+                &mut jobs.quest_retry[faction.index()],
+            ),
+            None => (&mut jobs.pirate_steps, &mut jobs.pirate_retry),
+        };
         if success {
-            state.jobs.quest_steps[index] = state.jobs.quest_steps[index].max(quest.step + 1);
-            if quest.treaty && state.jobs.treaty.is_none() {
-                state.jobs.treaty = Some(quest.faction);
+            *steps = (*steps).max(quest.step + 1);
+            if quest.treaty && jobs.treaty.is_none() {
+                jobs.treaty = quest.faction;
             }
         } else {
-            let retry = economy.rules.quest_catalog.retry_runs;
-            state.jobs.quest_retry[index] = state.navigation.run.saturating_add(retry);
+            let pause = economy.rules.quest_catalog.retry_runs;
+            *retry = state.navigation.run.saturating_add(pause);
         }
     }
     state
@@ -114,6 +122,40 @@ fn check(job: &Job, state: &TravelState, economy: &Economy, player: PlayerId) ->
                 .sum();
             if carried >= u64::from(*quantity) {
                 Verdict::Done(format!("Delivered {quantity} {}.", commodity.label()))
+            } else {
+                Verdict::Pending
+            }
+        }
+        Task::Smuggle {
+            commodity,
+            quantity,
+            market,
+        } => {
+            if stopped_by_police(state, economy, player, *market) {
+                return Verdict::Failed(
+                    "Their police stopped you on the way, and the buyer vanished.".into(),
+                );
+            }
+            let carried: u64 = ships
+                .filter(|ship| {
+                    economy
+                        .current_market(ship)
+                        .is_ok_and(|at| at.id == *market)
+                })
+                .map(|ship| u64::from(ship.cargo[commodity.index()]))
+                .sum();
+            if carried >= u64::from(*quantity) {
+                Verdict::Done(format!(
+                    "Ran {quantity} {} past the patrols.",
+                    commodity.label()
+                ))
+            } else {
+                Verdict::Pending
+            }
+        }
+        Task::Raid { units, taken } => {
+            if taken >= units {
+                Verdict::Done(format!("Seized {taken} units for the fence."))
             } else {
                 Verdict::Pending
             }
@@ -162,13 +204,41 @@ fn check(job: &Job, state: &TravelState, economy: &Economy, player: PlayerId) ->
     }
 }
 
-/// Takes a delivery's goods from the player's ships at the market into its stock.
+/// Whether police of the faction holding `market`'s system have one of the
+/// player's fleets stopped right now (a pending `Police` contact).
+fn stopped_by_police(
+    state: &TravelState,
+    economy: &Economy,
+    player: PlayerId,
+    market: crate::economy::MarketId,
+) -> bool {
+    let Some(owner) = economy.factions.owner(market.system) else {
+        return false;
+    };
+    state.navigation.encounters.iter().any(|contact| {
+        contact
+            .police
+            .as_ref()
+            .is_some_and(|police| police.faction == owner)
+            && state
+                .fleets
+                .iter()
+                .any(|fleet| fleet.id == contact.fleet && fleet.owner == player)
+    })
+}
+
+/// Takes a delivery's or smuggling run's goods from the player's ships at the market into its stock.
 fn hand_over(task: &Task, state: &mut TravelState, economy: &mut Economy, player: PlayerId) {
-    let Task::Deliver {
+    let (Task::Deliver {
         commodity,
         quantity,
         market,
-    } = task
+    }
+    | Task::Smuggle {
+        commodity,
+        quantity,
+        market,
+    }) = task
     else {
         return;
     };

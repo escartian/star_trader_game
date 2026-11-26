@@ -1,11 +1,13 @@
 # Jobs
 
-Status: **job boards and story quests implemented** (roadmap milestone 6,
-first part). Story quests lead to the Diplomat road (see [CAMPAIGN.md](CAMPAIGN.md)).
+Status: **job boards, fence work and story quests implemented** (roadmap
+milestone 6, first part). Faction story quests lead to the Diplomat road, the
+Free Captains' chain to the Pirate road (see [CAMPAIGN.md](CAMPAIGN.md)).
 
 Code: `game-core/src/jobs.rs` (types, accept, catalog), `jobs/board.rs`
-(offers), `jobs/settle.rs` (completion, failure, payout), `jobs/quests.rs`
-(story quests); commands and the
+(offers; fence work in `jobs/board/fence.rs`), `jobs/settle.rs` (completion,
+failure, payout), `jobs/quests.rs` (story quests; definitions in
+`jobs/quests/catalog.rs`); commands and the
 after-command pass in `game-server/src/jobs.rs`; the port's Jobs tab, the Jobs
 window and the outcome card in `game-client/src/session/jobs.rs`, quest cards
 in `session/quests.rs`. Tuning and text: `config/jobs.json`, `config/quests.json`.
@@ -27,6 +29,9 @@ in `session/quests.rs`. Tuning and text: `config/jobs.json`, `config/quests.json
 
 Every target lies in the posting port's `reach_systems` (6) nearest systems.
 Rewards are base pay plus `reward_step` per unit, raider or light-year.
+Kinds marked `lawless` in the catalog (**fence work**: raids and smuggling) are
+posted only at ports in systems no faction holds; they pay no standing and
+cost none.
 
 | Kind | Task | Done when | Fails when |
 | --- | --- | --- | --- |
@@ -34,8 +39,12 @@ Rewards are base pay plus `reward_step` per unit, raider or light-year.
 | Bounty | wipe out a raider band | your fleets destroy its last raider | another band-killer gets there first, or deadline |
 | Escort | see an NPC trader safely into its destination port | it docks there while one of your fleets is in that system | it is lost, docks with none of your fleets there, or deadline |
 | Survey | put a ship in orbit of (or on) a body | any ship of yours orbits or lands there | deadline |
+| Raid (fence) | seize N units from NPC traders, by demand or plunder | units seized since accepting reach N | deadline |
+| Smuggling (fence) | bring N units of a good into a faction port | as a delivery | that faction's police stop one of your fleets on the way, or deadline |
 
-A delivery also pays the goods' asking price at the destination when posted.
+A delivery or smuggling run also pays the goods' asking price at the
+destination when posted. Police only stop fleets their faction pursues (wanted,
+or Hostile standing), so smuggling is safe until you turn pirate.
 
 ## Settling
 
@@ -73,11 +82,30 @@ job lifecycle above.
 - **Carrying a treaty wins the Diplomat road.** The Jobs window shows each
   faction's story progress, and the score counts every step done.
 
+### The Free Captains
+
+The pirate chain (`pirate` in `config/quests.json`, four steps today) runs the
+same way with these differences:
+
+- It is offered in any galaxy with NPC traders. Its steps open with your
+  pirate record instead of standing: a step's `seizures` (successful cargo
+  seizures from traders) and `escapes` (police patrols evaded after a seizure;
+  ignored without factions). Today: a raid after your first seizure, a
+  smuggling run after the second, a survey for a hidden anchorage once you
+  have also escaped the police, and a final raid after the third seizure.
+- Steps are drafted from the lawless port nearest your flagship (any port when
+  every system is held) and pay credits only.
+- **Completing the chain wins the Pirate road.** Its offers arrive as red
+  event cards, and the Jobs window and Victory panel say what the next step
+  waits for.
+
 ## Saves
 
 The player state's `jobs` holds standing `boards` (port and posting run),
 `offers`, `active` jobs, `next_id`, a short `history`, the completed and failed
 counts, `cleared_bands` (bands your fleets wiped out), and for quests
-`quest_offers`, `quest_steps` and `quest_retry` (by faction) and `treaty`. It is omitted when
+`quest_offers`, `quest_steps` and `quest_retry` (by faction), `treaty`, and
+`pirate_steps` and `pirate_retry` for the Free Captains. A raid job's task
+records the units `taken` so far. It is omitted when
 empty; older saves load without it (loading never changes the state), and the
 first order after loading posts the current port's board.

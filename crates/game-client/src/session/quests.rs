@@ -8,7 +8,8 @@ use crate::theme::event_card::{self, Card};
 use crate::theme::icons::{self, Icon};
 use crate::theme::{CYAN, GREEN};
 use egui::RichText;
-use game_core::jobs::Job;
+use game_core::factions::Faction;
+use game_core::jobs::{Job, quests};
 use game_protocol::ClientCommand;
 
 impl LocalSession {
@@ -44,21 +45,19 @@ impl LocalSession {
         let Some(quest) = job.quest.clone() else {
             return;
         };
-        let name = &self.economy.rules.faction_catalog.get(quest.faction).name;
+        let name = self.patron_name(quest.faction);
         let kicker = format!(
             "{} · {}",
             name,
             if quest.treaty { "Treaty" } else { "Request" }
         );
-        let mut art = Illustration::new(
-            if quest.treaty {
-                Mood::Triumph
-            } else {
-                Mood::Lawful
-            },
-            job.id.wrapping_mul(131),
-        );
-        art.station = true;
+        let mood = match (quest.faction, quest.treaty) {
+            (None, _) => Mood::Hostile,
+            (Some(_), true) => Mood::Triumph,
+            (Some(_), false) => Mood::Lawful,
+        };
+        let mut art = Illustration::new(mood, job.id.wrapping_mul(131));
+        art.station = quest.faction.is_some();
         art.ours = vec![self.selected_ship().kind];
         let (mut accept, mut later) = (false, false);
         let card = Card {
@@ -72,17 +71,17 @@ impl LocalSession {
             ui.label(&quest.intro);
             ui.add_space(4.0);
             ui.label(RichText::new(&job.brief).strong());
-            ui.label(
-                RichText::new(format!(
+            let terms = match quest.faction {
+                Some(faction) => format!(
                     "Reward {} cr · +{} {} standing (−{} if it fails)",
                     job.reward,
                     job.standing,
-                    quest.faction.label(),
+                    faction.label(),
                     job.penalty
-                ))
-                .color(GREEN)
-                .small(),
-            );
+                ),
+                None => format!("Reward {} cr · no questions asked", job.reward),
+            };
+            ui.label(RichText::new(terms).color(GREEN).small());
             event_card::choices(ui, |ui| {
                 accept = event_card::choice(ui, Icon::Confirm, "Accept")
                     .on_hover_text("Its deadline starts now. Quests count against no job limit.")
@@ -104,9 +103,29 @@ impl LocalSession {
         }
     }
 
+    /// Who offers a quest chain: a faction's full name, or the Free Captains.
+    fn patron_name(&self, patron: Option<Faction>) -> String {
+        let rules = &self.economy.rules;
+        match patron {
+            Some(faction) => rules.faction_catalog.get(faction).name.clone(),
+            None => rules.quest_catalog.pirate_name().to_owned(),
+        }
+    }
+
     /// The Jobs window's Requests (quest offers) and story progress.
     pub(super) fn quests_ui(&mut self, ui: &mut egui::Ui) {
-        if !self.factions_active() {
+        let mut patrons: Vec<Option<Faction>> = self
+            .economy
+            .factions
+            .in_play
+            .iter()
+            .copied()
+            .map(Some)
+            .collect();
+        if quests::pirates_active(&self.economy) {
+            patrons.push(None);
+        }
+        if patrons.is_empty() {
             return;
         }
         let offers = self.state.jobs.quest_offers.clone();
@@ -133,24 +152,41 @@ impl LocalSession {
         }
         ui.label(RichText::new("STORY").small().color(egui::Color32::GRAY));
         ui.horizontal_wrapped(|ui| {
-            for faction in self.economy.factions.in_play.clone() {
-                let (done, total) =
-                    game_core::jobs::quests::chain_progress(&self.state, &self.economy, faction);
+            for patron in patrons {
+                let (done, total) = quests::chain_progress(&self.state, &self.economy, patron);
                 if total == 0 {
                     continue;
                 }
-                let treaty = self.state.jobs.treaty == Some(faction);
-                let color = if treaty { GREEN } else { CYAN };
+                let won = match patron {
+                    Some(faction) => self.state.jobs.treaty == Some(faction),
+                    None => done >= total,
+                };
+                let color = if won { GREEN } else { CYAN };
+                let label = patron.map_or_else(
+                    || self.economy.rules.quest_catalog.pirate_name().to_owned(),
+                    |faction| faction.label().to_owned(),
+                );
+                let tip = match patron {
+                    Some(_) => "Story steps done. A faction's requests open at Friendly \
+                                standing; its treaty, the last step, at Honored, and carrying \
+                                it wins the Diplomat road."
+                        .to_owned(),
+                    None => {
+                        let next = quests::pirate_needs(&self.state, &self.economy)
+                            .map_or_else(String::new, |needs| format!(" Next step needs {needs}."));
+                        format!(
+                            "Story steps done. The Free Captains' requests open as you seize \
+                             cargo from traders and escape the police; finishing them wins the \
+                             Pirate road.{next}"
+                        )
+                    }
+                };
                 ui.label(
-                    RichText::new(format!("{} {done}/{total}", faction.label()))
+                    RichText::new(format!("{label} {done}/{total}"))
                         .color(color)
                         .small(),
                 )
-                .on_hover_text(
-                    "Story steps done. A faction's requests open at Friendly standing; \
-                         its treaty, the last step, at Honored, and carrying it wins the \
-                         Diplomat road.",
-                );
+                .on_hover_text(tip);
             }
         });
         ui.separator();
@@ -159,19 +195,20 @@ impl LocalSession {
 
 #[cfg(any(test, feature = "dev-tools"))]
 impl LocalSession {
-    /// Capture "quest": the Federation's first story request as its card
-    /// (client state only; the request is drawn from the home board).
-    pub fn capture_quest(&mut self) -> Result<(), String> {
+    /// Capture "quest" (the Federation's first story request) or
+    /// "pirate-quest" (the Free Captains' first) as its card (client state
+    /// only; the request is drawn from the home board).
+    pub fn capture_quest(&mut self, pirate: bool) -> Result<(), String> {
         self.capture_jobs("jobs")?;
         self.market.open = false;
-        let faction = game_core::factions::Faction::Federation;
+        let patron = (!pirate).then_some(game_core::factions::Faction::Federation);
         let step = self
             .economy
             .rules
             .quest_catalog
-            .chain(faction)
-            .and_then(|chain| chain.steps.first())
-            .ok_or("No Federation quest")?
+            .steps(patron)
+            .first()
+            .ok_or("No quest chain")?
             .clone();
         let mut job = self
             .state
@@ -182,9 +219,13 @@ impl LocalSession {
             .clone();
         job.id = u64::MAX;
         job.title = step.title;
-        job.brief = "Bring 8 Medicine to Sol Inner world within 16 runs.".into();
+        job.brief = if pirate {
+            "Seize 8 units from traders, by demand or plunder, within 16 runs.".into()
+        } else {
+            "Bring 8 Medicine to Sol Inner world within 16 runs.".into()
+        };
         job.quest = Some(game_core::jobs::quests::QuestRef {
-            faction,
+            faction: patron,
             step: 0,
             runs: step.runs,
             intro: step.intro,

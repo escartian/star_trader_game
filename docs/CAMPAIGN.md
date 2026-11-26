@@ -3,7 +3,8 @@
 Status: **victory framework implemented** (phone-first phase 5). The game has
 roads to victory, a score, an optional campaign length, a Raider Haven to
 destroy, port charters to buy and a Diplomat road through faction story
-quests ([JOBS.md](JOBS.md#story-quests)). The Pirate road waits for missions.
+quests ([JOBS.md](JOBS.md#story-quests)), and a Pirate road through the Free
+Captains' chain ([JOBS.md](JOBS.md#the-free-captains)).
 
 Code: `game-core/src/campaign.rs` (roads, net worth, score, ends),
 `economy/charters.rs` (charters, port share, lanes), `navigation/haven.rs`
@@ -22,7 +23,7 @@ toward a second road.
 | Trader | Net worth of **10% of all galaxy wealth**, or **3 port charters** | Playable |
 | Soldier | Destroy the Raider Haven | Playable |
 | Diplomat | Carry a great power's treaty: the last step of its story quests, offered at Honored standing | Playable with factions |
-| Pirate | Take over the Raider Haven | Locked until factions and missions |
+| Pirate | Complete the Free Captains' story chain: its steps open with successful cargo seizures from traders and, with factions, a police escape | Playable with NPC traders |
 
 **Galaxy wealth** = your net worth + every market treasury + every NPC
 trader's credits. The goal is a share rather than a sum (the 1,000,000 cr first
@@ -107,7 +108,7 @@ A port authority's licence, bought once in the port's market (**Buy charter**,
 ## Not yet
 
 - Unlock order and guide cards for these systems (phase 6).
-- The Spy side of the Diplomat road, and the Pirate road.
+- The Spy side of the Diplomat road.
 - The Haven's own defences as a distinct hull (it fields existing hulls today).
 - Balance from playtests: the Trader goals, charter price and garrison size are
   first-pass numbers.

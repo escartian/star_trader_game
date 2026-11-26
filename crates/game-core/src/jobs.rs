@@ -34,10 +34,21 @@ pub enum JobKind {
     Hunt,
     Escort,
     Survey,
+    /// Fence work: seize cargo from NPC traders (lawless ports only).
+    Raid,
+    /// Fence work: run goods into a faction port unseen (lawless ports only).
+    Smuggle,
 }
 
 impl JobKind {
-    pub const ALL: [JobKind; 4] = [Self::Deliver, Self::Hunt, Self::Escort, Self::Survey];
+    pub const ALL: [JobKind; 6] = [
+        Self::Deliver,
+        Self::Hunt,
+        Self::Escort,
+        Self::Survey,
+        Self::Raid,
+        Self::Smuggle,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
@@ -45,6 +56,8 @@ impl JobKind {
             Self::Hunt => "Bounty",
             Self::Escort => "Escort",
             Self::Survey => "Survey",
+            Self::Raid => "Raid",
+            Self::Smuggle => "Smuggling",
         }
     }
 }
@@ -65,6 +78,20 @@ pub enum Task {
     Escort { trader: u64, market: MarketId },
     /// Put a ship in orbit of, or on, `body` in `system`.
     Survey { system: SystemId, body: BodyId },
+    /// Seize `units` units from NPC traders, by demand or plunder; `taken`
+    /// counts those seized since the job was accepted.
+    Raid {
+        units: u32,
+        #[serde(default)]
+        taken: u32,
+    },
+    /// Bring `quantity` `commodity` to `market`, a faction port, without
+    /// being stopped by that faction's police on the way (consumed on arrival).
+    Smuggle {
+        commodity: Commodity,
+        quantity: u32,
+        market: MarketId,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -135,6 +162,16 @@ pub struct Jobs {
     /// The faction whose treaty you carried: the Diplomat road is won.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub treaty: Option<Faction>,
+    /// Free Captains story steps completed (the pirate chain; see `quests`).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub pirate_steps: u32,
+    /// The run from which a failed Free Captains step is offered again.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub pirate_retry: u64,
+}
+
+fn is_zero<T: Default + PartialEq>(value: &T) -> bool {
+    *value == T::default()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -247,15 +284,33 @@ impl Jobs {
         }
         if self.active.iter().filter(|job| job.quest.is_none()).count()
             > catalog.max_active as usize
-            || self.quest_offers.len() > Faction::ALL.len()
+            || self.quest_offers.len() > Faction::ALL.len() + 1
             || self.offers.len() > 4_096
             || self.boards.len() > 1_024
             || self.history.len() > HISTORY
             || self.cleared_bands.len() > CLEARED_BANDS
+            || self.pirate_steps > 16
+            || self.quest_steps.iter().any(|steps| *steps > 16)
         {
             return Err("Too many saved jobs".into());
         }
         Ok(())
+    }
+
+    /// Story steps completed for `patron` (`None`: the Free Captains).
+    pub fn steps_done(&self, patron: Option<Faction>) -> u32 {
+        patron.map_or(self.pirate_steps, |faction| {
+            self.quest_steps[faction.index()]
+        })
+    }
+
+    /// Counts units seized from a trader toward every active raid job.
+    pub fn record_seizure(&mut self, units: u32) {
+        for job in &mut self.active {
+            if let Task::Raid { taken, .. } = &mut job.task {
+                *taken = taken.saturating_add(units);
+            }
+        }
     }
 
     /// Remembers a band the player's fleets wiped out.
@@ -267,6 +322,8 @@ impl Jobs {
     }
 }
 
+#[cfg(test)]
+mod pirate_tests;
 #[cfg(test)]
 mod quest_tests;
 #[cfg(test)]

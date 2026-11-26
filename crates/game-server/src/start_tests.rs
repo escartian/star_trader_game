@@ -37,10 +37,10 @@ fn near_start(session: &Session) -> Vec<(String, i64)> {
     let mut near = Vec::new();
     for trader in &session.economy.traders {
         let ship = &trader.state.ships[0];
-        if let Some(at) = trader.state.navigation_position(ship.id, &systems) {
-            if gap(at, ours) <= HAIL_KM {
-                near.push((format!("trader {}", trader.name), gap(at, ours)));
-            }
+        if let Some(at) = trader.state.navigation_position(ship.id, &systems)
+            && gap(at, ours) <= HAIL_KM
+        {
+            near.push((format!("trader {}", trader.name), gap(at, ours)));
         }
     }
     for patrol in &session.state.navigation.police.patrols {

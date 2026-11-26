@@ -67,6 +67,23 @@ impl LocalView {
         self.npc_hits.extend(hits);
     }
 
+    /// Where a trader or band in this system is drawn (view units), when it is here.
+    pub(super) fn npc_anchor(&self, quarry: Quarry) -> Option<glam::DVec3> {
+        match quarry {
+            Quarry::Trader(id) => {
+                let trader = self.traders.iter().find(|trader| trader.id == id)?;
+                self.ship_anchor(&trader.location)
+            }
+            Quarry::Band(id) => self
+                .bands
+                .iter()
+                .find(|band| {
+                    band.id == id && band.system == self.system.id && band.transit.is_none()
+                })
+                .map(|band| super::kilometers(band.position) / super::KM_PER_VIEW_UNIT),
+        }
+    }
+
     /// The selected NPC's ring and, while pursuing, the dashed line from the
     /// flagship's chip to its quarry with a crosshair. After fleets are drawn.
     pub(super) fn draw_npc_focus(&self, painter: &Painter) {

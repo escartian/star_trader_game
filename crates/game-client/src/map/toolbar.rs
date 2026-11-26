@@ -20,7 +20,10 @@ impl CameraAction {
         match self {
             Self::Reset => (Icon::Reset, "Reset view"),
             Self::FocusSelection => (Icon::Focus, "Focus selection (F)"),
-            Self::FocusFleet => (Icon::Ship, "Focus selected fleet"),
+            Self::FocusFleet => (
+                Icon::Ship,
+                "Focus selected fleet (yours, or a selected trader or band)",
+            ),
             Self::Overview => (Icon::Overview, "System overview"),
             Self::Search => (Icon::Search, "Search stars & planets (Ctrl+F)"),
             Self::ToggleTraffic => (

@@ -203,12 +203,20 @@ impl Map {
             Some(CameraAction::ToggleTerritory) => self
                 .session
                 .toggle_map_layer(crate::preferences::MapLayer::Territory),
-            Some(CameraAction::FocusFleet) => {
-                if let Some(position) = self.route_position() {
-                    self.camera.focus_on(position);
-                }
-            }
+            Some(CameraAction::FocusFleet) => self.focus_selected_fleet(),
             _ => {}
+        }
+    }
+
+    /// Centres the galaxy camera on the selected trader or band, or else on
+    /// your selected fleet.
+    pub(super) fn focus_selected_fleet(&mut self) {
+        let npc = self.session.npc_focus().0;
+        if let Some(position) = npc
+            .and_then(|quarry| self.npc_position(quarry))
+            .or_else(|| self.route_position())
+        {
+            self.camera.focus_on(position);
         }
     }
 }

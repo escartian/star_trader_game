@@ -323,3 +323,35 @@ fn hidden_traffic_leaves_only_the_selected_npc_on_both_maps() {
     frame(&mut map);
     assert!(map.local.as_ref().unwrap().npc_count() <= 1);
 }
+
+#[test]
+fn focus_selected_fleet_centres_a_selected_npc_or_your_own_fleet() {
+    let ctx = egui::Context::default();
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
+    let _ = ctx.run(
+        egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1000.0, 720.0))),
+            ..Default::default()
+        },
+        |ctx| map.ui(ctx),
+    );
+    let own = map.route_position().unwrap();
+    // A trader or band away from your fleet.
+    let far = map
+        .galaxy_npc_hits
+        .iter()
+        .map(|hit| hit.quarry)
+        .find(|quarry| {
+            map.npc_position(*quarry)
+                .is_some_and(|at| at.distance(own) > 1.0)
+        })
+        .expect("an NPC away from the fleet");
+    map.session.select_npc(far);
+    map.focus_selected_fleet();
+    assert_eq!(map.camera.focus, map.npc_position(far).unwrap());
+    // Selecting your fleet again focuses it.
+    let ship = map.session.selected_ship().id;
+    map.session.select_map_fleet(ship);
+    map.focus_selected_fleet();
+    assert_eq!(map.camera.focus, own);
+}

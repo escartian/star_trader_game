@@ -317,3 +317,25 @@ fn double_clicking_the_body_a_fleet_trades_at_opens_its_market() {
         "the selected fleet's market"
     );
 }
+
+#[test]
+fn a_band_in_this_system_can_be_focused_and_one_elsewhere_cannot() {
+    use game_core::pursuit::Quarry;
+    let system = game_core::demo_galaxy().remove(0);
+    let host = crate::session::LocalSession::new(game_server::Session::default());
+    let mut band = host.raider_bands()[0].clone();
+    band.system = system.id;
+    band.transit = None;
+    band.position = game_core::LocalPosition {
+        x_km: 60_000_000,
+        y_km: 0,
+        z_km: 0,
+    };
+    let mut local = LocalView::new(system);
+    local.set_bands(vec![band.clone()]);
+    let at = local.npc_anchor(Quarry::Band(band.id)).expect("drawn here");
+    assert!(at.x > 0.0 && at.y == 0.0 && at.z == 0.0);
+    band.system = game_core::SystemId(band.system.0 + 1);
+    local.set_bands(vec![band.clone()]);
+    assert_eq!(local.npc_anchor(Quarry::Band(band.id)), None);
+}

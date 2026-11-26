@@ -50,11 +50,14 @@ impl LocalView {
             Some(CameraAction::FocusSelection) => self.focus(),
             Some(CameraAction::ToggleTraffic) => self.traffic_toggled = true,
             Some(CameraAction::FocusFleet) => {
-                if let Some(anchor) = ships
-                    .iter()
-                    .find(|ship| ship.id == self.active_ship)
-                    .and_then(|ship| self.ship_anchor(&ship.location))
-                {
+                // A selected trader or band in this system first, else your fleet.
+                let npc = self.npc_focus.0.and_then(|quarry| self.npc_anchor(quarry));
+                if let Some(anchor) = npc.or_else(|| {
+                    ships
+                        .iter()
+                        .find(|ship| ship.id == self.active_ship)
+                        .and_then(|ship| self.ship_anchor(&ship.location))
+                }) {
                     self.camera.focus_on(anchor);
                 }
             }

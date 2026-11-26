@@ -67,7 +67,9 @@ red lines between systems are raider bands crossing. A raider band's heading lin
 fleets. A band crossing to another system is drawn on a faint line between
 the two systems in the galaxy view, and is absent from the system view. The orbit ring appears only around the selected fleet's body.
 **System overview** refits the scene; **Focus selected fleet** provides a close
-view. The simulation's system limits have no boundary cube or display toggle.
+view of the selected trader or raider band when one is selected (on the galaxy
+map wherever it is; on the system map when it is in that system), otherwise of
+your selected fleet. The simulation's system limits have no boundary cube or display toggle.
 
 ## Stellar clearance
 

@@ -232,6 +232,46 @@ impl Map {
         hits
     }
 
+    /// Where the galaxy map draws a trader or band (light-years): a resting
+    /// one at its star, a flying trader on its gliding position, a crossing
+    /// band along its line between the two systems.
+    pub(super) fn npc_position(&self, quarry: Quarry) -> Option<glam::DVec3> {
+        let find = |id| self.systems.iter().find(|known| known.id == id);
+        match quarry {
+            Quarry::Trader(id) => {
+                let trader = self.session.traffic().iter().find(|npc| npc.id == id)?;
+                let ship = trader.state.ships.first()?;
+                match ship
+                    .location
+                    .system()
+                    .filter(|_| ship.location.stationary())
+                {
+                    Some(system) => find(system).map(position),
+                    None => self.session.trader_display_position(trader, &self.systems),
+                }
+            }
+            Quarry::Band(id) => {
+                let band = self
+                    .session
+                    .raider_bands()
+                    .iter()
+                    .find(|band| band.id == id)?;
+                let at = position(find(band.system)?);
+                Some(
+                    match band
+                        .transit
+                        .and_then(|transit| Some((transit, find(transit.from)?)))
+                    {
+                        Some((transit, origin)) => {
+                            position(origin).lerp(at, f64::from(transit.progress()))
+                        }
+                        None => at,
+                    },
+                )
+            }
+        }
+    }
+
     /// The other star system a trader or band is bound for, if any.
     fn quarry_bound(&self, quarry: Quarry) -> Option<&game_core::StarSystem> {
         let bound = match quarry {

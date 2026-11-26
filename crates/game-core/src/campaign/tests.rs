@@ -171,6 +171,33 @@ fn the_haven_stands_in_the_farthest_system_and_falls_with_its_garrison() {
 }
 
 #[test]
+fn pirate_progress_counts_successful_seizures_and_stolen_units() {
+    let (systems, mut state, mut economy) = world();
+    economy.spawn_traders(&systems, &state.movement_rules);
+    let pirate = |state: &TravelState, economy: &Economy| {
+        progress(state, economy, PLAYER)
+            .into_iter()
+            .find(|road| road.road == Road::Pirate)
+            .unwrap()
+    };
+    assert!(pirate(&state, &economy).open);
+    state.navigation.piracies = 3;
+    assert_eq!(pirate(&state, &economy).percent, 0);
+    state.navigation.pirate_seizures = 3;
+    state.navigation.pirate_cargo = 19;
+    assert!(!pirate(&state, &economy).complete);
+    state.navigation.pirate_cargo = 20;
+    assert!(pirate(&state, &economy).complete);
+    assert_eq!(
+        check_end(&state, &economy, PLAYER),
+        Some(CampaignEnd::Won {
+            road: Road::Pirate,
+            run: state.navigation.run,
+        })
+    );
+}
+
+#[test]
 fn charters_sell_once_pay_a_port_share_and_conserve_credits() {
     let (systems, mut state, mut economy) = world();
     economy.spawn_traders(&systems, &state.movement_rules);

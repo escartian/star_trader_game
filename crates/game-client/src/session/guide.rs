@@ -67,6 +67,15 @@ impl LocalSession {
                 });
             });
             ui.label(hint);
+            ui.collapsing("Pirate road introduction", |ui| {
+                ui.label(
+                    "Leave port, then use Fleets → Traffic to Pursue or Hail a trader in open space. \
+                     Demand cargo from an outgunned trader, or attack and plunder its hold. \
+                     A seizure makes you wanted in faction space; evade a police patrol after \
+                     your first seizure. Menu → Victory tracks the Pirate road. \
+                     Trading and the first delivery are optional for this road.",
+                );
+            });
         });
         if dismiss {
             self.dismiss_guide();

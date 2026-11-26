@@ -1,9 +1,9 @@
 # Player specializations and mission routes
 
 The current first-delivery guide is **trader onboarding**, not a generic questline.
-No contract/quest engine, espionage or warfare system is implemented yet. Piracy
-has a first foundation: hailing NPC traders, demanding cargo and attacking them
-(see [combat](COMBAT.md)); legal status and heat are still missing.
+Contracts and faction story quests exist; espionage and faction warfare remain open.
+Piracy supports hailing NPC traders, demanding cargo and attacking them
+(see [combat](COMBAT.md)), with wanted status and police pursuit.
 Navigation, travel, refuelling, saving and ship management are shared foundations.
 
 ## Working progression direction
@@ -18,6 +18,13 @@ routes; exact unlocks and starting choices still need design/playtesting.
 | Spy | Espionage, intelligence gathering, covert delivery, infiltration | Discreet courier → reconnaissance → intelligence operation | Intel objectives, cover/detection, access restrictions, secrecy, faction trust |
 | Soldier | Military service, patrol, escort, defense and combat | Patrol assignment → convoy escort → contested-system deployment | Combat resolution, equipment/damage/repair, military reputation, rules of engagement |
 | Pirate | Robbery, boarding demands, combat, illicit sales and police evasion | Intercept cargo → escape pursuit → establish illicit contacts | Legal status, wanted/heat, inspections/pursuit, stolen cargo, fencing and faction hostility |
+
+The Pirate victory road is playable through three successful cargo seizures from
+traders, 20 stolen units, and one successful police evasion after a seizure when
+factions are active. Demands that transfer no cargo and attacks without plunder
+do not count as seizures. Progress survives saves and the Victory panel shows
+the goals. The guide introduces pursuit, hailing, seizures and police evasion;
+a dedicated pirate mission chain is still planned.
 
 These chains are design examples, not existing missions or promises of a separate
 real-time tactical combat game. Initial encounters should use understandable choices

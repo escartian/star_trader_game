@@ -6,8 +6,8 @@
 //!   galaxy wealth ([`galaxy_wealth`]), or [`CampaignRules::charters_to_win`]
 //!   port charters.
 //! - **Soldier:** destroy the Raider Haven (`navigation::haven`).
-//! - **Diplomat / Spy** and **Pirate:** need factions and missions; shown as
-//!   locked until those exist.
+//! - **Diplomat / Spy:** carry a great power's treaty.
+//! - **Pirate:** seize cargo from traders and escape a police patrol.
 //! - **Lost:** the player's last ship was destroyed.
 //! - **Time up:** with a run limit, the game ends on score at that run.
 //!
@@ -16,8 +16,8 @@
 //!
 //! Score = net worth / 100 cr, plus [`CHARTER_POINTS`] per charter, plus
 //! [`HAVEN_SHIP_POINTS`] per Haven garrison ship destroyed, plus
-//! [`HAVEN_POINTS`] for destroying the Haven. Faction standing will add points
-//! once factions exist.
+//! [`HAVEN_POINTS`] for destroying the Haven, plus faction standing and
+//! completed story quest steps.
 //!
 //! [`CampaignRules::wealth_share_percent`]: crate::economy::CampaignRules
 //! [`CampaignRules::charters_to_win`]: crate::economy::CampaignRules
@@ -37,6 +37,10 @@ pub const STANDING_POINTS: u64 = 2;
 pub const QUEST_STEP_POINTS: u64 = 50;
 /// Credits (in cents) per score point of net worth: 100 cr.
 pub const NET_WORTH_PER_POINT: u64 = 10_000;
+/// Successful seizures needed for the Pirate road.
+pub const PIRATE_SEIZURES_TO_WIN: u64 = 3;
+/// Stolen cargo units needed for the Pirate road.
+pub const PIRATE_CARGO_TO_WIN: u64 = 20;
 /// Run limits the Victory panel offers (0 = none).
 pub const RUN_LIMIT_CHOICES: [u64; 4] = [0, 200, 400, 800];
 
@@ -262,12 +266,21 @@ pub fn progress(state: &TravelState, economy: &Economy, player: PlayerId) -> Vec
         let left = haven.garrison.len() as u64;
         (u64::from(haven.sunk), left + u64::from(haven.sunk))
     });
-    let locked = |road| RoadProgress {
-        road,
-        open: false,
-        percent: 0,
-        complete: false,
-        detail: "Opens with a later update.".into(),
+    let piracy = &state.navigation;
+    let seizures = piracy.pirate_seizures;
+    let cargo = piracy.pirate_cargo;
+    let escapes = piracy.pirate_escapes;
+    let police_goal = economy.factions.is_active();
+    let pirate_complete = seizures >= PIRATE_SEIZURES_TO_WIN
+        && cargo >= PIRATE_CARGO_TO_WIN
+        && (!police_goal || escapes > 0);
+    let pirate_percent = if police_goal {
+        (share(seizures, PIRATE_SEIZURES_TO_WIN)
+            + share(cargo, PIRATE_CARGO_TO_WIN)
+            + share(escapes, 1))
+            / 3
+    } else {
+        (share(seizures, PIRATE_SEIZURES_TO_WIN) + share(cargo, PIRATE_CARGO_TO_WIN)) / 2
     };
     vec![
         RoadProgress {
@@ -302,7 +315,21 @@ pub fn progress(state: &TravelState, economy: &Economy, player: PlayerId) -> Vec
             },
         },
         diplomat(state, economy),
-        locked(Road::Pirate),
+        RoadProgress {
+            road: Road::Pirate,
+            open: !economy.traders.is_empty(),
+            percent: pirate_percent,
+            complete: pirate_complete,
+            detail: if police_goal {
+                format!(
+                    "Hail traders in open space and demand cargo or attack: {seizures}/{PIRATE_SEIZURES_TO_WIN} successful seizures, {cargo}/{PIRATE_CARGO_TO_WIN} units taken. Evade a faction police patrol: {escapes}/1."
+                )
+            } else {
+                format!(
+                    "Hail traders in open space and demand cargo or attack: {seizures}/{PIRATE_SEIZURES_TO_WIN} successful seizures, {cargo}/{PIRATE_CARGO_TO_WIN} units taken."
+                )
+            },
+        },
     ]
 }
 

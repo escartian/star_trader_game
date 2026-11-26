@@ -2,10 +2,13 @@
 use super::{
     LOCAL_PLAYER, Session,
     combat_tests::{choose, reload},
+    faction_tests::claimed,
     test_support::execute_quiet_run,
 };
 use game_core::{
+    campaign::{CampaignEnd, Road},
     economy::Commodity,
+    factions::Faction,
     fleet::{FleetId, ShipKind},
     navigation::{EncounterChoice, EncounterKind, NavigationError},
     npc::{REFIT_RUNS, market_location},
@@ -157,8 +160,36 @@ fn an_outgunned_trader_hands_over_half_its_cargo_most_valuable_first() {
         (0, 8)
     );
     assert_eq!(session.state.navigation.piracies, 1);
+    assert_eq!(session.state.navigation.pirate_seizures, 1);
+    assert_eq!(session.state.navigation.pirate_cargo, 8);
     assert!(session.economy.traders[0].last_action.contains("pirates"));
     reload(&session);
+}
+
+#[test]
+fn a_cargo_seizure_completes_the_pirate_road_after_a_police_escape() {
+    let mut session = Session::default();
+    let (fleet, trader) = meet_trader(&mut session, 0);
+    session.economy.factions = claimed([None, Some(Faction::Federation), None])
+        .economy
+        .factions;
+    session.state.navigation.piracies = 2;
+    session.state.navigation.pirate_seizures = 2;
+    session.state.navigation.pirate_cargo = 12;
+    session.state.navigation.pirate_escapes = 1;
+    session.economy.traders[0].state.ships[0].hull_damage = 40;
+    let contact = hailed(&mut session, fleet, trader);
+    choose(&mut session, contact, EncounterChoice::Demand);
+    assert_eq!(session.state.navigation.pirate_cargo, 20);
+    assert_eq!(
+        session.state.campaign.ended,
+        Some(CampaignEnd::Won {
+            road: Road::Pirate,
+            run: session.state.navigation.run,
+        })
+    );
+    let restored = reload(&session);
+    assert_eq!(restored.state.campaign.ended, session.state.campaign.ended);
 }
 
 #[test]
@@ -219,10 +250,13 @@ fn a_destroyed_trader_is_plundered_and_refitted_without_a_bounty() {
     assert_eq!(npc.state.ships[0].cargo_used(), 0);
     assert!(npc.last_action.starts_with("Destroyed by pirates"));
     assert_eq!(session.state.navigation.piracies, 1);
+    assert_eq!(session.state.navigation.pirate_seizures, 1);
+    assert_eq!(session.state.navigation.pirate_cargo, 16);
     let mut session = reload(&session);
     // Later commands never settle the same battle again.
     execute_quiet_run(&mut session);
     assert_eq!(session.economy.traders[0].refit_runs, REFIT_RUNS - 1);
+    assert_eq!(session.state.navigation.pirate_cargo, 16);
 }
 
 #[test]

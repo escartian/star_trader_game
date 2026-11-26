@@ -267,6 +267,9 @@ Build common objective/deadline/reward rules after movement/combat foundations.
   Done so far: deliveries, bounties, escorts and surveys; story quests lead to
   the Diplomat road. Still open: piracy and smuggling jobs.
 - [ ] Trader, spy/espionage, soldier and pirate routes with appropriate onboarding.
+  Pirate victory is playable: three successful trader cargo seizures, 20 stolen
+  units and, when factions are active, one police escape after a seizure. The
+  Victory panel explains the route and the guide has a pirate introduction.
 - [ ] Mixable specializations; shared control/save introduction, route-specific goals.
 - [ ] Candidate additions: explorer/scout, prospector/salvager, smuggler and
   diplomat/fixer. Explorer and prospector are the preferred first additions.

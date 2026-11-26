@@ -125,6 +125,10 @@ impl TravelState {
                 let foe = match (encounter.police, &encounter.trader) {
                     (Some(police), _) => {
                         self.police_after_contact(police.patrol, &[]);
+                        if self.navigation.pirate_seizures > 0 {
+                            self.navigation.pirate_escapes =
+                                self.navigation.pirate_escapes.saturating_add(1);
+                        }
                         format!("the {} patrol", police.faction.label())
                     }
                     (None, Some(corsair)) => corsair.name.clone(),

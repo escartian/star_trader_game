@@ -7,6 +7,13 @@ impl SaveData {
         let state = &self.player;
         let run = state.navigation.run;
         let limit = state.campaign.run_limit;
+        let piracy = &state.navigation;
+        if piracy.pirate_seizures > piracy.piracies
+            || piracy.pirate_escapes > piracy.next_encounter_id
+            || piracy.pirate_cargo > piracy.pirate_seizures.saturating_mul(1_000_000)
+        {
+            return Err("Invalid pirate progress".into());
+        }
         if limit.is_some_and(|value| value == 0 || value > crate::campaign::MAX_RUN_LIMIT) {
             return Err("Invalid campaign length".into());
         }
@@ -35,7 +42,11 @@ impl SaveData {
                             .as_ref()
                             .is_some_and(|haven| haven.destroyed_run == Some(ended)),
                         Road::Diplomat => state.jobs.treaty.is_some(),
-                        Road::Pirate => false,
+                        Road::Pirate => {
+                            game_core::campaign::progress(state, &self.economy, crate::LOCAL_PLAYER)
+                                .iter()
+                                .any(|progress| progress.road == Road::Pirate && progress.complete)
+                        }
                     }
             }
         };

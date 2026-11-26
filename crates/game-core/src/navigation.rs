@@ -235,10 +235,17 @@ pub struct NavigationState {
     /// Secondary fleets guarding a system (see `patrols`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub patrols: Vec<crate::patrols::Patrol>,
-    /// NPC traders the player robbed or attacked (see `piracy`); the future
-    /// wanted status and pirate road read it.
+    /// NPC traders the player robbed or attacked (see `piracy`).
     #[serde(default, skip_serializing_if = "is_zero_count")]
     pub piracies: u64,
+    /// Successful cargo seizures and units taken from NPC traders.
+    #[serde(default, skip_serializing_if = "is_zero_count")]
+    pub pirate_seizures: u64,
+    #[serde(default, skip_serializing_if = "is_zero_count")]
+    pub pirate_cargo: u64,
+    /// Successful escapes from faction police contacts.
+    #[serde(default, skip_serializing_if = "is_zero_count")]
+    pub pirate_escapes: u64,
     /// Hired escorts, at most one per fleet.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub escorts: Vec<Escort>,
@@ -283,6 +290,9 @@ impl Default for NavigationState {
             flagship: None,
             patrols: Vec::new(),
             piracies: 0,
+            pirate_seizures: 0,
+            pirate_cargo: 0,
+            pirate_escapes: 0,
             escorts: Vec::new(),
             police: Default::default(),
             pursuit: None,

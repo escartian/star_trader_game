@@ -217,6 +217,29 @@ fn a_wanted_fleet_is_stopped_and_complying_pays_the_fine() {
 }
 
 #[test]
+fn escaping_police_after_a_seizure_advances_pirate_progress() {
+    let mut session = policed(Session::default(), FleetId(1), 30);
+    session.state.navigation.piracies = 1;
+    session.state.navigation.pirate_seizures = 1;
+    session.state.navigation.pirate_cargo = 8;
+    let contact = stopped(&mut session);
+    let escaped = (0..100).find_map(|seed| {
+        let mut attempt = session.clone();
+        attempt.state.navigation.rng_state = seed;
+        choose(&mut attempt, contact, EncounterChoice::Evade);
+        attempt
+            .state
+            .navigation
+            .encounters
+            .is_empty()
+            .then_some(attempt)
+    });
+    let escaped = escaped.expect("at least one deterministic seed evades the patrol");
+    assert_eq!(escaped.state.navigation.pirate_escapes, 1);
+    assert_eq!(reload(&escaped).state.navigation.pirate_escapes, 1);
+}
+
+#[test]
 fn complying_short_of_the_fine_impounds_the_cargo() {
     let mut session = policed(Session::default(), FleetId(1), 30);
     session.state.ships[0].cargo[Commodity::Ore.index()] = 5;

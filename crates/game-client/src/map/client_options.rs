@@ -29,7 +29,7 @@ impl Map {
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(options.fullscreen));
         }
         self.applied_options = Some(options);
-        // The theme belongs to the main menu; in game only if the player asks.
+        // The theme plays in game by default, and can be disabled in Settings.
         let wanted =
             (self.save_recovery.is_some() || options.music_in_game).then_some(Track::MainTheme);
         let gain = music_gain(options.master_volume, options.music_volume, options.muted);

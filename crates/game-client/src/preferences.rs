@@ -106,7 +106,7 @@ impl Default for ClientOptions {
             music_volume: 70,
             effects_volume: 80,
             muted: false,
-            music_in_game: false,
+            music_in_game: true,
             fullscreen: false,
             ui_scale: 100,
             animations: true,

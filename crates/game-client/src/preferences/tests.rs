@@ -57,10 +57,9 @@ fn settings_from_before_options_load_with_defaults_and_bad_options_are_rejected(
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("settings.json");
     std::fs::write(&path, r#"{"schema_version":2,"save_path":"data/slot-1.json","slot":1,"active_ship":1,"guide":true,"autosave":true}"#).unwrap();
-    assert_eq!(
-        Preferences::load(&path).unwrap().options,
-        ClientOptions::default()
-    );
+    let default_options = Preferences::load(&path).unwrap().options;
+    assert_eq!(default_options, ClientOptions::default());
+    assert!(default_options.music_in_game);
     let quiet = Preferences {
         options: ClientOptions {
             music_volume: 25,

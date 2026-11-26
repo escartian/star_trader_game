@@ -14,7 +14,7 @@ fn frame(map: &mut Map, ctx: &egui::Context, time: f64) {
 }
 
 #[test]
-fn the_theme_plays_on_the_menu_and_fades_out_once_a_game_starts() {
+fn the_theme_plays_on_the_menu_and_continues_into_gameplay_by_default() {
     let directory = tempfile::tempdir().unwrap();
     let save = directory.path().join("slot-1.json");
     game_server::Session::default().save(&save).unwrap();
@@ -28,9 +28,13 @@ fn the_theme_plays_on_the_menu_and_fades_out_once_a_game_starts() {
     let mut menu = map.save_recovery.take().unwrap();
     assert!(map.carry_out(&ctx, &mut menu, Some(Choice::Load(save.clone()))));
     frame(&mut map, &ctx, 3.5);
-    assert_eq!(map.music.playing(), Some(Track::MainTheme), "fading out");
+    assert_eq!(
+        map.music.playing(),
+        Some(Track::MainTheme),
+        "gameplay music stays enabled by default"
+    );
     frame(&mut map, &ctx, 8.0);
-    assert_eq!(map.music.playing(), None);
+    assert_eq!(map.music.playing(), Some(Track::MainTheme));
 
     // "Main menu" without saving reopens the menu on the same save.
     map.session.leave_to_main_menu(false);

@@ -35,6 +35,11 @@ bundle is not browser/device acceptance.
 
 `tools/export_web.sh DEST_DIR` builds a release bundle with relative paths and
 copies it into a static site (for example a portfolio's `games/star-trader/`).
+`tools/update_resume_web.sh` builds that bundle in the sibling `Code/Resume`
+repository and replaces its `games/star-trader/` folder after validation. The
+swap reuses unchanged files via hard links, so the music is only copied when its
+contents change. The browser bundle can be built here, but mobile device
+validation remains deferred.
 
 ## Rendering evidence
 

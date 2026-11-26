@@ -259,6 +259,7 @@ impl TravelState {
                 report.crippled = Some(id);
             }
         }
+        let player_captain = self.player_captain_record(fleet.owner);
         let removed: Vec<ShipId> = destroyed
             .into_iter()
             .filter(|id| Some(*id) != wreck)
@@ -275,6 +276,9 @@ impl TravelState {
             record.ships.retain(|id| !removed.contains(id));
         }
         self.fleets.retain(|record| !record.ships.is_empty());
+        if let Some(previous) = player_captain {
+            self.reseat_player_captain(fleet.owner, previous);
+        }
         if !self.fleets.iter().any(|record| record.id == fleet.id) {
             self.navigation
                 .orders

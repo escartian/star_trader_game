@@ -84,6 +84,10 @@ impl SaveData {
         if members != ids
             || self
                 .player
+                .player_captain_fleet
+                .is_some_and(|id| !fleets.contains(&id))
+            || self
+                .player
                 .ships
                 .iter()
                 .any(|ship| ship.id.0 >= self.player.next_ship_id)

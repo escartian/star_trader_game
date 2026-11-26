@@ -13,7 +13,11 @@ impl LocalSession {
         ship: &Ship,
     ) -> Option<ClientCommand> {
         ui.separator();
-        ui.label(egui::RichText::new("REFIT THIS SHIP").small().color(AMBER));
+        ui.label(
+            egui::RichText::new(format!("REFIT {}", ship.name.to_uppercase()))
+                .small()
+                .color(AMBER),
+        );
         ui.small("Remove an upgrade for its current resale value, or swap it in one transaction. Cargo must fit after a capacity change.");
         let mut fitted = Vec::new();
         if ship.upgraded {

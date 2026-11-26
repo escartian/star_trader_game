@@ -50,6 +50,10 @@ Draw star markers and route lines, with regular UI panels for markets/fleets.
 No ECS, physics world or general scene framework is required. The client reads
 only the embedded ship GLBs used by battle and NPC traffic.
 
+The Market's Trade tab owns buying, selling and port services. Its Shipyard tab
+is available at every market for ship fittings, fleet software, refits and hull
+transactions, including ports with no hulls currently in stock.
+
 Music is client I/O in `game-client/src/audio.rs`. The map decides which track
 should play (the main menu theme, or in game when the player enables it) and
 the gain from the Settings sliders; `audio` owns the device through rodio

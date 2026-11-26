@@ -85,12 +85,14 @@ impl LocalSession {
                 "Tick ships to split them into a new fleet. Co-located fleets can merge.\nCancel plotted courses before changing fleet membership.",
             );
         });
-        let flagship = self.state.flagship(game_server::LOCAL_PLAYER);
+        let player_captain = self
+            .state
+            .player_captain_fleet_id(game_server::LOCAL_PLAYER);
         for fleet in self.state.fleets.clone() {
             ui.group(|ui| {
                 ui.strong(&fleet.name);
-                // You command the flagship yourself; other fleets have hired captains.
-                let commander = if flagship == Some(fleet.id) {
+                // Taking direct command of another fleet does not replace its captain.
+                let commander = if Some(fleet.id) == player_captain {
                     format!("{} (you), ", self.state.captain_title())
                 } else {
                     String::new()
@@ -103,7 +105,7 @@ impl LocalSession {
                 ));
                 let at_port = self.state.ship(fleet.ships[0])
                     .is_ok_and(|ship| self.economy.current_market(ship).is_ok());
-                if at_port {
+                if at_port && Some(fleet.id) != player_captain {
                     ui.menu_button("Appoint captain…", |ui| {
                         for species in Species::ALL {
                             if ui.selectable_label(fleet.captain.species == species, species.label()).clicked() {
@@ -232,7 +234,7 @@ impl LocalSession {
         }
         ui.horizontal_wrapped(|ui| {
             icons::glyph(ui, Icon::Shipyard, GREEN, "Shipyard");
-            ui.weak("Buy and sell hulls in the market's Shipyard tab, at a port with a shipyard.");
+            ui.weak("Buy and sell hulls or fit upgrades in the market's Shipyard tab.");
         });
         ui.separator();
         ui.horizontal_wrapped(|ui| {

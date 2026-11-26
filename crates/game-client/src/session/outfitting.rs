@@ -1,8 +1,5 @@
-//! The Market window's ship rows: per-ship refuel, repair and hold upgrade (see
-//! `port_services`), then universal, model and size gear for
-//! any of the fleet's ships at this port (each row lists what fits that
-//! ship), and hire (or renew) an escort for the fleet. Rules live in
-//! `game_core::combat::gear`.
+//! Port service controls on Trade and fitting controls on Shipyard. Rules
+//! live in simulation; these rows only submit commands for docked ships.
 use super::LocalSession;
 use crate::theme::icons::{self, Icon};
 use crate::theme::{AMBER, GREEN};
@@ -36,15 +33,44 @@ pub(super) fn fitted_gear(ui: &mut egui::Ui, ship: &Ship) {
 }
 
 impl LocalSession {
-    /// Upgrade rows for every fleet ship at `ship`'s port (`ship` first), then
-    /// the escort; returns the command to send.
-    pub(super) fn outfitting_row(&self, ui: &mut egui::Ui, ship: &Ship) -> Option<ClientCommand> {
+    /// Refuel and repair each ship here, plus the fleet's escort contract.
+    pub(super) fn trade_services_ui(
+        &self,
+        ui: &mut egui::Ui,
+        ship: &Ship,
+    ) -> Option<ClientCommand> {
         let mut action = None;
-        ui.label(egui::RichText::new("SHIPS").small().color(AMBER))
-            .on_hover_text(
-                "Upgrades are fitted to one ship and stay with it. Each row lists what fits \
-                 that ship's model and size.",
-            );
+        ui.label(egui::RichText::new("SHIP SERVICES").small().color(AMBER));
+        for id in self.ships_here(ship.id) {
+            let Ok(member) = self.state.ship(id) else {
+                continue;
+            };
+            ui.label(egui::RichText::new(&member.name).strong())
+                .on_hover_text(member.kind.label());
+            if let Some(command) = ui
+                .horizontal_wrapped(|ui| self.ship_service_buttons(ui, member))
+                .inner
+            {
+                action = Some(command);
+            }
+        }
+        ui.label(egui::RichText::new("FLEET SERVICE").small().color(AMBER));
+        if let Some(command) = self.escort_button(ui, ship) {
+            action = Some(command);
+        }
+        action
+    }
+
+    /// Buy fittings for every ship at this port and software for its fleet.
+    pub(super) fn shipyard_upgrades_ui(
+        &self,
+        ui: &mut egui::Ui,
+        ship: &Ship,
+    ) -> Option<ClientCommand> {
+        let mut action = None;
+        ui.separator();
+        ui.label(egui::RichText::new("OUTFIT SHIPS").small().color(AMBER))
+            .on_hover_text("Fittings stay with each ship and must fit its model and size.");
         for id in self.ships_here(ship.id) {
             let Ok(member) = self.state.ship(id) else {
                 continue;
@@ -53,16 +79,11 @@ impl LocalSession {
                 action = Some(command);
             }
         }
-        ui.label(egui::RichText::new("FLEET").small().color(AMBER))
+        ui.label(egui::RichText::new("FLEET SOFTWARE").small().color(AMBER))
             .on_hover_text("Bought once for the whole fleet; the lead ship pays here.");
-        ui.horizontal_wrapped(|ui| {
-            if let Some(command) = self.software_buttons(ui, ship) {
-                action = Some(command);
-            }
-            if let Some(command) = self.escort_button(ui, ship) {
-                action = Some(command);
-            }
-        });
+        if let Some(command) = self.software_buttons(ui, ship) {
+            action = Some(command);
+        }
         action
     }
 
@@ -100,7 +121,7 @@ impl LocalSession {
         action
     }
 
-    /// One ship's row: its name, then a button per fitting upgrade.
+    /// One ship's upgrades, one per line to keep the card's width fixed.
     fn ship_upgrades(&self, ui: &mut egui::Ui, ship: &Ship) -> Option<ClientCommand> {
         let mut action = None;
         let size = self
@@ -109,44 +130,39 @@ impl LocalSession {
             .ship_catalog
             .spec(ship.kind)
             .map(|spec| spec.combat.size);
-        ui.horizontal_wrapped(|ui| {
-            ui.label(egui::RichText::new(&ship.name).strong())
-                .on_hover_text(ship.kind.label());
-            if let Some(command) = self.ship_service_buttons(ui, ship) {
-                action = Some(command);
+        ui.label(egui::RichText::new(&ship.name).strong())
+            .on_hover_text(ship.kind.label());
+        if let Some(command) = self.hold_upgrade_button(ui, ship) {
+            action = Some(command);
+        }
+        for gear in Gear::ALL {
+            if !size.is_some_and(|size| gear.fits(ship.kind, size)) {
+                continue;
             }
-            if let Some(command) = self.hold_upgrade_button(ui, ship) {
-                action = Some(command);
+            let price = self.economy.gear_price(gear);
+            let fitted = ship.gear.contains(&gear);
+            let blocked = if fitted {
+                Some(format!("{} already fitted.", gear.label()))
+            } else {
+                (price > self.economy.credits)
+                    .then(|| format!("Costs {price} cr; you have {} cr.", self.economy.credits))
+            };
+            let label = if fitted {
+                format!("{} ✓", gear.label())
+            } else {
+                format!("{} · {price} cr", gear.label())
+            };
+            if icons::labeled_action(ui, gear_icon(gear), &label, blocked)
+                .on_hover_text(gear.summary())
+                .clicked()
+            {
+                action = Some(ClientCommand::FitGear {
+                    ship: ship.id,
+                    gear,
+                    expected_revision: self.state.revision,
+                });
             }
-            for gear in Gear::ALL {
-                if !size.is_some_and(|size| gear.fits(ship.kind, size)) {
-                    continue;
-                }
-                let price = self.economy.gear_price(gear);
-                let fitted = ship.gear.contains(&gear);
-                let blocked = if fitted {
-                    Some(format!("{} already fitted.", gear.label()))
-                } else {
-                    (price > self.economy.credits)
-                        .then(|| format!("Costs {price} cr; you have {} cr.", self.economy.credits))
-                };
-                let label = if fitted {
-                    format!("{} ✓", gear.label())
-                } else {
-                    format!("{} · {price} cr", gear.label())
-                };
-                if icons::labeled_action(ui, gear_icon(gear), &label, blocked)
-                    .on_hover_text(gear.summary())
-                    .clicked()
-                {
-                    action = Some(ClientCommand::FitGear {
-                        ship: ship.id,
-                        gear,
-                        expected_revision: self.state.revision,
-                    });
-                }
-            }
-        });
+        }
         action
     }
 

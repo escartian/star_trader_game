@@ -32,7 +32,9 @@ Each `data/slot-N.json` stores:
 - `systems`: stable IDs, star/body kinds, planet profiles and galaxy/local positions.
 - `player`: selected starting captain `player_species` (old saves default to Human),
   optional `captain_name` (at most 24 characters, single-spaced and trimmed;
-  omitted or empty reads as plain "Captain" in game text), tick/revision, movement rules, navigation state (run, courses, Wait orders as `holds`,
+  omitted or empty reads as plain "Captain" in game text), optional `player_captain_fleet`
+  (the fleet carrying the player captain; old saves infer the first owned fleet),
+  tick/revision, movement rules, navigation state (run, courses, Wait orders as `holds`,
   encounters with raider `hostiles`, RNG, rescues, `last_combat` report (outcome `victory`, `defeat`, `disengaged` or `surrendered`), the open `battle` (omitted when none), trade
   `routes` with their fleet and two market stops, omitted when empty), ships (IDs, owner, class, individual cargo/hold/fuel/range,
   `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner, ship membership, `captain` with species and experience, and optional

@@ -160,6 +160,19 @@ fn parse(json: &[u8]) -> Result<(SaveData, Option<&'static str>), String> {
         serde_json::from_slice(json).map_err(|error| error.to_string())?;
     let grid_battle = schema::upgrade(&mut value)?;
     let mut data: SaveData = serde_json::from_value(value).map_err(|error| error.to_string())?;
+    // Older builds let a player appoint a replacement to Fleet 1. Restore
+    // the player's chosen species without discarding that captain's experience.
+    let player_captain = data
+        .player
+        .player_captain_fleet_id(game_core::travel::PlayerId(1));
+    if let Some(primary) = data
+        .player
+        .fleets
+        .iter_mut()
+        .find(|fleet| Some(fleet.id) == player_captain)
+    {
+        primary.captain.species = data.player.player_species;
+    }
     // Reject malformed orbit definitions before `place` divides by a period
     // or adds a moon offset to its parent.
     data.player

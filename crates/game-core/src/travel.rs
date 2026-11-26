@@ -4,6 +4,7 @@ use crate::{
     fleet::{Fleet, FleetId, ShipKind},
 };
 use serde::{Deserialize, Serialize};
+mod captain;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub u64);
@@ -121,6 +122,10 @@ pub struct TravelState {
     /// empty means plain "Captain" (and older saves).
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub captain_name: String,
+    /// The fleet carrying the player captain; old saves infer Fleet 1 (or the
+    /// first surviving fleet). Direct command of another fleet is separate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player_captain_fleet: Option<FleetId>,
     pub navigation: crate::navigation::NavigationState,
     pub movement_rules: crate::movement::MovementRules,
     pub tick: u64,
@@ -181,6 +186,7 @@ impl Default for TravelState {
         Self {
             player_species: crate::species::Species::Human,
             captain_name: String::new(),
+            player_captain_fleet: Some(crate::fleet::PRIMARY_FLEET),
             navigation: crate::navigation::NavigationState::default(),
             movement_rules: crate::movement::MovementRules::default(),
             tick: 0,

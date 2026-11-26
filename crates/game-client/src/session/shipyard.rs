@@ -36,6 +36,14 @@ impl LocalSession {
             &market.credits.to_string(),
             "Shipyard funds available to buy hulls",
         );
+        if let Some(command) = self.shipyard_upgrades_ui(ui, ship) {
+            action = Some(command);
+        }
+        if let Some(command) = self.shipyard_refit_ui(ui, ship) {
+            action = Some(command);
+        }
+        ui.separator();
+        ui.label(egui::RichText::new("HULLS FOR SALE").small().color(AMBER));
         let artwork = crate::map::art::Artwork::preload(ui.ctx());
         for spec in &self.economy.rules.ship_catalog.ships {
             ui.horizontal_wrapped(|ui| {
@@ -101,9 +109,6 @@ impl LocalSession {
                 ui.add_space(44.0);
                 combat_chips(ui, &spec.combat, &self.economy.rules.combat_catalog, None);
             });
-        }
-        if let Some(command) = self.shipyard_refit_ui(ui, ship) {
-            action = Some(command);
         }
         let quote = self.economy.quote_ship_sale(ship);
         let label = quote.as_ref().map_or_else(

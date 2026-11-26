@@ -117,3 +117,19 @@ fn compact_json_imports_to_the_same_session_and_rejects_damage() {
     assert!(Session::import_json(&compact[..compact.len() / 2]).is_err());
     assert!(Session::import_json(r#"{"schema_version":6}"#).is_err());
 }
+
+#[test]
+fn old_primary_fleet_appointment_restores_player_species_on_load() {
+    let session = Session::default();
+    let mut save: serde_json::Value =
+        serde_json::from_str(&session.export_json().unwrap()).unwrap();
+    save["player"]["player_species"] = "miri".into();
+    save["player"]["fleets"][0]["captain"]["species"] = "auralith".into();
+    save["player"]["fleets"][0]["captain"]["experience"] = 42.into();
+    let (loaded, _) = Session::import_json(&save.to_string()).unwrap();
+    assert_eq!(
+        loaded.state.fleets[0].captain.species,
+        game_core::species::Species::Miri
+    );
+    assert_eq!(loaded.state.fleets[0].captain.experience, 42);
+}

@@ -12,6 +12,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FleetId(pub u64);
 
+/// The player's original fleet. Direct command (`flagship`) may move to a
+/// different fleet, but this fleet's captain remains the player while it exists.
+/// If it is lost, the player captain takes over a surviving fleet.
+pub const PRIMARY_FLEET: FleetId = FleetId(1);
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ShipKind {

@@ -156,13 +156,18 @@ pub fn window(
         window.fixed_pos(screen.min).fixed_size(screen.size())
     } else {
         window
-            .default_width(width)
+            // `width` is the plate's content width. A long row of fixed-size
+            // buttons must wrap inside it rather than enlarging the window
+            // after the header has positioned its right-aligned Close button.
+            .default_width(width + 24.0)
+            .max_width(width + 24.0)
             .pivot(egui::Align2::CENTER_CENTER)
             .default_pos(screen.center())
     };
     window.show(ctx, |ui| {
         frame(ui, 255, |ui| {
             ui.set_width(width);
+            ui.set_max_width(width);
             ui.horizontal(|ui| {
                 if full {
                     close = super::icons::button(ui, super::icons::Icon::Back, "Back").clicked();

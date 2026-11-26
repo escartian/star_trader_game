@@ -51,6 +51,9 @@ impl Session {
                 | ClientCommand::SplitFleet { .. }
                 | ClientCommand::MergeFleets { .. }
         );
+        let player_captain = structural
+            .then(|| candidate.state.player_captain_record(player))
+            .flatten();
         match &command {
             ClientCommand::BuyShip { ship, .. } | ClientCommand::SellShip { ship, .. } => {
                 candidate.state.authorize(player, *ship)?;
@@ -105,7 +108,10 @@ impl Session {
                     .iter()
                     .find(|record| record.id == fleet)
                     .ok_or(FleetError::UnknownFleet)?;
-                if record.owner != player || record.captain.species == species {
+                if record.owner != player
+                    || candidate.state.player_captain_fleet_id(player) == Some(fleet)
+                    || record.captain.species == species
+                {
                     return Err(FleetError::InvalidSelection.into());
                 }
                 let ship = candidate.state.ship(record.ships[0])?;
@@ -151,6 +157,9 @@ impl Session {
         if structural {
             // Fleets created by a split start without orders; surviving fleets keep theirs.
             candidate.state.prune_standing_orders();
+            if let Some(previous) = player_captain {
+                candidate.state.reseat_player_captain(player, previous);
+            }
         }
         candidate.state.revision = revision;
         *self = candidate;

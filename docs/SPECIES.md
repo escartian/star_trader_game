@@ -34,10 +34,14 @@ The engine rating stays within 1–10 and escape chance within 10–90%. Fleet
 captains earn one experience point per navigation run while their fleet travels
 and five for a victory. Experience caps at 100; each 25 points adds one armor
 to every ship, and each 20 points adds one percentage point to escape chance.
-Splitting a fleet appoints a new novice captain of the player's species;
-merging retains the target fleet's captain. At a port, **Menu → Fleets → Appoint
-captain** can select any species for a fleet; the replacement starts at zero
-experience. Captain traits are applied when a battle begins and are visible in
+Splitting a fleet appoints a new novice captain of the player's species.
+Merging normally retains the target fleet's captain. Fleet 1 keeps the player
+as its captain while it exists, even when direct command moves to another
+fleet. If the player captain's fleet is destroyed, sold or merged away, the
+player immediately escapes to the surviving flagship (or first owned fleet),
+replacing its captain and keeping their species and experience. At a port,
+**Menu → Fleets → Appoint captain** can select any species for another fleet;
+the replacement starts at zero experience. Captain traits are applied when a battle begins and are visible in
 **Menu → Fleets**. Saves retain species and
 experience, and old saves default to Human novices.
 

@@ -17,6 +17,11 @@ other fleet follows a **standing order**:
   fuel at its markets when credits allow, so raider bands hunting the system
   meet it. A patrol that cannot set off (no fuel, say) reports it and retries.
 
+Taking direct command of a different fleet does not change its appointed
+captain. The player remains captain of Fleet 1 while that fleet exists. If the
+player captain's fleet is lost, the player immediately takes over the surviving
+flagship, keeping their species and experience.
+
 Secondary fleets settle their own contacts: raider fights auto-resolve (each
 bounty paid once), salvage is taken when a hold has room, distress calls are
 answered when medicine is aboard, customs are complied with, convoys get the

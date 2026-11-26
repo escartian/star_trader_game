@@ -104,12 +104,7 @@ impl LocalSession {
             ui.label(egui::RichText::new(terms.summary()).color(color).small());
             self.wanted_banner(ui, &ship);
         }
-        // A port with hulls for sale has a Shipyard tab; hulls are bought
-        // only there, where the ship is docked. Every port has a job board.
-        let yard = market.ship_stock.iter().any(|stock| *stock > 0);
-        if !yard && self.market.page == MarketPage::Shipyard {
-            self.market.page = MarketPage::Trade;
-        }
+        // Fittings are available at every market, even when hull stock is empty.
         ui.horizontal(|ui| {
             let mut tab = |ui: &mut egui::Ui, icon, label, page| {
                 if icons::labeled_toggle(ui, icon, label, self.market.page == page).clicked() {
@@ -117,9 +112,7 @@ impl LocalSession {
                 }
             };
             tab(ui, Icon::Market, "Trade", MarketPage::Trade);
-            if yard {
-                tab(ui, Icon::Shipyard, "Shipyard", MarketPage::Shipyard);
-            }
+            tab(ui, Icon::Shipyard, "Shipyard", MarketPage::Shipyard);
             tab(ui, Icon::Log, "Jobs", MarketPage::Jobs);
         });
         ui.separator();
@@ -201,7 +194,7 @@ impl LocalSession {
         ui.separator();
         let service = self.fleet_services_row(ui, &ship);
         ui.separator();
-        if let Some(command) = self.outfitting_row(ui, &ship) {
+        if let Some(command) = self.trade_services_ui(ui, &ship) {
             action = Some(command);
         }
         self.known_prices(ui, systems);
@@ -270,5 +263,58 @@ impl LocalSession {
                     });
                 });
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shipyard_tab_remains_available_when_no_hulls_are_in_stock() {
+        let authority = game_server::Session::default();
+        let systems = authority.systems().to_vec();
+        let mut session = LocalSession::new(authority);
+        for market in &mut session.economy.markets {
+            market.ship_stock.fill(0);
+        }
+        session.market.open = true;
+        let ctx = egui::Context::default();
+        let input = || egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(1280.0, 800.0),
+            )),
+            ..Default::default()
+        };
+        let mut output = ctx.run(input(), |ctx| session.show_market(ctx, &systems));
+        for _ in 0..3 {
+            output = ctx.run(input(), |ctx| session.show_market(ctx, &systems));
+        }
+        let shipyard = output.shapes.iter().find_map(|shape| match &shape.shape {
+            egui::epaint::Shape::Text(text) if text.galley.job.text == "Shipyard" => {
+                Some(text.pos + text.galley.size() / 2.0)
+            }
+            _ => None,
+        });
+        let point = shipyard.expect("Shipyard tab remains visible");
+        for pressed in [true, false] {
+            let _ = ctx.run(
+                egui::RawInput {
+                    events: vec![
+                        egui::Event::PointerMoved(point),
+                        egui::Event::PointerButton {
+                            pos: point,
+                            button: egui::PointerButton::Primary,
+                            pressed,
+                            modifiers: egui::Modifiers::NONE,
+                        },
+                    ],
+                    ..input()
+                },
+                |ctx| session.show_market(ctx, &systems),
+            );
+        }
+        assert_eq!(session.market.page, MarketPage::Shipyard);
     }
 }

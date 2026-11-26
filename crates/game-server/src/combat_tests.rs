@@ -203,6 +203,45 @@ fn a_destroyed_fleet_is_removed_with_its_course_while_others_continue() {
 }
 
 #[test]
+fn player_captain_escapes_to_a_surviving_fleet_after_primary_is_destroyed() {
+    let mut session = two_fleets();
+    session.state.player_species = game_core::species::Species::Miri;
+    session.state.fleets[0].captain.species = game_core::species::Species::Miri;
+    session.state.fleets[0].captain.experience = 37;
+    let encounter = raid(
+        &mut session,
+        ShipId(1),
+        Some(FleetId(2)),
+        vec![ShipKind::Patrol; 3],
+    );
+    let player_captain = session.state.fleets[0].captain;
+    choose(&mut session, encounter, EncounterChoice::AutoResolve);
+    assert_eq!(
+        session
+            .state
+            .navigation
+            .last_combat
+            .as_ref()
+            .unwrap()
+            .outcome,
+        CombatOutcome::Defeat
+    );
+    assert!(
+        session
+            .state
+            .fleets
+            .iter()
+            .all(|fleet| fleet.id != FleetId(1))
+    );
+    assert_eq!(
+        session.state.player_captain_fleet_id(super::LOCAL_PLAYER),
+        Some(FleetId(2))
+    );
+    assert_eq!(session.state.fleets[0].captain, player_captain);
+    reload(&session);
+}
+
+#[test]
 fn evasion_either_escapes_untouched_or_opens_a_battle() {
     let mut escaped = false;
     let mut forced = false;

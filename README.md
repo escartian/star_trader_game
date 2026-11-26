@@ -20,7 +20,7 @@ browser build compiles the same client to WebAssembly.
   explicit system entry, with whole-fleet fuel/range checks and shared navigation runs.
 - Per-planet and station markets with finite funds/hull stock, planet economy/biome/
   danger/specialization, stock-sensitive prices and refuelling,
-  known-market comparisons and a purchasable cargo-hold upgrade.
+  known-market comparisons and a purchasable cargo-hold upgrade on the Shipyard tab.
 - Fleet course planning, readiness highlighting, persistent Wait orders, parallel navigation
   runs and individual salvage, distress and raider encounters.
 - Planets and moons on deterministic orbits, with collision volumes that courses
@@ -116,6 +116,11 @@ they survive reloads and later visits until the site's data is cleared. It
 autosaves when the tab is hidden and every minute. To put the build on a
 static site, run `tools/export_web.sh DEST_DIR`. See
 [platform status](docs/PLATFORM_STATUS.md).
+To replace the copy in the sibling `Code/Resume/games/star-trader` folder,
+run `./tools/update_resume_web.sh` from anywhere. It builds a release bundle
+and swaps the game folder only after the new files are ready. Files with the
+same contents as the current bundle, including music, are reused without
+copying them into the Resume folder again.
 
 The initial path is `data/slot-1.json`. Normal desktop launches open the
 [main menu](docs/previews/main-menu.png): **Continue** (the last used game),

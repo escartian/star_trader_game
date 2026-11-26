@@ -1,9 +1,80 @@
 use super::*;
 use game_core::{
     BodyId,
+    fleet::{FleetId, PRIMARY_FLEET, ShipKind},
     movement::MoveTarget,
     travel::{Location, ShipId},
 };
+
+#[test]
+fn fleet_one_shows_player_captain_after_taking_command_of_fleet_two() {
+    let mut authority = game_server::Session::default();
+    let systems = authority.systems().to_vec();
+    for command in [
+        ClientCommand::BuyShip {
+            ship: ShipId(1),
+            kind: ShipKind::Scout,
+            expected_revision: 0,
+        },
+        ClientCommand::SplitFleet {
+            fleet: PRIMARY_FLEET,
+            ships: vec![ShipId(2)],
+            expected_revision: 1,
+        },
+        ClientCommand::SetFlagship {
+            fleet: FleetId(2),
+            expected_revision: 2,
+        },
+    ] {
+        assert!(matches!(
+            authority.handle(command),
+            ServerMessage::SessionSnapshot { .. }
+        ));
+    }
+    let mut host = LocalSession::new(authority);
+    host.fleet_panel.open = true;
+    assert_eq!(
+        host.state.flagship(game_server::LOCAL_PLAYER),
+        Some(FleetId(2))
+    );
+    let ctx = egui::Context::default();
+    let mut output = egui::FullOutput::default();
+    for _ in 0..4 {
+        output = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1280.0, 1000.0),
+                )),
+                ..Default::default()
+            },
+            |ctx| host.show_fleets(ctx, &systems),
+        );
+    }
+    let texts: Vec<_> = output
+        .shapes
+        .iter()
+        .filter_map(|shape| match &shape.shape {
+            egui::epaint::Shape::Text(text) => Some((&text.galley.job.text, text.pos.y)),
+            _ => None,
+        })
+        .collect();
+    let y = |label: &str| {
+        texts
+            .iter()
+            .find(|(text, _)| text.starts_with(label))
+            .map(|(_, y)| *y)
+            .unwrap_or_else(|| panic!("missing {label}"))
+    };
+    assert!(y("Fleet 1") < y("Captain (you),") && y("Captain (you),") < y("Fleet 2"));
+    assert_eq!(
+        texts
+            .iter()
+            .filter(|(text, _)| text.contains("(you)"))
+            .count(),
+        1
+    );
+}
 
 #[test]
 fn plotting_does_not_advance_time_and_navigation_runs_do() {

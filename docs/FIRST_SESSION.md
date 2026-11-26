@@ -31,7 +31,8 @@
   (and its system) that pays most for each good; the selector above it limits
   that search to ports in fuel range, this system or the whole galaxy, and the
   best-trade line picks the single best one. Fixed-price fuel service costs 2.00 credits/unit
-  by default. Earn enough for the cargo upgrade while budgeting for future journeys.
+  by default. Earn enough for the cargo upgrade while budgeting for future journeys;
+  buy the hold upgrade on the Market's **Shipyard** tab.
 - Continue restores the exact saved journey, cargo, prices, markets and tick.
   Save slots use validated JSON, atomic replacement and a previous-good backup.
   Autosave runs on close/suspend; failed close-saves keep the window open.

@@ -191,6 +191,66 @@ fn phone_market_shows_trade_actions_without_horizontal_clipping() {
 }
 
 #[test]
+fn desktop_market_keeps_service_rows_inside_card_and_close_at_right_edge() {
+    let ctx = egui::Context::default();
+    let mut map = multi_fleet();
+    map.session.open_market();
+    settle(&ctx, &mut map, DESKTOP);
+    let card = ctx
+        .memory(|memory| memory.area_rect(egui::Id::new("Market")))
+        .expect("market card");
+    assert!(card.width() <= 724.0 + 1.0, "market grew to {card:?}");
+    let close = Pos2::new(card.right() - 27.0, card.top() + 27.0);
+    for pressed in [true, false] {
+        frame(
+            &ctx,
+            &mut map,
+            DESKTOP,
+            vec![
+                egui::Event::PointerMoved(close),
+                egui::Event::PointerButton {
+                    pos: close,
+                    button: egui::PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+    }
+    assert!(shows(&ctx, &mut map, DESKTOP, "MARKET").is_none());
+}
+
+#[test]
+fn ship_upgrades_appear_in_shipyard_instead_of_trade() {
+    let ctx = egui::Context::default();
+    let mut map = multi_fleet();
+    map.session.open_market();
+    let trade = settle(&ctx, &mut map, DESKTOP);
+    assert!(trade.iter().any(|(text, _)| text == "SHIP SERVICES"));
+    assert!(!trade.iter().any(|(text, _)| text == "OUTFIT SHIPS"));
+
+    map.session.open_shipyard();
+    let yard = settle(&ctx, &mut map, DESKTOP);
+    assert!(yard.iter().any(|(text, _)| text == "OUTFIT SHIPS"));
+    assert!(!yard.iter().any(|(text, _)| text == "SHIP SERVICES"));
+    frame(
+        &ctx,
+        &mut map,
+        DESKTOP,
+        vec![
+            egui::Event::PointerMoved(Pos2::new(DESKTOP.x / 2.0, DESKTOP.y / 2.0)),
+            egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                delta: Vec2::new(0.0, -3000.0),
+                modifiers: egui::Modifiers::NONE,
+            },
+        ],
+    );
+    let yard_bottom = settle(&ctx, &mut map, DESKTOP);
+    assert!(yard_bottom.iter().any(|(text, _)| text == "FLEET SOFTWARE"));
+}
+
+#[test]
 fn the_alert_badge_brings_you_back_to_the_flagship_when_it_needs_orders() {
     let ctx = egui::Context::default();
     let mut map = multi_fleet();

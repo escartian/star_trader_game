@@ -151,6 +151,9 @@ pub fn labeled_toggle(ui: &mut Ui, icon: Icon, label: &str, on: bool) -> Respons
     response
 }
 
+/// Height (points) of a menu row on the in-game Menu page.
+pub const MENU_ROW_HEIGHT: f32 = 36.0;
+
 /// A full-width menu entry: a larger icon and label on the left.
 pub fn menu_button(ui: &mut Ui, icon: Icon, label: &str, height: f32) -> Response {
     let text = ui.painter().layout_no_wrap(

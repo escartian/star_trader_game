@@ -67,13 +67,21 @@ impl Map {
                     .strip_actions(ui, &mut self.sheet, &mut self.card.open);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                // Advance takes the right-hand corner; the numbers sit beside it.
+                if one_row {
+                    self.session.run_controls(ui);
+                    ui.add_space(12.0);
+                }
                 self.session.status_numbers(ui);
             });
         });
         if !one_row {
             ui.horizontal(|ui| {
                 self.session
-                    .strip_actions(ui, &mut self.sheet, &mut self.card.open)
+                    .strip_actions(ui, &mut self.sheet, &mut self.card.open);
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    self.session.run_controls(ui);
+                });
             });
         }
     }
@@ -145,10 +153,7 @@ impl Map {
             }
             SheetTab::Fleets => self.session.fleets_sheet(ui, &self.session_systems),
             SheetTab::Menu => {
-                if ui
-                    .add_sized([ui.available_width(), 34.0], |ui: &mut egui::Ui| {
-                        icons::button(ui, Icon::Log, "Songbook · Music")
-                    })
+                if icons::menu_button(ui, Icon::Log, "Songbook · Music", icons::MENU_ROW_HEIGHT)
                     .on_hover_text("Every part of the soundtrack; play or queue one")
                     .clicked()
                 {

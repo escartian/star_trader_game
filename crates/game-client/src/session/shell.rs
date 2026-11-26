@@ -116,8 +116,8 @@ impl LocalSession {
         self.request_sheet_for(next);
     }
 
-    /// The strip's actions: Fleets, Advance (with the single-run clock), Menu
-    /// and the card toggle. A tab toggles its page, or opens a closed card on it.
+    /// The strip's actions: Fleets, Menu and the card toggle (Advance sits at
+    /// the strip's right end, see `run_controls`). A tab toggles its page, or opens a closed card on it.
     pub fn strip_actions(&mut self, ui: &mut egui::Ui, tab: &mut SheetTab, card: &mut bool) {
         let mut tab_button = |ui: &mut egui::Ui, icon, label, page: SheetTab| {
             let on = *card && *tab == page;
@@ -127,7 +127,6 @@ impl LocalSession {
             }
         };
         tab_button(ui, Icon::Fleets, "Fleets", SheetTab::Fleets);
-        self.run_controls(ui);
         tab_button(ui, Icon::Settings, "Menu", SheetTab::Menu);
         let tip = if *card {
             "Hide the card"
@@ -238,9 +237,7 @@ impl LocalSession {
             if !shown[index] {
                 continue;
             }
-            let button = ui.add_sized([ui.available_width(), 34.0], |ui: &mut egui::Ui| {
-                icons::button(ui, icon, label)
-            });
+            let button = icons::menu_button(ui, icon, label, icons::MENU_ROW_HEIGHT);
             if button.on_hover_text(tip).clicked() {
                 match index {
                     0 => self.market.open = true,

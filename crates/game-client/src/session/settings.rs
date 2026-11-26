@@ -117,9 +117,7 @@ impl LocalSession {
     /// "Main menu" from the in-game menu: autosave first, or ask when it is off.
     pub(super) fn main_menu_controls(&mut self, ui: &mut egui::Ui) {
         if !self.saves.confirm_leave {
-            let button = ui.add_sized([ui.available_width(), 34.0], |ui: &mut egui::Ui| {
-                icons::button(ui, Icon::Back, "Main menu")
-            });
+            let button = icons::menu_button(ui, Icon::Back, "Main menu", icons::MENU_ROW_HEIGHT);
             if button
                 .on_hover_text("Save and return to the title screen")
                 .clicked()

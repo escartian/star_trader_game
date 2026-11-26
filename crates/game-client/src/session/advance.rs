@@ -97,18 +97,33 @@ impl LocalSession {
         self.focus_requested = true;
     }
 
-    /// Advance (primary), single-run step and Stop, shared by the HUD and Navigation.
-    pub(super) fn run_controls(&mut self, ui: &mut egui::Ui) {
+    /// Advance (primary), single-run step and Stop, shared by the status
+    /// strip and Navigation. The primary button comes first: in a
+    /// right-to-left row (the strip's right end) it takes the corner.
+    pub fn run_controls(&mut self, ui: &mut egui::Ui) {
         if self.is_advancing() {
-            if icons::button(ui, Icon::Cancel, "STOP")
-                .on_hover_text("Stop advancing; completed runs stay completed")
-                .clicked()
-            {
-                self.toggle_advance();
-            }
-            ui.small(format!("Advancing · run {}", self.state.navigation.run));
-            return;
+            self.stop_button(ui);
+            self.advancing_label(ui);
+        } else {
+            self.advance_button(ui);
+            self.single_run_button(ui);
         }
+    }
+
+    fn stop_button(&mut self, ui: &mut egui::Ui) {
+        if icons::button(ui, Icon::Cancel, "STOP")
+            .on_hover_text("Stop advancing; completed runs stay completed")
+            .clicked()
+        {
+            self.toggle_advance();
+        }
+    }
+
+    fn advancing_label(&self, ui: &mut egui::Ui) {
+        ui.small(format!("Advancing · run {}", self.state.navigation.run));
+    }
+
+    fn advance_button(&mut self, ui: &mut egui::Ui) {
         if icons::button(ui, Icon::Execute, "ADVANCE")
             .on_hover_text(
                 "Run until a fleet arrives, meets a contact or needs orders.\nEvery fleet needs a course or a Wait order first.",
@@ -117,6 +132,9 @@ impl LocalSession {
         {
             self.toggle_advance();
         }
+    }
+
+    fn single_run_button(&mut self, ui: &mut egui::Ui) {
         let run = self.state.navigation.run.saturating_add(1);
         if icons::icon_button(ui, Icon::Clock, &format!("Execute run {run} only")).clicked() {
             self.request_execute_run();

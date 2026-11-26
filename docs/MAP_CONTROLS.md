@@ -90,7 +90,8 @@ takes the screen, framed by two panels.
 
 | Part | Position | Contents |
 | --- | --- | --- |
-| Status strip | top | Back (system view), place name, **Fleets**, **ADVANCE** / **STOP** with the single-run clock, **Menu**, the card toggle (ⓘ), then credits, run number and alert badge; below 720 points wide the actions take a second row |
+| Status strip | top | Back (system view), place name, **Fleets**, **Menu**, the card toggle (ⓘ), then credits, run number and alert badge, and in the right-hand corner the single-run clock and **ADVANCE** (or the run count and **STOP** while advancing); below 720 points wide the actions take a second row, with the run controls at its right end |
+| Menu page | the card's Menu tab | full-width rows of equal size: Songbook, Trade, Fleets, Navigation, Jobs, Victory, Factions (with factions in play), Save & load, New session, Settings, then the event log and Main menu |
 | Context card | bottom, or docked on the right when the window is wider than tall; can be closed | **Close**, the guide and a contact reminder first, then one page |
 | Event card | centred over the map | a contact's decision: an illustrated scene of both sides, the story and the choices as full-width rows; **×** hides it until **Decide** on the card's contact line |
 | Message pop-up | bottom of the map | each new message for about 3 s, then fades over 1 s |

@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 15;
+pub const PROTOCOL_VERSION: u32 = 16;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {

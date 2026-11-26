@@ -1,9 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "factions": [
     {
       "id": "Federation",
       "name": "Concord Federation",
+      "species": "Human",
       "description": "Lawful core worlds. Piracy in their space is punished hardest.",
       "color": [90, 160, 255],
       "piracy_penalty": 25,
@@ -15,6 +16,7 @@
     {
       "id": "Empire",
       "name": "Ascendant Empire",
+      "species": "Human",
       "description": "A martial throne that honours every raider you destroy.",
       "color": [190, 110, 250],
       "piracy_penalty": 15,
@@ -26,6 +28,7 @@
     {
       "id": "Republic",
       "name": "Free Trade Republic",
+      "species": "Human",
       "description": "Merchant houses. Selling in their ports wins favour fastest.",
       "color": [60, 215, 200],
       "piracy_penalty": 15,
@@ -37,6 +40,7 @@
     {
       "id": "Alliance",
       "name": "Frontier Alliance",
+      "species": "Human",
       "description": "Loose frontier clans, slow to anger and glad of raider hunters.",
       "color": [235, 195, 80],
       "piracy_penalty": 8,
@@ -44,12 +48,40 @@
       "sale_credits_per_point": 500000,
       "wanted_runs": 20,
       "fine_per_run": 500
+    },
+    {
+      "id": "Miri",
+      "name": "Miri Observatory",
+      "species": "Miri",
+      "description": "Small green scholars who trade in star charts and field readings. Their observatories welcome explorers but guard their archives fiercely.",
+      "color": [126, 222, 109],
+      "piracy_penalty": 18,
+      "raider_kill_standing": 1,
+      "sale_credits_per_point": 300000,
+      "wanted_runs": 28,
+      "fine_per_run": 900
+    },
+    {
+      "id": "Auralith",
+      "name": "Auralith Confluence",
+      "species": "Auralith",
+      "description": "Energy beings who braid many minds into luminous choirs. They prize mutual defense and negotiate through carefully chosen voices.",
+      "color": [105, 190, 245],
+      "piracy_penalty": 22,
+      "raider_kill_standing": 5,
+      "sale_credits_per_point": 800000,
+      "wanted_runs": 35,
+      "fine_per_run": 1300
     }
   ],
   "classic_relations": [
     { "between": ["Federation", "Republic"], "relation": "Allied" },
     { "between": ["Federation", "Empire"], "relation": "Rival" },
     { "between": ["Empire", "Alliance"], "relation": "Rival" },
-    { "between": ["Republic", "Alliance"], "relation": "Allied" }
+    { "between": ["Republic", "Alliance"], "relation": "Allied" },
+    { "between": ["Miri", "Republic"], "relation": "Allied" },
+    { "between": ["Miri", "Empire"], "relation": "Rival" },
+    { "between": ["Auralith", "Alliance"], "relation": "Allied" },
+    { "between": ["Auralith", "Empire"], "relation": "Rival" }
   ]
 }

@@ -235,8 +235,9 @@ save tests. NPC actions will resolve at navigation-run boundaries.
 
 ## 5. Factions and ship management
 
-- [x] Federation, Empire, Republic and Alliance with territory, influence (share
-  of systems held) and alliances/rivalries, set up at new-game setup: factions
+- [x] Federation, Empire, Republic, Alliance, Miri Observatory and Auralith
+  Confluence with territory, influence (share of systems held) and
+  alliances/rivalries, set up at new-game setup: factions
   in play, allegiance, territory share and classic or random relations
   ([factions](docs/FACTIONS.md)).
 - [x] Standing per faction (−100 to 100, spreading to allies and rivals): piracy
@@ -308,7 +309,7 @@ protocol boundary anticipates this; multiplayer itself is not implemented.
 - [ ] Mobile packaging/signing and full-session offline/connected acceptance.
 
 Potential later scope from the original: enhanced faction AI/economy/generation,
-alien reputation, colonization, planetary development/events/diplomacy. Binary
+further alien diplomacy, colonization, planetary development/events/diplomacy. Binary
 stars, multiple galaxies, galactic motion and orbital mechanics remain unlikely.
 Original web-save import is separate from this Rust rewrite's JSON;
 no compatibility claim is made without inspecting and testing actual old saves.

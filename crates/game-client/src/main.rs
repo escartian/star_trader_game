@@ -161,7 +161,7 @@ fn fresh_session(
     } else {
         game_server::Session::with_galaxy(seed, rules, options.galaxy)?
     };
-    // A player's new game starts as a captain with the four factions in
+    // A player's new game starts as a captain with all six factions in
     // play; captures keep every control and an unclaimed galaxy.
     if !options.capturing() {
         authority.begin_progression();

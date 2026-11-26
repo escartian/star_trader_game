@@ -155,10 +155,10 @@ pub struct Jobs {
     pub quest_offers: Vec<Job>,
     /// Quest steps completed, by [`Faction::index`].
     #[serde(default)]
-    pub quest_steps: [u32; 4],
+    pub quest_steps: [u32; 6],
     /// The run from which a faction's failed step is offered again.
     #[serde(default)]
-    pub quest_retry: [u64; 4],
+    pub quest_retry: [u64; 6],
     /// The faction whose treaty you carried: the Diplomat road is won.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub treaty: Option<Faction>,

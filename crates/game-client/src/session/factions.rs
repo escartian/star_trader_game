@@ -112,12 +112,14 @@ impl LocalSession {
             ui.group(|ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal_wrapped(|ui| {
+                    super::faction_emblems::show(ui, *faction);
                     ui.label(
                         RichText::new(faction.label().to_uppercase())
                             .color(color)
                             .strong(),
                     );
                     ui.label(RichText::new(&definition.name).small());
+                    ui.label(RichText::new(format!("· {}", definition.species)).small());
                     ui.label(
                         RichText::new(format!(
                             "· holds {}% of systems",

@@ -192,9 +192,9 @@ the host adjusts standing and wanted status after each command
 (`factions::terms`). Police patrols live in `NavigationState::police`; the host
 runs `game-core::police::patrol_run` once per navigation run, after NPC traders,
 routes and patrols, because pursuit reads `Economy::factions`. `game-core::combat` validates them.
-Older save schemas are rejected during prototyping. Schema 8 is current; a
-schema-7 save differs only in its battle format and is upgraded on load, its
-open 3D-grid battle (if any) auto-resolved.
+Schema 10 is current. Schemas 7–9 upgrade on load; schemas 7–8 auto-resolve
+an open legacy battle. Schema 10 expands faction and quest state to six powers
+while preserving the four human factions in older games.
 
 ## Movement spaces and host resolution
 

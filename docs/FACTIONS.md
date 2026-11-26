@@ -1,7 +1,8 @@
 # Factions
 
-Four powers divide the galaxy: the **Federation**, the **Empire**, the
-**Republic** and the **Alliance**. They hold territory, they are allied with or
+Six powers divide the galaxy: the human **Federation**, **Empire**,
+**Republic** and **Alliance**, the green **Miri Observatory**, and the
+energy-based **Auralith Confluence**. They hold territory, they are allied with or
 rival to each other, and each keeps a standing with you that sets your terms at
 its ports. Rules live in `game-core/src/factions*`; definitions are JSON content
 in `config/factions.json`.
@@ -13,7 +14,7 @@ rows below the campaign choices:
 
 | Row | Choices | Default |
 | --- | --- | --- |
-| Factions | a checkbox per faction; clear all four for a galaxy without factions | all four |
+| Factions | a checkbox per faction; clear all six for a galaxy without factions | all six |
 | Allegiance | none, or one faction in play: your home system becomes its capital and you start Friendly with it | none |
 | Territory | Sparse (40% of systems claimed), Standard (70%) or Full (every system) | Standard |
 | Relations | Classic (the catalog's alliances and rivalries) or Random (rolled from the map seed) | Classic |
@@ -44,14 +45,19 @@ standing there; the destination card shows the holder's name.
 ## Relations
 
 Pairs of factions are allied, neutral or rivals. Classic relations
-(`classic_relations` in the catalog):
+(`classic_relations` in the catalog) make Federation–Republic,
+Republic–Alliance, Miri–Republic and Auralith–Alliance allies.
+Federation–Empire, Empire–Alliance, Miri–Empire and Auralith–Empire are
+rivals. All other pairs are neutral.
 
-| | Federation | Empire | Republic | Alliance |
-| --- | --- | --- | --- | --- |
-| Federation | | rival | allied | neutral |
-| Empire | rival | | neutral | rival |
-| Republic | allied | neutral | | allied |
-| Alliance | neutral | rival | allied | |
+The Miri are small green cartographers. Their story jobs begin with a survey,
+then help a living archive and end with sharing their charts with a rival.
+The Auralith are luminous beings whose minds can join into choirs. Their
+story starts by defending a damaged relay and ends by carrying a resonance
+anchor to a rival. Both chains can complete the Diplomat road. Their patrols,
+traders, port terms, wanted status and standing follow the same faction rules
+as the human powers. The Miri gain standing from sales relatively quickly;
+the Auralith give the strongest standing reward for destroying raiders.
 
 Random relations make each pair allied one time in four, rivals one time in
 four and neutral otherwise.
@@ -85,6 +91,8 @@ never change your standing. Every change is announced in the log, for example
 | Empire | −15 | +4 | 10,000 cr |
 | Republic | −15 | +1 | 2,000 cr |
 | Alliance | −8 | +3 | 5,000 cr |
+| Miri | −18 | +1 | 3,000 cr |
+| Auralith | −22 | +5 | 8,000 cr |
 
 ## Terms at a faction's ports
 

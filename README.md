@@ -37,7 +37,7 @@ browser build compiles the same client to WebAssembly.
 - Roaming raider bands in every system but home that hunt fleets in the open,
   chase fleets that flee into the next system and wander between systems;
   dock or land to hide, outrun them, flee home or fight them for the bounty.
-- Four factions (Federation, Empire, Republic, Alliance) chosen at setup, with
+- Six factions (four human powers, the Miri and the Auralith) chosen at setup, with
   territory, alliances and rivalries; your standing with each sets prices at
   its ports, and piracy, raider hunting and trade move it (Menu → Factions).
   Piracy makes you wanted: faction police patrols stop your fleets (comply and

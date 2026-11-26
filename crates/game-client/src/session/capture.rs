@@ -343,7 +343,7 @@ impl LocalSession {
         self.victory.open = true;
     }
 
-    /// Lays out the four factions (sworn to the Federation), opening the
+    /// Lays out the factions (sworn to the Federation), opening the
     /// panel unless only the map's territory rings are wanted.
     pub fn capture_factions(&mut self, panel: bool) -> Result<(), String> {
         let setup = game_core::factions::FactionSetup {

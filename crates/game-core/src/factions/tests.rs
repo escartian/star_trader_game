@@ -6,10 +6,34 @@ fn galaxy(seed: u64) -> Vec<crate::StarSystem> {
 }
 
 #[test]
-fn the_embedded_catalog_lists_the_four_factions_in_order() {
+fn the_embedded_catalog_lists_all_powers_in_order() {
     let catalog = FactionCatalog::default();
     let ids: Vec<_> = catalog.factions.iter().map(|faction| faction.id).collect();
     assert_eq!(ids, Faction::ALL);
+}
+
+#[test]
+fn alien_powers_can_hold_territory_and_keep_separate_standing() {
+    let catalog = FactionCatalog::default();
+    assert_eq!(catalog.get(Faction::Miri).species, "Miri");
+    assert_eq!(catalog.get(Faction::Auralith).species, "Auralith");
+    assert_eq!(catalog.get(Faction::Miri).sale_credits_per_point, 300_000);
+    assert_eq!(catalog.get(Faction::Auralith).raider_kill_standing, 5);
+    let systems = galaxy(42);
+    let setup = FactionSetup {
+        in_play: [false, false, false, false, true, true],
+        allegiance: Some(Faction::Miri),
+        ..FactionSetup::default()
+    };
+    let mut factions = setup.generate(42, &systems, &catalog).unwrap();
+    assert_eq!(factions.owner(systems[0].id), Some(Faction::Miri));
+    assert!(factions.influence_percent(Faction::Auralith, systems.len()) > 0);
+    assert_eq!(factions.standing(Faction::Miri), 30);
+    assert_eq!(factions.standing(Faction::Auralith), 0);
+    factions.adjust(Faction::Auralith, 12);
+    assert_eq!(factions.standing(Faction::Auralith), 12);
+    assert_eq!(factions.standing(Faction::Miri), 30);
+    factions.validate(&systems, &catalog).unwrap();
 }
 
 #[test]
@@ -64,7 +88,7 @@ fn factions_out_of_play_hold_nothing_and_none_turns_factions_off() {
     let catalog = FactionCatalog::default();
     let systems = galaxy(5);
     let two = FactionSetup {
-        in_play: [true, false, true, false],
+        in_play: [true, false, true, false, false, false],
         ..FactionSetup::default()
     };
     let factions = two.generate(5, &systems, &catalog).unwrap();
@@ -77,7 +101,7 @@ fn factions_out_of_play_hold_nothing_and_none_turns_factions_off() {
     let mut factions = factions;
     assert!(factions.adjust(Faction::Empire, -20).is_empty());
     let off = FactionSetup {
-        in_play: [false; 4],
+        in_play: [false; 6],
         ..FactionSetup::default()
     };
     let none = off.generate(5, &systems, &catalog).unwrap();

@@ -1,4 +1,4 @@
-//! The four great powers: who holds which systems, how they regard each other
+//! The powers: who holds which systems, how they regard each other
 //! and how they regard you.
 //!
 //! - Definitions (names, colours, temperaments) are JSON content
@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 
 pub const MIN_STANDING: i32 = -100;
 pub const MAX_STANDING: i32 = 100;
-const CATALOG_SCHEMA: u32 = 1;
+const CATALOG_SCHEMA: u32 = 2;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Faction {
@@ -30,14 +30,18 @@ pub enum Faction {
     Empire,
     Republic,
     Alliance,
+    Miri,
+    Auralith,
 }
 
 impl Faction {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 6] = [
         Self::Federation,
         Self::Empire,
         Self::Republic,
         Self::Alliance,
+        Self::Miri,
+        Self::Auralith,
     ];
 
     pub fn index(self) -> usize {
@@ -51,6 +55,8 @@ impl Faction {
             Self::Empire => "Empire",
             Self::Republic => "Republic",
             Self::Alliance => "Alliance",
+            Self::Miri => "Miri",
+            Self::Auralith => "Auralith",
         }
     }
 }
@@ -68,6 +74,8 @@ pub struct FactionDefinition {
     pub id: Faction,
     pub name: String,
     pub description: String,
+    /// Species represented by this power, shown in the factions panel.
+    pub species: String,
     /// sRGB.
     pub color: [u8; 3],
     /// Standing lost for each act of piracy in its space.
@@ -124,6 +132,7 @@ impl FactionCatalog {
                 .all(|(definition, id)| definition.id == id);
         let sound = self.factions.iter().all(|definition| {
             (1..=64).contains(&definition.name.len())
+                && (1..=64).contains(&definition.species.len())
                 && definition.description.len() <= 256
                 && definition.piracy_penalty <= 100
                 && definition.raider_kill_standing <= 100
@@ -164,14 +173,14 @@ pub struct Factions {
     pub relations: Vec<(Faction, Faction, Relation)>,
     /// Your standing with each faction, by [`Faction::index`].
     #[serde(default)]
-    pub standing: [i32; 4],
+    pub standing: [i32; 6],
     /// Sales not yet worth a point of standing, in cents, by faction.
     #[serde(default)]
-    pub sales_cents: [u64; 4],
+    pub sales_cents: [u64; 6],
     /// Runs left on your wanted status with each faction, by
     /// [`Faction::index`]; 0: not wanted (see `wanted`).
     #[serde(default)]
-    pub wanted: [u32; 4],
+    pub wanted: [u32; 6],
 }
 
 impl Factions {

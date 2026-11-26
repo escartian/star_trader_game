@@ -15,6 +15,7 @@ mod capture_traffic;
 mod combat_report;
 mod contact_card;
 mod contacts;
+mod faction_emblems;
 mod factions;
 mod fleets;
 mod victory;

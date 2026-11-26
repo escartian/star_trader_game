@@ -18,21 +18,57 @@ fn load_value(value: &serde_json::Value) -> Result<(Session, Option<String>), St
 #[test]
 fn saves_from_before_flat_maps_are_rejected_with_a_clear_message() {
     let session = Session::default();
-    let mut value: serde_json::Value =
-        serde_json::from_str(&session.export_json().unwrap()).unwrap();
-    assert_eq!(value["schema_version"], 9);
+    let value: serde_json::Value = serde_json::from_str(&session.export_json().unwrap()).unwrap();
+    assert_eq!(value["schema_version"], 10);
     assert!(load_value(&value).is_ok());
-    for older in [7, 8] {
-        value["schema_version"] = older.into();
-        let (_, notice) = load_value(&value).unwrap();
+    for older in [7, 8, 9] {
+        let mut legacy = value.clone();
+        legacy["schema_version"] = older.into();
+        for path in [
+            "/economy/factions/standing",
+            "/economy/factions/sales_cents",
+            "/economy/factions/wanted",
+            "/player/jobs/quest_steps",
+            "/player/jobs/quest_retry",
+            "/economy/rules/faction_catalog/factions",
+        ] {
+            legacy
+                .pointer_mut(path)
+                .unwrap()
+                .as_array_mut()
+                .unwrap()
+                .truncate(4);
+        }
+        for definition in legacy["economy"]["rules"]["faction_catalog"]["factions"]
+            .as_array_mut()
+            .unwrap()
+        {
+            definition.as_object_mut().unwrap().remove("species");
+        }
+        legacy["economy"]["rules"]["faction_catalog"]["classic_relations"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|relation| {
+                relation["between"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|faction| faction != "Miri" && faction != "Auralith")
+            });
+        legacy["economy"]["rules"]["quest_catalog"]["chains"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|chain| chain["faction"] != "Miri" && chain["faction"] != "Auralith");
+        let (_, notice) = load_value(&legacy).unwrap();
         assert!(
             notice.is_none(),
             "schema {older} without a battle loads as is"
         );
     }
     for old in [1, 5, 6] {
-        value["schema_version"] = old.into();
-        let error = load_value(&value).map(|_| ()).unwrap_err();
+        let mut legacy = value.clone();
+        legacy["schema_version"] = old.into();
+        let error = load_value(&legacy).map(|_| ()).unwrap_err();
         assert!(error.contains("before flat maps"), "{old}: {error}");
     }
 }

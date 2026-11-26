@@ -19,7 +19,7 @@ fn every_setup_choice_becomes_a_session_rule() {
         run_limit: Some(400),
         wealth_share_percent: 25,
         factions: game_core::factions::FactionSetup {
-            in_play: [false, true, true, false],
+            in_play: [false, true, true, false, false, false],
             allegiance: Some(game_core::factions::Faction::Empire),
             coverage: game_core::factions::Coverage::Full,
             relations: game_core::factions::RelationMode::Random,

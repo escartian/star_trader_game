@@ -55,7 +55,7 @@ pub struct EconomyRules {
     /// Anti-piracy gear and escort prices (defaults for older definitions).
     #[serde(default)]
     pub gear_prices: crate::combat::gear::GearPrices,
-    /// The four factions' definitions (`config/factions.json`).
+    /// The factions' definitions (`config/factions.json`).
     #[serde(default)]
     pub faction_catalog: crate::factions::FactionCatalog,
     /// NPC trader personalities (`config/npc.json`).

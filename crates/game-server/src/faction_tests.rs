@@ -14,7 +14,7 @@ use game_core::{
 };
 use game_protocol::{ClientCommand, CommandError, ServerMessage, SessionEvent};
 
-/// The default fixture with all four factions in play (classic relations),
+/// The default fixture with all factions in play (classic relations),
 /// `holders` claiming systems 1, 2 and 3 in turn, and neutral standing.
 pub(super) fn claimed(holders: [Option<Faction>; 3]) -> Session {
     let mut session = Session::default();
@@ -69,7 +69,7 @@ fn new_games_set_up_factions_and_saves_keep_them() {
 
     let off = GameSetup {
         factions: FactionSetup {
-            in_play: [false; 4],
+            in_play: [false; 6],
             ..FactionSetup::default()
         },
         ..GameSetup::default()
@@ -78,7 +78,7 @@ fn new_games_set_up_factions_and_saves_keep_them() {
     assert!(!session.economy.factions.is_active());
     let disloyal = GameSetup {
         factions: FactionSetup {
-            in_play: [true, false, false, false],
+            in_play: [true, false, false, false, false, false],
             allegiance: Some(Faction::Empire),
             ..FactionSetup::default()
         },

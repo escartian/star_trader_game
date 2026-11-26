@@ -225,6 +225,118 @@
           "runs": 24
         }
       ]
+    },
+    {
+      "faction": "Miri",
+      "steps": [
+        {
+          "kind": "survey",
+          "unlock": "Friendly",
+          "title": "The Unheard Signal",
+          "intro": "A Miri cartographer projects a field of green stars above your console. A faint signal has appeared beyond the Observatory's charts, and their probes cannot reach it safely.",
+          "brief": "Survey {body} within {runs} runs and return the readings to the Observatory.",
+          "reward": 90000,
+          "standing": 12,
+          "penalty": 4,
+          "runs": 18
+        },
+        {
+          "kind": "deliver",
+          "unlock": "Friendly",
+          "destination": "own",
+          "cargo": "electronics",
+          "units": 8,
+          "title": "A Living Archive",
+          "intro": "The Miri build memory gardens that grow new connections as they learn. One garden is failing for want of replacement interfaces.",
+          "brief": "Bring {units} {cargo} to {port} within {runs} runs.",
+          "reward": 100000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 18
+        },
+        {
+          "kind": "survey",
+          "unlock": "Honored",
+          "title": "The Shared Horizon",
+          "intro": "The Observatory offers to publish its deepest map with its neighbors. First, it needs a trusted outsider to verify one final coordinate.",
+          "brief": "Survey {body} within {runs} runs to complete the shared map.",
+          "reward": 150000,
+          "standing": 12,
+          "penalty": 6,
+          "runs": 20
+        },
+        {
+          "kind": "deliver",
+          "unlock": "Honored",
+          "destination": "rival",
+          "cargo": "electronics",
+          "units": 10,
+          "treaty": true,
+          "title": "The Open Archive",
+          "intro": "The Miri entrust you with an archive key and a copy of their charts for {rival}. Opening the data to an old rival may end a generation of suspicion.",
+          "brief": "Carry the archive key and {units} {cargo} to {port} within {runs} runs.",
+          "reward": 300000,
+          "standing": 15,
+          "penalty": 10,
+          "runs": 24
+        }
+      ]
+    },
+    {
+      "faction": "Auralith",
+      "steps": [
+        {
+          "kind": "hunt",
+          "unlock": "Friendly",
+          "title": "A Fractured Choir",
+          "intro": "A single Auralith voice speaks for a thousand minds. Raiders broke a relay where the Confluence gathers, scattering its choir into silence.",
+          "brief": "Destroy the raider band of {ships} in {system} within {runs} runs.",
+          "reward": 120000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 20
+        },
+        {
+          "kind": "survey",
+          "unlock": "Friendly",
+          "title": "The Resonant Passage",
+          "intro": "The Confluence senses a quiet path through a field of interference. A physical survey will tell them whether ships can cross it unharmed.",
+          "brief": "Survey {body} within {runs} runs.",
+          "reward": 90000,
+          "standing": 10,
+          "penalty": 5,
+          "runs": 18
+        },
+        {
+          "kind": "deliver",
+          "unlock": "Honored",
+          "destination": "own",
+          "cargo": "electronics",
+          "units": 10,
+          "title": "An Anchor for Many",
+          "intro": "A remote choir has begun to drift apart. The Confluence asks you to carry the components for a new anchor before its voices fade.",
+          "brief": "Bring {units} {cargo} to {port} within {runs} runs.",
+          "reward": 110000,
+          "standing": 12,
+          "penalty": 6,
+          "runs": 18
+        },
+        {
+          "kind": "deliver",
+          "unlock": "Honored",
+          "destination": "rival",
+          "cargo": "electronics",
+          "units": 10,
+          "treaty": true,
+          "title": "The Joined Voice",
+          "intro": "The Confluence has chosen a voice willing to speak with {rival}. You must deliver a resonance anchor so both sides can hear one another without fear.",
+          "brief": "Carry the anchor and {units} {cargo} to {port} within {runs} runs.",
+          "reward": 300000,
+          "standing": 15,
+          "penalty": 10,
+          "runs": 24
+        }
+      ]
     }
   ],
   "pirate": {

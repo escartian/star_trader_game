@@ -25,7 +25,7 @@ unbounded prices/rates, and invalid stocks/capacities. New games load the projec
 file when available or an explicitly supplied `--economy PATH`; packaged builds
 can use the embedded validated defaults. No per-trade filesystem reads occur.
 
-## Session save (schema 9)
+## Session save (schema 10)
 
 Each `data/slot-N.json` stores:
 
@@ -60,8 +60,10 @@ Loading checks size, schema, IDs, references, coordinates, ownership, balances,
 capacity, stock/rates, route validity and journey timing before returning a session.
 A failed load leaves the live session unchanged. Since schema 7 every galaxy
 system, local body, orbit and fleet position lies on the map plane (`y = 0`);
-schema 8 moved battles to the hex board and schema 9 flattened that board;
-schema-7 and -8 saves are upgraded on load. Earlier schemas are rejected with a clear message; start a new session. Do not
+schema 8 moved battles to the hex board, schema 9 flattened that board, and
+schema 10 added two alien factions with six-slot standing and quest state.
+Schema-7 through -9 saves are upgraded on load; older games keep their original
+four factions in play. Earlier schemas are rejected with a clear message; start a new session. Do not
 hand-edit a live session's file and expect its in-memory state to change.
 Normal desktop launch shows a game chooser for three slots and the last-used
 custom path. An incompatible save stays on disk until the player explicitly
@@ -133,10 +135,11 @@ load the project file when present; saves preserve the active catalog. See
 `npc_raid_chance_percent` (0–100, default 4) load with defaults when absent. A
 combat report adds `bounty` (hundredths, default 0).
 
-## Faction catalog (schema 1)
+## Faction catalog (schema 2)
 
-`config/factions.json` lists the four factions in order (`Federation`,
-`Empire`, `Republic`, `Alliance`), each with `id`, `name` (1–64 bytes),
+`config/factions.json` lists six factions in order (`Federation`,
+`Empire`, `Republic`, `Alliance`, `Miri`, `Auralith`), each with `id`, `name` (1–64 bytes),
+`species` (1–64 bytes),
 `description` (up to 256), `color` (sRGB triple), `piracy_penalty` (0–100),
 `raider_kill_standing` (0–100), `sale_credits_per_point` (hundredths,
 100–100,000,000), `wanted_runs` (1–200, default 30) and `fine_per_run`

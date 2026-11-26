@@ -73,7 +73,7 @@ impl RelationMode {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FactionSetup {
     /// Which factions take part, by [`Faction::index`]; none: factions off.
-    pub in_play: [bool; 4],
+    pub in_play: [bool; 6],
     pub allegiance: Option<Faction>,
     pub coverage: Coverage,
     pub relations: RelationMode,
@@ -82,7 +82,7 @@ pub struct FactionSetup {
 impl Default for FactionSetup {
     fn default() -> Self {
         Self {
-            in_play: [true; 4],
+            in_play: [true; 6],
             allegiance: None,
             coverage: Coverage::default(),
             relations: RelationMode::default(),

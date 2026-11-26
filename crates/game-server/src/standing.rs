@@ -32,8 +32,8 @@ use game_protocol::{ServerMessage, SessionEvent};
 
 /// What standing compares across one command.
 pub(super) struct Watch {
-    standing: [i32; 4],
-    wanted: [u32; 4],
+    standing: [i32; 6],
+    wanted: [u32; 6],
     piracies: u64,
     /// The encounter of the last combat report, if any.
     combat: Option<u64>,

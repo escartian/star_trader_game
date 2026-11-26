@@ -295,6 +295,8 @@ mod raid_tests;
 mod setup_tests;
 #[cfg(test)]
 mod shipyard_tests;
+#[cfg(test)]
+mod start_tests;
 
 #[cfg(test)]
 mod approach_tests;

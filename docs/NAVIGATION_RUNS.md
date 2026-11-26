@@ -216,7 +216,11 @@ dashed amber line from your flagship:
   flagship, or when you give the flagship any other order (**Stop** issues a
   Wait). Only the flagship pursues.
 
-A docked flagship can pursue too: the chase plots its way out of the port.
+A docked flagship can pursue too: the chase plots its way out of the port. A new game never starts with a trader, police patrol or raider band within
+contact reach (20 million km) of your fleet, nor a trader at your starting port
+or planet, so the first contact always needs an Advance
+(`start_tests::no_npc_starts_within_contact_reach_of_your_fleet`, 36 seeds and
+galaxy sizes).
 
 **Police patrols** can be pursued the same way: tap one on the system map to
 select it and use **Pursue** on its card. A patrol never leaves its system, so

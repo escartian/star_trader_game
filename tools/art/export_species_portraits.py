@@ -16,7 +16,7 @@ DESTINATION = ROOT / "assets" / "portraits"
 
 def main() -> None:
     DESTINATION.mkdir(parents=True, exist_ok=True)
-    for name in ("human", "miri", "auralith"):
+    for name in ("human", "miri", "auralith", "kethari"):
         with Image.open(SOURCE / f"{name}.png") as original:
             portrait = original.convert("RGB")
             portrait.thumbnail((512, 512), Image.Resampling.LANCZOS)

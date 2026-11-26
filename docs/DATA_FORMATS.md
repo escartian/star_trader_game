@@ -30,7 +30,7 @@ can use the embedded validated defaults. No per-trade filesystem reads occur.
 Each `data/slot-N.json` stores:
 
 - `systems`: stable IDs, star/body kinds, planet profiles and galaxy/local positions.
-- `player`: selected `player_species` (old saves default to Human), tick/revision, movement rules, navigation state (run, courses, Wait orders as `holds`,
+- `player`: selected starting captain `player_species` (old saves default to Human), tick/revision, movement rules, navigation state (run, courses, Wait orders as `holds`,
   encounters with raider `hostiles`, RNG, rescues, `last_combat` report (outcome `victory`, `defeat`, `disengaged` or `surrendered`), the open `battle` (omitted when none), trade
   `routes` with their fleet and two market stops, omitted when empty), ships (IDs, owner, class, individual cargo/hold/fuel/range,
   `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner, ship membership and `captain` with species and experience), monotonic ID counters,
@@ -51,7 +51,9 @@ Each `data/slot-N.json` stores:
   (`market`, `owner`; omitted when none) and `factions` (`in_play`,
   `allegiance`, `territory`, `relations`, `standing`, `sales_cents`, `wanted`; see
   [factions](FACTIONS.md); absent means no factions). Each market records a composite system/body ID,
-  station flag, treasury, `residents_percent` (Human, Miri, Auralith shares),
+  station flag, treasury, `residents_percent` (Human, Miri, Auralith, Kethari
+  shares; old three-share saves load with Kethari at 0%), `total_population`
+  (people; older saves default to 1,000,000 per port),
   recent trade `activity`, hull inventory and commodity
   balances (each good with its `price_level_ppm`). Cargo is keyed by commodity name inside each ship.
 

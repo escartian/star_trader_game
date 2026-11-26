@@ -5,12 +5,14 @@ use game_core::species::Species;
 const HUMAN: &[u8] = include_bytes!("../../../../assets/portraits/human.png");
 const MIRI: &[u8] = include_bytes!("../../../../assets/portraits/miri.png");
 const AURALITH: &[u8] = include_bytes!("../../../../assets/portraits/auralith.png");
+const KETHARI: &[u8] = include_bytes!("../../../../assets/portraits/kethari.png");
 
 fn bytes(species: Species) -> &'static [u8] {
     match species {
         Species::Human => HUMAN,
         Species::Miri => MIRI,
         Species::Auralith => AURALITH,
+        Species::Kethari => KETHARI,
     }
 }
 

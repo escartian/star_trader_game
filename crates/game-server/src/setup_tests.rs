@@ -9,11 +9,14 @@ fn game(setup: &GameSetup) -> Result<Session, String> {
 fn port_residents_mix_each_run_and_survive_a_save() {
     let mut session = Session::default();
     let before = session.economy.markets[0].residents_percent();
+    let population = session.economy.markets[0].total_population;
     crate::test_support::execute_quiet_run(&mut session);
     let after = session.economy.markets[0].residents_percent();
     assert_ne!(before, after);
+    assert_eq!(session.economy.markets[0].total_population, population);
     let restored = super::combat_tests::reload(&session);
     assert_eq!(restored.economy.markets[0].residents_percent(), after);
+    assert_eq!(restored.economy.markets[0].total_population, population);
 }
 
 #[test]

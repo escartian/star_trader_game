@@ -4,8 +4,21 @@ use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{
     StarSystem,
     economy::{Commodity, MarketId, TradeSide},
+    species::Species,
 };
 use game_protocol::ClientCommand;
+
+fn format_population(value: u64) -> String {
+    let digits = value.to_string();
+    let mut grouped = String::with_capacity(digits.len() + digits.len() / 3);
+    for (index, digit) in digits.chars().enumerate() {
+        if index > 0 && (digits.len() - index).is_multiple_of(3) {
+            grouped.push(',');
+        }
+        grouped.push(digit);
+    }
+    grouped
+}
 
 /// Display name of a market: the body (planet or station) it trades at.
 pub(super) fn market_name(systems: &[StarSystem], market: MarketId) -> &str {
@@ -90,9 +103,16 @@ impl LocalSession {
                 icons::planet_traits(ui, profile);
             }
         });
-        let [human, miri, auralith] = market.residents_percent();
+        let residents = market.residents_percent();
+        let shares = Species::ALL
+            .iter()
+            .zip(residents)
+            .map(|(species, share)| format!("{} {share}%", species.label()))
+            .collect::<Vec<_>>()
+            .join(" · ");
         ui.small(format!(
-            "Residents: Human {human}% · Miri {miri}% · Auralith {auralith}%"
+            "Population: {} · {shares}",
+            format_population(market.total_population)
         ));
         if self.factions_active() {
             let terms = self.economy.port_terms(&ship);

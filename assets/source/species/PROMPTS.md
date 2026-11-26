@@ -1,6 +1,6 @@
 # Species portrait sources
 
-The three 1254 × 1254 PNGs here are the original generated images. They were
+The four 1254 × 1254 PNGs here are the original generated images. They were
 created with the built-in image generation tool on 2026-11-26. Runtime images
 are 512 × 512 exports made by `tools/art/export_species_portraits.py`.
 
@@ -17,6 +17,9 @@ and no text, logos, borders, watermarks or franchise imagery.
 - **Auralith:** Sentient luminous energy captain with a humanoid head and
   shoulders, translucent violet-blue crystalline plates, bright cyan inner
   light, floating fragments suggesting joined minds, and a serene expression.
+- **Kethari:** Insectoid colony-born captain with a compact chitinous head,
+  four alert eyes in two pairs, articulated antennae, amber mandibles, layered
+  copper and umber exoskeleton, and a practical navy expedition collar.
 
 Each was prompted as an original game character portrait with a clear silhouette
 and facial features readable at small UI sizes.

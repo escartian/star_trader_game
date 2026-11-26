@@ -9,16 +9,18 @@ pub enum Species {
     Human,
     Miri,
     Auralith,
+    Kethari,
 }
 
 impl Species {
-    pub const ALL: [Self; 3] = [Self::Human, Self::Miri, Self::Auralith];
+    pub const ALL: [Self; 4] = [Self::Human, Self::Miri, Self::Auralith, Self::Kethari];
 
     pub fn label(self) -> &'static str {
         match self {
             Self::Human => "Human",
             Self::Miri => "Miri",
             Self::Auralith => "Auralith",
+            Self::Kethari => "Kethari",
         }
     }
 
@@ -32,6 +34,9 @@ impl Species {
             }
             Self::Auralith => {
                 "Luminous minds that can join in a shared choir. Their shields are strong, but their ships react slowly."
+            }
+            Self::Kethari => {
+                "Insectoid colony-born navigators. Their coordinated formations protect ships, but turn slowly."
             }
         }
     }
@@ -70,6 +75,10 @@ impl FleetCaptain {
                 profile.shields = profile.shields.saturating_add(4);
                 profile.engine = profile.engine.saturating_sub(1).max(1);
             }
+            Species::Kethari => {
+                profile.armor = profile.armor.saturating_add(2);
+                profile.engine = profile.engine.saturating_sub(1).max(1);
+            }
         }
         profile.armor = profile.armor.saturating_add(self.experience / 25);
     }
@@ -80,6 +89,7 @@ impl FleetCaptain {
             Species::Human => 0,
             Species::Miri => 10,
             Species::Auralith => -10,
+            Species::Kethari => -5,
         };
         species + (self.experience / 20) as i32
     }
@@ -89,6 +99,7 @@ impl FleetCaptain {
             Species::Human => "balanced handling",
             Species::Miri => "+1 engine, −2 shields, +10% escape",
             Species::Auralith => "+4 shields, −1 engine, −10% escape",
+            Species::Kethari => "+2 armor, −1 engine, −5% escape",
         }
     }
 }
@@ -129,5 +140,12 @@ mod tests {
         let mut human = profile();
         FleetCaptain::default().combat_profile(&mut human);
         assert_eq!(human.armor, 1);
+        let mut kethari = profile();
+        FleetCaptain {
+            species: Species::Kethari,
+            experience: 0,
+        }
+        .combat_profile(&mut kethari);
+        assert_eq!((kethari.armor, kethari.engine), (3, 3));
     }
 }

@@ -195,7 +195,7 @@ routes and patrols, because pursuit reads `Economy::factions`. `game-core::comba
 Schema 10 is current. Schemas 7–9 upgrade on load; schemas 7–8 auto-resolve
 an open legacy battle. Schema 10 expands faction and quest state to six powers
 while preserving the four original factions in older games. New games offer
-those four political powers and choose the player's species independently.
+those four political powers and choose the starting captain's species independently.
 Fleet captains store species and experience in `TravelState::fleets`.
 
 ## Movement spaces and host resolution

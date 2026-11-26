@@ -75,7 +75,7 @@ impl Economy {
             let personality = self.rules.personality_catalog.dealt(index);
             let id = index as u64 + 1;
             let name = trader_name(index);
-            let species = crate::species::Species::ALL[index % 3];
+            let species = crate::species::Species::ALL[index % crate::species::Species::ALL.len()];
             let mut state = commissioned(id, &name, home, systems, movement);
             state.player_species = species;
             state.fleets[0].captain.species = species;

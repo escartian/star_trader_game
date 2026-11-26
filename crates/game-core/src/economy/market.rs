@@ -92,7 +92,7 @@ impl Market {
     /// Resident mix at a port, independent of the faction holding its system.
     /// All current species are open to migration. Stations and planet markets
     /// are inhabited; a new port starts with one majority species.
-    pub fn residents_percent(&self) -> [u32; 3] {
+    pub fn residents_percent(&self) -> [u32; 4] {
         self.residents_percent
     }
 
@@ -100,10 +100,10 @@ impl Market {
     /// smallest until the shares differ by at most one point. No present
     /// species blocks migration; faction ownership has no effect.
     pub fn mix_residents(&mut self) {
-        let largest = (0..3)
+        let largest = (0..crate::species::Species::ALL.len())
             .max_by_key(|index| self.residents_percent[*index])
             .unwrap();
-        let smallest = (0..3)
+        let smallest = (0..crate::species::Species::ALL.len())
             .min_by_key(|index| self.residents_percent[*index])
             .unwrap();
         if self.residents_percent[largest] > self.residents_percent[smallest] + 1 {
@@ -123,6 +123,7 @@ impl Market {
             id,
             is_station,
             residents_percent: initial_residents(id),
+            total_population: initial_population(id, is_station),
             credits,
             activity: 0,
             ship_stock,
@@ -138,16 +139,47 @@ impl Market {
     }
 }
 
-/// Older saves predate resident shares and start with a Human majority.
-pub(super) fn legacy_residents() -> [u32; 3] {
-    [90, 5, 5]
+/// Older saves without resident shares start with a Human majority.
+pub(super) fn legacy_residents() -> [u32; 4] {
+    [90, 5, 5, 0]
 }
 
-fn initial_residents(id: super::MarketId) -> [u32; 3] {
-    let dominant = ((id.system.0.wrapping_mul(31) ^ id.body.0.wrapping_mul(17)) % 3) as usize;
-    let mut residents = [5; 3];
-    residents[dominant] = 90;
+/// Earlier saves did not store a count; use a stable, valid fallback.
+pub(super) fn legacy_population() -> u64 {
+    1_000_000
+}
+
+/// Three-share saves gain a Kethari slot without changing existing shares.
+pub(super) fn deserialize_residents<'de, D>(deserializer: D) -> Result<[u32; 4], D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    let shares = Vec::<u32>::deserialize(deserializer)?;
+    match shares.as_slice() {
+        [human, miri, auralith] => Ok([*human, *miri, *auralith, 0]),
+        [human, miri, auralith, kethari] => Ok([*human, *miri, *auralith, *kethari]),
+        _ => Err(serde::de::Error::custom(
+            "expected three or four species shares",
+        )),
+    }
+}
+
+fn initial_residents(id: super::MarketId) -> [u32; 4] {
+    let count = crate::species::Species::ALL.len();
+    let dominant = ((id.system.0.wrapping_mul(31) ^ id.body.0.wrapping_mul(17)) as usize) % count;
+    let mut residents = [4; 4];
+    residents[dominant] = 88;
     residents
+}
+
+fn initial_population(id: super::MarketId, is_station: bool) -> u64 {
+    let seed = id.system.0.wrapping_mul(31) ^ id.body.0.wrapping_mul(17);
+    if is_station {
+        120_000 + seed % 880_000
+    } else {
+        2_000_000 + seed % 18_000_000
+    }
 }
 
 impl MarketGood {
@@ -189,12 +221,21 @@ mod population_tests {
                 .all(|mix| mix.iter().all(|share| *share > 0) && mix.iter().sum::<u32>() == 100)
         );
         assert!(mixes.windows(2).any(|pair| pair[0] != pair[1]));
+        assert!(
+            economy
+                .markets
+                .iter()
+                .all(|market| market.total_population > 0)
+        );
         let mut market = economy.markets[0].clone();
         for _ in 0..100 {
             market.mix_residents();
         }
-        let [human, miri, auralith] = market.residents_percent();
-        assert!(human.abs_diff(miri) <= 1);
-        assert!(miri.abs_diff(auralith) <= 1);
+        let residents = market.residents_percent();
+        assert!(
+            residents
+                .windows(2)
+                .all(|pair| pair[0].abs_diff(pair[1]) <= 1)
+        );
     }
 }

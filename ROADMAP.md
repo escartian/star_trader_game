@@ -252,7 +252,7 @@ save tests. NPC actions will resolve at navigation-run boundaries.
   statistics, equipment and customization. Model-specific utility upgrades and
   size-specific combat fittings are available at markets.
 - [ ] Fleet summaries and batch management that remain readable as ownership grows.
-- [x] Human, Miri and Auralith chosen independently of faction; mixed port
+- [x] Human, Miri, Auralith and Kethari captains chosen independently of faction; mixed port
   residents and trader crews, captain combat traits and experience.
 
 **Acceptance:** allegiance, equipment and damage affect actionable decisions;

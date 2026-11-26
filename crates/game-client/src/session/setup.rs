@@ -17,23 +17,30 @@ pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
     ui.horizontal(|ui| {
         super::species_portraits::show(ui, setup.species, 112.0);
         ui.vertical(|ui| {
-            ui.menu_button(format!("Species: {} ▾", setup.species.label()), |ui| {
-                for species in Species::ALL {
-                    ui.horizontal(|ui| {
-                        super::species_portraits::show(ui, species, 56.0);
-                        if ui
-                            .selectable_label(setup.species == species, species.label())
-                            .clicked()
-                        {
-                            setup.species = species;
-                            ui.close_menu();
-                        }
-                    });
-                    ui.small(species.description());
-                    ui.separator();
-                }
-            });
+            ui.menu_button(
+                format!("Captain species: {} ▾", setup.species.label()),
+                |ui| {
+                    ui.set_width((ui.ctx().screen_rect().width().min(440.0) - 24.0).max(280.0));
+                    for species in Species::ALL {
+                        ui.horizontal(|ui| {
+                            super::species_portraits::show(ui, species, 56.0);
+                            if ui
+                                .selectable_label(
+                                    setup.species == species,
+                                    format!("{}\n{}", species.label(), species.description()),
+                                )
+                                .clicked()
+                            {
+                                setup.species = species;
+                                ui.close_menu();
+                            }
+                        });
+                        ui.separator();
+                    }
+                },
+            );
             ui.small(setup.species.description());
+            ui.small("This captain's traits affect the ships they command.");
         });
     });
     egui::Grid::new("new-game-setup")
@@ -197,7 +204,7 @@ pub(crate) fn setup_summary(seed: u64, setup: &GameSetup) -> String {
     let inflation_whole = setup.inflation_basis_points / 100;
     let inflation_fraction = setup.inflation_basis_points % 100;
     format!(
-        "New {} map (seed {seed}, {} systems, {} ly radius, up to {} objects per system; \
+        "New map with a {} captain (seed {seed}, {} systems, {} ly radius, up to {} objects per system; \
          {} cr to start, {inflation_whole}.{inflation_fraction:02}% per 100 runs inflation, {} danger; {}).",
         setup.species.label(),
         setup.galaxy.systems,

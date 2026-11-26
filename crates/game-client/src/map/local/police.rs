@@ -9,7 +9,8 @@ use crate::map::npc_marker;
 use egui::{Color32, Painter, Rect, Stroke, Vec2};
 
 impl LocalView {
-    pub(super) fn draw_police(&self, painter: &Painter, rect: Rect) {
+    pub(super) fn draw_police(&mut self, painter: &Painter, rect: Rect) {
+        let mut hits = Vec::new();
         for marker in self
             .police
             .iter()
@@ -23,6 +24,11 @@ impl LocalView {
             if !rect.expand(40.0).contains(at) {
                 continue;
             }
+            // Tappable, like traders and bands: select it, then Pursue.
+            hits.push(npc_marker::NpcHit {
+                quarry: game_core::pursuit::Quarry::Patrol(patrol.id),
+                at,
+            });
             let chasing = patrol.pursuing.is_some() || patrol.answering.is_some();
             let towards = self
                 .camera
@@ -65,5 +71,6 @@ impl LocalView {
             );
             painter.galley(origin, galley, *color);
         }
+        self.npc_hits.extend(hits);
     }
 }

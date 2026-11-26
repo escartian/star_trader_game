@@ -130,6 +130,7 @@ fn a_smuggling_run_fails_when_that_factions_police_stop_you() {
         police: Some(PoliceContact {
             patrol: 1,
             faction: owner,
+            intercepted: false,
         }),
         rescue: None,
     });

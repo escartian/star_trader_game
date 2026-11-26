@@ -42,6 +42,18 @@ pub(super) fn sight(
                 steer: (band.system, target),
             })
         }
+        Quarry::Patrol(id) => {
+            // Patrols never leave their system: steer for where it is.
+            let patrol = state.navigation.police.patrol(id)?;
+            let target = MoveTarget::Local {
+                system: patrol.system,
+                position: patrol.position,
+            };
+            Some(Sighting {
+                now: Some((patrol.system, patrol.position)),
+                steer: (patrol.system, target),
+            })
+        }
         Quarry::Trader(id) => {
             let npc = economy.traders.iter().find(|npc| npc.id == id)?;
             let ship = npc.state.ships.first()?;

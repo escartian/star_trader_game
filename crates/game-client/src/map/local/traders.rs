@@ -74,6 +74,11 @@ impl LocalView {
                 let trader = self.traders.iter().find(|trader| trader.id == id)?;
                 self.ship_anchor(&trader.location)
             }
+            Quarry::Patrol(id) => self
+                .police
+                .iter()
+                .find(|marker| marker.patrol.id == id && marker.patrol.system == self.system.id)
+                .map(|marker| super::kilometers(marker.patrol.position) / super::KM_PER_VIEW_UNIT),
             Quarry::Band(id) => self
                 .bands
                 .iter()

@@ -24,6 +24,7 @@
 mod contact;
 mod patrol_run;
 pub use contact::{fine, pay_fine_at_port, resolve};
+pub(crate) use patrol_run::intercept;
 pub use patrol_run::patrol_run;
 
 use crate::{
@@ -117,6 +118,10 @@ pub struct FactionPatrol {
 pub struct PoliceContact {
     pub patrol: u64,
     pub faction: Faction,
+    /// You ran the patrol down (a pursuit), rather than it stopping you:
+    /// there is no fine to pay, only Fight, Auto-resolve or let it go.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub intercepted: bool,
 }
 
 /// The point beside the body a patrol visits after `stops` visits: well

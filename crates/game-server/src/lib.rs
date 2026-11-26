@@ -284,6 +284,8 @@ mod navigation_tests;
 #[cfg(test)]
 mod orbit_tests;
 #[cfg(test)]
+mod police_pursuit_tests;
+#[cfg(test)]
 mod port_hail_tests;
 #[cfg(test)]
 mod pursuit_tests;

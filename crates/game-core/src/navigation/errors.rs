@@ -55,6 +55,8 @@ pub enum NavigationError {
     PursuitImpossible(String),
     /// No raider band has that ID.
     UnknownBand,
+    /// No police patrol has that ID.
+    UnknownPatrol,
     Battle(crate::combat::tactical::BattleError),
 }
 impl std::fmt::Display for NavigationError {
@@ -135,6 +137,7 @@ impl std::fmt::Display for NavigationError {
             Self::CannotAfford => f.write_str("You cannot afford any of the trader's cargo."),
             Self::PursuitImpossible(reason) => f.write_str(reason),
             Self::UnknownBand => f.write_str("There is no such raider band."),
+            Self::UnknownPatrol => f.write_str("There is no such police patrol."),
             Self::Battle(error) => error.fmt(f),
         }
     }

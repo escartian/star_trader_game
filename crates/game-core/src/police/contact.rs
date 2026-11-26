@@ -42,11 +42,20 @@ pub fn resolve(
         .find(|encounter| encounter.id == encounter_id)
         .ok_or(NavigationError::UnknownEncounter)?
         .clone();
-    let (EncounterKind::Police, Some(PoliceContact { patrol, faction })) =
-        (encounter.kind, encounter.police)
+    let (
+        EncounterKind::Police,
+        Some(PoliceContact {
+            patrol,
+            faction,
+            intercepted,
+        }),
+    ) = (encounter.kind, encounter.police)
     else {
         return Err(NavigationError::InvalidChoice.into());
     };
+    if intercepted {
+        return resolve_intercept(state, economy, player, &encounter, choice, faction);
+    }
     match choice {
         EncounterChoice::Fight | EncounterChoice::AutoResolve => {
             let event = state.resolve_encounter(player, encounter_id, choice, &economy.rules)?;
@@ -110,6 +119,50 @@ pub fn resolve(
         fleet: fleet.id,
         outcome,
     })
+}
+
+/// A patrol you ran down: **Fight** or **Auto-resolve** attack it (a crime,
+/// as when you resist a stop); **Bypass** lets it go and nothing happens.
+fn resolve_intercept(
+    state: &mut TravelState,
+    economy: &mut Economy,
+    player: PlayerId,
+    encounter: &crate::navigation::Encounter,
+    choice: EncounterChoice,
+    faction: Faction,
+) -> Result<NavigationEvent, FleetMovementError> {
+    match choice {
+        EncounterChoice::Fight | EncounterChoice::AutoResolve => {
+            let event = state.resolve_encounter(player, encounter.id, choice, &economy.rules)?;
+            let catalog = economy.rules.faction_catalog.clone();
+            economy.factions.charge(faction, 1, &catalog);
+            Ok(event)
+        }
+        EncounterChoice::Bypass => {
+            let fleet = state
+                .fleets
+                .iter()
+                .find(|record| record.id == encounter.fleet)
+                .ok_or(FleetError::UnknownFleet)?;
+            if fleet.owner != player {
+                return Err(FleetError::NotOwner.into());
+            }
+            let revision = state
+                .revision
+                .checked_add(1)
+                .ok_or(TravelError::TimeOverflow)?;
+            state
+                .navigation
+                .encounters
+                .retain(|record| record.id != encounter.id);
+            state.revision = revision;
+            Ok(NavigationEvent::EncounterResolved {
+                fleet: encounter.fleet,
+                outcome: format!("You let the {} patrol go.", faction.label()),
+            })
+        }
+        _ => Err(NavigationError::InvalidChoice.into()),
+    }
 }
 
 /// Pays your fine at the port `ship` is at, to the port's treasury; returns

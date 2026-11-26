@@ -27,6 +27,9 @@ pub enum Quarry {
     Trader(u64),
     /// A raider band (`navigation::RaiderBand::id`).
     Band(u64),
+    /// A faction police patrol (`police::FactionPatrol::id`); caught, it is a
+    /// `Police` contact you started: fight it or let it go.
+    Patrol(u64),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -106,6 +109,7 @@ pub fn pursue(
     let missing = match quarry {
         Quarry::Trader(_) => NavigationError::UnknownTrader,
         Quarry::Band(_) => NavigationError::UnknownBand,
+        Quarry::Patrol(_) => NavigationError::UnknownPatrol,
     };
     sighting::sight(state, economy, quarry, systems).ok_or(missing)?;
     state.end_trade_route(fleet);
@@ -284,6 +288,16 @@ fn catch(
             Some(state.strike(&band, fleet, state.navigation.run)?)
         }
         Quarry::Band(_) => None,
+        Quarry::Patrol(id) if distance(position, at) <= ENGAGE_KM => {
+            let patrol = state
+                .navigation
+                .police
+                .patrol(id)
+                .cloned()
+                .ok_or(NavigationError::UnknownPatrol)?;
+            Some(crate::police::intercept(state, &patrol, fleet)?)
+        }
+        Quarry::Patrol(_) => None,
     })
 }
 

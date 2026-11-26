@@ -378,11 +378,9 @@ impl Map {
         let mut bands = self.session.raider_bands().to_vec();
         bands.retain(|band| self.session.npc_shown(Quarry::Band(band.id)));
         local.set_bands(bands);
-        local.set_police(if show_traffic {
-            self.session.police_patrols()
-        } else {
-            Vec::new()
-        });
+        let mut police = self.session.police_patrols();
+        police.retain(|marker| self.session.npc_shown(Quarry::Patrol(marker.patrol.id)));
+        local.set_police(police);
         let mut traders = self
             .session
             .traders_for_map(local.system(), &self.session_systems);

@@ -250,6 +250,13 @@ impl Map {
                     None => self.session.trader_display_position(trader, &self.systems),
                 }
             }
+            // Patrols stay in their system; the galaxy map shows the system.
+            Quarry::Patrol(id) => self
+                .session
+                .police_patrols()
+                .into_iter()
+                .find(|marker| marker.patrol.id == id)
+                .and_then(|marker| find(marker.patrol.system).map(position)),
             Quarry::Band(id) => {
                 let band = self
                     .session
@@ -287,6 +294,7 @@ impl Map {
                 .iter()
                 .find(|band| band.id == id && band.transit.is_some())
                 .map(|band| band.system),
+            Quarry::Patrol(_) => None,
         }?;
         self.systems.iter().find(|known| known.id == bound)
     }

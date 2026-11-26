@@ -58,6 +58,16 @@ impl LocalSession {
                     || "a raider band".to_owned(),
                     |band| format!("raiders · {}", crew(&band.ships)),
                 ),
+            Quarry::Patrol(id) => self.state.navigation.police.patrol(id).map_or_else(
+                || "a police patrol".to_owned(),
+                |patrol| {
+                    format!(
+                        "{} police · {}",
+                        patrol.faction.label(),
+                        crew(&patrol.ships)
+                    )
+                },
+            ),
         };
         let mut stop = false;
         ui.horizontal_wrapped(|ui| {

@@ -154,6 +154,7 @@ impl SaveData {
             let known = match pursuit.quarry {
                 Quarry::Trader(id) => traders.iter().any(|trader| trader.id == id),
                 Quarry::Band(id) => navigation.bands.iter().any(|band| band.id == id),
+                Quarry::Patrol(id) => navigation.police.patrol(id).is_some(),
             };
             if !known
                 || navigation

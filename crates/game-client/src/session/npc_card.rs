@@ -91,6 +91,36 @@ impl LocalSession {
                     place,
                 )
             }
+            Quarry::Patrol(id) => {
+                let Some(marker) = self
+                    .police_patrols()
+                    .into_iter()
+                    .find(|marker| marker.patrol.id == id)
+                else {
+                    self.npc_target = None;
+                    return;
+                };
+                let patrol = &marker.patrol;
+                let doing = match (patrol.pursuing.is_some(), patrol.answering.is_some()) {
+                    (true, _) => ", pursuing your fleet",
+                    (false, true) => ", engaging raiders",
+                    _ => "",
+                };
+                (
+                    format!(
+                        "{} police · {}",
+                        patrol.faction.label(),
+                        super::crew(&patrol.ships)
+                    ),
+                    marker.stance.color(),
+                    format!(
+                        "Patrolling {}{doing}. Run it down to attack it (a crime with the {}) \
+                         or let it go.",
+                        name(patrol.system),
+                        patrol.faction.label()
+                    ),
+                )
+            }
         };
         let pursued = self
             .state
@@ -102,7 +132,7 @@ impl LocalSession {
             Quarry::Trader(id) => {
                 piracy::in_reach(&self.state, &self.economy, LOCAL_PLAYER, &placed).contains(&id)
             }
-            Quarry::Band(_) => false,
+            Quarry::Band(_) | Quarry::Patrol(_) => false,
         };
         let mut action = None;
         ui.group(|ui| {

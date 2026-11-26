@@ -218,6 +218,14 @@ dashed amber line from your flagship:
 
 A docked flagship can pursue too: the chase plots its way out of the port.
 
+**Police patrols** can be pursued the same way: tap one on the system map to
+select it and use **Pursue** on its card. A patrol never leaves its system, so
+the flagship steers for where it is. Within 20 million km a `Police` contact
+opens that you started (`intercepted` in its `police` record): there is no
+fine to pay or escape to roll, only **Attack**, **Auto-resolve** or **Let it
+go**. Attacking is a crime with the patrol's faction, as when you resist a
+stop; letting it go changes nothing.
+
 **Pursuit suite** (fleet software, 900 cr, bought once per fleet in the
 Market's *Fleet* row; `game-core/src/fleet/software.rs`): while that fleet
 pursues, every course it plots takes 65% of the usual time (at least one

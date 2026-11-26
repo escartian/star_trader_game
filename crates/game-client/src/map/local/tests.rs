@@ -339,3 +339,49 @@ fn a_band_in_this_system_can_be_focused_and_one_elsewhere_cannot() {
     local.set_bands(vec![band.clone()]);
     assert_eq!(local.npc_anchor(Quarry::Band(band.id)), None);
 }
+
+#[test]
+fn a_police_patrol_here_is_tappable_and_focusable() {
+    use game_core::pursuit::Quarry;
+    let ctx = egui::Context::default();
+    let system = game_core::demo_galaxy().remove(0);
+    let position = game_core::LocalPosition {
+        x_km: 60_000_000,
+        y_km: 0,
+        z_km: 0,
+    };
+    let patrol = game_core::police::FactionPatrol {
+        id: 7,
+        faction: game_core::factions::Faction::Federation,
+        system: system.id,
+        position,
+        heading: position,
+        ships: game_core::police::PATROL_SHIPS.to_vec(),
+        pursuing: None,
+        answering: None,
+        stops: 0,
+        cooldown: 0,
+    };
+    let mut local = LocalView::new(system);
+    local.set_police(vec![crate::session::PatrolMarker {
+        patrol,
+        faction: egui::Color32::BLUE,
+        stance: crate::theme::iff::Stance::Neutral,
+    }]);
+    let _ = ctx.run(
+        egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1000.0, 720.0))),
+            ..Default::default()
+        },
+        |ctx| {
+            local.ui(ctx, &[], &[]);
+        },
+    );
+    assert!(
+        local
+            .npc_hits
+            .iter()
+            .any(|hit| hit.quarry == Quarry::Patrol(7))
+    );
+    assert!(local.npc_anchor(Quarry::Patrol(7)).is_some());
+}

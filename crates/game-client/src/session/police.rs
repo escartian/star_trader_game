@@ -81,6 +81,10 @@ impl LocalSession {
             ));
             return;
         }
+        if contact.intercepted {
+            self.intercepted_ui(ui, encounter, contact.faction);
+            return;
+        }
         let faction = contact.faction;
         let factions = &self.economy.factions;
         let names: Vec<_> = encounter.hostiles.iter().map(|kind| kind.label()).collect();
@@ -144,6 +148,53 @@ impl LocalSession {
                 .clicked()
             {
                 choice = Some(EncounterChoice::Evade);
+            }
+        });
+        if let Some(choice) = choice {
+            self.command(ClientCommand::ResolveEncounter {
+                encounter: encounter.id,
+                choice,
+                expected_revision: self.state.revision,
+            });
+        }
+    }
+
+    /// A patrol your flagship ran down: attack it (a crime) or let it go.
+    fn intercepted_ui(&mut self, ui: &mut egui::Ui, encounter: &Encounter, faction: Faction) {
+        let names: Vec<_> = encounter.hostiles.iter().map(|kind| kind.label()).collect();
+        ui.label(format!(
+            "{}, you have run down the {} patrol ({}). It holds course and waits to see \
+             what you do.",
+            self.state.captain_title(),
+            faction.label(),
+            names.join(", ")
+        ));
+        ui.small(format!(
+            "Attacking the police is a crime: the {} will want you, and each patrol ship \
+             destroyed costs {} standing. Letting it go costs nothing.",
+            faction.label(),
+            self.economy
+                .rules
+                .faction_catalog
+                .get(faction)
+                .piracy_penalty
+        ));
+        let mut choice = None;
+        event_card::choices(ui, |ui| {
+            if event_card::choice(ui, Icon::Weapon, "Attack")
+                .on_hover_text("Open fire: command your ships turn by turn.")
+                .clicked()
+            {
+                choice = Some(EncounterChoice::Fight);
+            }
+            if event_card::choice(ui, Icon::Execute, "Auto-resolve")
+                .on_hover_text("Open fire and let the AI fight it out.")
+                .clicked()
+            {
+                choice = Some(EncounterChoice::AutoResolve);
+            }
+            if event_card::choice(ui, Icon::Bypass, "Let it go").clicked() {
+                choice = Some(EncounterChoice::Bypass);
             }
         });
         if let Some(choice) = choice {

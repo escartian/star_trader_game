@@ -192,7 +192,8 @@ four numbers in faction order). Police patrols are in
 `player.navigation.police`: `patrols` (each with `id`, `faction`, `system`,
 `position`, `heading`, `ships`, optional `pursuing` fleet or `answering` band,
 `stops` and `cooldown`), `respawns` (system, run) and `next_id`. A police
-contact carries `police` (`patrol`, `faction`); a combat report against police
+contact carries `police` (`patrol`, `faction`, and `intercepted: true` when
+your flagship ran the patrol down; see [pursuit](NAVIGATION_RUNS.md#pursuit)); a combat report against police
 carries `police` (the faction). The definitions travel in the economy rules as
 `faction_catalog`. Each NPC trader may carry `affiliation` (its faction) and `home` (its home
 port's market id); without them it is independent and its home port is the

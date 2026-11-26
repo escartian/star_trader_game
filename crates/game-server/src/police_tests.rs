@@ -24,7 +24,7 @@ const FEDERATION_WANTED_RUNS: u32 = 40;
 /// System 2 held by the Federation with its patrol, no raider bands, and
 /// `fleet` waiting in the open 2 million km from the patrol; wanted by the
 /// Federation for `wanted` runs.
-fn policed(mut session: Session, fleet: FleetId, wanted: u32) -> Session {
+pub(super) fn policed(mut session: Session, fleet: FleetId, wanted: u32) -> Session {
     session.economy.factions = claimed([None, Some(Faction::Federation), None])
         .economy
         .factions;

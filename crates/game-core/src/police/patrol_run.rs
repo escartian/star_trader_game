@@ -86,7 +86,7 @@ pub fn patrol_run(
         }
         match quarry {
             Some((Quarry::Fleet(fleet), at)) if distance(position, at) <= STRIKE_KM => {
-                events.push(stop_fleet(state, &patrol, fleet)?);
+                events.push(stop_fleet(state, &patrol, fleet, false)?);
             }
             Some((Quarry::Band(band), at)) if distance(position, at) <= STRIKE_KM => {
                 if let Some(note) = fight_band(state, economy, player, id, band, world)? {
@@ -186,10 +186,21 @@ fn nearest_band(state: &TravelState, patrol: &FactionPatrol) -> Option<(u64, Loc
         .map(|(_, band, at)| (band, at))
 }
 
+/// Your flagship ran `patrol` down (see `pursuit`): a `Police` contact you
+/// started, with no fine at stake.
+pub(crate) fn intercept(
+    state: &mut TravelState,
+    patrol: &FactionPatrol,
+    fleet: FleetId,
+) -> Result<NavigationEvent, FleetMovementError> {
+    stop_fleet(state, patrol, fleet, true)
+}
+
 fn stop_fleet(
     state: &mut TravelState,
     patrol: &FactionPatrol,
     fleet: FleetId,
+    intercepted: bool,
 ) -> Result<NavigationEvent, FleetMovementError> {
     let navigation = &mut state.navigation;
     let next = navigation
@@ -208,6 +219,7 @@ fn stop_fleet(
         police: Some(PoliceContact {
             patrol: patrol.id,
             faction: patrol.faction,
+            intercepted,
         }),
         rescue: None,
     };

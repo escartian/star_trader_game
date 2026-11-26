@@ -87,6 +87,7 @@ impl LocalSession {
             .on_hover_text("Show the first-delivery guide");
         ui.checkbox(&mut self.saves.autosave, "Autosave")
             .on_hover_text("Save the selected slot on close, suspend and Main menu");
+        super::market_table::load_order_picker(ui, &mut self.saves.options.load_order);
         if self.preferences() != previous
             && let Err(error) = self.persist_preferences()
         {

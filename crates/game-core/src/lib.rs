@@ -7,6 +7,7 @@ pub mod combat;
 pub mod economy;
 pub mod factions;
 pub mod fleet;
+pub mod fleet_trade;
 pub mod generation;
 pub mod jobs;
 pub mod movement;

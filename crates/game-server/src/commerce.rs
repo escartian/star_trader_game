@@ -1,4 +1,5 @@
 use super::Session;
+use game_core::fleet_trade;
 use game_core::travel::{PlayerId, TravelError};
 use game_protocol::{ClientCommand, CommandError, ServerMessage, SessionEvent};
 
@@ -10,6 +11,11 @@ impl Session {
     ) -> Result<ServerMessage, CommandError> {
         let (ship, expected_revision) = match command {
             ClientCommand::Trade {
+                ship,
+                expected_revision,
+                ..
+            }
+            | ClientCommand::FleetTrade {
                 ship,
                 expected_revision,
                 ..
@@ -74,6 +80,31 @@ impl Session {
                     state.progress.deliveries = state.progress.deliveries.saturating_add(1);
                 }
                 SessionEvent::Traded(quote)
+            }
+            ClientCommand::FleetTrade {
+                commodity,
+                quantity,
+                side,
+                order,
+                ..
+            } => {
+                // Priced as one bulk order against the pooled hold, then split.
+                let ships = fleet_trade::partners(&state, &economy, ship, order)?;
+                let mut pool = fleet_trade::pooled(&state, &ships)?;
+                let quote =
+                    economy.trade(&mut pool, commodity, quantity, side, expected_revision)?;
+                let catalog = &economy.rules.ship_catalog;
+                let split =
+                    fleet_trade::plan(&state, catalog, &ships, commodity, quantity, side, order);
+                let planned: u32 = split.iter().map(|(_, units)| units).sum();
+                if planned != quantity {
+                    return Err(game_core::economy::EconomyError::CargoFull.into());
+                }
+                fleet_trade::apply(&mut state, &split, commodity, side)?;
+                if side == game_core::economy::TradeSide::Sell {
+                    state.progress.deliveries = state.progress.deliveries.saturating_add(1);
+                }
+                SessionEvent::FleetTraded { quote, split }
             }
             ClientCommand::Refuel { units, .. } => {
                 economy.refuel(state.ship_mut(ship)?, units)?;

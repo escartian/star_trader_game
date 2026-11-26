@@ -242,6 +242,7 @@ impl Map {
                 self.local = Some(LocalView::new(system));
             }
             "market" => self.session.open_market(),
+            "fleet-market" => self.session.capture_fleet_market()?,
             "shipyard" => self.session.open_shipyard(),
             "fleets" => self.session.open_fleets(),
             "saves" => self.session.open_saves(),

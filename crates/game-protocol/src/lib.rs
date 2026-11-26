@@ -78,6 +78,16 @@ pub enum ClientCommand {
         side: TradeSide,
         expected_revision: u64,
     },
+    /// An order shared by `ship`'s fleet at its port, split among the holds
+    /// in `order` (see `game_core::fleet_trade`).
+    FleetTrade {
+        ship: ShipId,
+        commodity: Commodity,
+        quantity: u32,
+        side: TradeSide,
+        order: game_core::fleet_trade::LoadOrder,
+        expected_revision: u64,
+    },
     Refuel {
         ship: ShipId,
         units: u32,
@@ -249,6 +259,11 @@ pub enum SessionEvent {
         quantity: u32,
     },
     Traded(TradeQuote),
+    /// A fleet order and the units each ship gave or took.
+    FleetTraded {
+        quote: TradeQuote,
+        split: Vec<(ShipId, u32)>,
+    },
     CharterBought {
         cost: game_core::economy::Credits,
     },

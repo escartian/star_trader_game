@@ -1,12 +1,15 @@
 //! The live trade table: prices, the best margin at a port in scope and order buttons.
 //! "Max" and "All" size an order to what the economy's quote accepts right now; the
-//! authority still validates every trade it receives.
+//! authority still validates every trade it receives. Orders are fleet orders: the
+//! table shows the pooled hold of the selected ship's fleet at this port, and the
+//! host splits each order among them in the chosen load order (`fleet_trade`).
 use super::LocalSession;
 use crate::theme::icons::{self, Icon, stat};
 use crate::theme::{AMBER, CYAN, GREEN};
 use game_core::{
     StarSystem,
     economy::{Commodity, Credits, Market, TradeSide},
+    fleet_trade::{self, LoadOrder},
     travel::Ship,
 };
 use game_protocol::ClientCommand;
@@ -31,7 +34,7 @@ impl LocalSession {
                     ui.label("");
                     for (icon, color, text, tip) in [
                         (Icon::Funds, CYAN, "", "Market stock"),
-                        (Icon::Cargo, GREEN, "", "Held in your selected ship"),
+                        (Icon::Cargo, GREEN, "", "Held by your fleet's ships at this port"),
                         (Icon::Buy, GREEN, "1", "Buy price for one unit"),
                         (Icon::Sell, AMBER, "1", "Sell price for one unit"),
                         (
@@ -234,19 +237,87 @@ impl LocalSession {
         quantity: u32,
         side: TradeSide,
     ) -> ClientCommand {
-        ClientCommand::Trade {
+        ClientCommand::FleetTrade {
             ship: ship.id,
             commodity,
             quantity,
             side,
+            order: self.saves.options.load_order,
             expected_revision: self.state.revision,
         }
     }
+
+    /// The hold orders from `ship` trade against: its fleet's ships at this
+    /// port pooled (see `fleet_trade::pooled`), and how many ships that is.
+    pub(super) fn fleet_hold(&self, ship: &Ship) -> (Ship, usize) {
+        let order = self.saves.options.load_order;
+        fleet_trade::partners(&self.state, &self.economy, ship.id, order)
+            .and_then(|ships| Ok((fleet_trade::pooled(&self.state, &ships)?, ships.len())))
+            .unwrap_or_else(|_| (ship.clone(), 1))
+    }
+
+    /// The load order picker beside the order quantity, when more than one
+    /// of the fleet's ships is at this port. Returns whether it changed.
+    pub(super) fn load_order_row(&mut self, ui: &mut egui::Ui) -> bool {
+        let ship = self.selected_ship().id;
+        let fleet_here = fleet_trade::partners(&self.state, &self.economy, ship, LoadOrder::Even)
+            .is_ok_and(|ships| ships.len() > 1);
+        if !fleet_here {
+            return false;
+        }
+        let before = self.saves.options.load_order;
+        load_order_picker(ui, &mut self.saves.options.load_order);
+        self.saves.options.load_order != before
+    }
+
+    pub(super) fn persist_load_order(&mut self) {
+        if let Err(error) = self.persist_preferences() {
+            self.record(format!("Could not save client settings: {error}"));
+        }
+    }
+}
+
+/// A combo box choosing how fleet orders are split among the holds.
+pub(super) fn load_order_picker(ui: &mut egui::Ui, order: &mut LoadOrder) {
+    ui.horizontal(|ui| {
+        ui.label("Load");
+        egui::ComboBox::from_id_salt("load-order")
+            .selected_text(order.label())
+            .show_ui(ui, |ui| {
+                for choice in LoadOrder::ALL {
+                    ui.selectable_value(order, choice, choice.label())
+                        .on_hover_text(choice.summary());
+                }
+            })
+            .response
+            .on_hover_text(
+                "How buying and selling is split among your fleet's ships at a port. \
+                 Cargo stays with its ship: a ship lost in battle loses its hold.",
+            );
+    });
 }
 
 fn side_label(side: TradeSide) -> (Icon, &'static str) {
     match side {
         TradeSide::Buy => (Icon::Buy, "Buy"),
         TradeSide::Sell => (Icon::Sell, "Sell"),
+    }
+}
+
+#[cfg(any(test, feature = "dev-tools"))]
+impl LocalSession {
+    /// Capture "fleet-market": a second hull bought at the start port, so the
+    /// market trades for a fleet of two and shows the load order picker.
+    pub fn capture_fleet_market(&mut self) -> Result<(), String> {
+        self.command(ClientCommand::BuyShip {
+            ship: self.active_ship,
+            kind: game_core::fleet::ShipKind::Scout,
+            expected_revision: self.state.revision,
+        });
+        if self.state.ships.len() < 2 {
+            return Err("Could not buy a second ship at the start port".into());
+        }
+        self.open_market();
+        Ok(())
     }
 }

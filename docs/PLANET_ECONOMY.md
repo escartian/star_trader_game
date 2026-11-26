@@ -36,6 +36,28 @@ fund and store; **Full** refuels as far as credits allow. These sizes come from 
 economy's own quote rules (`max_trade_quantity`, `max_refuel_units`), and the
 authority still validates every order.
 
+### Fleet orders
+
+Buying and selling are **fleet orders** (`game_core::fleet_trade`,
+`ClientCommand::FleetTrade`): every ship of the selected ship's fleet at the
+same port shares the order. The Trade window shows their pooled hold (cargo
+column and used/capacity), and the order is priced and checked once, as one
+bulk trade against that pooled hold, then split among the ships. Cargo stays
+per ship, so a ship destroyed in battle loses its own hold. The **Load**
+picker beside the order quantity (shown when two or more of the fleet's ships
+are there; also under Settings → Gameplay, saved with the client settings)
+chooses the split:
+
+| Load order | Buying fills | Selling empties |
+| --- | --- | --- |
+| Spread evenly (default) | each hold to the same share of its capacity | the fullest share first |
+| Toughest ship first | the ship with the most hull and shields left | the weakest first |
+| Largest hold first | the largest hold | the smallest first |
+| Selected ship only | only the selected ship | only the selected ship |
+
+Upgrades (hold, gear) and repairs stay per ship: they apply to the selected
+ship. The event log names how many units each ship took or gave.
+
 ## Living markets and inflation
 
 Markets are not static (`game-core/src/economy/dynamics.rs`). A market's future

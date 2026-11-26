@@ -47,6 +47,8 @@ pub struct ClientOptions {
     pub animations: bool,
     /// How long each navigation run takes to play out on the map.
     pub run_pace: RunPace,
+    /// How market orders are split among the fleet's ships at a port.
+    pub load_order: game_core::fleet_trade::LoadOrder,
 }
 
 /// Seconds per navigation run on the map: the ships' glide and the pause
@@ -99,6 +101,7 @@ impl Default for ClientOptions {
             ui_scale: 100,
             animations: true,
             run_pace: RunPace::default(),
+            load_order: Default::default(),
         }
     }
 }

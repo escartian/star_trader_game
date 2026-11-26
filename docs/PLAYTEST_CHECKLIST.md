@@ -23,6 +23,8 @@ Mobile builds and device checks are deferred by user direction.
 - [ ] Use Max, All and Full; check hover totals and whether the margin column
   makes a profitable next cargo obvious without opening Price comparison.
 - [ ] Discover and purchase the cargo-hold upgrade without outside explanation.
+- [ ] With two ships in a fleet at a port, try each Load order; check the log's
+  per-ship split and that a lost ship takes only its own cargo.
 - [ ] Record first-delivery and upgrade times, credits and any confusing decisions.
 - [ ] Judge whether the 20–30 minute upgrade hypothesis should change.
 

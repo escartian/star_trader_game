@@ -158,14 +158,22 @@ impl LocalSession {
                     self.economy.price_level_ppm as f64 / 10_000.0
                 ),
             );
+            let (hold, ships) = self.fleet_hold(&ship);
             stat(
                 ui,
                 Icon::Cargo,
                 GREEN,
-                &format!("{}/{}", ship.cargo_used(), ship.cargo_capacity),
-                "Cargo used / capacity",
+                &format!("{}/{}", hold.cargo_used(), hold.cargo_capacity),
+                &if ships > 1 {
+                    format!("Cargo used / capacity of the {ships} fleet ships trading here")
+                } else {
+                    "Cargo used / capacity".to_owned()
+                },
             );
             ui.separator();
+            if self.load_order_row(ui) {
+                self.persist_load_order();
+            }
             icons::glyph(ui, Icon::Cargo, CYAN, "Order quantity (units per trade)");
             ui.add(egui::DragValue::new(&mut self.market.quantity).range(1..=2000).prefix("×"))
                 .on_hover_text("Order quantity");
@@ -181,7 +189,9 @@ impl LocalSession {
             self.trade_scope_ui(ui, &ship, systems);
             self.best_trade_line(ui, &market, systems);
         });
-        let mut action = self.trade_table(ui, &ship, &market, systems);
+        // Orders are priced against the pooled hold of the fleet's ships here.
+        let (hold, _) = self.fleet_hold(&ship);
+        let mut action = self.trade_table(ui, &hold, &market, systems);
         ui.separator();
         ui.horizontal_wrapped(|ui| {
             // Orders never exceed the space left in the tanks.

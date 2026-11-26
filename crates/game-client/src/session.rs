@@ -350,6 +350,26 @@ impl LocalSession {
                             quote.commodity.label(),
                             quote.total
                         ),
+                        SessionEvent::FleetTraded { quote, split } => {
+                            let ships: Vec<String> = split
+                                .iter()
+                                .map(|(ship, units)| {
+                                    let name = self.state.ship(*ship).map_or_else(
+                                        |_| format!("ship {}", ship.0),
+                                        |s| s.name.clone(),
+                                    );
+                                    format!("{name} {units}")
+                                })
+                                .collect();
+                            format!(
+                                "{:?}: {} {} for {} credits ({}).",
+                                quote.side,
+                                quote.quantity,
+                                quote.commodity.label(),
+                                quote.total,
+                                ships.join(", ")
+                            )
+                        }
                         SessionEvent::Refuelled { units } => format!("Purchased {units} fuel."),
                         SessionEvent::Repaired { ship, cost } => {
                             format!("Repaired ship {} for {cost} cr.", ship.0)

@@ -286,6 +286,23 @@ fn paint_ring(painter: &Painter, projector: &Projector, far_half: bool) {
     }
 }
 
+/// Seconds between the orbiting prospector's correction burns.
+const BURN_EVERY: f32 = 11.0;
+/// How long each burn lasts, in seconds.
+const BURN_SECONDS: f32 = 0.9;
+/// Peak engine output of a burn (0-1): a short, dim pulse.
+const BURN_PEAK: f32 = 0.45;
+
+/// The orbiting prospector's engine at `time`: off while it coasts round its
+/// orbit, with a brief correction burn now and then that rises and falls.
+fn correction_burn(time: f32) -> f32 {
+    let into = (time + 3.0).rem_euclid(BURN_EVERY);
+    if into >= BURN_SECONDS {
+        return 0.0;
+    }
+    (into / BURN_SECONDS * std::f32::consts::PI).sin() * BURN_PEAK
+}
+
 fn paint_orbiter(
     painter: &Painter,
     projector: &Projector,
@@ -308,7 +325,8 @@ fn paint_orbiter(
         }
         return;
     }
-    // The prospector flies along the ring: its heading is the ring's tangent.
+    // The prospector coasts along the ring (an orbit needs no thrust): its
+    // heading is the ring's tangent.
     let ahead = orbit_point(angle + 2.21, ORBIT_RADIUS * 0.82);
     // Its trail curves back along the ring: one whole lap is progress 0-1.
     let radius = ORBIT_RADIUS * 0.82;
@@ -319,7 +337,7 @@ fn paint_orbiter(
         progress: 1.0,
         time,
         phase: 42.0,
-        throttle: 1.0,
+        throttle: correction_burn(time),
     };
     trail.paint(painter, projector, route);
     if let Some(ship) = model::for_kind(ShipKind::Prospector) {
@@ -332,6 +350,25 @@ fn paint_orbiter(
 mod tests {
     use super::*;
     use egui::Pos2;
+
+    #[test]
+    fn the_orbiting_prospector_coasts_with_only_brief_dim_burns() {
+        let samples: Vec<f32> = (0..2200)
+            .map(|step| correction_burn(step as f32 * 0.01))
+            .collect();
+        let firing = samples.iter().filter(|throttle| **throttle > 0.02).count();
+        // About 0.9 s of every 11 s, never at full power.
+        assert!(
+            firing > 0 && firing * 8 < samples.len(),
+            "{firing} of {}",
+            samples.len()
+        );
+        assert!(
+            samples
+                .iter()
+                .all(|throttle| (0.0..=BURN_PEAK).contains(throttle))
+        );
+    }
 
     #[test]
     fn the_station_model_loads_and_ships_dock_on_its_top() {

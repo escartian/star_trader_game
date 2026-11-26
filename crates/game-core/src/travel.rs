@@ -167,6 +167,7 @@ impl Default for TravelState {
                 owner: PlayerId(1),
                 ships: vec![ShipId(1)],
                 captain: crate::species::FleetCaptain::default(),
+                software: Vec::new(),
             }],
             next_ship_id: 2,
             next_fleet_id: 2,

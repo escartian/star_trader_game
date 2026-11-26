@@ -47,6 +47,11 @@ impl Session {
                 ship,
                 expected_revision,
             }
+            | ClientCommand::InstallSoftware {
+                ship,
+                expected_revision,
+                ..
+            }
             | ClientCommand::PayFine {
                 ship,
                 expected_revision,
@@ -156,6 +161,23 @@ impl Session {
                     runs_left: game_core::combat::gear::ESCORT_RUNS,
                 });
                 SessionEvent::EscortHired { cost }
+            }
+            ClientCommand::InstallSoftware { software, .. } => {
+                // Installed fleet-wide; the lead ship pays at its market.
+                let fleet = state.fleet_for_ship(ship)?.id;
+                let lead = *state
+                    .fleet_for_ship(ship)?
+                    .ships
+                    .first()
+                    .ok_or(TravelError::UnknownShip)?;
+                let lead = state.ship(lead)?.clone();
+                let record = state
+                    .fleets
+                    .iter_mut()
+                    .find(|record| record.id == fleet)
+                    .ok_or(TravelError::UnknownShip)?;
+                let cost = economy.install_software(&lead, record, software)?;
+                SessionEvent::SoftwareInstalled { software, cost }
             }
             ClientCommand::PayFine { .. } => {
                 let (faction, cost) =

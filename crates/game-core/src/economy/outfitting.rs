@@ -226,6 +226,27 @@ impl Economy {
     }
 
     /// Today's price of one escort contract.
+    /// Price of fleet `software` at today's price level.
+    pub fn software_price(&self, software: crate::fleet::software::FleetSoftware) -> Credits {
+        self.inflate(self.rules.software_prices.of(software))
+    }
+
+    /// Installs `software` on `fleet`, paid at the market `lead` is at.
+    pub fn install_software(
+        &mut self,
+        lead: &Ship,
+        fleet: &mut crate::fleet::Fleet,
+        software: crate::fleet::software::FleetSoftware,
+    ) -> Result<Credits, EconomyError> {
+        if fleet.software.contains(&software) {
+            return Err(EconomyError::SoftwareInstalled);
+        }
+        let cost = self.software_price(software);
+        self.pay_market(lead, cost)?;
+        fleet.software.push(software);
+        Ok(cost)
+    }
+
     pub fn escort_price(&self) -> Credits {
         self.inflate(self.rules.gear_prices.escort)
     }

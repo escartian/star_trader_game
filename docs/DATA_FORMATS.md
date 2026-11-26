@@ -33,7 +33,8 @@ Each `data/slot-N.json` stores:
 - `player`: selected starting captain `player_species` (old saves default to Human), tick/revision, movement rules, navigation state (run, courses, Wait orders as `holds`,
   encounters with raider `hostiles`, RNG, rescues, `last_combat` report (outcome `victory`, `defeat`, `disengaged` or `surrendered`), the open `battle` (omitted when none), trade
   `routes` with their fleet and two market stops, omitted when empty), ships (IDs, owner, class, individual cargo/hold/fuel/range,
-  `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner, ship membership and `captain` with species and experience), monotonic ID counters,
+  `hull_damage` and body/local/deep-space location or legacy journey), fleets (IDs, owner, ship membership, `captain` with species and experience, and optional
+  `software`: fleet software such as `"pursuit_suite"`, each at most once), monotonic ID counters,
   the Raider `haven` in navigation (`system`, `body`, `garrison`, `sunk`, `destroyed_run`; contacts against it carry `haven: true`)
   the `flagship` fleet and secondary fleets' `patrols` (`fleet`, `system`, `stops`) in navigation,
   the flagship's `pursuit` (`fleet`, `quarry`: `{"Trader": id}` or `{"Band": id}`; omitted when none),
@@ -257,8 +258,8 @@ may battle units; `navigation.escorts` holds hired escorts (`fleet`, `runs_left`
 trader's contact its `gear` and `escort` (then `hostiles` adds the escort's
 patrol hull). An open battle may include one unowned player-side escort only
 while that fleet's contract runs. Economy rules add `gear_prices`
-(`afterburners`, `point_defense`, the seven new upgrades, `escort`), with defaults
-for older files. The model and size restrictions are checked on purchase and
+(`afterburners`, `point_defense`, the seven new upgrades, `escort`) and
+`software_prices` (`pursuit_suite`), with defaults for older files. The model and size restrictions are checked on purchase and
 save load; Scout range and Freighter capacity reflect their fitted upgrades. A raider band may record
 `stalking` (an NPC trader's ID, which must exist; never together with
 `hunting`), and its `cooldown` may reach 12 after striking a trader. These fields are additive and

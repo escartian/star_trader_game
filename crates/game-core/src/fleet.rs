@@ -2,6 +2,7 @@
 #[cfg(test)]
 mod catalog_tests;
 mod operations;
+pub mod software;
 use crate::{
     economy::Credits,
     travel::{PlayerId, ShipId},
@@ -78,6 +79,9 @@ pub struct Fleet {
     pub ships: Vec<ShipId>,
     #[serde(default)]
     pub captain: crate::species::FleetCaptain,
+    /// Installed fleet software (see [`software`]), each item at most once.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub software: Vec<software::FleetSoftware>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

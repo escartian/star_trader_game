@@ -166,6 +166,13 @@ impl TravelState {
                 return Err("Invalid fitted gear".into());
             }
         }
+        if !self
+            .fleets
+            .iter()
+            .all(|fleet| crate::fleet::software::valid_install(&fleet.software))
+        {
+            return Err("Invalid fleet software".into());
+        }
         self.validate_bands(systems)?;
         self.validate_haven(systems)?;
         self.validate_patrols(systems)?;

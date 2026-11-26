@@ -47,6 +47,7 @@ impl TravelState {
                 .div_ceil(self.movement_rules.local_km_per_tick)
                 .max(1)
         };
+        let duration_ticks = self.pursuit_duration(fleet, duration_ticks);
         for id in &fleet.ships {
             let member = self.ship(*id)?;
             if deep {
@@ -89,6 +90,22 @@ impl TravelState {
             revision: self.revision,
             tick: self.tick,
         })
+    }
+
+    /// A pursuing fleet with the pursuit suite flies its courses in
+    /// [`PURSUIT_COURSE_PERCENT`](crate::fleet::software::PURSUIT_COURSE_PERCENT)%
+    /// of the time (at least one tick).
+    fn pursuit_duration(&self, fleet: &crate::fleet::Fleet, ticks: u64) -> u64 {
+        use crate::fleet::software::{FleetSoftware, PURSUIT_COURSE_PERCENT};
+        let pursuing = self
+            .navigation
+            .pursuit
+            .is_some_and(|pursuit| pursuit.fleet == fleet.id);
+        if pursuing && fleet.software.contains(&FleetSoftware::PursuitSuite) {
+            (ticks * PURSUIT_COURSE_PERCENT).div_ceil(100).max(1)
+        } else {
+            ticks
+        }
     }
 
     fn destination(

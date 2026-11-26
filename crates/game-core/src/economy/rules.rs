@@ -55,6 +55,9 @@ pub struct EconomyRules {
     /// Anti-piracy gear and escort prices (defaults for older definitions).
     #[serde(default)]
     pub gear_prices: crate::combat::gear::GearPrices,
+    /// Fleet software prices (defaults for older definitions).
+    #[serde(default)]
+    pub software_prices: crate::fleet::software::SoftwarePrices,
     /// The factions' definitions (`config/factions.json`).
     #[serde(default)]
     pub faction_catalog: crate::factions::FactionCatalog,
@@ -151,6 +154,7 @@ impl EconomyRules {
             || !self.campaign.valid()
             || !self.dynamics.valid()
             || !self.gear_prices.valid()
+            || !self.software_prices.valid()
         {
             return Err("Invalid initial credits or service prices".into());
         }

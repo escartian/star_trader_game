@@ -8,6 +8,7 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::{AMBER, GREEN};
 use game_core::{
     combat::gear::{ESCORT_RUNS, Gear},
+    fleet::software::FleetSoftware,
     travel::Ship,
 };
 use game_protocol::ClientCommand;
@@ -52,11 +53,50 @@ impl LocalSession {
                 action = Some(command);
             }
         }
+        ui.label(egui::RichText::new("FLEET").small().color(AMBER))
+            .on_hover_text("Bought once for the whole fleet; the lead ship pays here.");
         ui.horizontal_wrapped(|ui| {
+            if let Some(command) = self.software_buttons(ui, ship) {
+                action = Some(command);
+            }
             if let Some(command) = self.escort_button(ui, ship) {
                 action = Some(command);
             }
         });
+        action
+    }
+
+    /// A button per fleet software item, for the fleet `ship` belongs to.
+    fn software_buttons(&self, ui: &mut egui::Ui, ship: &Ship) -> Option<ClientCommand> {
+        let installed = self
+            .state
+            .fleet_for_ship(ship.id)
+            .map(|fleet| fleet.software.clone())
+            .unwrap_or_default();
+        let mut action = None;
+        for software in FleetSoftware::ALL {
+            let price = self.economy.software_price(software);
+            let (label, blocked) = if installed.contains(&software) {
+                (
+                    format!("{} ✓", software.label()),
+                    Some(format!("{} already installed.", software.label())),
+                )
+            } else {
+                let short = (price > self.economy.credits)
+                    .then(|| format!("Costs {price} cr; you have {} cr.", self.economy.credits));
+                (format!("{} · {price} cr", software.label()), short)
+            };
+            if icons::labeled_action(ui, Icon::Overview, &label, blocked)
+                .on_hover_text(format!("Fleet software: {}", software.summary()))
+                .clicked()
+            {
+                action = Some(ClientCommand::InstallSoftware {
+                    ship: ship.id,
+                    software,
+                    expected_revision: self.state.revision,
+                });
+            }
+        }
         action
     }
 

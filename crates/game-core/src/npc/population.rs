@@ -150,6 +150,7 @@ fn commissioned(
         owner: PlayerId(identity),
         ships: vec![ShipId(identity)],
         captain: crate::species::FleetCaptain::default(),
+        software: Vec::new(),
     }];
     state.next_ship_id = identity + 1;
     state.next_fleet_id = identity + 1;

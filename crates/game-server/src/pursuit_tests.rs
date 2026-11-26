@@ -9,6 +9,7 @@ use super::{
 use game_core::{
     LocalPosition, SystemId,
     fleet::FleetId,
+    fleet::software::FleetSoftware,
     movement::MoveTarget,
     navigation::{EncounterKind, NavigationEvent},
     pursuit::Quarry,
@@ -238,4 +239,61 @@ fn a_trader_is_intercepted_where_it_is_bound_and_the_flagship_refuels_on_the_way
         },
         "steers for where the trader is going, not where it is"
     );
+}
+
+/// Runs until contact for chases of every NPC trader after 1–12 warm-up
+/// runs; chases that end any other way are counted in the second value.
+fn chase_lengths(fitted: bool) -> (Vec<usize>, usize) {
+    let mut caught = Vec::new();
+    let mut failed = 0;
+    for warmup in 1..=12 {
+        let mut base = Session::default();
+        base.state.movement_rules.encounter_chance_percent = 0;
+        for _ in 0..warmup {
+            super::test_support::execute_quiet_run(&mut base);
+        }
+        base.state.navigation.orders.clear();
+        base.state.navigation.holds.clear();
+        if fitted {
+            base.state.fleets[0]
+                .software
+                .push(FleetSoftware::PursuitSuite);
+        }
+        for index in 0..base.economy.traders.len() {
+            let mut session = base.clone();
+            let trader = session.economy.traders[index].id;
+            ok(pursue(&mut session, Quarry::Trader(trader)));
+            let runs = (0..60).find(|_| {
+                if !session.state.navigation.encounters.is_empty()
+                    || session.state.navigation.pursuit.is_none()
+                {
+                    return true;
+                }
+                let reply = session.handle(ClientCommand::ExecuteNavigationRun {
+                    expected_revision: session.state.revision,
+                });
+                !matches!(reply, ServerMessage::SessionSnapshot { .. })
+            });
+            match runs {
+                Some(runs) if !session.state.navigation.encounters.is_empty() => caught.push(runs),
+                _ => failed += 1,
+            }
+        }
+    }
+    (caught, failed)
+}
+
+#[test]
+fn the_pursuit_suite_runs_traders_down_in_fewer_runs() {
+    let mean = |runs: &[usize]| runs.iter().sum::<usize>() as f64 / runs.len() as f64;
+    let (plain, _) = chase_lengths(false);
+    let (fitted, failed) = chase_lengths(true);
+    assert_eq!(failed, 0, "every fitted chase ends in contact");
+    assert!(
+        mean(&fitted) < 0.6 * mean(&plain),
+        "fitted {:.1} vs plain {:.1} runs",
+        mean(&fitted),
+        mean(&plain)
+    );
+    assert!(fitted.iter().all(|runs| *runs <= 20), "{fitted:?}");
 }

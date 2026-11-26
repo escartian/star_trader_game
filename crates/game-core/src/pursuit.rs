@@ -244,11 +244,7 @@ pub fn service_pursuit(
             state.navigation.holds.push(fleet);
             Ok(Vec::new())
         }
-        Err(error) => {
-            eprintln!(
-                "DBGPURSUIT {error:?} fuel {:?}",
-                state.ship(lead).map(|s| s.fuel)
-            );
+        Err(_) => {
             state.navigation.pursuit = None;
             Ok(vec![note(
                 "Pursuit ended: no course to the quarry (out of range or fuel).",

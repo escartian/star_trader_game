@@ -217,6 +217,15 @@ dashed amber line from your flagship:
   Wait). Only the flagship pursues.
 
 A docked flagship can pursue too: the chase plots its way out of the port.
+
+**Pursuit suite** (fleet software, 900 cr, bought once per fleet in the
+Market's *Fleet* row; `game-core/src/fleet/software.rs`): while that fleet
+pursues, every course it plots takes 65% of the usual time (at least one
+tick). Without it a chase that starts a run behind usually stays a run behind
+from port to port. Measured over 48 chases of the four starting traders
+(1–12 warm-up runs): without the suite a catch took 8 runs (median), 14.9 on
+average and up to 52, and 3 chases were lost; with it, 6 runs median, 6.4 on
+average, at most 14, none lost (`pursuit_tests::the_pursuit_suite_runs_traders_down_in_fewer_runs`).
 Saved as `pursuit` in navigation state and validated on load.
 
 ## Saves and multiplayer

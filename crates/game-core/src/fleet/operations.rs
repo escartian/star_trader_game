@@ -146,6 +146,8 @@ impl TravelState {
         self.fleets[index]
             .ships
             .retain(|ship| !selection.contains(ship));
+        // Software is copied, so both halves keep it.
+        let software = self.fleets[index].software.clone();
         self.fleets.push(Fleet {
             id: new_id,
             name: format!("Fleet {}", new_id.0),
@@ -155,6 +157,7 @@ impl TravelState {
                 species: self.player_species,
                 experience: 0,
             },
+            software,
         });
         self.next_fleet_id = next;
         Ok(new_id)
@@ -178,12 +181,18 @@ impl TravelState {
             .position(|fleet| fleet.id == source)
             .ok_or(FleetError::UnknownFleet)?;
         let members = self.fleets[source_index].ships.clone();
+        let software = self.fleets[source_index].software.clone();
         let target_fleet = self
             .fleets
             .iter_mut()
             .find(|fleet| fleet.id == target)
             .ok_or(FleetError::UnknownFleet)?;
         target_fleet.ships.extend(members);
+        for item in software {
+            if !target_fleet.software.contains(&item) {
+                target_fleet.software.push(item);
+            }
+        }
         self.fleets.remove(source_index);
         Ok(())
     }

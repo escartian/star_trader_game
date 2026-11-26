@@ -122,6 +122,13 @@ pub enum ClientCommand {
         install: Option<game_core::economy::ShipUpgrade>,
         expected_revision: u64,
     },
+    /// Install fleet `software` on the fleet `ship` belongs to, paid by the
+    /// fleet's lead ship at its market (see `game_core::fleet::software`).
+    InstallSoftware {
+        ship: ShipId,
+        software: game_core::fleet::software::FleetSoftware,
+        expected_revision: u64,
+    },
     /// Hire (or renew) an escort for the fleet `ship` leads, at its market.
     HireEscort {
         ship: ShipId,
@@ -314,6 +321,10 @@ pub enum SessionEvent {
         cost: game_core::economy::Credits,
     },
     EscortHired {
+        cost: game_core::economy::Credits,
+    },
+    SoftwareInstalled {
+        software: game_core::fleet::software::FleetSoftware,
         cost: game_core::economy::Credits,
     },
     /// Your standing with a faction moved by `change` to `standing`

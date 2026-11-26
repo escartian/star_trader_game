@@ -421,6 +421,9 @@ impl LocalSession {
                             "Escort hired for {cost} cr: it joins this fleet's battles for {} runs.",
                             game_core::combat::gear::ESCORT_RUNS
                         ),
+                        SessionEvent::SoftwareInstalled { software, cost } => {
+                            format!("{} installed fleet-wide for {cost} cr.", software.label())
+                        }
                         SessionEvent::HoldUpgraded => {
                             "Cargo hold upgraded. First earnings goal completed!".into()
                         }

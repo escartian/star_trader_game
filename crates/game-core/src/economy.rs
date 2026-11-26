@@ -186,6 +186,8 @@ pub enum EconomyError {
     AlreadyChartered,
     /// That gear is already fitted to this ship.
     AlreadyFitted,
+    /// The fleet already runs that software.
+    SoftwareInstalled,
     NotFitted,
     NoShipyard,
     /// The fitting is restricted to another hull model or size.
@@ -215,6 +217,7 @@ impl std::fmt::Display for EconomyError {
             Self::NoDamage => "This ship has no hull damage to repair.",
             Self::AlreadyChartered => "This port's charter has already been sold.",
             Self::AlreadyFitted => "This ship already has that gear fitted.",
+            Self::SoftwareInstalled => "This fleet already runs that software.",
             Self::NotFitted => "That upgrade is not fitted to this ship.",
             Self::NoShipyard => "This port has no active shipyard.",
             Self::IncompatibleGear => "This upgrade does not fit this ship model or size.",

@@ -345,6 +345,7 @@ goes to that market's treasury.
 | Evasion jets | small ships (Scout) | shots at the ship have 10 points less chance to hit | 600 cr |
 | Shield array | medium ships (Freighter, Patrol) | +10 starting shields in battle | 800 cr |
 | Armored bulkheads | large ships (Prospector) | +3 armor against hull hits | 1000 cr |
+| Pursuit suite (fleet software) | a fleet | while the fleet pursues a trader or band, its courses take 65% of the usual time | 900 cr |
 | Escort | a fleet | a patrol ship joins every battle the fleet fights, on its side, for 10 runs; you command it like your own ships. If it is destroyed the contract ends. Hiring again renews it to 10 runs | 250 cr |
 
 Each item is fitted once per ship. At a shipyard it can be removed for the

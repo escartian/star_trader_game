@@ -201,6 +201,7 @@ impl Session {
             | ClientCommand::FitGear { .. }
             | ClientCommand::RefitShip { .. }
             | ClientCommand::HireEscort { .. }
+            | ClientCommand::InstallSoftware { .. }
             | ClientCommand::PayFine { .. }) => self.commerce(player, command),
             command @ (ClientCommand::AcceptJob { .. } | ClientCommand::AbandonJob { .. }) => {
                 self.job_command(player, command)
@@ -320,3 +321,5 @@ mod band_trader_tests;
 mod gear_tests;
 #[cfg(test)]
 mod job_tests;
+#[cfg(test)]
+mod software_tests;

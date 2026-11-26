@@ -32,13 +32,16 @@ pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
     ui.horizontal(|ui| {
         super::species_portraits::show(ui, setup.species, 112.0);
         ui.vertical(|ui| {
-            let title = format!("Captain species: {} ▾", setup.species.label());
+            // Trailing spaces leave room for the painted drop-down arrow.
+            let title = format!("Captain species: {}    ", setup.species.label());
             if phone {
-                if ui.button(title).clicked() {
+                let button = ui.button(title);
+                drop_down_arrow(ui, &button);
+                if button.clicked() {
                     picker_open = true;
                 }
             } else {
-                ui.menu_button(title, |ui| {
+                let menu = ui.menu_button(title, |ui| {
                     ui.set_width((ui.ctx().screen_rect().width().min(440.0) - 24.0).max(280.0));
                     for species in Species::ALL {
                         if species_option(ui, species, setup.species).clicked() {
@@ -47,6 +50,7 @@ pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
                         }
                     }
                 });
+                drop_down_arrow(ui, &menu.response);
             }
             ui.small(setup.species.description());
             ui.small("This captain's traits affect the ships they command.");
@@ -252,6 +256,23 @@ fn choice_row<T: Copy + PartialEq>(
             }
         });
     ui.end_row();
+}
+
+/// A small downward triangle at the right end of `button` (the bundled
+/// fonts have no arrow glyph, so it is painted).
+fn drop_down_arrow(ui: &Ui, button: &Response) {
+    let color = ui.style().interact(button).text_color();
+    let center = egui::pos2(button.rect.right() - 12.0, button.rect.center().y);
+    let half = 4.0;
+    ui.painter().add(egui::Shape::convex_polygon(
+        vec![
+            egui::pos2(center.x - half, center.y - half * 0.5),
+            egui::pos2(center.x + half, center.y - half * 0.5),
+            egui::pos2(center.x, center.y + half * 0.7),
+        ],
+        color,
+        egui::Stroke::NONE,
+    ));
 }
 
 /// One line describing a new game, for the log.

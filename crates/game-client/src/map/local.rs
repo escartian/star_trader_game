@@ -180,6 +180,12 @@ impl LocalView {
         self.show_traffic = show;
     }
 
+    /// Traders and bands drawn (and tappable) last frame.
+    #[cfg(test)]
+    pub(crate) fn npc_count(&self) -> usize {
+        self.npc_hits.len()
+    }
+
     /// True once after the player pressed the traffic button.
     pub fn take_traffic_toggle(&mut self) -> bool {
         std::mem::take(&mut self.traffic_toggled)

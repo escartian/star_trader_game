@@ -285,3 +285,41 @@ fn leaving_and_entering_system_space_switch_views_only_after_a_navigation_run() 
     map.follow_navigation_transitions();
     assert_eq!(map.local.as_ref().unwrap().system().id, SystemId(2));
 }
+
+#[test]
+fn hidden_traffic_leaves_only_the_selected_npc_on_both_maps() {
+    use crate::preferences::MapLayer;
+    let ctx = egui::Context::default();
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
+    let screen = Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1000.0, 720.0)));
+    let frame = |map: &mut Map| {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: screen,
+                ..Default::default()
+            },
+            |ctx| map.ui(ctx),
+        );
+    };
+    frame(&mut map);
+    assert!(map.galaxy_npc_hits.len() > 1, "traders and bands drawn");
+    let chosen = map.galaxy_npc_hits[0].quarry;
+    map.session.toggle_map_layer(MapLayer::Traffic);
+    frame(&mut map);
+    assert!(map.galaxy_npc_hits.is_empty(), "all hidden");
+    map.session.select_npc(chosen);
+    frame(&mut map);
+    let shown: Vec<_> = map.galaxy_npc_hits.iter().map(|hit| hit.quarry).collect();
+    assert_eq!(shown, vec![chosen], "the selected one stays");
+
+    // The system map follows the same option.
+    map.session.toggle_map_layer(MapLayer::Traffic);
+    map.selected = map.session.current_system();
+    map.open_selected_system();
+    frame(&mut map);
+    let all = map.local.as_ref().unwrap().npc_count();
+    assert!(all > 0, "traffic in the home system");
+    map.session.toggle_map_layer(MapLayer::Traffic);
+    frame(&mut map);
+    assert!(map.local.as_ref().unwrap().npc_count() <= 1);
+}

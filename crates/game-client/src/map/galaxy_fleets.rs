@@ -117,7 +117,8 @@ impl Map {
             .iter()
             .map(|hit| (hit.bounds.center(), super::fleets::CHIP))
             .collect();
-        for trader in self.session.traffic() {
+        let traders = self.session.traffic().iter();
+        for trader in traders.filter(|trader| self.session.npc_shown(Quarry::Trader(trader.id))) {
             let Some(ship) = trader.state.ships.first() else {
                 continue;
             };
@@ -195,7 +196,8 @@ impl Map {
         }
         let red = crate::theme::iff::HOSTILE;
         let find = |id| self.systems.iter().find(|known| known.id == id);
-        for band in self.session.raider_bands() {
+        let bands = self.session.raider_bands().iter();
+        for band in bands.filter(|band| self.session.npc_shown(Quarry::Band(band.id))) {
             let Some(system) = find(band.system) else {
                 continue;
             };

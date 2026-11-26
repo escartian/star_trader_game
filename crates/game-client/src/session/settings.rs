@@ -54,6 +54,13 @@ impl LocalSession {
         self.saves.options
     }
 
+    /// Whether a trader or band is drawn on the maps: all are while traffic
+    /// is shown; while it is hidden, only the one you selected or pursue.
+    pub fn npc_shown(&self, quarry: game_core::pursuit::Quarry) -> bool {
+        let (selected, pursued) = self.npc_focus();
+        self.saves.options.show_traffic || [selected, pursued].contains(&Some(quarry))
+    }
+
     /// Shows or hides a map layer and remembers the choice.
     pub fn toggle_map_layer(&mut self, layer: crate::preferences::MapLayer) {
         let options = &mut self.saves.options;

@@ -49,7 +49,8 @@ pub struct ClientOptions {
     pub run_pace: RunPace,
     /// How market orders are split among the fleet's ships at a port.
     pub load_order: game_core::fleet_trade::LoadOrder,
-    /// System map: draw NPC traders, police patrols and raider bands.
+    /// Both maps: draw NPC traders, police patrols and raider bands (the
+    /// selected or pursued one stays visible either way).
     pub show_traffic: bool,
     /// Galaxy map: draw faction territory.
     pub show_territory: bool,

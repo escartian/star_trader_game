@@ -161,7 +161,8 @@ impl Map {
         }
     }
 
-    /// Reset, focus selection and focus fleet at the galaxy map's corner.
+    /// Search, reset, focus selection and fleet, and the traffic and
+    /// territory toggles at the galaxy map's corner.
     pub(super) fn galaxy_buttons(&mut self, ctx: &egui::Context, rect: egui::Rect) {
         let action = super::toolbar::map_buttons(
             ctx,
@@ -174,6 +175,10 @@ impl Map {
                 (CameraAction::FocusFleet, None),
             ]
             .into_iter()
+            .chain([(
+                CameraAction::ToggleTraffic,
+                Some(self.session.client_options().show_traffic),
+            )])
             .chain(self.session.factions_active().then_some((
                 CameraAction::ToggleTerritory,
                 Some(self.session.client_options().show_territory),
@@ -187,6 +192,9 @@ impl Map {
             }
             Some(CameraAction::FocusSelection) => self.focus_selection(),
             Some(CameraAction::Search) => super::search::toggle(ctx),
+            Some(CameraAction::ToggleTraffic) => self
+                .session
+                .toggle_map_layer(crate::preferences::MapLayer::Traffic),
             Some(CameraAction::ToggleTerritory) => self
                 .session
                 .toggle_map_layer(crate::preferences::MapLayer::Territory),

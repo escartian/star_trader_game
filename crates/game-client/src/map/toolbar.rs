@@ -9,7 +9,7 @@ pub enum CameraAction {
     Overview,
     /// Opens or closes the galaxy's name search.
     Search,
-    /// Shows or hides NPC traffic on the system map.
+    /// Shows or hides NPC traffic on both maps.
     ToggleTraffic,
     /// Shows or hides faction territory on the galaxy map.
     ToggleTerritory,

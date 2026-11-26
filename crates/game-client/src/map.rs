@@ -372,16 +372,26 @@ impl Map {
         local.set_fleet_context(self.session.selected_ship().id);
         local.set_trade_ready(self.session.trade_ready_ships());
         local.set_contacts(self.session.contact_fleets());
-        local.set_bands(self.session.raider_bands().to_vec());
-        local.set_police(self.session.police_patrols());
-        local.set_traders(
-            self.session
-                .traders_for_map(local.system(), &self.session_systems),
-        );
+        // Hidden traffic keeps only the NPC you selected or pursue.
+        use game_core::pursuit::Quarry;
+        let show_traffic = self.session.client_options().show_traffic;
+        let mut bands = self.session.raider_bands().to_vec();
+        bands.retain(|band| self.session.npc_shown(Quarry::Band(band.id)));
+        local.set_bands(bands);
+        local.set_police(if show_traffic {
+            self.session.police_patrols()
+        } else {
+            Vec::new()
+        });
+        let mut traders = self
+            .session
+            .traders_for_map(local.system(), &self.session_systems);
+        traders.retain(|trader| self.session.npc_shown(Quarry::Trader(trader.id)));
+        local.set_traders(traders);
         let (selected, pursued) = self.session.npc_focus();
         local.set_npc_focus((selected, pursued, self.session.flagship_fleet()));
         local.set_landing(self.session.landing_rules().clone());
-        local.set_show_traffic(self.session.client_options().show_traffic);
+        local.set_show_traffic(show_traffic);
         local.set_campaign_marks(self.session.campaign_marks());
         local.set_headings(self.session.fleet_headings(&self.session_systems));
         local.set_trade_options(self.session.trade_options(local.system().id));

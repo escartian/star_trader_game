@@ -15,12 +15,12 @@ const RUN_LIMITS: [u64; 4] = [0, 200, 400, 800];
 /// Every setting on its own line: its name, then its value right beside it.
 pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
     ui.horizontal(|ui| {
-        super::species_portraits::show(ui, setup.species);
+        super::species_portraits::show(ui, setup.species, 112.0);
         ui.vertical(|ui| {
             ui.menu_button(format!("Species: {} ▾", setup.species.label()), |ui| {
                 for species in Species::ALL {
                     ui.horizontal(|ui| {
-                        super::species_portraits::show(ui, species);
+                        super::species_portraits::show(ui, species, 56.0);
                         if ui
                             .selectable_label(setup.species == species, species.label())
                             .clicked()

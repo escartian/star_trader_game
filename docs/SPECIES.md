@@ -1,9 +1,12 @@
 # Species and fleet captains
 
 New games choose **Human**, **Miri** or **Auralith** from a portrait menu. The
-choice sets the player and starting fleet captain's species. Political allegiance
-is selected separately. Every inhabited port has residents of all three species,
-and NPC trader crews cycle through them regardless of the faction they serve.
+species portraits are 512 px game textures derived from the original images in
+`assets/source/species/`, and the selected portrait is shown larger than the
+menu entries. The choice sets the player and starting fleet captain's species.
+Political allegiance is selected separately. Every inhabited port has residents
+of all three species, and NPC trader crews cycle through them regardless of the
+faction they serve.
 None of the current species is xenophobic. Each inhabited port starts with a
 majority species chosen from its market identity and small communities of the
 other two. Every economy tick moves one percentage point from the largest

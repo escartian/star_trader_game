@@ -47,6 +47,15 @@ marker, with a larger detail illustration when selected. A moon next to its
 planet may overlap in projection; use the candidate chooser or destination list.
 Blender is needed only for authoring/export, never to run the game.
 
+## Species portraits
+
+`source/species/*.png` contains the original 1254 × 1254 generated character
+portraits and `source/species/PROMPTS.md` records the prompts and provenance.
+The game embeds 512 × 512 exports from `portraits/`. Regenerate them with
+`python3 tools/art/export_species_portraits.py` (requires Pillow). The selected
+species portrait is displayed at 112 UI points, and the menu portraits at 56.
+Each PNG is decoded once per egui context and reused for both sizes.
+
 ## Interface icons
 
 `icons/*.svg` holds 72 original command, status, commodity and planet-trait

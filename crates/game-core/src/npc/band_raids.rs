@@ -16,7 +16,7 @@ use crate::{
     combat::gear::ESCORT_KIND,
     economy::Economy,
     fleet::FleetMovementError,
-    navigation::{Prey, STRIKE_KM, distance, local_in},
+    navigation::{NPC_STRIKE_KM as STRIKE_KM, Prey, distance, local_in},
     piracy,
     travel::{Location, TravelState},
 };

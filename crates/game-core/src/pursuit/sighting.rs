@@ -67,13 +67,30 @@ pub(super) fn sight(
         Quarry::Trader(id) => {
             let npc = economy.traders.iter().find(|npc| npc.id == id)?;
             let ship = npc.state.ships.first()?;
-            let now = ship.location.system().and_then(|system| {
+            // Mid-flight, the system is the one its leg starts or ends in;
+            // it counts as there while still inside that system's bounds.
+            let system = ship.location.system().or_else(|| match ship.location {
+                Location::InTransit(fleet) => npc.state.navigation.order(fleet).and_then(|order| {
+                    order
+                        .plan
+                        .origin
+                        .system()
+                        .or(order.plan.destination.system())
+                }),
+                _ => None,
+            });
+            let half = state.movement_rules.system_half_extent_km;
+            let now = system.and_then(|system| {
                 let at = local(
                     npc.state.navigation_position(ship.id, systems)?,
                     system,
                     systems,
                 )?;
-                Some((system, at))
+                let inside = [at.x_km, at.y_km, at.z_km]
+                    .iter()
+                    .all(|value| value.abs() <= half);
+                let flying = matches!(ship.location, Location::InTransit(_));
+                (inside || !flying).then_some((system, at))
             });
             let bound = npc.state.navigation.orders.first().and_then(|order| {
                 let last = order.remaining_waypoints.last().unwrap_or(&order.target);

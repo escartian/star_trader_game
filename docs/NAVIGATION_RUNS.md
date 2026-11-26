@@ -192,10 +192,25 @@ dashed amber line from your flagship:
   reach opens the contact and Advance stops: a trader the hail card (demand
   cargo, attack, let go; within 200,000 km; at a port, docked beside it,
   only its trade offer), a band
-  the raider fight (within 5 million km, the distance at which bands and
+  the raider fight (within 500,000 km, the distance at which bands and
   police strike your fleets). A quarry already in reach is
   contacted immediately.
-- Otherwise the flagship steers to intercept. Your fleets and NPC traders move
+- **In the quarry's system** the flagship flies a pursuit curve
+  (`game-core/src/pursuit/curve.rs`, `navigation/chase.rs`): it holds (a Wait
+  order) while the run plays out, and when the run is resolved it flies up to a
+  run's distance after the quarry, split into 16 steps; at each step it heads
+  for where the quarry will be at the end of that step (taken to move straight
+  from where it was last seen, saved as the pursuit's `seen`, to where it is
+  now). Once within reach it is alongside and the contact opens. Fuel is paid
+  for the distance flown (one unit per 100 million km, rounded up); without
+  enough, the chase ends. A trader mid-flight counts as in the system its leg
+  starts or ends in while still inside its bounds; a docked trader is waited
+  for off the port. Chased from 300 million km, raider bands and police patrols
+  are caught within two runs, and so is a trader that stays in the system; one
+  already leaving at your speed reaches the edge first and is caught in the
+  next system (8–9 runs, 6 with the pursuit suite;
+  `pursuit_curve_tests`).
+- Between systems the flagship steers to intercept. Your fleets and NPC traders move
   at the same speed (50 million km a tick in a system, 4 ticks a run, whatever
   the hull), so trailing a trader rarely closes the gap: a trader with a
   course is met where it is bound (its body or point, in this system or the
@@ -218,13 +233,13 @@ dashed amber line from your flagship:
   flagship, or when you give the flagship any other order (**Stop** issues a
   Wait). Only the flagship pursues.
 
-Hailing range is deliberately short (about half the Earth–Moon distance):
-a chase meets a trader at the spot it is bound for, so measured catches did
-not change between 20 million and 50,000 km. Bands and patrols keep moving and
-turn at orbiting bodies, so they are engaged at the wider strike distance.
+Hailing range is deliberately short (about half the Earth–Moon distance),
+and the strike distance for bands and police only somewhat wider (500,000 km):
+the pursuit curve brings a chaser alongside rather than relying on a wide
+reach.
 
 A docked flagship can pursue too: the chase plots its way out of the port. A new game never starts with a trader, police patrol or raider band within
-contact reach (200,000 km for traders, 5 million km for bands and police) of
+contact reach (200,000 km for traders, 500,000 km for bands and police) of
 your fleet, nor a trader at your starting port
 or planet, so the first contact always needs an Advance
 (`start_tests::no_npc_starts_within_contact_reach_of_your_fleet`, 36 seeds and
@@ -232,7 +247,7 @@ galaxy sizes).
 
 **Police patrols** can be pursued the same way: tap one on the system map to
 select it and use **Pursue** on its card. A patrol never leaves its system, so
-the flagship steers for where it will be. Within 5 million km a `Police` contact
+the flagship chases it on a curve. Within 500,000 km a `Police` contact
 opens that you started (`intercepted` in its `police` record): there is no
 fine to pay or escape to roll, only **Attack**, **Auto-resolve** or **Let it
 go**. Attacking is a crime with the patrol's faction, as when you resist a
@@ -241,11 +256,11 @@ stop; letting it go changes nothing.
 **Pursuit suite** (fleet software, 900 cr, bought once per fleet in the
 Market's *Fleet* row; `game-core/src/fleet/software.rs`): while that fleet
 pursues, every course it plots takes 65% of the usual time (at least one
-tick). Without it a chase that starts a run behind usually stays a run behind
-from port to port. Measured over 48 chases of the four starting traders
-(1–12 warm-up runs): without the suite a catch took 8 runs (median), 14.9 on
-average and up to 52, and 3 chases were lost; with it, 6 runs median, 6.4 on
-average, at most 14, none lost (`pursuit_tests::the_pursuit_suite_runs_traders_down_in_fewer_runs`).
+tick), and its in-system chase covers 1/0.65 of the usual distance per run.
+Measured over 48 chases of the four starting traders (1–12 warm-up runs):
+without the suite a catch takes 6.1 runs on average (at most 12); with it,
+3.8 (at most 8), none lost
+(`pursuit_tests::the_pursuit_suite_runs_traders_down_in_fewer_runs`).
 Saved as `pursuit` in navigation state and validated on load.
 
 ## Saves and multiplayer

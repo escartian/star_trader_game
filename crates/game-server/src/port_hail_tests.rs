@@ -110,10 +110,18 @@ fn a_docked_flagship_can_set_off_in_pursuit() {
     );
     assert!(session.state.navigation.pursuit.is_some());
     assert!(
-        session.state.navigation.order(FleetId(1)).is_some(),
-        "course plotted from the dock"
+        session.state.navigation.holds.contains(&FleetId(1)),
+        "in-system chases hold; the chase itself moves the flagship"
     );
-    execute_quiet_run(&mut session);
+    // A plain run (a Wait order would end the chase).
+    session.state.movement_rules.encounter_chance_percent = 0;
+    let reply = session.handle(ClientCommand::ExecuteNavigationRun {
+        expected_revision: session.state.revision,
+    });
+    assert!(
+        matches!(reply, ServerMessage::SessionSnapshot { .. }),
+        "{reply:?}"
+    );
     assert!(
         !matches!(session.state.ships[0].location, Location::Docked(_)),
         "it left the port"
@@ -148,6 +156,7 @@ fn a_pursued_trader_docking_beside_the_flagship_is_caught_on_its_way_in() {
         fleet: FleetId(1),
         quarry: Quarry::Trader(trader),
         quarry_docked: false,
+        seen: None,
     });
     let events = service_pursuit(
         &mut session.state,
@@ -175,6 +184,7 @@ fn a_pursued_trader_docking_beside_the_flagship_is_caught_on_its_way_in() {
         fleet: FleetId(1),
         quarry: Quarry::Trader(trader),
         quarry_docked: true,
+        seen: None,
     });
     service_pursuit(
         &mut session.state,

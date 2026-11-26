@@ -59,7 +59,29 @@ pub fn patrol_run(
             Some((_, at)) => (patrol.stops, at),
             None => super::rounds(&patrol, world, &state.movement_rules),
         };
-        let position = step_toward(&state.movement_rules, world, patrol.position, heading);
+        // Hunting your fleet: a curve from where it was last seen (the
+        // patrol's heading while it pursued it) to where it is now.
+        let hunt = match quarry {
+            Some((Quarry::Fleet(fleet), now)) => {
+                let seen = if patrol.pursuing == Some(fleet) {
+                    patrol.heading
+                } else {
+                    now
+                };
+                Some(crate::navigation::chase::chase(
+                    patrol.position,
+                    crate::navigation::BAND_KM_PER_RUN,
+                    (seen, now),
+                    STRIKE_KM,
+                    state.movement_rules.star_exclusion_radius_km,
+                ))
+            }
+            _ => None,
+        };
+        let position = match hunt {
+            Some(hunt) => hunt.end,
+            None => step_toward(&state.movement_rules, world, patrol.position, heading),
+        };
         if let Some(record) = state
             .navigation
             .police
@@ -78,10 +100,12 @@ pub fn patrol_run(
             };
         }
         match quarry {
-            Some((Quarry::Fleet(fleet), at)) if distance(position, at) <= STRIKE_KM => {
+            Some((Quarry::Fleet(fleet), _)) if hunt.is_some_and(|hunt| hunt.caught) => {
                 events.push(stop_fleet(state, &patrol, fleet, false)?);
             }
-            Some((Quarry::Band(band), at)) if distance(position, at) <= STRIKE_KM => {
+            Some((Quarry::Band(band), at))
+                if distance(position, at) <= crate::navigation::NPC_STRIKE_KM =>
+            {
                 if let Some(note) = fight_band(state, economy, player, id, band, world)? {
                     events.push(NavigationEvent::PoliceNote(note));
                 }

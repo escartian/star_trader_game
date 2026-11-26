@@ -18,6 +18,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+mod curve;
 mod sighting;
 
 /// What the flagship chases.
@@ -41,6 +42,10 @@ pub struct Pursuit {
     /// looks, within reach of the flagship, is caught on its way in.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub quarry_docked: bool,
+    /// Where the quarry was at the last look, while in the flagship's system:
+    /// the in-system chase (`curve`) takes it to have moved on from there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seen: Option<(SystemId, LocalPosition)>,
 }
 
 /// Whether the quarry is a trader docked at a station right now.
@@ -121,8 +126,9 @@ pub fn pursue(
         fleet,
         quarry,
         quarry_docked: docked(economy, quarry),
+        seen: None,
     });
-    let events = service_pursuit(state, economy, player, systems)?;
+    let events = steer(state, economy, player, systems, false)?;
     let ordered =
         state.navigation.order(fleet).is_some() || state.navigation.holds.contains(&fleet);
     if state.navigation.pursuit.is_some() && !ordered {
@@ -154,18 +160,30 @@ pub fn end_pursuit(state: &mut TravelState, fleet: FleetId) -> bool {
     ends
 }
 
-/// After a run: catch the quarry, lose it, or steer for where it is now (in
-/// its system, or the system it is bound for).
+/// After a run: catch the quarry, lose it, close in on it in this system
+/// (`curve`), or steer for the system it is in or bound for.
 pub fn service_pursuit(
     state: &mut TravelState,
     economy: &mut Economy,
     player: PlayerId,
     systems: &[StarSystem],
 ) -> Result<Vec<NavigationEvent>, FleetMovementError> {
+    steer(state, economy, player, systems, true)
+}
+
+/// `ran`: a run has just played out (the chase may move the flagship).
+fn steer(
+    state: &mut TravelState,
+    economy: &mut Economy,
+    player: PlayerId,
+    systems: &[StarSystem],
+    ran: bool,
+) -> Result<Vec<NavigationEvent>, FleetMovementError> {
     let Some(Pursuit {
         fleet,
         quarry,
         quarry_docked,
+        ..
     }) = state.navigation.pursuit
     else {
         return Ok(Vec::new());
@@ -225,6 +243,38 @@ pub fn service_pursuit(
     }
     // At a market on the way: top up, as route fleets do.
     refuel(state, economy, fleet);
+    let landed = state
+        .ship(lead)
+        .is_ok_and(|ship| matches!(ship.location, crate::travel::Location::Landed { .. }));
+    if let (Some((system, now)), Some((ours, from))) = (found.now, here)
+        && system == ours
+        && !landed
+    {
+        // A docked trader is waited for off the port, not under its guns.
+        let target = match (docked(economy, quarry), &found.steer) {
+            (true, (steer_system, MoveTarget::Local { position, .. }))
+                if *steer_system == system =>
+            {
+                *position
+            }
+            _ => now,
+        };
+        let closing = curve::Closing {
+            system,
+            from,
+            quarry_now: now,
+            target,
+        };
+        return curve::close_in(
+            state,
+            economy,
+            (player, fleet),
+            quarry,
+            closing,
+            ran,
+            systems,
+        );
+    }
     let (system, target) = found.steer;
     let plotted = if here.is_some_and(|(ours, _)| ours == system) {
         match target {

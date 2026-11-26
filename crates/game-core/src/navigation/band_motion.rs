@@ -1,6 +1,6 @@
 //! Band geometry: positions relative to a star, distances and one run's
 //! movement around bodies. Every value is in kilometres on the system plane.
-use super::raiders::{BAND_KM_PER_RUN, STRIKE_KM};
+use super::raiders::{BAND_KM_PER_RUN, NPC_STRIKE_KM};
 use crate::{
     LocalPosition, StarSystem,
     movement::{SpacePosition, safe_route},
@@ -35,7 +35,7 @@ pub(crate) fn distance(a: LocalPosition, b: LocalPosition) -> i64 {
 }
 
 pub(crate) fn near(a: LocalPosition, b: LocalPosition) -> bool {
-    distance(a, b) <= STRIKE_KM
+    distance(a, b) <= NPC_STRIKE_KM
 }
 
 /// Up to one run's distance toward `goal`, along a route that avoids the star

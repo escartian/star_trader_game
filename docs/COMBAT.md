@@ -269,14 +269,19 @@ Raiders also roam as persistent bands you can see coming
   avoided).
 - A band moves up to 100 million km per run (half a fleet's local speed),
   routing around planets. You can outrun one, or fly at it to pick a fight.
-- Within 5 million km it strikes: a raider contact with the band's real ships
-  (Fight, Auto-resolve or Evade).
+- Hunting your fleet it chases on a curve through each run
+  (`game-core/src/navigation/chase.rs`): the run is split into 16 steps, and at
+  each it heads for where your fleet will be at the end of that step. Within
+  500,000 km it strikes: a raider contact with the band's real ships (Fight,
+  Auto-resolve or Evade). A fleet waiting in the open is struck within two runs
+  from anywhere in detection range.
 - Destroyed raiders leave the band; after any fight or escape it backs off for 3
   runs. A band wiped out returns to its system 20 runs later.
 - Bands prey on NPC traders too (`game-core/src/npc/band_raids.rs`): a band with
   no nearer fleet of yours in range stalks the nearest laden trader out in the
   open (not docked at a station or being refitted) and strikes once it reaches
-  where the trader stood, or the trader comes within 5 million km. A trader it
+  where the trader stood, or the trader comes within 5 million km (NPC-to-NPC
+  reach stays wider: these still close in one straight step per run). A trader it
   outguns as you would need to for a demand (150% of a cautious trader's
   strength, 300% of an opportunist's) hands over half its cargo without a fight;
   otherwise they fight it out (auto-resolved, as below). Afterwards the band

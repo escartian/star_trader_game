@@ -144,8 +144,9 @@ turn. Each run, after fleets, raider bands and NPC traders move:
 
 1. If the faction pursues you, the patrol hunts your nearest fleet out in the
    open within 150 million km (docked and landed fleets are safe, as from
-   raiders) and moves toward it at a raider band's pace. Within 5 million km it
-   stops the fleet: a **Police patrol** contact.
+   raiders) and chases it on a curve at a raider band's pace (as raiders do; see
+   [combat](COMBAT.md)). Within 500,000 km it stops the fleet: a **Police
+   patrol** contact.
 2. Otherwise it answers the nearest raider band in its system that is hunting a
    fleet or stalking a trader (and has no strike on you pending), and fights it
    on reaching it, auto-resolved. Both sides lose the ships destroyed; the band

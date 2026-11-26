@@ -2,6 +2,7 @@
 pub(crate) mod band_motion;
 mod band_roaming;
 mod battle;
+pub mod chase;
 mod contacts;
 mod errors;
 mod haven;
@@ -11,7 +12,7 @@ mod next_leg;
 mod raiders;
 pub(crate) use band_motion::{distance, local_in, near, step_toward};
 pub use band_roaming::{BandTransit, MAX_BANDS_PER_SYSTEM};
-pub use raiders::STRIKE_KM;
+pub use raiders::{BAND_KM_PER_RUN, NPC_STRIKE_KM, STRIKE_KM};
 pub use raiders::{COOLDOWN_RUNS, LOOT_COOLDOWN_RUNS};
 pub use raiders::{Prey, RaiderBand};
 mod orders;

@@ -39,7 +39,7 @@ Each `data/slot-N.json` stores:
   `software`: fleet software such as `"pursuit_suite"`, each at most once), monotonic ID counters,
   the Raider `haven` in navigation (`system`, `body`, `garrison`, `sunk`, `destroyed_run`; contacts against it carry `haven: true`)
   the `flagship` fleet and secondary fleets' `patrols` (`fleet`, `system`, `stops`) in navigation,
-  the flagship's `pursuit` (`fleet`, `quarry`: `{"Trader": id}`, `{"Band": id}` or `{"Patrol": id}`; omitted when none),
+  the flagship's `pursuit` (`fleet`, `quarry`: `{"Trader": id}`, `{"Band": id}` or `{"Patrol": id}`; optional `seen`: the quarry's system and position at the last look while in the flagship's system; omitted when none),
   `campaign` (`run_limit`, `ended` as `won` with its `road`, `lost` or `time_up`, each with its `run`),
   and `jobs` (board offers, accepted jobs and their record; see [JOBS.md](JOBS.md#saves); omitted when empty).
 - `economy`: shared player credits, current markets and exact session rules,

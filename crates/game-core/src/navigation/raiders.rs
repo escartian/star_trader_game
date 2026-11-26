@@ -9,7 +9,9 @@
 //!   where traders stood before the run), or patrols near a body, preferring
 //!   dangerous planets.
 //!   It moves up to [`BAND_KM_PER_RUN`], around planets rather than through.
-//! - Within [`STRIKE_KM`] of its quarry it strikes: a raider contact with the
+//! - Hunting your fleet, it chases on a curve through the run
+//!   (`navigation::chase`) and strikes once within [`STRIKE_KM`]: a raider
+//!   contact with the
 //!   band's real ships (Fight, Auto-resolve or Evade). A stalked trader is
 //!   struck once traders have moved, if it is still that close and in the open
 //!   (`npc::band_raids`).
@@ -36,8 +38,13 @@ use serde::{Deserialize, Serialize};
 pub const BAND_KM_PER_RUN: i64 = 100_000_000;
 /// A band hunts the nearest exposed player fleet within this distance, in km.
 pub const DETECTION_KM: i64 = 150_000_000;
-/// Close enough to strike, in km.
-pub const STRIKE_KM: i64 = 5_000_000;
+/// Close enough to strike one of your fleets (or for police to stop it), in
+/// km. Hunters chase on a curve within each run (`chase`), so they close in
+/// rather than needing a wide reach.
+pub const STRIKE_KM: i64 = 500_000;
+/// Reach between NPCs: a band robbing a trader, police engaging a band.
+/// Wider, as these still close in one straight step per run.
+pub const NPC_STRIKE_KM: i64 = 5_000_000;
 /// Runs a band backs off after a fight or an escape.
 pub const COOLDOWN_RUNS: u32 = 3;
 /// Runs a band lies low after striking an NPC trader, fencing the loot.
@@ -252,7 +259,30 @@ impl TravelState {
                 None if chasing || near(band.position, band.heading) => self.patrol_point(world),
                 None => band.heading,
             };
-            let position = step_toward(&self.movement_rules, world, band.position, heading);
+            let peaceful = self.movement_rules.encounter_chance_percent == 0;
+            // Hunting your fleet: chase it on a curve from where it was last
+            // seen (the band's heading) to where it is now.
+            let hunt = match quarry {
+                Some((Quarry::Fleet(fleet), now)) if !peaceful => {
+                    let seen = if band.hunting == Some(fleet) {
+                        band.heading
+                    } else {
+                        now
+                    };
+                    Some(super::chase::chase(
+                        band.position,
+                        BAND_KM_PER_RUN,
+                        (seen, now),
+                        STRIKE_KM,
+                        self.movement_rules.star_exclusion_radius_km,
+                    ))
+                }
+                _ => None,
+            };
+            let position = match hunt {
+                Some(hunt) => hunt.end,
+                None => step_toward(&self.movement_rules, world, band.position, heading),
+            };
             let record = &mut self.navigation.bands[index];
             record.cooldown = record.cooldown.saturating_sub(1);
             (record.hunting, record.stalking) = match quarry {
@@ -262,10 +292,8 @@ impl TravelState {
             };
             record.heading = heading;
             record.position = position;
-            let peaceful = self.movement_rules.encounter_chance_percent == 0;
-            if let Some((Quarry::Fleet(fleet), target)) = quarry
-                && !peaceful
-                && distance(position, target) <= STRIKE_KM
+            if let (Some((Quarry::Fleet(fleet), _)), Some(true)) =
+                (quarry, hunt.map(|hunt| hunt.caught))
             {
                 events.push(self.strike(&band, fleet, run)?);
             }

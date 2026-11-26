@@ -58,7 +58,7 @@ fn new_games_set_up_factions_and_saves_keep_them() {
     let session =
         Session::new_game(3, EconomyRules::default(), Default::default(), &setup).unwrap();
     let factions = &session.economy.factions;
-    assert_eq!(factions.in_play, Faction::ALL);
+    assert_eq!(factions.in_play, Faction::PLAYABLE);
     assert_eq!(
         factions.owner(session.systems[0].id),
         Some(Faction::Republic)

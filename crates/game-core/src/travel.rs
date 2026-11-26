@@ -114,6 +114,9 @@ impl std::fmt::Display for TravelError {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TravelState {
+    /// The player's selected species, independent of allegiance.
+    #[serde(default)]
+    pub player_species: crate::species::Species,
     pub navigation: crate::navigation::NavigationState,
     pub movement_rules: crate::movement::MovementRules,
     pub tick: u64,
@@ -137,6 +140,7 @@ pub struct TravelState {
 impl Default for TravelState {
     fn default() -> Self {
         Self {
+            player_species: crate::species::Species::Human,
             navigation: crate::navigation::NavigationState::default(),
             movement_rules: crate::movement::MovementRules::default(),
             tick: 0,
@@ -162,6 +166,7 @@ impl Default for TravelState {
                 name: "Fleet 1".into(),
                 owner: PlayerId(1),
                 ships: vec![ShipId(1)],
+                captain: crate::species::FleetCaptain::default(),
             }],
             next_ship_id: 2,
             next_fleet_id: 2,

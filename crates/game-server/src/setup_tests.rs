@@ -6,8 +6,20 @@ fn game(setup: &GameSetup) -> Result<Session, String> {
 }
 
 #[test]
+fn port_residents_mix_each_run_and_survive_a_save() {
+    let mut session = Session::default();
+    let before = session.economy.markets[0].residents_percent();
+    crate::test_support::execute_quiet_run(&mut session);
+    let after = session.economy.markets[0].residents_percent();
+    assert_ne!(before, after);
+    let restored = super::combat_tests::reload(&session);
+    assert_eq!(restored.economy.markets[0].residents_percent(), after);
+}
+
+#[test]
 fn every_setup_choice_becomes_a_session_rule() {
     let setup = GameSetup {
+        species: game_core::species::Species::Miri,
         galaxy: GalaxyConfig {
             systems: 12,
             radius_ly: 40,
@@ -26,6 +38,14 @@ fn every_setup_choice_becomes_a_session_rule() {
         },
     };
     let session = game(&setup).unwrap();
+    assert_eq!(
+        session.state.player_species,
+        game_core::species::Species::Miri
+    );
+    assert_eq!(
+        session.state.fleets[0].captain.species,
+        game_core::species::Species::Miri
+    );
     let factions = &session.economy.factions;
     assert_eq!(
         factions.allegiance,
@@ -56,6 +76,10 @@ fn every_setup_choice_becomes_a_session_rule() {
             .all(|band| band.ships.len() == 3)
     );
     session.export_json().unwrap();
+    assert_eq!(
+        super::combat_tests::reload(&session).state.player_species,
+        setup.species
+    );
     let calm = game(&GameSetup {
         danger: DangerLevel::Calm,
         inflation_basis_points: 0,

@@ -206,6 +206,11 @@ impl TravelState {
             rescue_reward: crate::economy::Credits(0),
         };
         self.apply_engagement(&fleet, &mut report)?;
+        if report.outcome == CombatOutcome::Victory
+            && let Some(survivors) = self.fleets.iter_mut().find(|record| record.id == fleet.id)
+        {
+            survivors.captain.gain(5);
+        }
         // Raiders, a corsair (or the police, impounding it) take every cargo
         // unit still aboard a fleet that gives up; a trader the player
         // attacked just breaks away.
@@ -328,6 +333,10 @@ impl TravelState {
             .and_then(|_| units.iter().position(|unit| unit.side == Side::Hostile));
         for (index, unit) in units.iter().enumerate() {
             let spec = rules.ship_catalog.spec(unit.kind).ok_or_else(invalid)?;
+            let mut expected_profile = spec.combat.clone();
+            if unit.ship.is_some() {
+                fleet.captain.combat_profile(&mut expected_profile);
+            }
             let fits = match (unit.ship, &encounter.trader) {
                 (Some(id), _) => {
                     let ship = self.ship(id).map_err(|_| invalid())?;
@@ -345,7 +354,7 @@ impl TravelState {
                         && (!escort || unit.kind == ESCORT_KIND)
                 }
             };
-            if spec.combat != unit.profile || !fits {
+            if expected_profile != unit.profile || !fits {
                 return Err(invalid());
             }
         }

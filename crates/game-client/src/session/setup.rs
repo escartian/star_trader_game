@@ -5,6 +5,7 @@ use egui::Ui;
 use game_core::{
     economy::Credits,
     factions::{Coverage, Faction, RelationMode},
+    species::Species,
 };
 use game_server::{DangerLevel, GameSetup, STARTING_CREDITS, WEALTH_SHARES};
 
@@ -13,6 +14,28 @@ const RUN_LIMITS: [u64; 4] = [0, 200, 400, 800];
 
 /// Every setting on its own line: its name, then its value right beside it.
 pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
+    ui.horizontal(|ui| {
+        super::species_portraits::show(ui, setup.species);
+        ui.vertical(|ui| {
+            ui.menu_button(format!("Species: {} ▾", setup.species.label()), |ui| {
+                for species in Species::ALL {
+                    ui.horizontal(|ui| {
+                        super::species_portraits::show(ui, species);
+                        if ui
+                            .selectable_label(setup.species == species, species.label())
+                            .clicked()
+                        {
+                            setup.species = species;
+                            ui.close_menu();
+                        }
+                    });
+                    ui.small(species.description());
+                    ui.separator();
+                }
+            });
+            ui.small(setup.species.description());
+        });
+    });
     egui::Grid::new("new-game-setup")
         .num_columns(2)
         .spacing([12.0, 6.0])
@@ -91,7 +114,7 @@ pub(crate) fn setup_controls(ui: &mut Ui, setup: &mut GameSetup) {
 fn faction_rows(ui: &mut Ui, factions: &mut game_core::factions::FactionSetup) {
     ui.label("Factions");
     ui.horizontal_wrapped(|ui| {
-        for faction in Faction::ALL {
+        for faction in Faction::PLAYABLE {
             ui.checkbox(&mut factions.in_play[faction.index()], faction.label());
         }
     });
@@ -107,7 +130,7 @@ fn faction_rows(ui: &mut Ui, factions: &mut game_core::factions::FactionSetup) {
         return;
     }
     let choices = std::iter::once(None).chain(
-        Faction::ALL
+        Faction::PLAYABLE
             .into_iter()
             .filter(|faction| factions.in_play[faction.index()])
             .map(Some),
@@ -174,8 +197,9 @@ pub(crate) fn setup_summary(seed: u64, setup: &GameSetup) -> String {
     let inflation_whole = setup.inflation_basis_points / 100;
     let inflation_fraction = setup.inflation_basis_points % 100;
     format!(
-        "New map (seed {seed}, {} systems, {} ly radius, up to {} objects per system; \
+        "New {} map (seed {seed}, {} systems, {} ly radius, up to {} objects per system; \
          {} cr to start, {inflation_whole}.{inflation_fraction:02}% per 100 runs inflation, {} danger; {}).",
+        setup.species.label(),
         setup.galaxy.systems,
         setup.galaxy.radius_ly,
         setup.galaxy.max_objects,

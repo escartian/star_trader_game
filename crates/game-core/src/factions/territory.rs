@@ -82,7 +82,7 @@ pub struct FactionSetup {
 impl Default for FactionSetup {
     fn default() -> Self {
         Self {
-            in_play: [true; 6],
+            in_play: [true, true, true, true, false, false],
             allegiance: None,
             coverage: Coverage::default(),
             relations: RelationMode::default(),
@@ -99,6 +99,9 @@ impl FactionSetup {
     }
 
     pub fn validate(&self) -> Result<(), String> {
+        if self.in_play[4..].contains(&true) {
+            return Err("Alien species are chosen separately from political factions".into());
+        }
         if self
             .allegiance
             .is_some_and(|faction| !self.in_play[faction.index()])

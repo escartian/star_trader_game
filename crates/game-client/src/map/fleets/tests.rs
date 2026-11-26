@@ -16,6 +16,7 @@ fn fleets() -> (Vec<Fleet>, Vec<Ship>) {
             name: format!("Fleet {id}"),
             owner: base.fleets[0].owner,
             ships: vec![ShipId(id)],
+            captain: Default::default(),
         })
         .collect();
     (fleets, ships)

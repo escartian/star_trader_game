@@ -71,6 +71,30 @@ pub(super) fn choose(
 }
 
 #[test]
+fn a_miri_captains_open_battle_keeps_its_traits_on_save() {
+    let mut session = Session::default();
+    session.state.player_species = game_core::species::Species::Miri;
+    session.state.fleets[0].captain.species = game_core::species::Species::Miri;
+    let encounter = raid(&mut session, ShipId(1), None, vec![ShipKind::Scout]);
+    choose(&mut session, encounter, EncounterChoice::Fight);
+    let battle = session.state.navigation.battle.as_ref().unwrap();
+    let ship = &battle.battle.units[0];
+    assert_eq!(
+        ship.profile.engine,
+        session
+            .economy
+            .rules
+            .ship_catalog
+            .spec(ShipKind::Freighter)
+            .unwrap()
+            .combat
+            .engine
+            + 1
+    );
+    reload(&session);
+}
+
+#[test]
 fn raider_fights_are_reproducible_saved_and_resolve_once() {
     let mut session = Session::default();
     let encounter = raid(&mut session, ShipId(1), None, vec![ShipKind::Scout]);
@@ -92,6 +116,7 @@ fn raider_fights_are_reproducible_saved_and_resolve_once() {
     assert_eq!(entry.ship, Some(ShipId(1)));
     assert_eq!(session.state.ships[0].hull_damage, entry.final_damage);
     if report.outcome == CombatOutcome::Victory {
+        assert_eq!(session.state.fleets[0].captain.experience, 6);
         // Salvage comes from wrecks; a raider that fled leaves none.
         let wrecks = report
             .side(game_core::combat::Side::Hostile)

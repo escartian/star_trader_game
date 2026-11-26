@@ -1,4 +1,5 @@
 //! Shared, preloaded bitmap artwork. Simulation never consumes rendering assets.
+mod alternate_sources;
 use egui::{Color32, Painter, Pos2, Rect, TextureHandle, Vec2};
 use game_core::{BodyKind, StarKind};
 use std::collections::BTreeMap;
@@ -258,6 +259,7 @@ const SOURCES: &[(ArtKind, &str, &[u8])] = &[
 #[derive(Clone)]
 pub struct Artwork {
     textures: BTreeMap<ArtKind, TextureHandle>,
+    alternates: BTreeMap<ArtKind, TextureHandle>,
     errors: Vec<String>,
 }
 
@@ -270,6 +272,7 @@ impl Artwork {
         }
         let mut artwork = Self {
             textures: BTreeMap::new(),
+            alternates: BTreeMap::new(),
             errors: Vec::new(),
         };
         for &(kind, name, bytes) in SOURCES {
@@ -290,6 +293,24 @@ impl Artwork {
                     .push(format!("Artwork {name} could not load: {error}")),
             }
         }
+        for &(kind, name, bytes) in alternate_sources::SOURCES {
+            match image::load_from_memory(bytes) {
+                Ok(image) => {
+                    let rgba = image.into_rgba8();
+                    let pixels = egui::ColorImage::from_rgba_unmultiplied(
+                        [rgba.width() as usize, rgba.height() as usize],
+                        rgba.as_raw(),
+                    );
+                    artwork.alternates.insert(
+                        kind,
+                        ctx.load_texture(name, pixels, egui::TextureOptions::LINEAR),
+                    );
+                }
+                Err(error) => artwork
+                    .errors
+                    .push(format!("Artwork {name} could not load: {error}")),
+            }
+        }
         ctx.data_mut(|data| data.insert_temp(cache_key, artwork.clone()));
         artwork
     }
@@ -297,6 +318,31 @@ impl Artwork {
     /// Returns false when a procedural fallback should be drawn.
     pub fn paint(&self, kind: ArtKind, painter: &Painter, center: Pos2, size: f32) -> bool {
         self.paint_tinted(kind, painter, center, size, Color32::WHITE)
+    }
+
+    /// A stable alternate view for half the bodies and stars in a system.
+    pub fn paint_variant(
+        &self,
+        kind: ArtKind,
+        alternate: bool,
+        painter: &Painter,
+        center: Pos2,
+        size: f32,
+    ) -> bool {
+        let texture = if alternate {
+            self.alternates.get(&kind)
+        } else {
+            None
+        }
+        .or_else(|| self.textures.get(&kind));
+        let Some(texture) = texture else { return false };
+        painter.image(
+            texture.id(),
+            Rect::from_center_size(center, Vec2::splat(size)),
+            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+            Color32::WHITE,
+        );
+        true
     }
 
     /// Like `paint`, multiplied by `tint` (premultiplied: dims and fades).
@@ -342,8 +388,14 @@ impl Artwork {
         true
     }
 
-    pub fn preview(&self, kind: ArtKind, ui: &mut egui::Ui) {
-        if let Some(texture) = self.textures.get(&kind) {
+    pub fn preview(&self, kind: ArtKind, alternate: bool, ui: &mut egui::Ui) {
+        if let Some(texture) = (if alternate {
+            self.alternates.get(&kind)
+        } else {
+            None
+        })
+        .or_else(|| self.textures.get(&kind))
+        {
             ui.image((texture.id(), Vec2::splat(160.0)));
         }
     }
@@ -353,6 +405,7 @@ impl Artwork {
         &self,
         ui: &mut egui::Ui,
         kind: ArtKind,
+        alternate: bool,
         name: &str,
         selected: bool,
     ) -> egui::Response {
@@ -372,8 +425,9 @@ impl Artwork {
             egui::Stroke::new(1.0_f32, color),
             egui::StrokeKind::Inside,
         );
-        self.paint(
+        self.paint_variant(
             kind,
+            alternate,
             ui.painter(),
             rect.center_top() + Vec2::new(0.0, 23.0),
             38.0,

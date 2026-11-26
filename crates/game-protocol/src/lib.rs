@@ -8,7 +8,7 @@ use game_core::{
     travel::{ShipId, TravelState},
 };
 
-pub const PROTOCOL_VERSION: u32 = 16;
+pub const PROTOCOL_VERSION: u32 = 18;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientCommand {
@@ -28,6 +28,11 @@ pub enum ClientCommand {
     RenameFleet {
         fleet: FleetId,
         name: String,
+        expected_revision: u64,
+    },
+    AppointCaptain {
+        fleet: FleetId,
+        species: game_core::species::Species,
         expected_revision: u64,
     },
     SplitFleet {
@@ -251,6 +256,10 @@ pub enum SessionEvent {
     },
     FleetRenamed {
         fleet: FleetId,
+    },
+    CaptainAppointed {
+        fleet: FleetId,
+        species: game_core::species::Species,
     },
     ShipPurchased {
         ship: ShipId,

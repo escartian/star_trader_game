@@ -82,13 +82,18 @@ def moon_craters(obj):
         vertex.co *= 1 + delta
 
 
-def export(name, colors, style):
+def export(name, colors, style, alternate=False):
     scene = setup()
     obj = sphere(name, surface(name, colors, style), rough=style in ("asteroid", "metallic_asteroid"))
+    if alternate:
+        # Rotate the procedural surface and silhouette into a second stable
+        # view; both the editable scene and its PNG are kept beside the first.
+        obj.rotation_euler = (0.52, -0.38, 1.17)
     if style in ("moon", "ice_moon"):
         moon_craters(obj)
-    scene.render.filepath = f"//../sprites/{name}.png"
-    bpy.ops.wm.save_as_mainfile(filepath=str(ROOT / "assets/source" / f"{name}.blend"))
+    output = f"{name}-alt" if alternate else name
+    scene.render.filepath = f"//../sprites/{output}.png"
+    bpy.ops.wm.save_as_mainfile(filepath=str(ROOT / "assets/source" / f"{output}.blend"))
     bpy.ops.render.render(write_still=True)
 
 
@@ -128,9 +133,10 @@ EXPORTS = {
 
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    alternate = "--alternates" in argv
     for name, (colors, style) in EXPORTS.items():
-        if not argv or name in argv:
-            export(name, colors, style)
+        if not argv or alternate or name in argv:
+            export(name, colors, style, alternate)
 
 
 if __name__ == "__main__":

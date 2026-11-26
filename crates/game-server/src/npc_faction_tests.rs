@@ -38,7 +38,14 @@ fn new_galaxies_field_traders_flying_for_their_home_ports_holder() {
     for trader in &economy.traders {
         let home = trader.home.expect("new traders record their home port");
         assert_eq!(trader.affiliation, economy.factions.owner(home.system));
+        assert_eq!(trader.state.fleets[0].captain.species, trader.species);
     }
+    let species: std::collections::HashSet<_> = economy
+        .traders
+        .iter()
+        .map(|trader| trader.species)
+        .collect();
+    assert_eq!(species.len(), game_core::species::Species::ALL.len());
     assert!(economy.traders.iter().any(|t| t.affiliation.is_some()));
     assert_eq!(reload(&session).economy.traders, economy.traders);
 }

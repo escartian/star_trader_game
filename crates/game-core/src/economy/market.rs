@@ -81,11 +81,37 @@ impl Economy {
         }
         for _ in 0..ticks {
             self.advance_dynamics();
+            for market in &mut self.markets {
+                market.mix_residents();
+            }
         }
     }
 }
 
 impl Market {
+    /// Resident mix at a port, independent of the faction holding its system.
+    /// All current species are open to migration. Stations and planet markets
+    /// are inhabited; a new port starts with one majority species.
+    pub fn residents_percent(&self) -> [u32; 3] {
+        self.residents_percent
+    }
+
+    /// One percent moves each economy tick from the largest community to the
+    /// smallest until the shares differ by at most one point. No present
+    /// species blocks migration; faction ownership has no effect.
+    pub fn mix_residents(&mut self) {
+        let largest = (0..3)
+            .max_by_key(|index| self.residents_percent[*index])
+            .unwrap();
+        let smallest = (0..3)
+            .min_by_key(|index| self.residents_percent[*index])
+            .unwrap();
+        if self.residents_percent[largest] > self.residents_percent[smallest] + 1 {
+            self.residents_percent[largest] -= 1;
+            self.residents_percent[smallest] += 1;
+        }
+    }
+
     pub fn from_template(
         id: super::MarketId,
         is_station: bool,
@@ -96,6 +122,7 @@ impl Market {
         Self {
             id,
             is_station,
+            residents_percent: initial_residents(id),
             credits,
             activity: 0,
             ship_stock,
@@ -109,6 +136,18 @@ impl Market {
             }),
         }
     }
+}
+
+/// Older saves predate resident shares and start with a Human majority.
+pub(super) fn legacy_residents() -> [u32; 3] {
+    [90, 5, 5]
+}
+
+fn initial_residents(id: super::MarketId) -> [u32; 3] {
+    let dominant = ((id.system.0.wrapping_mul(31) ^ id.body.0.wrapping_mul(17)) % 3) as usize;
+    let mut residents = [5; 3];
+    residents[dominant] = 90;
+    residents
 }
 
 impl MarketGood {
@@ -129,5 +168,33 @@ impl MarketGood {
             TradeSide::Sell => numerator * 90 / denominator,
         };
         Credits(value.min(u128::from(u64::MAX)) as u64)
+    }
+}
+
+#[cfg(test)]
+mod population_tests {
+    use super::*;
+
+    #[test]
+    fn inhabited_ports_are_mixed_independent_of_territory() {
+        let economy = Economy::new(&crate::demo_galaxy());
+        let mixes: Vec<_> = economy
+            .markets
+            .iter()
+            .map(Market::residents_percent)
+            .collect();
+        assert!(
+            mixes
+                .iter()
+                .all(|mix| mix.iter().all(|share| *share > 0) && mix.iter().sum::<u32>() == 100)
+        );
+        assert!(mixes.windows(2).any(|pair| pair[0] != pair[1]));
+        let mut market = economy.markets[0].clone();
+        for _ in 0..100 {
+            market.mix_residents();
+        }
+        let [human, miri, auralith] = market.residents_percent();
+        assert!(human.abs_diff(miri) <= 1);
+        assert!(miri.abs_diff(auralith) <= 1);
     }
 }

@@ -235,10 +235,9 @@ save tests. NPC actions will resolve at navigation-run boundaries.
 
 ## 5. Factions and ship management
 
-- [x] Federation, Empire, Republic, Alliance, Miri Observatory and Auralith
-  Confluence with territory, influence (share of systems held) and
-  alliances/rivalries, set up at new-game setup: factions
-  in play, allegiance, territory share and classic or random relations
+- [x] Federation, Empire, Republic and Alliance with territory, influence
+  (share of systems held) and alliances/rivalries, set up at new-game setup:
+  factions in play, allegiance, territory share and classic or random relations
   ([factions](docs/FACTIONS.md)).
 - [x] Standing per faction (−100 to 100, spreading to allies and rivals): piracy
   costs it, destroying raiders and selling cargo earn it; tiers set prices and
@@ -253,6 +252,8 @@ save tests. NPC actions will resolve at navigation-run boundaries.
   statistics, equipment and customization. Model-specific utility upgrades and
   size-specific combat fittings are available at markets.
 - [ ] Fleet summaries and batch management that remain readable as ownership grows.
+- [x] Human, Miri and Auralith chosen independently of faction; mixed port
+  residents and trader crews, captain combat traits and experience.
 
 **Acceptance:** allegiance, equipment and damage affect actionable decisions;
 repairs, access and reputation changes persist and cannot duplicate credits/items.

@@ -3,8 +3,8 @@
 Status: **job boards, fence work and story quests implemented** (roadmap
 milestone 6, first part). Faction story quests lead to the Diplomat road, the
 Free Captains' chain to the Pirate road (see [CAMPAIGN.md](CAMPAIGN.md)).
-The Miri Observatory's chain centers on surveys and shared archives; the
-Auralith Confluence's chain begins with defending a damaged choir relay.
+Miri Observatory and Auralith Confluence chains remain available in legacy
+saves that had those political factions; new games treat them as species.
 
 Code: `game-core/src/jobs.rs` (types, accept, catalog), `jobs/board.rs`
 (offers; fence work in `jobs/board/fence.rs`), `jobs/settle.rs` (completion,

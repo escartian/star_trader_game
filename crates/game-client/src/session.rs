@@ -15,9 +15,9 @@ mod capture_traffic;
 mod combat_report;
 mod contact_card;
 mod contacts;
-mod faction_emblems;
 mod factions;
 mod fleets;
+mod species_portraits;
 mod victory;
 pub use factions::tier_color;
 pub use fleets::TradeOption;
@@ -339,6 +339,13 @@ impl LocalSession {
                         }
                         SessionEvent::FleetRenamed { fleet } => {
                             format!("Renamed fleet {}.", fleet.0)
+                        }
+                        SessionEvent::CaptainAppointed { fleet, species } => {
+                            format!(
+                                "Appointed a {} captain to Fleet {}.",
+                                species.label(),
+                                fleet.0
+                            )
                         }
                         SessionEvent::ShipPurchased { ship } => {
                             self.active_ship = ship;

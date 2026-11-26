@@ -60,7 +60,12 @@ impl LocalSession {
                     (None, None) => "Between systems".to_owned(),
                 };
                 (
-                    format!("{} ({}, {flies})", npc.name, temper.label.to_lowercase()),
+                    format!(
+                        "{} ({} {}, {flies})",
+                        npc.name,
+                        npc.species.label(),
+                        temper.label.to_lowercase()
+                    ),
                     self.trader_stance(npc).color(),
                     format!("{place}. {}", npc.last_action),
                 )

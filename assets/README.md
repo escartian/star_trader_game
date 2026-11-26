@@ -26,10 +26,15 @@ Append `-- arid-planet frozen-planet` (any export names) to the celestial comman
 to rebuild only those sprites. The scripts overwrite generated sources/images; preserve hand edits separately
 or incorporate them into the authoring scripts before regenerating.
 
-The runtime embeds all twelve celestial/station sprites, decodes them once per egui context and shares
+Run the celestial command with `-- --alternates` to regenerate a second
+editable `.blend` and transparent PNG for every planet, star, moon and asteroid.
+The alternate rotates the procedural surface and asteroid silhouette to a
+distinct view. The local map chooses one of the two views from each object's
+stable ID, so its image does not change during a session or on load.
+
+The runtime embeds both celestial views and the station sprite, decodes them once per egui context and shares
 texture handles across system views. Recreated graphics contexts receive new
-handles. Their raw RGBA pixels total about 3.75 MiB, excluding fonts and driver
-allocation overhead. PNG checks validate transparency/decoding and cache reuse.
+handles. PNG checks validate transparency/decoding and cache reuse.
 
 This is a hybrid renderer: detailed local surfaces use the baked artwork; tiny
 galaxy markers, star halos, route lines and selection effects remain procedural.

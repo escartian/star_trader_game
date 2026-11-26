@@ -109,6 +109,7 @@ impl TravelState {
             }
             ready_orders.push(order);
         }
+        let travelling: Vec<_> = ready_orders.iter().map(|order| order.plan.fleet).collect();
         // One shared clock advance, regardless of fleet count or course length.
         self.advance(ticks)?;
         // From here on, bodies stand where their orbits put them after the run.
@@ -198,6 +199,11 @@ impl TravelState {
             .escorts
             .retain(|escort| escort.runs_left > 0);
         events.extend(self.mine(systems)?);
+        for fleet in &mut self.fleets {
+            if fleet.owner == player && travelling.contains(&fleet.id) {
+                fleet.captain.gain(1);
+            }
+        }
         events.push(NavigationEvent::RunExecuted(run));
         Ok(events)
     }

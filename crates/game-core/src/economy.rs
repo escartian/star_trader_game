@@ -115,6 +115,9 @@ pub struct MarketId {
 pub struct Market {
     pub id: MarketId,
     pub is_station: bool,
+    /// Resident shares by Species::ALL, summing to 100 percent.
+    #[serde(default = "market::legacy_residents")]
+    pub residents_percent: [u32; 3],
     pub credits: Credits,
     #[serde(deserialize_with = "crate::fleet::per_class_stock")]
     pub ship_stock: [u32; crate::fleet::SHIP_KIND_COUNT],

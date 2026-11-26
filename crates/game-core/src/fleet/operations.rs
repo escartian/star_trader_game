@@ -151,6 +151,10 @@ impl TravelState {
             name: format!("Fleet {}", new_id.0),
             owner: player,
             ships: ships.to_vec(),
+            captain: crate::species::FleetCaptain {
+                species: self.player_species,
+                experience: 0,
+            },
         });
         self.next_fleet_id = next;
         Ok(new_id)

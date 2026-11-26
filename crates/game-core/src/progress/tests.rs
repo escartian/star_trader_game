@@ -55,6 +55,7 @@ fn profit_opens_the_shipyard_and_deliveries_or_fleets_open_routes() {
         name: "Second".into(),
         owner: PLAYER,
         ships: Vec::new(),
+        captain: crate::species::FleetCaptain::default(),
     });
     assert!(unlocks(&state, &economy, &systems).contains(&Feature::TradeRoutes));
 }

@@ -76,6 +76,8 @@ pub struct Fleet {
     pub name: String,
     pub owner: PlayerId,
     pub ships: Vec<ShipId>,
+    #[serde(default)]
+    pub captain: crate::species::FleetCaptain,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

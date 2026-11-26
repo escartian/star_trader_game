@@ -7,6 +7,7 @@ use game_core::{
     factions::FactionSetup,
     generation::GalaxyConfig,
     movement::MovementRules,
+    species::Species,
 };
 
 /// How often contacts happen and how strong raiders are.
@@ -42,6 +43,7 @@ impl DangerLevel {
 /// Everything a new game can be set up with.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GameSetup {
+    pub species: Species,
     pub galaxy: GalaxyConfig,
     /// Credits in cents.
     pub starting_credits: Credits,
@@ -59,6 +61,7 @@ pub struct GameSetup {
 impl Default for GameSetup {
     fn default() -> Self {
         Self {
+            species: Species::Human,
             galaxy: GalaxyConfig::default(),
             starting_credits: Credits(100_000),
             inflation_basis_points: 0,
@@ -133,6 +136,8 @@ impl Session {
         }
         let systems = game_core::generation::generate_galaxy_with(seed, setup.galaxy)?;
         let mut session = Self::from_generated(seed, rules, systems, movement)?;
+        session.state.player_species = setup.species;
+        session.state.fleets[0].captain.species = setup.species;
         session.state.campaign.run_limit = setup.run_limit;
         session.set_up_factions(seed, &setup.factions)?;
         session.begin_progression();

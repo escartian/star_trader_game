@@ -35,6 +35,14 @@ pub enum Faction {
 }
 
 impl Faction {
+    /// Powers selectable in new games. The final two enum entries remain for
+    /// saves made when species were briefly modeled as political factions.
+    pub const PLAYABLE: [Self; 4] = [
+        Self::Federation,
+        Self::Empire,
+        Self::Republic,
+        Self::Alliance,
+    ];
     pub const ALL: [Self; 6] = [
         Self::Federation,
         Self::Empire,
@@ -74,7 +82,7 @@ pub struct FactionDefinition {
     pub id: Faction,
     pub name: String,
     pub description: String,
-    /// Species represented by this power, shown in the factions panel.
+    /// Historical founding species; territory and crews are not exclusive.
     pub species: String,
     /// sRGB.
     pub color: [u8; 3],

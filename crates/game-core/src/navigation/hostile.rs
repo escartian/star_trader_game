@@ -65,7 +65,7 @@ impl TravelState {
         } else {
             0
         };
-        Ok((chance + bonus).min(90))
+        Ok((chance as i32 + bonus as i32 + fleet.captain.evasion_points()).clamp(10, 90) as u32)
     }
 
     /// One raider per two fleet ships (rounded up, at most [`MAX_RAIDERS`]).
@@ -165,7 +165,11 @@ impl TravelState {
                 side: Side::Player,
                 ship: Some(ship.id),
                 kind: ship.kind,
-                profile: profile(ship.kind)?,
+                profile: {
+                    let mut adjusted = profile(ship.kind)?;
+                    fleet.captain.combat_profile(&mut adjusted);
+                    adjusted
+                },
                 hull_damage: ship.hull_damage,
                 gear: ship.gear.clone(),
             });

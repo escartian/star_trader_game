@@ -90,6 +90,10 @@ impl LocalSession {
                 icons::planet_traits(ui, profile);
             }
         });
+        let [human, miri, auralith] = market.residents_percent();
+        ui.small(format!(
+            "Residents: Human {human}% · Miri {miri}% · Auralith {auralith}%"
+        ));
         if self.factions_active() {
             let terms = self.economy.port_terms(&ship);
             let color = terms

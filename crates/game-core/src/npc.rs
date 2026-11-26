@@ -23,6 +23,9 @@ pub const NPC_ID_BASE: u64 = 1 << 63;
 pub struct Trader {
     pub id: u64,
     pub name: String,
+    /// Crew identity, independent of the political faction it flies for.
+    #[serde(default)]
+    pub species: crate::species::Species,
     pub personality: Personality,
     pub credits: Credits,
     pub state: TravelState,
@@ -92,6 +95,8 @@ impl Economy {
             let ship = &trader.state.ships[0];
             let fleet = &trader.state.fleets[0];
             if ship.id != ShipId(identity)
+                || trader.state.player_species != trader.species
+                || fleet.captain.species != trader.species
                 || ship.owner != PlayerId(identity)
                 || fleet.id != FleetId(identity)
                 || fleet.owner != ship.owner

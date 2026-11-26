@@ -13,7 +13,7 @@ fn the_embedded_catalog_lists_all_powers_in_order() {
 }
 
 #[test]
-fn alien_powers_can_hold_territory_and_keep_separate_standing() {
+fn alien_species_are_not_new_game_political_powers() {
     let catalog = FactionCatalog::default();
     assert_eq!(catalog.get(Faction::Miri).species, "Miri");
     assert_eq!(catalog.get(Faction::Auralith).species, "Auralith");
@@ -25,15 +25,13 @@ fn alien_powers_can_hold_territory_and_keep_separate_standing() {
         allegiance: Some(Faction::Miri),
         ..FactionSetup::default()
     };
-    let mut factions = setup.generate(42, &systems, &catalog).unwrap();
-    assert_eq!(factions.owner(systems[0].id), Some(Faction::Miri));
-    assert!(factions.influence_percent(Faction::Auralith, systems.len()) > 0);
-    assert_eq!(factions.standing(Faction::Miri), 30);
+    assert!(setup.generate(42, &systems, &catalog).is_err());
+    let factions = FactionSetup::default()
+        .generate(42, &systems, &catalog)
+        .unwrap();
+    assert_eq!(factions.in_play, Faction::PLAYABLE);
+    assert_eq!(factions.standing(Faction::Miri), 0);
     assert_eq!(factions.standing(Faction::Auralith), 0);
-    factions.adjust(Faction::Auralith, 12);
-    assert_eq!(factions.standing(Faction::Auralith), 12);
-    assert_eq!(factions.standing(Faction::Miri), 30);
-    factions.validate(&systems, &catalog).unwrap();
 }
 
 #[test]
@@ -51,7 +49,7 @@ fn territory_is_deterministic_claims_the_coverage_and_spares_home() {
         claimed + 1 >= quota && claimed <= quota,
         "{claimed} of {quota}"
     );
-    for faction in Faction::ALL {
+    for faction in Faction::PLAYABLE {
         assert!(factions.influence_percent(faction, systems.len()) > 0);
         assert_eq!(factions.standing(faction), 0);
     }

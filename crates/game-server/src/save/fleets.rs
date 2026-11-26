@@ -65,6 +65,7 @@ impl SaveData {
                 || fleet.name.is_empty()
                 || fleet.name.len() > 128
                 || fleet.ships.is_empty()
+                || fleet.captain.experience > game_core::species::FleetCaptain::MAX_EXPERIENCE
             {
                 return Err("Invalid fleet identity".into());
             }

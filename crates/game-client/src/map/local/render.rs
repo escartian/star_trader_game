@@ -63,8 +63,9 @@ impl LocalView {
             scale.star_radius(self.system.star_kind),
         );
         if let Some(art) = &self.art {
-            art.paint(
+            art.paint_variant(
                 ArtKind::from(self.system.star_kind),
+                self.system.id.0.is_multiple_of(2),
                 &painter,
                 star,
                 scale.star_radius(self.system.star_kind) * 2.25,
@@ -96,10 +97,15 @@ impl LocalView {
             } else {
                 radius * 2.25
             };
-            let painted = self
-                .art
-                .as_ref()
-                .is_some_and(|art| art.paint(ArtKind::for_body(body), &painter, point, size));
+            let painted = self.art.as_ref().is_some_and(|art| {
+                art.paint_variant(
+                    ArtKind::for_body(body),
+                    body.id.0.is_multiple_of(2),
+                    &painter,
+                    point,
+                    size,
+                )
+            });
             if !painted {
                 painter.circle_filled(point, radius, Color32::LIGHT_BLUE);
             }

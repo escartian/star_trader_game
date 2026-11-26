@@ -27,8 +27,41 @@ fn buy(session: &mut Session) {
 }
 
 #[test]
+fn appointing_a_different_species_captain_resets_experience_at_a_port() {
+    let mut session = Session::default();
+    session.state.fleets[0].captain.experience = 50;
+    let revision = session.state.revision;
+    apply(
+        &mut session,
+        ClientCommand::AppointCaptain {
+            fleet: FleetId(1),
+            species: game_core::species::Species::Auralith,
+            expected_revision: revision,
+        },
+    );
+    assert_eq!(
+        session.state.fleets[0].captain.species,
+        game_core::species::Species::Auralith
+    );
+    assert_eq!(session.state.fleets[0].captain.experience, 0);
+    let before = session.export_json().unwrap();
+    assert!(matches!(
+        session.handle_offline(ClientCommand::AppointCaptain {
+            fleet: FleetId(1),
+            species: game_core::species::Species::Auralith,
+            expected_revision: session.state.revision,
+        }),
+        ServerMessage::CommandRejected(_)
+    ));
+    assert_eq!(session.export_json().unwrap(), before);
+}
+
+#[test]
 fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
     let mut session = Session::default();
+    session.state.player_species = game_core::species::Species::Miri;
+    session.state.fleets[0].captain.species = game_core::species::Species::Miri;
+    session.state.fleets[0].captain.experience = 20;
     let initial_credits = session.economy.credits.0;
     buy(&mut session);
     assert_eq!(session.economy.credits.0, initial_credits - 45000);
@@ -56,6 +89,12 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
     );
     assert_eq!(session.state.tick, 0);
     assert_eq!(session.state.fleets.len(), 2);
+    assert_eq!(session.state.fleets[0].captain.experience, 20);
+    assert_eq!(session.state.fleets[1].captain.experience, 0);
+    assert_eq!(
+        session.state.fleets[1].captain.species,
+        game_core::species::Species::Miri
+    );
     crate::test_support::take_command(&mut session, ShipId(2));
     let revision = session.state.revision;
     apply(
@@ -71,6 +110,8 @@ fn fleet_purchase_split_transfer_travel_and_merge_preserve_owned_state() {
     );
     crate::test_support::execute_quiet_run(&mut session);
     assert_eq!(session.state.tick, 4);
+    assert_eq!(session.state.fleets[0].captain.experience, 20);
+    assert_eq!(session.state.fleets[1].captain.experience, 1);
     assert_eq!(
         session.state.ships[0].location,
         Location::Docked(SystemId(1))

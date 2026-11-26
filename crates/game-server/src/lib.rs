@@ -164,6 +164,7 @@ impl Session {
             command @ (ClientCommand::BuyShip { .. }
             | ClientCommand::SellShip { .. }
             | ClientCommand::RenameFleet { .. }
+            | ClientCommand::AppointCaptain { .. }
             | ClientCommand::SplitFleet { .. }
             | ClientCommand::MergeFleets { .. }
             | ClientCommand::TransferCargo { .. }) => self.fleet_command(player, command),

@@ -3,7 +3,7 @@ use super::LocalSession;
 use crate::map::art::ArtKind;
 use crate::theme::icons::{self, Icon, stat};
 use crate::theme::{AMBER, CYAN, GREEN};
-use game_core::{economy::Commodity, travel::ShipId};
+use game_core::{economy::Commodity, species::Species, travel::ShipId};
 use game_protocol::ClientCommand;
 
 pub(super) struct FleetPanel {
@@ -88,6 +88,29 @@ impl LocalSession {
         for fleet in self.state.fleets.clone() {
             ui.group(|ui| {
                 ui.strong(&fleet.name);
+                ui.small(format!(
+                    "{} captain · {} / 100 experience · {} · +1 armor per 25 experience, +1% escape per 20",
+                    fleet.captain.species.label(),
+                    fleet.captain.experience,
+                    fleet.captain.trait_summary(),
+                ));
+                let at_port = self.state.ship(fleet.ships[0])
+                    .is_ok_and(|ship| self.economy.current_market(ship).is_ok());
+                if at_port {
+                    ui.menu_button("Appoint captain…", |ui| {
+                        for species in Species::ALL {
+                            if ui.selectable_label(fleet.captain.species == species, species.label()).clicked() {
+                                action = Some(ClientCommand::AppointCaptain {
+                                    fleet: fleet.id,
+                                    species,
+                                    expected_revision: revision,
+                                });
+                                ui.close_menu();
+                            }
+                        }
+                        ui.small("A new captain starts with 0 experience.");
+                    });
+                }
                 for id in &fleet.ships {
                     let ship = self
                         .state

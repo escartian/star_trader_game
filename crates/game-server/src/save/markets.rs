@@ -52,6 +52,7 @@ impl SaveData {
                 || market.is_station != stations.contains(&market.id)
                 || market.credits.0 > 1_000_000_000_000_000
                 || market.ship_stock.iter().any(|stock| *stock > 1000)
+                || market.residents_percent.iter().sum::<u32>() != 100
             {
                 return Err("Invalid market identity, treasury or ship inventory".into());
             }

@@ -21,6 +21,7 @@ pub mod police;
 pub mod progress;
 pub mod pursuit;
 pub mod routes;
+pub mod species;
 pub mod travel;
 
 /// Stable identity; never use a display name or array index as an entity ID.

@@ -131,6 +131,7 @@ impl LocalView {
                     art.tile(
                         ui,
                         ArtKind::for_body(body),
+                        body.id.0.is_multiple_of(2),
                         short_name(&self.system, body),
                         Some(body.id) == self.selected,
                     )
@@ -213,8 +214,9 @@ impl LocalView {
                 .iter()
                 .find(|body| Some(body.id) == self.selected)
             {
-                egui::CollapsingHeader::new("Sensor image")
-                    .show(ui, |ui| art.preview(ArtKind::for_body(body), ui));
+                egui::CollapsingHeader::new("Sensor image").show(ui, |ui| {
+                    art.preview(ArtKind::for_body(body), body.id.0.is_multiple_of(2), ui)
+                });
             }
             art.warnings(ui);
         }

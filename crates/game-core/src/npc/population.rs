@@ -75,10 +75,14 @@ impl Economy {
             let personality = self.rules.personality_catalog.dealt(index);
             let id = index as u64 + 1;
             let name = trader_name(index);
-            let state = commissioned(id, &name, home, systems, movement);
+            let species = crate::species::Species::ALL[index % 3];
+            let mut state = commissioned(id, &name, home, systems, movement);
+            state.player_species = species;
+            state.fleets[0].captain.species = species;
             self.traders.push(Trader {
                 id,
                 name,
+                species,
                 personality,
                 credits: self.rules.npc_starting_credits,
                 state,
@@ -145,6 +149,7 @@ fn commissioned(
         name: name.into(),
         owner: PlayerId(identity),
         ships: vec![ShipId(identity)],
+        captain: crate::species::FleetCaptain::default(),
     }];
     state.next_ship_id = identity + 1;
     state.next_fleet_id = identity + 1;

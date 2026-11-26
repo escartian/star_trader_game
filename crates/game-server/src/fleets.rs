@@ -21,6 +21,9 @@ impl Session {
             | ClientCommand::RenameFleet {
                 expected_revision, ..
             }
+            | ClientCommand::AppointCaptain {
+                expected_revision, ..
+            }
             | ClientCommand::SplitFleet {
                 expected_revision, ..
             }
@@ -58,6 +61,9 @@ impl Session {
             ClientCommand::SplitFleet { fleet, .. } => {
                 candidate.state.guard_fleet_changes(player, *fleet)?
             }
+            ClientCommand::AppointCaptain { fleet, .. } => {
+                candidate.state.guard_fleet_changes(player, *fleet)?
+            }
             ClientCommand::MergeFleets { source, target, .. } => {
                 candidate.state.guard_fleet_changes(player, *source)?;
                 candidate.state.guard_fleet_changes(player, *target)?;
@@ -91,6 +97,30 @@ impl Session {
                 }
                 fleet_record.name = name.into();
                 SessionEvent::FleetRenamed { fleet }
+            }
+            ClientCommand::AppointCaptain { fleet, species, .. } => {
+                let record = candidate
+                    .state
+                    .fleets
+                    .iter()
+                    .find(|record| record.id == fleet)
+                    .ok_or(FleetError::UnknownFleet)?;
+                if record.owner != player || record.captain.species == species {
+                    return Err(FleetError::InvalidSelection.into());
+                }
+                let ship = candidate.state.ship(record.ships[0])?;
+                candidate.economy.current_market(ship)?;
+                let record = candidate
+                    .state
+                    .fleets
+                    .iter_mut()
+                    .find(|record| record.id == fleet)
+                    .ok_or(FleetError::UnknownFleet)?;
+                record.captain = game_core::species::FleetCaptain {
+                    species,
+                    experience: 0,
+                };
+                SessionEvent::CaptainAppointed { fleet, species }
             }
             ClientCommand::SplitFleet { fleet, ships, .. } => {
                 let new_fleet = candidate.state.split_fleet(player, fleet, &ships)?;

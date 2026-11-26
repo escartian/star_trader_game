@@ -1,4 +1,4 @@
-use super::{Artwork, SOURCES};
+use super::{Artwork, SOURCES, alternate_sources};
 
 #[test]
 fn all_embedded_art_decodes_with_transparency_and_is_reused_across_views() {
@@ -11,11 +11,21 @@ fn all_embedded_art_decodes_with_transparency_and_is_reused_across_views() {
             "{name}"
         );
     }
+    for &(_, name, bytes) in alternate_sources::SOURCES {
+        let rgba = image::load_from_memory(bytes).unwrap().into_rgba8();
+        assert_eq!(rgba.width(), 256, "{name}");
+        assert_eq!(rgba.get_pixel(0, 0)[3], 0, "{name}");
+    }
+    for &(kind, name, bytes) in alternate_sources::SOURCES {
+        let base = SOURCES.iter().find(|(base, _, _)| *base == kind).unwrap().2;
+        assert_ne!(bytes, base, "{name} repeats the original view");
+    }
     let ctx = egui::Context::default();
     let initial = Artwork::preload(&ctx);
     let cached = Artwork::preload(&ctx);
     assert!(initial.errors.is_empty());
     assert_eq!(initial.textures.len(), SOURCES.len());
+    assert_eq!(initial.alternates.len(), alternate_sources::SOURCES.len());
     for (kind, texture) in &initial.textures {
         assert_eq!(texture.id(), cached.textures[kind].id());
     }

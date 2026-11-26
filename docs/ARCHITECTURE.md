@@ -194,7 +194,9 @@ runs `game-core::police::patrol_run` once per navigation run, after NPC traders,
 routes and patrols, because pursuit reads `Economy::factions`. `game-core::combat` validates them.
 Schema 10 is current. Schemas 7–9 upgrade on load; schemas 7–8 auto-resolve
 an open legacy battle. Schema 10 expands faction and quest state to six powers
-while preserving the four human factions in older games.
+while preserving the four original factions in older games. New games offer
+those four political powers and choose the player's species independently.
+Fleet captains store species and experience in `TravelState::fleets`.
 
 ## Movement spaces and host resolution
 

@@ -1,4 +1,5 @@
-//! The Market window's ship upgrades: fit universal, model and size gear to
+//! The Market window's ship rows: per-ship refuel, repair and hold upgrade (see
+//! `port_services`), then universal, model and size gear for
 //! any of the fleet's ships at this port (each row lists what fits that
 //! ship), and hire (or renew) an escort for the fleet. Rules live in
 //! `game_core::combat::gear`.
@@ -7,7 +8,6 @@ use crate::theme::icons::{self, Icon};
 use crate::theme::{AMBER, GREEN};
 use game_core::{
     combat::gear::{ESCORT_RUNS, Gear},
-    fleet_trade::{self, LoadOrder},
     travel::Ship,
 };
 use game_protocol::ClientCommand;
@@ -39,15 +39,12 @@ impl LocalSession {
     /// the escort; returns the command to send.
     pub(super) fn outfitting_row(&self, ui: &mut egui::Ui, ship: &Ship) -> Option<ClientCommand> {
         let mut action = None;
-        ui.label(egui::RichText::new("SHIP UPGRADES").small().color(AMBER))
+        ui.label(egui::RichText::new("SHIPS").small().color(AMBER))
             .on_hover_text(
                 "Upgrades are fitted to one ship and stay with it. Each row lists what fits \
                  that ship's model and size.",
             );
-        let mut here = fleet_trade::partners(&self.state, &self.economy, ship.id, LoadOrder::Even)
-            .unwrap_or_else(|_| vec![ship.id]);
-        here.sort_by_key(|id| *id != ship.id);
-        for id in here {
+        for id in self.ships_here(ship.id) {
             let Ok(member) = self.state.ship(id) else {
                 continue;
             };
@@ -75,6 +72,12 @@ impl LocalSession {
         ui.horizontal_wrapped(|ui| {
             ui.label(egui::RichText::new(&ship.name).strong())
                 .on_hover_text(ship.kind.label());
+            if let Some(command) = self.ship_service_buttons(ui, ship) {
+                action = Some(command);
+            }
+            if let Some(command) = self.hold_upgrade_button(ui, ship) {
+                action = Some(command);
+            }
             for gear in Gear::ALL {
                 if !size.is_some_and(|size| gear.fits(ship.kind, size)) {
                     continue;
@@ -105,6 +108,29 @@ impl LocalSession {
             }
         });
         action
+    }
+
+    /// The one-time cargo hold upgrade for this ship.
+    fn hold_upgrade_button(&self, ui: &mut egui::Ui, ship: &Ship) -> Option<ClientCommand> {
+        let capacity = self.economy.rules.hold_upgrade_capacity;
+        let price = self.economy.hold_upgrade_price();
+        let (label, blocked) = if ship.upgraded {
+            (
+                format!("Hold +{capacity} ✓"),
+                Some("Hold already upgraded.".to_owned()),
+            )
+        } else {
+            (format!("Hold +{capacity} · {price} cr"), None)
+        };
+        icons::labeled_action(ui, Icon::Upgrade, &label, blocked)
+            .on_hover_text(format!(
+                "Upgrade this ship's hold: +{capacity} cargo for {price} cr"
+            ))
+            .clicked()
+            .then_some(ClientCommand::UpgradeHold {
+                ship: ship.id,
+                expected_revision: self.state.revision,
+            })
     }
 
     fn escort_button(&self, ui: &mut egui::Ui, ship: &Ship) -> Option<ClientCommand> {

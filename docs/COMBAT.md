@@ -407,8 +407,8 @@ lets the trader go.
 
 ## Repairs
 
-**Repair hull** in the Market window restores all hull points at the current
-market for `repair_point_price` (default 5.00 cr) per point. Payment goes to that
+**Repair** on a ship's row in the Market window (or **Repair fleet** for every
+fleet ship docked there) restores all hull points at the current market for `repair_point_price` (default 5.00 cr) per point. Payment goes to that
 market's treasury, the same way refuelling does.
 
 ## Balance checkpoints

@@ -6,19 +6,6 @@ use game_core::{
     economy::{Commodity, MarketId, TradeSide},
     species::Species,
 };
-use game_protocol::ClientCommand;
-
-fn format_population(value: u64) -> String {
-    let digits = value.to_string();
-    let mut grouped = String::with_capacity(digits.len() + digits.len() / 3);
-    for (index, digit) in digits.chars().enumerate() {
-        if index > 0 && (digits.len() - index).is_multiple_of(3) {
-            grouped.push(',');
-        }
-        grouped.push(digit);
-    }
-    grouped
-}
 
 /// Display name of a market: the body (planet or station) it trades at.
 pub(super) fn market_name(systems: &[StarSystem], market: MarketId) -> &str {
@@ -33,7 +20,6 @@ pub(super) struct MarketPanel {
     pub open: bool,
     /// Units per Buy/Sell order button press.
     pub(super) quantity: u32,
-    fuel_units: u32,
     /// Where the best-margin column looks for a sale.
     pub(super) scope: super::market_scope::TradeScope,
     pub(super) reach: super::market_scope::ReachCache,
@@ -53,7 +39,6 @@ impl Default for MarketPanel {
         Self {
             open: false,
             quantity: 1,
-            fuel_units: 1,
             scope: Default::default(),
             reach: Default::default(),
             page: MarketPage::Trade,
@@ -110,10 +95,7 @@ impl LocalSession {
             .map(|(species, share)| format!("{} {share}%", species.label()))
             .collect::<Vec<_>>()
             .join(" · ");
-        ui.small(format!(
-            "Population: {} · {shares}",
-            format_population(market.total_population)
-        ));
+        ui.small(format!("Population: {shares}"));
         if self.factions_active() {
             let terms = self.economy.port_terms(&ship);
             let color = terms
@@ -217,114 +199,18 @@ impl LocalSession {
         let (hold, _) = self.fleet_hold(&ship);
         let mut action = self.trade_table(ui, &hold, &market, systems);
         ui.separator();
-        ui.horizontal_wrapped(|ui| {
-            // Orders never exceed the space left in the tanks.
-            let missing = ship.fuel_capacity.saturating_sub(ship.fuel);
-            let units = self.market.fuel_units.clamp(1, missing.max(1));
-            icons::glyph(ui, Icon::Fuel, CYAN, "Fuel units to buy");
-            ui.add_enabled(
-                missing > 0,
-                egui::DragValue::new(&mut self.market.fuel_units).range(1..=missing.max(1)),
-            );
-            let terms = self.economy.port_terms(&ship);
-            let cost = terms.service(u64::from(units) * self.economy.fuel_price().0);
-            stat(
-                ui,
-                Icon::Credits,
-                AMBER,
-                &game_core::economy::Credits(cost).to_string(),
-                &format!(
-                    "{} cr per fuel unit at list price",
-                    self.economy.fuel_price()
-                ),
-            );
-            let blocked = (missing == 0).then(|| "The tanks are full.".to_owned());
-            if icons::labeled_action(ui, Icon::Refuel, "Refuel", blocked)
-                .on_hover_text(format!("Buy {units} fuel ({missing} fits)"))
-                .clicked()
-            {
-                action = Some(ClientCommand::Refuel {
-                    ship: ship.id,
-                    units,
-                    expected_revision: self.state.revision,
-                });
-            }
-            let full = self.economy.max_refuel_units(&ship);
-            let reason = match &full {
-                Ok(_) => None,
-                Err(game_core::economy::EconomyError::FuelFull) => {
-                    Some("The tanks are full.".to_owned())
-                }
-                Err(error) => Some(error.to_string()),
-            };
-            let response = icons::labeled_action(ui, Icon::Refuel, "Full", reason);
-            if let Ok(units) = full {
-                let cost =
-                    terms.service(u64::from(units).saturating_mul(self.economy.fuel_price().0));
-                if response
-                    .on_hover_text(format!(
-                        "Refuel {units} units for {} cr",
-                        game_core::economy::Credits(cost)
-                    ))
-                    .clicked()
-                {
-                    action = Some(ClientCommand::Refuel {
-                        ship: ship.id,
-                        units,
-                        expected_revision: self.state.revision,
-                    });
-                }
-            }
-            ui.separator();
-            let blocked = ship
-                .upgraded
-                .then(|| "First earnings goal completed: hold already upgraded.".to_string());
-            let tip = format!(
-                "Upgrade hold: +{} cargo for {} cr",
-                self.economy.rules.hold_upgrade_capacity,
-                self.economy.hold_upgrade_price()
-            );
-            if icons::action(ui, Icon::Upgrade, &tip, blocked).clicked() {
-                action = Some(ClientCommand::UpgradeHold {
-                    ship: ship.id,
-                    expected_revision: self.state.revision,
-                });
-            }
-            stat(
-                ui,
-                Icon::Cargo,
-                if ship.upgraded { GREEN } else { AMBER },
-                &format!("+{}", self.economy.rules.hold_upgrade_capacity),
-                &tip,
-            );
-            ui.separator();
-            let (blocked, tip) = match self.economy.repair_quote(&ship) {
-                Ok(cost) => (
-                    None,
-                    format!("Repair {} hull points for {cost} cr", ship.hull_damage),
-                ),
-                Err(error) => (Some(error.to_string()), "Repair hull".to_string()),
-            };
-            if icons::action(ui, Icon::Hull, &tip, blocked).clicked() {
-                action = Some(ClientCommand::RepairShip {
-                    ship: ship.id,
-                    expected_revision: self.state.revision,
-                });
-            }
-        });
+        let service = self.fleet_services_row(ui, &ship);
         ui.separator();
         if let Some(command) = self.outfitting_row(ui, &ship) {
             action = Some(command);
         }
         self.known_prices(ui, systems);
-        if !self.notice.is_empty() {
-            ui.horizontal_wrapped(|ui| {
-                icons::glyph(ui, Icon::Info, CYAN, "Latest event");
-                ui.label(&self.notice);
-            });
-        }
         if let Some(command) = action {
             self.command(command);
+            ui.ctx().request_repaint();
+        }
+        if let Some(service) = service {
+            self.run_fleet_service(ship.id, service);
             ui.ctx().request_repaint();
         }
     }

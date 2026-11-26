@@ -41,6 +41,7 @@ mod npc_card;
 mod outfitting;
 mod panel;
 mod police;
+mod port_services;
 mod pursuit;
 mod quests;
 mod routes;

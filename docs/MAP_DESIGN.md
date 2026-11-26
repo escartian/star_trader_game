@@ -66,7 +66,8 @@ The galaxy's **Open system** button enters a separately scaled local
 map using fixed snapshot destinations. Local rocky planets, gas giants and trade
 stations are selectable by marker or list; overlapping candidates are listed
 explicitly. **← Galaxy** / Escape returns to the previous galaxy camera, selection
-and overlap candidates. Each view exposes pan, focus and zoom.
+and overlap candidates; while a window (Market, Fleets, Jobs…) is open, Escape
+closes it instead and leaves the system view in place. Each view exposes pan, focus and zoom.
 Local distances use kilometer positions; interstellar distances use galaxy
 light-years. Travel and docking use authoritative session commands.
 

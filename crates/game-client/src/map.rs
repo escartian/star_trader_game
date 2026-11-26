@@ -411,7 +411,8 @@ impl Map {
                 target => self.session.request_movement(target),
             }
         }
-        if back {
+        // Escape closes open windows first; only a bare map leaves the system.
+        if back && !std::mem::take(&mut self.songbook.0) && !self.session.close_popups() {
             self.local = None;
         }
     }

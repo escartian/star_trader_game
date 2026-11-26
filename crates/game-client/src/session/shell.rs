@@ -21,6 +21,29 @@ pub enum SheetTab {
 }
 
 impl LocalSession {
+    /// Closes every open session window (Market, Fleets, Jobs and the rest);
+    /// returns whether any was open, so Escape can close popups before it
+    /// leaves the system view.
+    pub fn close_popups(&mut self) -> bool {
+        let flags = [
+            &mut self.market.open,
+            &mut self.fleet_panel.open,
+            &mut self.navigation.open,
+            &mut self.jobs.open,
+            &mut self.factions.open,
+            &mut self.victory.open,
+            &mut self.combat_report.open,
+            &mut self.saves.open,
+            &mut self.saves.new_open,
+            &mut self.saves.settings_open,
+        ];
+        let mut closed = false;
+        for flag in flags {
+            closed |= std::mem::take(flag);
+        }
+        closed
+    }
+
     /// The sheet page something asked to show, once.
     pub fn take_sheet_request(&mut self) -> Option<SheetTab> {
         self.sheet_request.take()

@@ -117,9 +117,12 @@ fn max_fills_the_hold_all_sells_it_back_and_full_refuels() {
     click(&ctx, &mut map, "All");
     assert_eq!(map.session.selected_ship().cargo_used(), 0, "All sells it");
     assert!(map.session.selected_ship().fuel < map.session.selected_ship().fuel_capacity);
-    click(&ctx, &mut map, "Full");
+    click(&ctx, &mut map, "Refuel fleet");
     let ship = map.session.selected_ship();
-    assert_eq!(ship.fuel, ship.fuel_capacity, "Full refuels");
+    assert_eq!(
+        ship.fuel, ship.fuel_capacity,
+        "Refuel fleet fills the tanks"
+    );
     // With full tanks, Refuel is disabled instead of reporting an over-capacity error.
     let notice = map.session.notice().to_owned();
     click(&ctx, &mut map, "Refuel");

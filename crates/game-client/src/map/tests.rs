@@ -67,6 +67,33 @@ fn returning_from_local_view_preserves_galaxy_context() {
 }
 
 #[test]
+fn escape_closes_an_open_window_before_leaving_the_system() {
+    let ctx = egui::Context::default();
+    let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());
+    map.selected = Some(SystemId(2));
+    map.open_selected_system();
+    map.session.open_market();
+    let escape = || egui::RawInput {
+        events: vec![egui::Event::Key {
+            key: egui::Key::Escape,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }],
+        ..Default::default()
+    };
+    let _ = ctx.run(escape(), |ctx| map.ui(ctx));
+    assert!(
+        map.local.is_some(),
+        "the first Escape only closes the Market"
+    );
+    assert!(!map.session.close_popups());
+    let _ = ctx.run(escape(), |ctx| map.ui(ctx));
+    assert!(map.local.is_none());
+}
+
+#[test]
 fn dragging_the_flat_galaxy_pans_without_rotating() {
     let ctx = egui::Context::default();
     let mut map = Map::new(game_core::demo_galaxy(), game_server::Session::default());

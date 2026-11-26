@@ -165,7 +165,7 @@ fuel, tick, location), camera tools, trade/refuel/hold actions, commodities and
 planet traits (economy, specialization, biome, danger pips) appear as glyphs,
 with their text kept as hover help and accessible names. Decisions with
 consequences keep short labels: Plot course, Advance/Stop, encounter choices,
-Save/Load, Refuel/Full, Max/All and Depart. Explanations sit behind ⓘ and ? glyphs. Rocky
+Save/Load, Refuel/Repair (per ship and fleet), Max/All and Depart. Explanations sit behind ⓘ and ? glyphs. Rocky
 planets use biome-specific art (temperate, arid, frozen, ocean, jungle, volcanic,
 barren). Gas giant art follows its hazard profile. Touch has no hover,
 so icon meaning on mobile still needs a long-press or legend; that is open,

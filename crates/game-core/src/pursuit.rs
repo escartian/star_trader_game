@@ -60,9 +60,11 @@ fn docked(economy: &Economy, quarry: Quarry) -> bool {
         })
 }
 
-/// How close (km) the flagship must come to a raider band to engage it on
-/// purpose: hailing range, wider than a band's own strike.
-pub const ENGAGE_KM: i64 = piracy::HAIL_KM;
+/// How close (km) the flagship must come to a raider band or police patrol
+/// to engage it on purpose: the same distance at which they strike or stop
+/// your fleets (`navigation::STRIKE_KM`). Both keep moving and turn at
+/// orbiting bodies, so a chase gets close rather than exactly onto them.
+pub const ENGAGE_KM: i64 = crate::navigation::STRIKE_KM;
 
 /// The flagship's lead ship, and its system and position when in a system.
 fn flagship_at(

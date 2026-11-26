@@ -35,7 +35,7 @@ pub(super) fn sight(
                 .then_some((band.system, band.position));
             let target = MoveTarget::Local {
                 system: band.system,
-                position: band.position,
+                position: next_step(state, systems, band.system, band.position, band.heading),
             };
             Some(Sighting {
                 now,
@@ -43,11 +43,21 @@ pub(super) fn sight(
             })
         }
         Quarry::Patrol(id) => {
-            // Patrols never leave their system: steer for where it is.
+            // Patrols never leave their system: steer for where it will be.
             let patrol = state.navigation.police.patrol(id)?;
+            // A patrol on its rounds turns for its next post on arrival.
+            let heading = match (patrol.pursuing, patrol.answering) {
+                (None, None) => systems
+                    .iter()
+                    .find(|known| known.id == patrol.system)
+                    .map_or(patrol.heading, |world| {
+                        crate::police::rounds(patrol, world, &state.movement_rules).1
+                    }),
+                _ => patrol.heading,
+            };
             let target = MoveTarget::Local {
                 system: patrol.system,
-                position: patrol.position,
+                position: next_step(state, systems, patrol.system, patrol.position, heading),
             };
             Some(Sighting {
                 now: Some((patrol.system, patrol.position)),
@@ -94,10 +104,28 @@ pub(super) fn sight(
     }
 }
 
+/// Where a band or patrol at `from`, heading for `heading`, will be after
+/// its next run's step (see `navigation::band_motion::step_toward`). Steering
+/// there, instead of where it is now, meets it rather than trailing it.
+fn next_step(
+    state: &TravelState,
+    systems: &[StarSystem],
+    system: SystemId,
+    from: LocalPosition,
+    heading: LocalPosition,
+) -> LocalPosition {
+    systems
+        .iter()
+        .find(|known| known.id == system)
+        .map_or(from, |world| {
+            crate::navigation::band_motion::step_toward(&state.movement_rules, world, from, heading)
+        })
+}
+
 /// How far off a station (km) the flagship waits for a trader bound there:
 /// inside hailing range, outside the station's own berth, so the trader is
 /// caught on its way in rather than under the station's guns.
-const STATION_STANDOFF_KM: i64 = 8_000_000;
+const STATION_STANDOFF_KM: i64 = crate::piracy::HAIL_KM * 2 / 5;
 
 /// A trader bound for a station is met just off it, on the side it comes
 /// from, instead of docking there too.

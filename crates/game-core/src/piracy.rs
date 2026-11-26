@@ -36,8 +36,10 @@ use crate::{
 mod settlement;
 pub use settlement::{resolve, settle_battle};
 
-/// Hailing range between the flagship and a trader, in km.
-pub const HAIL_KM: i64 = 20_000_000;
+/// Hailing range between the flagship and a trader, in km (about half the
+/// Earth–Moon distance). A chase meets a trader where it is bound, so this
+/// only needs to cover arriving at the same spot or berth.
+pub const HAIL_KM: i64 = 200_000;
 
 /// The share of the trader's strength (in percent) a fleet needs for a demand.
 pub fn yield_percent(catalog: &PersonalityCatalog, personality: Personality) -> u64 {

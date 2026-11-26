@@ -3,14 +3,13 @@
 //! you), answers a raider band, or visits its next body.
 use super::{
     BAND_FIGHT_COOLDOWN_RUNS, DETECTION_KM, FactionPatrol, PoliceContact, STRIKE_KM, exposed_at,
-    post,
 };
 use crate::{
     LocalPosition, StarSystem,
     combat::{CombatantSetup, Side, engagement::MAX_COMBATANTS, tactical},
     economy::Economy,
     fleet::{FleetError, FleetId, FleetMovementError, ShipKind},
-    navigation::{Encounter, EncounterKind, NavigationEvent, distance, near, step_toward},
+    navigation::{Encounter, EncounterKind, NavigationEvent, distance, step_toward},
     travel::{PlayerId, TravelError, TravelState},
 };
 
@@ -56,15 +55,9 @@ pub fn patrol_run(
             0 => nearest_band(state, &patrol).map(|(band, at)| (Quarry::Band(band), at)),
             _ => None,
         };
-        let mut stops = patrol.stops;
-        let heading = match quarry {
-            Some((_, at)) => at,
-            None => {
-                if near(patrol.position, post(world, stops, &state.movement_rules)) {
-                    stops += 1;
-                }
-                post(world, stops, &state.movement_rules)
-            }
+        let (stops, heading) = match quarry {
+            Some((_, at)) => (patrol.stops, at),
+            None => super::rounds(&patrol, world, &state.movement_rules),
         };
         let position = step_toward(&state.movement_rules, world, patrol.position, heading);
         if let Some(record) = state

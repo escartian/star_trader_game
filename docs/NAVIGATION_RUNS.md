@@ -190,20 +190,22 @@ dashed amber line from your flagship:
 
 - At once, and after every run (once everything has moved), a flagship within
   reach opens the contact and Advance stops: a trader the hail card (demand
-  cargo, attack, let go; within 20 million km; at a port, docked beside it,
+  cargo, attack, let go; within 200,000 km; at a port, docked beside it,
   only its trade offer), a band
-  the raider fight (within 20 million km). A quarry already in reach is
+  the raider fight (within 5 million km, the distance at which bands and
+  police strike your fleets). A quarry already in reach is
   contacted immediately.
 - Otherwise the flagship steers to intercept. Your fleets and NPC traders move
   at the same speed (50 million km a tick in a system, 4 ticks a run, whatever
   the hull), so trailing a trader rarely closes the gap: a trader with a
   course is met where it is bound (its body or point, in this system or the
   next), and a resting one at its berth. Raider bands and police patrols move
-  at half that speed (100 million km a run), so a band is steered for where
-  it is. A band crossing to another system is followed there. While a leg is
+  at half that speed (100 million km a run), so a band or patrol is steered
+  for where its next run's step will take it, to meet it rather than trail it. A band crossing to another system is followed there. While a leg is
   under way it is finished first, and at any market on the way the flagship
   refuels as far as credits allow (a jump costs about half a freighter's
-  tank). A trader bound for a station is met 8 million km off it, on its way
+  tank). A trader bound for a station is met 80,000 km off it (two fifths of hailing
+  range, outside the station itself), on its way
   in; one that docks between two looks while the flagship is within reach is
   still caught there with the full hail. A chase never settles for a docked
   trader's trade-only offer: it waits off the port for it to come out. While
@@ -216,15 +218,21 @@ dashed amber line from your flagship:
   flagship, or when you give the flagship any other order (**Stop** issues a
   Wait). Only the flagship pursues.
 
+Hailing range is deliberately short (about half the Earth–Moon distance):
+a chase meets a trader at the spot it is bound for, so measured catches did
+not change between 20 million and 50,000 km. Bands and patrols keep moving and
+turn at orbiting bodies, so they are engaged at the wider strike distance.
+
 A docked flagship can pursue too: the chase plots its way out of the port. A new game never starts with a trader, police patrol or raider band within
-contact reach (20 million km) of your fleet, nor a trader at your starting port
+contact reach (200,000 km for traders, 5 million km for bands and police) of
+your fleet, nor a trader at your starting port
 or planet, so the first contact always needs an Advance
 (`start_tests::no_npc_starts_within_contact_reach_of_your_fleet`, 36 seeds and
 galaxy sizes).
 
 **Police patrols** can be pursued the same way: tap one on the system map to
 select it and use **Pursue** on its card. A patrol never leaves its system, so
-the flagship steers for where it is. Within 20 million km a `Police` contact
+the flagship steers for where it will be. Within 5 million km a `Police` contact
 opens that you started (`intercepted` in its `police` record): there is no
 fine to pay or escape to roll, only **Attack**, **Auto-resolve** or **Let it
 go**. Attacking is a crime with the patrol's faction, as when you resist a

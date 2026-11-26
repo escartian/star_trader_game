@@ -151,6 +151,18 @@ pub(crate) fn post(
     }
 }
 
+/// The stop count and post an idle patrol (no fleet or band to chase) heads
+/// for next: on to the next body once it has reached its current post.
+pub(crate) fn rounds(
+    patrol: &FactionPatrol,
+    world: &StarSystem,
+    rules: &crate::movement::MovementRules,
+) -> (u64, LocalPosition) {
+    let arrived = crate::navigation::near(patrol.position, post(world, patrol.stops, rules));
+    let stops = patrol.stops + u64::from(arrived);
+    (stops, post(world, stops, rules))
+}
+
 impl TravelState {
     /// Places one patrol in every claimed system, replacing any there were.
     pub fn spawn_police(&mut self, factions: &Factions, systems: &[StarSystem]) {

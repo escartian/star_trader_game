@@ -139,7 +139,8 @@ fn a_pursued_trader_docking_beside_the_flagship_is_caught_on_its_way_in() {
     session.state.ships[0].location = Location::InSystem {
         system,
         position: LocalPosition {
-            x_km: station.x_km + 8_000_000,
+            // Where a chase waits: two fifths of hailing range off the port.
+            x_km: station.x_km + game_core::piracy::HAIL_KM * 2 / 5,
             ..station
         },
     };

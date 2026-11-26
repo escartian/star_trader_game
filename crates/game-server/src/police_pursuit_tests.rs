@@ -25,7 +25,7 @@ fn pursue(session: &mut Session, patrol: u64) -> ServerMessage {
 }
 
 /// `police_tests::policed` after one quiet run (contacts need run 1 or later).
-/// The fleet is put back 2 million km from the patrol, which moved that run;
+/// The fleet is put back 100,000 km from the patrol, which moved that run;
 /// random contacts are off so only the pursuit makes one.
 fn patrolled() -> Session {
     let mut session = policed(Session::default(), FleetId(1), 0);
@@ -36,7 +36,7 @@ fn patrolled() -> Session {
     session.state.ships[0].location = Location::InSystem {
         system: patrol.system,
         position: LocalPosition {
-            z_km: patrol.position.z_km + 2_000_000,
+            z_km: patrol.position.z_km + 100_000,
             ..patrol.position
         },
     };

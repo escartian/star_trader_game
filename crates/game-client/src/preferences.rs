@@ -1,15 +1,13 @@
 //! Client preferences are separate from authoritative world/player saves.
-#[cfg(not(target_arch = "wasm32"))]
 mod legacy;
 use serde::{Deserialize, Serialize};
-use std::{
-    fs,
-    io::Write,
-    path::{Path, PathBuf},
-};
-
+use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
+use std::{fs, io::Write, path::Path};
+
 pub const DEFAULT_PATH: &str = "data/settings.json";
+/// Largest settings file accepted, in bytes.
+const MAX_BYTES: usize = 65_536;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -183,12 +181,21 @@ impl Preferences {
             }
             Err(error) => return Err(error.to_string()),
         };
-        if metadata.len() > 65_536 {
+        if metadata.len() > MAX_BYTES as u64 {
             return Err("Client settings file is too large".into());
         }
         let json = fs::read(path).map_err(|error| error.to_string())?;
+        Self::from_json(&json)
+    }
+
+    /// Settings from JSON (a file's, or a browser storage entry's), migrated
+    /// from older versions and validated.
+    pub fn from_json(json: &[u8]) -> Result<Self, String> {
+        if json.len() > MAX_BYTES {
+            return Err("Client settings file is too large".into());
+        }
         let value: serde_json::Value =
-            serde_json::from_slice(&json).map_err(|error| error.to_string())?;
+            serde_json::from_slice(json).map_err(|error| error.to_string())?;
         let settings: Self = match value
             .get("schema_version")
             .and_then(|version| version.as_u64())
@@ -203,8 +210,15 @@ impl Preferences {
         Ok(settings)
     }
 
-    pub fn save(&self, path: &Path) -> Result<(), String> {
+    /// The settings as pretty JSON, validated first.
+    pub fn to_json(&self) -> Result<String, String> {
         self.validate()?;
+        serde_json::to_string_pretty(self).map_err(|error| error.to_string())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn save(&self, path: &Path) -> Result<(), String> {
+        let json = self.to_json()?;
         let parent = path
             .parent()
             .filter(|p| !p.as_os_str().is_empty())
@@ -212,7 +226,8 @@ impl Preferences {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
         let mut temporary =
             tempfile::NamedTempFile::new_in(parent).map_err(|error| error.to_string())?;
-        serde_json::to_writer_pretty(temporary.as_file_mut(), self)
+        temporary
+            .write_all(json.as_bytes())
             .map_err(|error| error.to_string())?;
         temporary
             .write_all(b"\n")

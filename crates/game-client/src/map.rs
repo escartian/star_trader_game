@@ -204,7 +204,6 @@ impl Map {
         self.session.notify(message);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn autosave(&mut self) -> Result<(), String> {
         if self.save_recovery.is_some() {
             // The temporary fresh session must not replace an incompatible save.
@@ -314,7 +313,6 @@ impl Map {
         }
         if self.session.take_main_menu_request() {
             self.sheet = crate::session::SheetTab::default();
-            #[cfg(not(target_arch = "wasm32"))]
             self.open_save_chooser(self.session.save_path(), None);
         }
         if let Some(cue) = crate::audio::take_cue(ctx) {

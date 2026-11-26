@@ -253,11 +253,8 @@ impl LocalSession {
             }
         }
         self.event_log(ui);
-        // The browser build has no main menu yet: it starts straight in a game.
-        if !cfg!(target_arch = "wasm32") {
-            ui.separator();
-            self.main_menu_controls(ui);
-        }
+        ui.separator();
+        self.main_menu_controls(ui);
     }
 
     /// The Menu page's event log, newest first (the latest event opens it).

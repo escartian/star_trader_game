@@ -11,6 +11,7 @@ mod options;
 mod preferences;
 mod seed;
 mod session;
+mod storage;
 mod theme;
 mod units;
 #[cfg(target_arch = "wasm32")]
@@ -23,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let loaded_settings = if options.capturing() {
         Ok(preferences::Preferences::default())
     } else {
-        preferences::Preferences::load(&settings_path)
+        storage::load_preferences(&settings_path)
     };
     let (mut settings, settings_notice) = match loaded_settings {
         Ok(settings) => (settings, None),

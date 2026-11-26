@@ -32,17 +32,32 @@ fn run() -> Result<()> {
         return Err("Unable to start browser game session".into());
     };
     let mut map = Map::new(systems, authority);
-    map.apply_preferences(Preferences::default(), None)?;
+    // Settings and saves live in this site's browser storage (`storage`).
+    let settings_path = std::path::PathBuf::from(crate::preferences::DEFAULT_PATH);
+    let (settings, notice) = match crate::storage::load_preferences(&settings_path) {
+        Ok(settings) => (settings, None),
+        Err(error) => (
+            Preferences::default(),
+            Some(format!("Client settings reset to defaults: {error}")),
+        ),
+    };
+    let selected = settings.save_path.clone();
+    map.apply_preferences(settings, Some(settings_path))?;
     // Silent for now: the browser build has no audio output yet.
     let (music, _) = crate::audio::Music::open();
     map.set_music(music);
-    map.notify("Browser build: saves are not persistent yet.".to_owned());
+    // As on desktop: the main menu, with Continue for the last game.
+    map.open_save_chooser(selected, None);
+    if let Some(message) = notice {
+        map.notify(message);
+    }
 
     let app = App {
         window: None,
         graphics: Rc::new(RefCell::new(None)),
         map,
         next_redraw: None,
+        last_autosave: Instant::now(),
     };
     event_loop.spawn_app(app);
     Ok(())
@@ -53,9 +68,28 @@ struct App {
     graphics: Rc<RefCell<Option<Graphics>>>,
     map: Map,
     next_redraw: Option<Instant>,
+    /// When the game was last autosaved (see `autosave`).
+    last_autosave: Instant,
+}
+
+/// A tab can be closed without warning, so the game also saves this often.
+const AUTOSAVE_EVERY: Duration = Duration::from_secs(60);
+
+impl App {
+    /// Saves the game in play (not the main menu's idle session), as desktop
+    /// does on closing; failures are reported in the game's log.
+    fn autosave(&mut self) {
+        self.last_autosave = Instant::now();
+        let _ = self.map.autosave();
+    }
 }
 
 impl ApplicationHandler for App {
+    /// The page is being hidden or unloaded.
+    fn suspended(&mut self, _: &ActiveEventLoop) {
+        self.autosave();
+    }
+
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_some() {
             return;
@@ -101,6 +135,11 @@ impl ApplicationHandler for App {
         let Some(window) = self.window.as_ref().filter(|window| window.id() == id) else {
             return;
         };
+        // Switching tabs or minimising hides the page: save before it may go.
+        if matches!(event, WindowEvent::Occluded(true)) {
+            self.last_autosave = Instant::now();
+            let _ = self.map.autosave();
+        }
         let mut graphics_slot = self.graphics.borrow_mut();
         let Some(graphics) = graphics_slot.as_mut() else {
             return;
@@ -134,6 +173,9 @@ impl ApplicationHandler for App {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        if self.last_autosave.elapsed() >= AUTOSAVE_EVERY {
+            self.autosave();
+        }
         match self.next_redraw {
             Some(deadline) if deadline <= Instant::now() => {
                 self.next_redraw = None;

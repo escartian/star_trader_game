@@ -74,7 +74,7 @@ impl LocalSession {
 
     /// Select and load another game only after its save has been validated.
     pub fn load_path(&mut self, path: &Path) -> Result<Option<String>, String> {
-        let (authority, recovery) = game_server::Session::load(path)?;
+        let (authority, recovery) = crate::storage::load_session(path)?;
         self.replace_authority(authority);
         self.set_save_path(path.to_path_buf());
         if let Err(error) = self.persist_preferences() {
@@ -125,7 +125,6 @@ impl LocalSession {
         }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn autosave(&mut self) -> Result<(), String> {
         if !self.saves.autosave {
             if let Err(error) = self.persist_preferences() {

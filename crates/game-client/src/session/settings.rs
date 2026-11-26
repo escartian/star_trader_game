@@ -38,13 +38,13 @@ impl LocalSession {
 
     pub(super) fn persist_preferences(&self) -> Result<(), String> {
         if let Some(path) = &self.preferences_path {
-            self.preferences().save(path)?;
+            crate::storage::save_preferences(&self.preferences(), path)?;
         }
         Ok(())
     }
 
     pub(super) fn save_game(&mut self) -> Result<(), String> {
-        self.authority.save(&self.saves.path)?;
+        crate::storage::save_session(&self.authority, &self.saves.path)?;
         self.persist_preferences()
             .map_err(|error| format!("Game saved, but client settings could not be saved: {error}"))
     }
@@ -73,7 +73,6 @@ impl LocalSession {
         }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_path(&self) -> PathBuf {
         self.saves.path.clone()
     }

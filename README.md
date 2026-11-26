@@ -109,8 +109,13 @@ trunk serve
 # Or: trunk build --release
 ```
 
-This is an early browser port: it starts a fresh game and does not yet persist
-saves or preferences. See [platform status](docs/PLATFORM_STATUS.md).
+This is an early browser port. It opens the same main menu as desktop and
+keeps saves (three slots, each with a backup) and settings in the site's
+browser storage (`localStorage`, compressed: a 342 KB save takes 31 KB), so
+they survive reloads and later visits until the site's data is cleared. It
+autosaves when the tab is hidden and every minute. To put the build on a
+static site, run `tools/export_web.sh DEST_DIR`. See
+[platform status](docs/PLATFORM_STATUS.md).
 
 The initial path is `data/slot-1.json`. Normal desktop launches open the
 [main menu](docs/previews/main-menu.png): **Continue** (the last used game),

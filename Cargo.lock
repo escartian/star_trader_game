@@ -706,6 +706,7 @@ dependencies = [
  "egui-wgpu",
  "egui-winit",
  "fastrand",
+ "flate2",
  "game-core",
  "game-protocol",
  "game-server",

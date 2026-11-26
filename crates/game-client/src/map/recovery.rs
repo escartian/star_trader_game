@@ -2,11 +2,8 @@
 //! The menu keeps every session idle until the player picks a game; its pages
 //! are drawn by `main_menu`.
 use super::Map;
-use std::{
-    fs,
-    io::ErrorKind,
-    path::{Path, PathBuf},
-};
+use crate::storage;
+use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
 pub(super) struct SaveEntry {
@@ -24,11 +21,10 @@ pub(super) enum SaveStatus {
 
 impl SaveStatus {
     pub(super) fn inspect(path: &Path) -> Self {
-        let backup = backup_path(path);
-        if !path.exists() && !backup.exists() {
+        if !storage::has_save(path) {
             return Self::Empty;
         }
-        match game_server::Session::load(path) {
+        match storage::load_session(path) {
             Ok((mut session, _)) => {
                 let game_protocol::ServerMessage::SessionSnapshot { state, .. } =
                     session.handle(game_protocol::ClientCommand::GetSession)
@@ -64,7 +60,6 @@ pub(super) struct SaveRecovery {
 }
 
 impl SaveRecovery {
-    #[cfg(not(target_arch = "wasm32"))]
     fn new(selected: PathBuf, error: Option<String>) -> Self {
         let directory = selected
             .parent()
@@ -113,28 +108,15 @@ impl SaveRecovery {
     pub(super) fn delete(&mut self, path: &Path) -> Result<(), String> {
         // The confirmation UI names this exact path and its backup. Remove the
         // backup first, so a failure leaves the primary intact when possible.
-        for file in [backup_path(path), path.to_path_buf()] {
-            match fs::remove_file(&file) {
-                Ok(()) => {}
-                Err(error) if error.kind() == ErrorKind::NotFound => {}
-                Err(error) => return Err(format!("Could not delete {}: {error}", file.display())),
-            }
-        }
+        storage::delete_save(path)?;
         self.pending_delete = None;
         self.refresh();
         Ok(())
     }
 }
 
-fn backup_path(path: &Path) -> PathBuf {
-    let mut name = path.as_os_str().to_os_string();
-    name.push(".bak");
-    PathBuf::from(name)
-}
-
 impl Map {
     /// Present on normal desktop launch. No save is modified until a choice.
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn open_save_chooser(&mut self, selected: PathBuf, error: Option<String>) {
         self.save_recovery = Some(SaveRecovery::new(selected, error));
     }
@@ -143,6 +125,8 @@ impl Map {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::backup_path;
+    use std::fs;
 
     #[test]
     fn incompatible_save_stays_intact_until_explicit_deletion() {

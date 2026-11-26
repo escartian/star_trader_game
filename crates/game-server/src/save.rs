@@ -41,6 +41,29 @@ impl Session {
         serde_json::to_string_pretty(&data).map_err(|error| error.to_string())
     }
 
+    /// The save as compact JSON (no indentation), for size-limited storage
+    /// such as a browser's.
+    pub fn export_compact_json(&self) -> Result<String, String> {
+        let data = self.save_data();
+        data.validate()?;
+        serde_json::to_string(&data).map_err(|error| error.to_string())
+    }
+
+    /// A session from save JSON held in memory (a browser's storage), checked
+    /// and upgraded exactly as [`Self::load`] checks a file; there is no
+    /// backup to fall back on here, the caller keeps its own.
+    pub fn import_json(json: &str) -> Result<(Self, Option<String>), String> {
+        let (data, upgraded) = parse(json.as_bytes())?;
+        Ok((
+            Self {
+                systems: data.systems,
+                state: data.player,
+                economy: data.economy,
+            },
+            upgraded.map(String::from),
+        ))
+    }
+
     pub fn save(&self, path: impl AsRef<Path>) -> Result<(), String> {
         let path = path.as_ref();
         let data = self.save_data();
@@ -125,8 +148,16 @@ fn read(path: &Path) -> Result<(SaveData, Option<&'static str>), String> {
         return Err("Save exceeds the supported size limit".into());
     }
     let json = fs::read(path).map_err(|error| error.to_string())?;
+    parse(&json)
+}
+
+/// [`read`] for a save already in memory: upgraded, placed and validated.
+fn parse(json: &[u8]) -> Result<(SaveData, Option<&'static str>), String> {
+    if json.len() as u64 > MAX_SAVE_BYTES {
+        return Err("Save exceeds the supported size limit".into());
+    }
     let mut value: serde_json::Value =
-        serde_json::from_slice(&json).map_err(|error| error.to_string())?;
+        serde_json::from_slice(json).map_err(|error| error.to_string())?;
     let grid_battle = schema::upgrade(&mut value)?;
     let mut data: SaveData = serde_json::from_value(value).map_err(|error| error.to_string())?;
     // Reject malformed orbit definitions before `place` divides by a period

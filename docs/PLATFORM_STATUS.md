@@ -22,10 +22,19 @@ crates/game-client/Cargo.toml --target wasm32-unknown-unknown` and
 `cd crates/game-client && trunk build --release` succeeded. Serve the preview
 with `cd crates/game-client && trunk serve`.
 
-The prototype starts a fresh game. A local Chromium smoke check confirmed the
-canvas renders and the Menu control responds. Browser save/preferences
-persistence, other-browser compatibility and full interactive play checks
-remain open; a successful bundle is not browser/device acceptance.
+The browser build opens the main menu like desktop. Saves and settings go
+through `game-client/src/storage.rs`: files on desktop, `localStorage` in the
+browser (keys `star-trader/data/slot-N.json`, with `.bak` backups, saves
+zlib-compressed and base64-encoded by `storage/codec.rs`). It autosaves when
+the page is hidden and every 60 seconds. Codec round trips and damage
+detection are tested natively; the browser storage path itself has not been
+exercised in an automated browser test. A local Chromium smoke check earlier
+confirmed the canvas renders and the Menu control responds. Other-browser
+compatibility and full interactive play checks remain open; a successful
+bundle is not browser/device acceptance.
+
+`tools/export_web.sh DEST_DIR` builds a release bundle with relative paths and
+copies it into a static site (for example a portfolio's `games/star-trader/`).
 
 ## Rendering evidence
 

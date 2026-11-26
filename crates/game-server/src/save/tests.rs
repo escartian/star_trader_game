@@ -98,3 +98,22 @@ fn invalid_balances_and_failed_writes_cannot_replace_good_saves() {
     fs::write(&path, value.to_string()).unwrap();
     assert!(Session::load(&path).is_err());
 }
+
+#[test]
+fn compact_json_imports_to_the_same_session_and_rejects_damage() {
+    let mut session = Session::with_seed(42);
+    crate::test_support::legacy_depart(&mut session);
+    session.advance(4);
+    let compact = session.export_compact_json().unwrap();
+    assert!(
+        compact.len() < session.export_json().unwrap().len(),
+        "no indentation"
+    );
+    let (restored, notice) = Session::import_json(&compact).unwrap();
+    assert_eq!(notice, None);
+    assert_eq!(restored.systems, session.systems);
+    assert_eq!(restored.state, session.state);
+    assert_eq!(restored.economy, session.economy);
+    assert!(Session::import_json(&compact[..compact.len() / 2]).is_err());
+    assert!(Session::import_json(r#"{"schema_version":6}"#).is_err());
+}

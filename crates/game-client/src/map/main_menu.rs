@@ -249,7 +249,8 @@ fn title_page(
         if let Some(title) = current_part.and_then(super::songbook::title) {
             ui.small(format!("Now playing: {title}"));
         }
-        if wide_button(ui, Icon::Cancel, "Quit").clicked() {
+        // A browser tab is closed by the browser, not the game.
+        if !cfg!(target_arch = "wasm32") && wide_button(ui, Icon::Cancel, "Quit").clicked() {
             choice = Some(Choice::Quit);
         }
     });

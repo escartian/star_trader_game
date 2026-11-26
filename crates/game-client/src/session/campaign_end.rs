@@ -119,6 +119,7 @@ impl LocalSession {
 
     fn end_summary(&self, ui: &mut egui::Ui, end: CampaignEnd) {
         ui.label(RichText::new(end.label()).strong());
+        ui.label(format!("The career of {}", self.state.captain_title()));
         if let CampaignEnd::Lost { .. } = end
             && let Some(report) = self.state.navigation.last_combat.as_deref()
             && let Some(lost) = report
@@ -129,9 +130,10 @@ impl LocalSession {
             let foes = report.side(Side::Hostile).count();
             ui.label(format!(
                 "{} went down fighting {foes} hostile ship{}. With no other fleet left \
-                 to carry on, your trading house is finished.",
+                 to carry on, {}'s trading house is finished.",
                 lost.name,
-                if foes == 1 { "" } else { "s" }
+                if foes == 1 { "" } else { "s" },
+                self.state.captain_title()
             ));
         }
         ui.add_space(6.0);

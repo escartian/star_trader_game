@@ -186,8 +186,8 @@ impl LocalSession {
                 } else {
                     crate::seed::new_seed()
                 };
-                let setup = self.saves.setup;
-                match self.start_new_at(self.saves.path.clone(), seed, setup) {
+                let setup = self.saves.setup.clone();
+                match self.start_new_at(self.saves.path.clone(), seed, setup.clone()) {
                     Ok(()) => {
                         self.record(format!(
                             "{} Autosave uses the selected slot; choose another slot to preserve an older run.",

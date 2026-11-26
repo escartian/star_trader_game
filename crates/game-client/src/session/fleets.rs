@@ -85,11 +85,18 @@ impl LocalSession {
                 "Tick ships to split them into a new fleet. Co-located fleets can merge.\nCancel plotted courses before changing fleet membership.",
             );
         });
+        let flagship = self.state.flagship(game_server::LOCAL_PLAYER);
         for fleet in self.state.fleets.clone() {
             ui.group(|ui| {
                 ui.strong(&fleet.name);
+                // You command the flagship yourself; other fleets have hired captains.
+                let commander = if flagship == Some(fleet.id) {
+                    format!("{} (you), ", self.state.captain_title())
+                } else {
+                    String::new()
+                };
                 ui.small(format!(
-                    "{} captain · {} / 100 experience · {} · +1 armor per 25 experience, +1% escape per 20",
+                    "{commander}{} captain · {} / 100 experience · {} · +1 armor per 25 experience, +1% escape per 20",
                     fleet.captain.species.label(),
                     fleet.captain.experience,
                     fleet.captain.trait_summary(),

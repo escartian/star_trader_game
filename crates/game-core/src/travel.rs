@@ -117,6 +117,10 @@ pub struct TravelState {
     /// The player's selected species, independent of allegiance.
     #[serde(default)]
     pub player_species: crate::species::Species,
+    /// The player captain's chosen name, cleaned by [`clean_captain_name`];
+    /// empty means plain "Captain" (and older saves).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub captain_name: String,
     pub navigation: crate::navigation::NavigationState,
     pub movement_rules: crate::movement::MovementRules,
     pub tick: u64,
@@ -137,10 +141,46 @@ pub struct TravelState {
     pub jobs: crate::jobs::Jobs,
 }
 
+/// Longest captain name, in characters.
+pub const MAX_CAPTAIN_NAME_CHARS: usize = 24;
+
+/// A captain name as stored: control characters dropped, runs of whitespace
+/// collapsed to one space, trimmed and cut to [`MAX_CAPTAIN_NAME_CHARS`].
+pub fn clean_captain_name(raw: &str) -> String {
+    let words: Vec<&str> = raw
+        .split(|c: char| c.is_whitespace() || c.is_control())
+        .filter(|word| !word.is_empty())
+        .collect();
+    let joined: String = words
+        .join(" ")
+        .chars()
+        .take(MAX_CAPTAIN_NAME_CHARS)
+        .collect();
+    joined.trim_end().to_owned()
+}
+
+/// How game text addresses a captain named `name` (already cleaned):
+/// "Captain Vey", or plain "Captain" for an empty name.
+pub fn captain_title(name: &str) -> String {
+    if name.is_empty() {
+        "Captain".to_owned()
+    } else {
+        format!("Captain {name}")
+    }
+}
+
+impl TravelState {
+    /// How game text addresses the player (see [`captain_title`]).
+    pub fn captain_title(&self) -> String {
+        captain_title(&self.captain_name)
+    }
+}
+
 impl Default for TravelState {
     fn default() -> Self {
         Self {
             player_species: crate::species::Species::Human,
+            captain_name: String::new(),
             navigation: crate::navigation::NavigationState::default(),
             movement_rules: crate::movement::MovementRules::default(),
             tick: 0,

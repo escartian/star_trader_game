@@ -66,6 +66,9 @@ impl LocalSession {
                     .clicked();
                 });
             });
+            if self.state.navigation.run == 0 {
+                ui.label(format!("Welcome aboard, {}.", self.state.captain_title()));
+            }
             ui.label(hint);
             ui.collapsing("Pirate road introduction", |ui| {
                 ui.label(

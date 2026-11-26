@@ -22,6 +22,7 @@ fn port_residents_mix_each_run_and_survive_a_save() {
 #[test]
 fn every_setup_choice_becomes_a_session_rule() {
     let setup = GameSetup {
+        captain_name: "  Ilsa \t  Vey\n".into(),
         species: game_core::species::Species::Miri,
         galaxy: GalaxyConfig {
             systems: 12,
@@ -41,6 +42,12 @@ fn every_setup_choice_becomes_a_session_rule() {
         },
     };
     let session = game(&setup).unwrap();
+    assert_eq!(session.state.captain_name, "Ilsa Vey", "cleaned on start");
+    assert_eq!(session.state.captain_title(), "Captain Ilsa Vey");
+    assert_eq!(
+        super::combat_tests::reload(&session).state.captain_name,
+        "Ilsa Vey"
+    );
     assert_eq!(
         session.state.player_species,
         game_core::species::Species::Miri

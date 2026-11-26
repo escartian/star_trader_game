@@ -7,6 +7,9 @@ use std::collections::HashSet;
 
 impl TravelState {
     pub fn validate_navigation(&self, systems: &[StarSystem]) -> Result<(), String> {
+        if crate::travel::clean_captain_name(&self.captain_name) != self.captain_name {
+            return Err("Invalid captain name".into());
+        }
         if self.navigation.orders.len() > self.fleets.len()
             || self.navigation.encounters.len() > self.fleets.len()
             || u128::from(self.navigation.run)

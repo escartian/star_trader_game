@@ -41,8 +41,10 @@ impl DangerLevel {
 }
 
 /// Everything a new game can be set up with.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GameSetup {
+    /// The player captain's name as typed; cleaned when the game starts.
+    pub captain_name: String,
     pub species: Species,
     pub galaxy: GalaxyConfig,
     /// Credits in cents.
@@ -61,6 +63,7 @@ pub struct GameSetup {
 impl Default for GameSetup {
     fn default() -> Self {
         Self {
+            captain_name: String::new(),
             species: Species::Human,
             galaxy: GalaxyConfig::default(),
             starting_credits: Credits(100_000),
@@ -137,6 +140,7 @@ impl Session {
         let systems = game_core::generation::generate_galaxy_with(seed, setup.galaxy)?;
         let mut session = Self::from_generated(seed, rules, systems, movement)?;
         session.state.player_species = setup.species;
+        session.state.captain_name = game_core::travel::clean_captain_name(&setup.captain_name);
         session.state.fleets[0].captain.species = setup.species;
         session.state.campaign.run_limit = setup.run_limit;
         session.set_up_factions(seed, &setup.factions)?;

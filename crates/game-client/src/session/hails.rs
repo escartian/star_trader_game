@@ -192,9 +192,10 @@ impl LocalSession {
             hold.join(", ")
         };
         ui.label(format!(
-            "{} ({}) answers your hail: a {} with {hold}, hull {}/{hull}.",
+            "{} ({}) answers {}'s hail: a {} with {hold}, hull {}/{hull}.",
             hailed.name,
             temper.label.to_lowercase(),
+            self.state.captain_title(),
             ship.kind.label().to_lowercase(),
             hull.saturating_sub(ship.hull_damage),
         ));

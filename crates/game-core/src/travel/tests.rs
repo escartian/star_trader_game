@@ -84,3 +84,24 @@ fn extreme_coordinates_fail_without_overflow() {
         Err(TravelError::InvalidCoordinates)
     );
 }
+
+#[test]
+fn captain_names_are_cleaned_and_empty_reads_as_plain_captain() {
+    assert_eq!(clean_captain_name("  Ilsa\t\tVey \n"), "Ilsa Vey");
+    assert_eq!(clean_captain_name("A\u{7}B"), "A B");
+    let long = "x".repeat(40);
+    assert_eq!(
+        clean_captain_name(&long).chars().count(),
+        MAX_CAPTAIN_NAME_CHARS
+    );
+    // Cut at the limit, then trimmed: no trailing space.
+    let edge = format!("{} y", "x".repeat(MAX_CAPTAIN_NAME_CHARS - 1));
+    assert_eq!(
+        clean_captain_name(&edge),
+        "x".repeat(MAX_CAPTAIN_NAME_CHARS - 1)
+    );
+    let mut state = TravelState::default();
+    assert_eq!(state.captain_title(), "Captain");
+    state.captain_name = "Vey".into();
+    assert_eq!(state.captain_title(), "Captain Vey");
+}

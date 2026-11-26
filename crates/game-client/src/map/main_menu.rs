@@ -131,7 +131,7 @@ impl Map {
             },
             Some(Choice::StartNew(path)) => {
                 let seed = crate::seed::new_seed();
-                match self.session.start_new_at(path, seed, menu.setup) {
+                match self.session.start_new_at(path, seed, menu.setup.clone()) {
                     Ok(()) => {
                         let summary = crate::session::setup_summary(seed, &menu.setup);
                         self.notify(format!("{summary} This slot will save on close."));

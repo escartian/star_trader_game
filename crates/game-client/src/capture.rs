@@ -7,7 +7,12 @@ pub const DEFAULT_SIZE: (u32, u32) = (1024, 768);
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
 /// Renders the UI at `size` (pixels) and saves it as a PNG.
-pub async fn save(map: &mut Map, path: &Path, size: (u32, u32)) -> Result<(), Box<dyn Error>> {
+pub async fn save(
+    map: &mut Map,
+    path: &Path,
+    size: (u32, u32),
+    capture_view: &str,
+) -> Result<(), Box<dyn Error>> {
     let (width, height) = size;
     // Texture rows copy in multiples of 256 bytes; pad, then drop the padding.
     let row = width * 4;
@@ -24,19 +29,48 @@ pub async fn save(map: &mut Map, path: &Path, size: (u32, u32)) -> Result<(), Bo
     context.set_visuals(egui::Visuals::dark());
     context.style_mut(|style| style.animation_time = 0.0);
     let mut output = egui::FullOutput::default();
+    let mut species_button = None;
     // egui sizes new windows/areas over multiple frames; combine their texture uploads.
     for frame in 0..6 {
-        output.append(context.run(
+        let events = if capture_view == "menu-new-species" && (frame == 1 || frame == 2) {
+            species_button.map_or_else(Vec::new, |pos| {
+                vec![
+                    egui::Event::PointerMoved(pos),
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed: frame == 1,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ]
+            })
+        } else {
+            Vec::new()
+        };
+        let frame_output = context.run(
             egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(
                     egui::Pos2::ZERO,
                     egui::vec2(width as f32, height as f32),
                 )),
                 time: Some(f64::from(frame) / 60.0),
+                events,
                 ..Default::default()
             },
             |ctx| map.ui(ctx),
-        ));
+        );
+        if capture_view == "menu-new-species" && frame == 0 {
+            species_button = frame_output.shapes.iter().find_map(|shape| {
+                if let egui::epaint::Shape::Text(text) = &shape.shape
+                    && text.galley.job.text.starts_with("Captain species:")
+                {
+                    Some(text.pos + text.galley.size() / 2.0)
+                } else {
+                    None
+                }
+            });
+        }
+        output.append(frame_output);
     }
     let jobs = context.tessellate(output.shapes, output.pixels_per_point);
     let screen = egui_wgpu::ScreenDescriptor {

@@ -5,7 +5,10 @@ or **Kethari**. The entire name and description form one selectable option in
 the portrait menu. The species portraits are 512 px game textures derived from
 the original images in `assets/source/species/`. The selected portrait is larger than the
 menu entries. The choice sets the player character and starting fleet captain's
-species; the ships themselves have no species. Political allegiance is selected
+species; the ships themselves have no species. On phone-width screens, the
+captain button opens a centered, scrollable picker with all four portraits and
+full descriptions. A phone-sized capture of the open picker can be made with
+`--capture-view menu-new-species --capture-size 390x844`. Political allegiance is selected
 separately. Every inhabited port has residents of all four species, and NPC
 trader crews cycle through them regardless of the faction they serve. None of
 the current species is xenophobic. Each inhabited port starts with a

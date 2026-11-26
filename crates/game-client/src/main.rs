@@ -101,7 +101,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "dev-tools")]
     if let Some(path) = options.capture {
         map.prepare_capture(&options.capture_view)?;
-        return pollster::block_on(capture::save(&mut map, &path, options.capture_size));
+        return pollster::block_on(capture::save(
+            &mut map,
+            &path,
+            options.capture_size,
+            &options.capture_view,
+        ));
     }
     desktop::run(map)
 }

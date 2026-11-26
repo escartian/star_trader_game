@@ -140,12 +140,12 @@ impl Map {
                     menu.songbook_preview = Some(id);
                 }
             }
-            "menu-new" | "menu-load" | "menu-settings" => {
+            "menu-new" | "menu-new-species" | "menu-load" | "menu-settings" => {
                 self.menu_seed = 0;
                 self.open_save_chooser("data/slot-1.json".into(), None);
                 if let Some(menu) = &mut self.save_recovery {
                     menu.page = match view {
-                        "menu-new" => super::main_menu::MenuPage::NewGame,
+                        "menu-new" | "menu-new-species" => super::main_menu::MenuPage::NewGame,
                         "menu-load" => super::main_menu::MenuPage::Load,
                         _ => super::main_menu::MenuPage::Settings,
                     };
@@ -300,6 +300,7 @@ mod tests {
             "pursuing-galaxy",
             "pursuing-flight",
             "game-songbook",
+            "menu-new-species",
             "menu-songbook",
             "menu-songbook@cruise_a",
         ] {

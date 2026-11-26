@@ -33,6 +33,8 @@ mod morale_tests;
 pub mod terrain;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod upgrade_tests;
 mod validation;
 
 pub use ai::{auto_resolve, finish, play_turn};
@@ -193,6 +195,14 @@ impl Battle {
         }
         for setup in setups {
             setup.profile.validate(weapons)?;
+            if !super::gear::valid_fit(&setup.gear)
+                || setup
+                    .gear
+                    .iter()
+                    .any(|gear| !gear.fits(setup.kind, setup.profile.size))
+            {
+                return Err(format!("{} has incompatible fittings", setup.name));
+            }
             if setup.hull_damage >= setup.profile.hull {
                 return Err(format!("{} cannot fight while destroyed", setup.name));
             }
@@ -214,7 +224,12 @@ impl Battle {
                     profile: setup.profile.clone(),
                     starting_damage: setup.hull_damage,
                     damage: setup.hull_damage,
-                    shields: setup.profile.shields,
+                    shields: setup.profile.shields
+                        + if setup.gear.contains(&Gear::ShieldArray) {
+                            super::gear::SHIELD_ARRAY_POINTS
+                        } else {
+                            0
+                        },
                     at,
                     gear: setup.gear.clone(),
                     jammed: false,

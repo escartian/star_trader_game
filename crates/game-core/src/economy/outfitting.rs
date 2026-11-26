@@ -1,7 +1,10 @@
 //! Buying anti-piracy gear and hiring escorts at a market (`combat::gear`).
 //! The payment goes to the market's treasury, like repairs and fuel.
 use super::{Credits, Economy, EconomyError};
-use crate::{combat::gear::Gear, travel::Ship};
+use crate::{
+    combat::gear::{FREIGHTER_CARGO_UNITS, Gear, SCOUT_RANGE_LY},
+    travel::Ship,
+};
 
 impl Economy {
     /// Today's price of `gear`.
@@ -19,8 +22,39 @@ impl Economy {
         if ship.gear.contains(&gear) {
             return Err(EconomyError::AlreadyFitted);
         }
+        let size = self
+            .rules
+            .ship_catalog
+            .spec(ship.kind)
+            .ok_or(EconomyError::IncompatibleGear)?
+            .combat
+            .size;
+        if !gear.fits(ship.kind, size) {
+            return Err(EconomyError::IncompatibleGear);
+        }
+        let cargo = ship
+            .cargo_capacity
+            .checked_add(if gear == Gear::FreighterRacks {
+                FREIGHTER_CARGO_UNITS
+            } else {
+                0
+            })
+            .ok_or(EconomyError::ArithmeticOverflow)?;
+        let range = ship
+            .range_ly
+            .checked_add(if gear == Gear::ScoutDrive {
+                SCOUT_RANGE_LY
+            } else {
+                0
+            })
+            .ok_or(EconomyError::ArithmeticOverflow)?;
+        if range > 1_000_000 {
+            return Err(EconomyError::ArithmeticOverflow);
+        }
         let cost = self.gear_price(gear);
         self.pay_market(ship, cost)?;
+        ship.cargo_capacity = cargo;
+        ship.range_ly = range;
         ship.gear.push(gear);
         Ok(cost)
     }

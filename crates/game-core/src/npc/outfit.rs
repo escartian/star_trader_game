@@ -23,7 +23,7 @@ impl Economy {
     pub(super) fn outfit(&mut self, trader: &mut Trader) -> Option<String> {
         let start = self.rules.npc_starting_credits.0;
         let mut news = Vec::new();
-        let wanted = Gear::ALL
+        let wanted = Gear::NPC
             .into_iter()
             .find(|gear| !trader.state.ships[0].gear.contains(gear));
         if let Some(gear) = wanted

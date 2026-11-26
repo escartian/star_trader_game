@@ -124,7 +124,17 @@ impl TravelState {
             for id in &fleet.ships {
                 let ship = self.ship_mut(*id)?;
                 let free = u64::from(ship.cargo_capacity).saturating_sub(ship.cargo_used());
-                let mined = per_ship.min(u32::try_from(free).unwrap_or(u32::MAX));
+                let bonus = if ship
+                    .gear
+                    .contains(&crate::combat::gear::Gear::ProspectorDrill)
+                {
+                    crate::combat::gear::PROSPECTOR_ORE_PER_RUN
+                } else {
+                    0
+                };
+                let mined = per_ship
+                    .saturating_add(bonus)
+                    .min(u32::try_from(free).unwrap_or(u32::MAX));
                 ship.cargo[Commodity::Ore.index()] += mined;
                 ore += mined;
             }

@@ -55,8 +55,9 @@ chooses the split:
 | Largest hold first | the largest hold | the smallest first |
 | Selected ship only | only the selected ship | only the selected ship |
 
-Upgrades (hold, gear) and repairs stay per ship: they apply to the selected
-ship. The event log names how many units each ship took or gave.
+Upgrades and repairs stay per ship: the hold upgrade and repairs apply to the
+selected ship, and gear is fitted from each ship's own row under *Ship
+upgrades* (see [combat](COMBAT.md#ship-upgrades-and-escorts)). The event log names how many units each ship took or gave.
 
 ## Living markets and inflation
 

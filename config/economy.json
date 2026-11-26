@@ -115,5 +115,17 @@
     "patrol": 40000,
     "prospector": 25000
   },
+  "gear_prices": {
+    "afterburners": 50000,
+    "point_defense": 70000,
+    "scout_drive": 80000,
+    "freighter_racks": 90000,
+    "patrol_targeting": 120000,
+    "prospector_drill": 100000,
+    "evasion_jets": 60000,
+    "shield_array": 80000,
+    "armored_bulkheads": 100000,
+    "escort": 25000
+  },
   "npc_raid_chance_percent": 4
 }

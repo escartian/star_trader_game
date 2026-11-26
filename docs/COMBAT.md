@@ -328,7 +328,7 @@ they stalk (see above). Over 400 runs on four seeds the two starting traders met
 15–32 random raids and 22–42 band strikes, and none was destroyed: bands that
 could win easily take cargo instead, and scout pairs rarely beat a freighter.
 
-## Anti-piracy gear and escorts
+## Ship upgrades and escorts
 
 Gear and escorts are bought in the Market window (`game-core/src/combat/gear.rs`,
 prices in the economy rules' `gear_prices`, at today's price level). The payment
@@ -338,9 +338,22 @@ goes to that market's treasury.
 | --- | --- | --- | --- |
 | Afterburners | one ship | +1 move each battle turn; +15 points on the Evade chance when every ship in the fleet has them (at most 90%) | 500 cr |
 | Point defense | one ship | shots at the ship have 15 points less chance to hit (stacks with debris cover) | 700 cr |
+| Scout jump drive | Scout | +4 light-years of jump range | 800 cr |
+| Freighter cargo racks | Freighter | +20 cargo spaces; can stack with the first hold upgrade | 900 cr |
+| Patrol targeting computer | Patrol | +10 points to shot accuracy | 1200 cr |
+| Prospector drill | Prospector | +1 ore per ship per mining run | 1000 cr |
+| Evasion jets | small ships (Scout) | shots at the ship have 10 points less chance to hit | 600 cr |
+| Shield array | medium ships (Freighter, Patrol) | +10 starting shields in battle | 800 cr |
+| Armored bulkheads | large ships (Prospector) | +3 armor against hull hits | 1000 cr |
 | Escort | a fleet | a patrol ship joins every battle the fleet fights, on its side, for 10 runs; you command it like your own ships. If it is destroyed the contract ends. Hiring again renews it to 10 runs | 250 cr |
 
-Each item is fitted once per ship and stays fitted. A battle never grows beyond
+Each item is fitted once per ship and stays fitted. The Market's *Ship
+upgrades* section has a row for every ship of the selected ship's fleet at that
+port (the selected ship first), each listing only the upgrades that fit its
+model and size, so every ship is outfitted on its own; unaffordable ones are
+disabled with the price. Size follows the ship catalog, so another model of the
+same size can use the same size fitting. The Fleets roster shows each ship's
+fitted gear as glyphs (hover for what each does). A battle never grows beyond
 16 ships, so an escort stays out of a battle that is already full.
 
 **NPC traders arm themselves** (`game-core/src/npc/outfit.rs`). At a market,

@@ -2,7 +2,7 @@
 //! asteroids), fire one volley along a clear line of fire, withdraw from its
 //! own edge, or (for the player) surrender. Each action validates first and
 //! changes nothing when rejected.
-use super::{Battle, BattleError, COVER_PERCENT, Hex};
+use super::{Battle, BattleError, COVER_PERCENT, Hex, Unit};
 use crate::combat::{
     CombatCatalog, WeaponSpec,
     engagement::{ShotRecord, Side, adjusted_hit_chance, apply_hit},
@@ -10,8 +10,18 @@ use crate::combat::{
 };
 use crate::combat::{
     WeaponEffect,
-    gear::{Gear, POINT_DEFENSE_PERCENT},
+    gear::{
+        BULKHEAD_ARMOR_POINTS, EVASION_JETS_PERCENT, Gear, POINT_DEFENSE_PERCENT, TARGETING_PERCENT,
+    },
 };
+
+pub(super) fn defense_profile(unit: &Unit) -> crate::combat::CombatProfile {
+    let mut profile = unit.profile.clone();
+    if unit.has(Gear::ArmoredBulkheads) {
+        profile.armor = profile.armor.saturating_add(BULKHEAD_ARMOR_POINTS);
+    }
+    profile
+}
 
 impl Battle {
     /// Whether an active ship other than `except` stands on `hex`.
@@ -106,7 +116,22 @@ impl Battle {
             WeaponEffect::Steady => 1,
             _ => from.at.distance(to.at),
         };
-        adjusted_hit_chance(weapon, to.profile.engine, distance, cover + defense)
+        let targeting = if from.has(Gear::PatrolTargeting) {
+            TARGETING_PERCENT
+        } else {
+            0
+        };
+        let jets = if to.has(Gear::EvasionJets) {
+            -EVASION_JETS_PERCENT
+        } else {
+            0
+        };
+        adjusted_hit_chance(
+            weapon,
+            to.profile.engine,
+            distance,
+            cover + defense + targeting + jets,
+        )
     }
 
     /// Moves the acting ship to `to`, paying one point per hex step along the
@@ -166,7 +191,8 @@ impl Battle {
                 let hit = rng.percent() < chance;
                 let (shield_damage, hull_damage) = if hit {
                     let unit = &mut self.units[target];
-                    apply_hit(&mut unit.shields, &mut unit.damage, &unit.profile, weapon)
+                    let profile = defense_profile(unit);
+                    apply_hit(&mut unit.shields, &mut unit.damage, &profile, weapon)
                 } else {
                     (0, 0)
                 };
@@ -220,8 +246,9 @@ impl Battle {
                 };
                 for other in beside {
                     let unit = &mut self.units[other];
+                    let profile = defense_profile(unit);
                     let (shield_damage, hull_damage) =
-                        apply_hit(&mut unit.shields, &mut unit.damage, &unit.profile, &wave);
+                        apply_hit(&mut unit.shields, &mut unit.damage, &profile, &wave);
                     let destroyed = hull_damage > 0 && !self.units[other].alive();
                     self.units[me].hull_dealt += hull_damage;
                     self.current_round().push(ShotRecord {

@@ -173,6 +173,8 @@ pub enum EconomyError {
     AlreadyChartered,
     /// That gear is already fitted to this ship.
     AlreadyFitted,
+    /// The fitting is restricted to another hull model or size.
+    IncompatibleGear,
     /// This port's faction is hostile to you (`factions::Tier::Hostile`).
     PortClosed,
     /// The port's faction does not want you: there is no fine to pay.
@@ -199,6 +201,7 @@ impl std::fmt::Display for EconomyError {
             Self::NoDamage => "This ship has no hull damage to repair.",
             Self::AlreadyChartered => "This port's charter has already been sold.",
             Self::AlreadyFitted => "This ship already has that gear fitted.",
+            Self::IncompatibleGear => "This upgrade does not fit this ship model or size.",
             Self::PortClosed => {
                 "This port's faction is hostile to you, or wants you for your crimes, and refuses your business."
             }

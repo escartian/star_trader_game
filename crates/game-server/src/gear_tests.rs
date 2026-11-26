@@ -16,6 +16,17 @@ use game_core::{
 };
 use game_protocol::{ClientCommand, ServerMessage};
 
+fn ship_as(session: &mut Session, kind: ShipKind) {
+    let spec = session.economy.rules.ship_catalog.spec(kind).unwrap();
+    let ship = &mut session.state.ships[0];
+    ship.kind = kind;
+    ship.base_cargo_capacity = spec.cargo_capacity;
+    ship.cargo_capacity = spec.cargo_capacity;
+    ship.fuel_capacity = spec.fuel_capacity;
+    ship.fuel = spec.fuel_capacity;
+    ship.range_ly = spec.range_ly;
+}
+
 fn fit(session: &mut Session, gear: Gear) -> ServerMessage {
     session.handle(ClientCommand::FitGear {
         ship: ShipId(1),
@@ -66,6 +77,92 @@ fn gear_is_fitted_once_at_a_market_and_paid_into_its_treasury() {
         ServerMessage::CommandRejected(_)
     ));
     reload(&session);
+}
+
+#[test]
+fn model_upgrades_change_only_their_ship_and_reject_incompatible_hulls() {
+    let cases = [
+        (ShipKind::Scout, Gear::ScoutDrive),
+        (ShipKind::Freighter, Gear::FreighterRacks),
+        (ShipKind::Patrol, Gear::PatrolTargeting),
+        (ShipKind::Prospector, Gear::ProspectorDrill),
+    ];
+    for (kind, gear) in cases {
+        let mut session = Session::default();
+        ship_as(&mut session, kind);
+        session.economy.credits = Credits(1_000_000);
+        let before = session.state.ships[0].clone();
+        let wallet = session.economy.credits;
+        let wrong = if gear == Gear::ScoutDrive {
+            Gear::FreighterRacks
+        } else {
+            Gear::ScoutDrive
+        };
+        assert!(matches!(
+            fit(&mut session, wrong),
+            ServerMessage::CommandRejected(_)
+        ));
+        assert_eq!(session.state.ships[0], before);
+        assert_eq!(session.economy.credits, wallet);
+        ok(fit(&mut session, gear));
+        let ship = &session.state.ships[0];
+        assert!(ship.gear.contains(&gear));
+        assert_eq!(
+            ship.range_ly,
+            before.range_ly + u32::from(gear == Gear::ScoutDrive) * 4
+        );
+        assert_eq!(
+            ship.cargo_capacity,
+            before.cargo_capacity + u32::from(gear == Gear::FreighterRacks) * 20
+        );
+        assert!(session.economy.credits < wallet);
+        reload(&session);
+    }
+}
+
+#[test]
+fn size_upgrades_fit_only_their_size_and_survive_saves() {
+    for (kind, gear) in [
+        (ShipKind::Scout, Gear::EvasionJets),
+        (ShipKind::Freighter, Gear::ShieldArray),
+        (ShipKind::Prospector, Gear::ArmoredBulkheads),
+    ] {
+        let mut session = Session::default();
+        ship_as(&mut session, kind);
+        session.economy.credits = Credits(1_000_000);
+        ok(fit(&mut session, gear));
+        let restored = reload(&session);
+        assert_eq!(restored.state.ships[0].gear, [gear]);
+        assert!(matches!(
+            fit(&mut session, Gear::EvasionJets),
+            ServerMessage::CommandRejected(_)
+        ));
+    }
+}
+
+#[test]
+fn freighter_racks_stack_with_the_first_hold_upgrade() {
+    let mut session = Session::default();
+    session.economy.credits = Credits(1_000_000);
+    let base = session.state.ships[0].cargo_capacity;
+    ok(fit(&mut session, Gear::FreighterRacks));
+    ok(session.handle(ClientCommand::UpgradeHold {
+        ship: ShipId(1),
+        expected_revision: session.state.revision,
+    }));
+    assert_eq!(session.state.ships[0].cargo_capacity, base + 40);
+    assert_eq!(reload(&session).state.ships[0].cargo_capacity, base + 40);
+}
+
+#[test]
+fn saves_reject_incompatible_fittings_and_missing_drive_range() {
+    let mut session = Session::default();
+    session.state.ships[0].gear.push(Gear::ScoutDrive);
+    assert!(session.export_json().is_err());
+    session.state.ships[0].gear.clear();
+    ship_as(&mut session, ShipKind::Scout);
+    session.state.ships[0].gear.push(Gear::ScoutDrive);
+    assert!(session.export_json().is_err());
 }
 
 #[test]
@@ -158,7 +255,7 @@ fn wealthy_traders_arm_themselves_and_hire_escorts() {
     for _ in 0..12 {
         execute_quiet_run(&mut session);
         let trader = &session.economy.traders[0];
-        if trader.state.ships[0].gear.len() == Gear::ALL.len() && trader.escort_runs > 0 {
+        if trader.state.ships[0].gear.len() == Gear::NPC.len() && trader.escort_runs > 0 {
             armed = true;
             break;
         }

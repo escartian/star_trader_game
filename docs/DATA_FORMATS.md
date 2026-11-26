@@ -239,13 +239,18 @@ stores the stalking band in `band` (its ships as `hostiles`) and the trader in
 paid by the trader on victory). Both must name an existing trader. NPC traders record
 `last_approach` (the run of their last approach, at most the current run).
 `navigation.piracies` counts demands and attacks. Ships (player and NPC) may
-list fitted `gear` (`afterburners`, `point_defense`, each at most once), and so
+list fitted `gear` (universal afterburners and point defense; model-specific
+`scout_drive`, `freighter_racks`, `patrol_targeting`, `prospector_drill`; and
+size-specific `evasion_jets`, `shield_array`, `armored_bulkheads`, each at most
+once), and so
 may battle units; `navigation.escorts` holds hired escorts (`fleet`, `runs_left`
 1–10, one per existing fleet), NPC traders `escort_runs` (0–10), and a hailed
 trader's contact its `gear` and `escort` (then `hostiles` adds the escort's
 patrol hull). An open battle may include one unowned player-side escort only
 while that fleet's contract runs. Economy rules add `gear_prices`
-(`afterburners`, `point_defense`, `escort`), with defaults for older files. A raider band may record
+(`afterburners`, `point_defense`, the seven new upgrades, `escort`), with defaults
+for older files. The model and size restrictions are checked on purchase and
+save load; Scout range and Freighter capacity reflect their fitted upgrades. A raider band may record
 `stalking` (an NPC trader's ID, which must exist; never together with
 `hunting`), and its `cooldown` may reach 12 after striking a trader. These fields are additive and
 omitted when empty.

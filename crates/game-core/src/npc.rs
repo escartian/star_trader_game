@@ -105,6 +105,10 @@ impl Economy {
                 || ship.cargo_used() > u64::from(ship.cargo_capacity)
                 || ship.upgraded
                 || !crate::combat::gear::valid_fit(&ship.gear)
+                || ship
+                    .gear
+                    .iter()
+                    .any(|gear| !crate::combat::gear::Gear::NPC.contains(gear))
                 || ship.cargo_capacity != ship.base_cargo_capacity
                 || !trader.state.navigation.encounters.is_empty()
                 || self

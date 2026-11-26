@@ -135,6 +135,7 @@ impl LocalSession {
                                 Some(ship.hull_damage),
                             );
                         }
+                        super::outfitting::fitted_gear(ui, &ship);
                     });
                 }
                 let selected: Vec<_> = fleet

@@ -1,4 +1,5 @@
 use super::SaveData;
+use game_core::combat::gear::{FREIGHTER_CARGO_UNITS, Gear, SCOUT_RANGE_LY};
 use game_core::travel::PlayerId;
 use std::collections::HashSet;
 
@@ -33,8 +34,24 @@ impl SaveData {
                     self.economy.rules.hold_upgrade_capacity
                 } else {
                     0
+                }
+                + if ship.gear.contains(&Gear::FreighterRacks) {
+                    FREIGHTER_CARGO_UNITS
+                } else {
+                    0
                 };
-            if ship.cargo_capacity != capacity || ship.cargo_used() > u64::from(capacity) {
+            let Some(spec) = self.economy.rules.ship_catalog.spec(ship.kind) else {
+                return Err("Invalid owned ship model".into());
+            };
+            if ship.cargo_capacity != capacity
+                || ship.cargo_used() > u64::from(capacity)
+                || (ship.gear.contains(&Gear::ScoutDrive)
+                    && ship.range_ly != spec.range_ly + SCOUT_RANGE_LY)
+                || ship
+                    .gear
+                    .iter()
+                    .any(|gear| !gear.fits(ship.kind, spec.combat.size))
+            {
                 return Err("Invalid ship cargo".into());
             }
         }

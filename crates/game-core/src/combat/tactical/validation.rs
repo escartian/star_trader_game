@@ -44,12 +44,22 @@ impl Battle {
                 || unit.starting_damage >= unit.profile.hull
                 || unit.damage < unit.starting_damage
                 || unit.damage > unit.profile.hull
-                || unit.shields > unit.profile.shields
+                || unit.shields
+                    > unit.profile.shields
+                        + if unit.has(crate::combat::gear::Gear::ShieldArray) {
+                            crate::combat::gear::SHIELD_ARRAY_POINTS
+                        } else {
+                            0
+                        }
                 || unit.hits > unit.shots
                 || !self.board.contains(unit.at)
                 || self.blocked(unit.at)
                 || (unit.side == Side::Hostile && unit.ship.is_some())
                 || !crate::combat::gear::valid_fit(&unit.gear)
+                || unit
+                    .gear
+                    .iter()
+                    .any(|gear| !gear.fits(unit.kind, unit.profile.size))
                 || (unit.active() && !hexes.insert(unit.at))
             {
                 return Err(format!("Invalid battle state for {}", unit.name));

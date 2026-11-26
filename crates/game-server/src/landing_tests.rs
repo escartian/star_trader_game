@@ -5,8 +5,9 @@ use super::{
 };
 use game_core::{
     BodyId, SystemId,
+    combat::gear::Gear,
     economy::Commodity,
-    fleet::FleetId,
+    fleet::{FleetId, ShipKind},
     movement::MoveTarget,
     navigation::{NavigationError, NavigationEvent},
     travel::{Location, ShipId},
@@ -169,6 +170,46 @@ fn a_waiting_fleet_on_an_asteroid_mines_ore_until_its_holds_are_full() {
         .expect("asteroids have a surface");
     assert_eq!(mined[0], surface.ore_per_ship(2));
     assert_eq!(*mined.last().unwrap(), 0, "full holds mine nothing");
+    reload(&session);
+}
+
+#[test]
+fn a_prospector_drill_adds_one_ore_per_run_at_a_moon() {
+    let mut session = orbiting(MOON);
+    let spec = session
+        .economy
+        .rules
+        .ship_catalog
+        .spec(ShipKind::Prospector)
+        .unwrap();
+    let ship = &mut session.state.ships[0];
+    ship.kind = ShipKind::Prospector;
+    ship.base_cargo_capacity = spec.cargo_capacity;
+    ship.cargo_capacity = spec.cargo_capacity;
+    ship.fuel_capacity = spec.fuel_capacity;
+    ship.fuel = spec.fuel_capacity;
+    ship.range_ly = spec.range_ly;
+    ship.gear.push(Gear::ProspectorDrill);
+    land(&mut session);
+    let revision = session.state.revision;
+    succeed(
+        &mut session,
+        ClientCommand::HoldFleet {
+            fleet: FleetId(1),
+            expected_revision: revision,
+        },
+    );
+    run(&mut session);
+    let surface = session.systems[0]
+        .bodies
+        .iter()
+        .find(|body| body.id == MOON)
+        .and_then(|body| body.surface.as_ref())
+        .unwrap();
+    assert_eq!(
+        session.state.ships[0].cargo[Commodity::Ore.index()],
+        surface.ore_per_ship(1) + 1
+    );
     reload(&session);
 }
 

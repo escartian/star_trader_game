@@ -22,8 +22,8 @@ Richer surfaces are riskier places to sit and mine. The info card shows a
 selected moon's or asteroid's biome, danger and yield. Saves from before
 surfaces get the ones a new game would give them when they load.
 
-Select a planet on the map, plot a course and Advance. At the body, open **Trade**
-or **Fleets** (shipyard). Commerce uses the selected ship's
+Select a planet on the map, plot a course and Advance. At the body, open the
+Market window's **Trade** or **Shipyard** tab. Commerce uses the selected ship's
 actual location, not the body or system being inspected. Every market is identified
 by the pair `(system ID, body ID)`; IDs scoped to different systems never share stock.
 
@@ -56,12 +56,13 @@ chooses the split:
 | Selected ship only | only the selected ship | only the selected ship |
 
 Upgrades and repairs stay per ship: the hold upgrade and repairs apply to the
-selected ship, and gear is fitted from each ship's own row under *Ship
-upgrades* (see [combat](COMBAT.md#ship-upgrades-and-escorts)). The event log names how many units each ship took or gave.
+selected ship. Fit gear from each ship's row under *Ship upgrades* on the
+Shipyard tab (see [combat](COMBAT.md#ship-upgrades-and-escorts)). The event log
+names how many units each ship took or gave.
 
 ## Living markets and inflation
 
-Markets are not static (`game-core/src/economy/dynamics.rs`). A market's future
+Markets are not static (`crates/game-core/src/economy/dynamics.rs`). A market's future
 depends only on its current state and recent past; nothing remembers how it was
 founded. Each tick:
 

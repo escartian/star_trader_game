@@ -197,7 +197,7 @@ names and reports are written in that voice.
 Rules exist from the start; controls appear when they become relevant, each with
 a one-line guide card.
 
-As built (`game-core/src/progress.rs`): the host records milestones after each
+As built (`crates/game-core/src/progress.rs`): the host records milestones after each
 command and the client shows a dismissible guide card for each. Since the
 unlocks were dropped at the user's request, every control is shown from the
 first run; the milestones below only time the tip cards. Thresholds were rescaled for the

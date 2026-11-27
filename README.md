@@ -30,8 +30,8 @@ browser build compiles the same client to WebAssembly.
   profitable cargo at each end, and still stops for contacts.
 - Turn-based battles against raiders on a single-layer hex board with asteroids
   (impassable, block fire) and debris (cover)
-  and 3D ship models, fought to a finish (engine initiative, movement, high
-  ground, weapon ranges, withdrawal) that you command or auto-resolve, with a
+  and 3D ship models, fought to a finish (engine initiative, movement,
+  weapon ranges, withdrawal) that you command or auto-resolve, with a
   saved combat report, destroyed ships, salvage, raider bounties and paid hull
   repairs.
 - Roaming raider bands in every system but home that hunt fleets in the open,
@@ -39,7 +39,8 @@ browser build compiles the same client to WebAssembly.
   dock or land to hide, outrun them, flee home or fight them for the bounty.
 - Four political factions and a separate Human, Miri, Auralith or Kethari
   starting captain species choice at setup. Fleets have captain traits and
-  experience; markets and traders mix species. Factions have territory,
+  experience; the player captain transfers to a surviving fleet if theirs is
+  lost. Markets and traders mix species. Factions have territory,
   alliances and rivalries; standing sets prices at
   its ports, and piracy, raider hunting and trade move it (Menu → Factions).
   Piracy makes you wanted: faction police patrols stop your fleets (comply and
@@ -169,11 +170,12 @@ Changing the slot changes the autosave destination; it does not load that slot.
 Use Continue to load it. Closing or starting fresh in a selected slot can replace
 that slot, with its previous valid snapshot retained as backup.
 
-Open the market's **Shipyard** tab (at a port with hulls for sale) to buy or sell ships, and **Fleets** to split checked members, merge co-located
+Open the market's **Shipyard** tab to buy or sell ships and fit upgrades, even
+when no hulls are in stock. Open **Fleets** to split checked members, merge co-located
 fleets or transfer cargo. Travel moves every ship in the selected fleet and checks
 each member’s fuel/range. Ships appear beside visited bodies/trade ports and at their deep-space positions.
-Rocky/gas planets have markets at orbital berths; detailed landing/collision
-volumes remain planned.
+Rocky/gas planets have markets at orbital berths. Courses avoid the current
+collision volumes around stars and bodies.
 
 Local-system distances, boundaries and waypoint inputs use **AU**. Galaxy distances
 remain light-years; saved simulation coordinates stay in integer kilometers.

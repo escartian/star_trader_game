@@ -98,7 +98,7 @@ map. A chase curves (`navigation::chase`): a flagship flying an in-system
 pursuit, and a band or patrol hunting your fleet, glide through each of their
 last run's 16 chase steps (`navigation.chase_trail`, and each band's or
 patrol's `trail`) instead of straight from start to end
-(`game-client/src/session/motion_paths.rs`). The glide is display-only;
+(`crates/game-client/src/session/motion_paths.rs`). The glide is display-only;
 camera-follow, saves and rules use
 the authoritative positions, and captures (animations off) show final positions.
 Existing paid voyages from older saves progress on navigation runs too.
@@ -207,7 +207,7 @@ dashed amber line from your flagship:
   police strike your fleets). A quarry already in reach is
   contacted immediately.
 - **In the quarry's system** the flagship flies a pursuit curve
-  (`game-core/src/pursuit/curve.rs`, `navigation/chase.rs`): it holds (a Wait
+  (`crates/game-core/src/pursuit/curve.rs`, `navigation/chase.rs`): it holds (a Wait
   order) while the run plays out, and when the run is resolved it flies up to a
   run's distance after the quarry, split into 16 steps; at each step it heads
   for where the quarry will be at the end of that step (taken to move straight
@@ -265,7 +265,7 @@ go**. Attacking is a crime with the patrol's faction, as when you resist a
 stop; letting it go changes nothing.
 
 **Pursuit suite** (fleet software, 900 cr, bought once per fleet in the
-Market's *Fleet* row; `game-core/src/fleet/software.rs`): while that fleet
+Market's *Fleet* row; `crates/game-core/src/fleet/software.rs`): while that fleet
 pursues, every course it plots takes 65% of the usual time (at least one
 tick), and its in-system chase covers 1/0.65 of the usual distance per run.
 Measured over 48 chases of the four starting traders (1–12 warm-up runs):

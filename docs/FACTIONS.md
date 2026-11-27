@@ -4,7 +4,7 @@ Four political powers divide new galaxies: the **Federation**, **Empire**,
 **Republic** and **Alliance**. They hold territory, they are allied with or
 rival to each other, and each keeps a standing with you that sets your terms at
 its ports. Human, Miri and Auralith residents live across all four powers;
-species is chosen separately and does not determine allegiance. Rules live in `game-core/src/factions*`; definitions are JSON content
+species is chosen separately and does not determine allegiance. Rules live in `crates/game-core/src/factions*`; definitions are JSON content
 in `config/factions.json`.
 
 ## Setting up a game
@@ -41,7 +41,7 @@ spreads an influence that fades out at 14 ly; a point belongs to the faction
 whose stars' summed influence there is strongest and strong enough, so a lone
 holding reaches about ten light-years, holdings up to about 20 ly apart merge
 into one region, borders between rivals run near the midway line, and
-independent systems cut into the region (`game-client/src/map/territory.rs`;
+independent systems cut into the region (`crates/game-client/src/map/territory.rs`;
 outlines are traced on a 1.25 ly grid and cached until ownership changes). The
 shield button in the galaxy map's button column hides or shows the
 territories; the choice is saved with the display settings. These outlines show ownership only and do not
@@ -112,7 +112,7 @@ and its prices already include them.
 
 ## The law: wanted status and police
 
-Rules live in `game-core/src/factions/wanted.rs` and `game-core/src/police*`.
+Rules live in `crates/game-core/src/factions/wanted.rs` and `crates/game-core/src/police*`.
 
 **Wanted status.** Each crime in a faction's space adds its `wanted_runs` to
 your wanted status with it (at most 200 runs); every navigation run takes one

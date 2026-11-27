@@ -13,13 +13,13 @@ report opens after each fight and survives saves.
 - Per-ship state: `hull_damage` only. Shields recharge before every engagement,
   so they are not saved. A ship whose damage reaches its hull is destroyed;
   saves reject ships at or beyond that value.
-- Battles: `game-core/src/combat/tactical.rs`, `tactical/board.rs` (hexes,
+- Battles: `crates/game-core/src/combat/tactical.rs`, `tactical/board.rs` (hexes,
   ranges, deployment), `tactical/terrain.rs` (asteroids, debris, paths, lines
   of fire), `tactical/actions.rs` and `tactical/ai.rs`; shared damage
   rules: `combat/engagement.rs` (all pure); raider contacts and applying results:
-  `game-core/src/navigation/hostile.rs`; battles in progress:
-  `game-core/src/navigation/battle.rs`; the battle window:
-  `game-client/src/battle*`, `session/battle.rs` and `session/battle_controls.rs`.
+  `crates/game-core/src/navigation/hostile.rs`; battles in progress:
+  `crates/game-core/src/navigation/battle.rs`; the battle window:
+  `crates/game-client/src/battle*`, `session/battle.rs` and `session/battle_controls.rs`.
 
 Units are abstract points. Engine is a 1–10 rating for evasion and initiative.
 
@@ -58,7 +58,7 @@ weapons that need it. These numbers are first-pass balance.
 
 ## Resolution rules
 
-Fights are turn-based battles on a hex board (`game-core/src/combat/tactical.rs`,
+Fights are turn-based battles on a hex board (`crates/game-core/src/combat/tactical.rs`,
 pure and deterministic). One seed is drawn from the saved navigation RNG and
 stored in the report, so the same seed and actions replay the same battle.
 
@@ -257,7 +257,7 @@ After the fight:
 ## Roaming raider bands
 
 Raiders also roam as persistent bands you can see coming
-(`game-core/src/navigation/raiders.rs`):
+(`crates/game-core/src/navigation/raiders.rs`):
 
 - Each system except the home system starts with one band: two scouts, or a
   patrol ship leading a scout one time in three. Bands are saved with the world
@@ -270,14 +270,14 @@ Raiders also roam as persistent bands you can see coming
 - A band moves up to 100 million km per run (half a fleet's local speed),
   routing around planets. You can outrun one, or fly at it to pick a fight.
 - Hunting your fleet it chases on a curve through each run
-  (`game-core/src/navigation/chase.rs`): the run is split into 16 steps, and at
+  (`crates/game-core/src/navigation/chase.rs`): the run is split into 16 steps, and at
   each it heads for where your fleet will be at the end of that step. Within
   500,000 km it strikes: a raider contact with the band's real ships (Fight,
   Auto-resolve or Evade). A fleet waiting in the open is struck within two runs
   from anywhere in detection range.
 - Destroyed raiders leave the band; after any fight or escape it backs off for 3
   runs. A band wiped out returns to its system 20 runs later.
-- Bands prey on NPC traders too (`game-core/src/npc/band_raids.rs`): a band with
+- Bands prey on NPC traders too (`crates/game-core/src/npc/band_raids.rs`): a band with
   no nearer fleet of yours in range stalks the nearest laden trader out in the
   open (not docked at a station or being refitted) and strikes once it reaches
   where the trader stood, or the trader comes within 5 million km (NPC-to-NPC
@@ -296,7 +296,7 @@ Raiders also roam as persistent bands you can see coming
 
 ### Bands crossing systems
 
-Bands do not stay put (`game-core/src/navigation/band_roaming.rs`):
+Bands do not stay put (`crates/game-core/src/navigation/band_roaming.rs`):
 
 - **Pursuit:** a band hunting your fleet when it leaves the system follows it
   to the next system on its course, if that lies within 40 ly. The fleet's card
@@ -335,7 +335,8 @@ could win easily take cargo instead, and scout pairs rarely beat a freighter.
 
 ## Ship upgrades and escorts
 
-Gear and escorts are bought in the Market window (`game-core/src/combat/gear.rs`,
+Gear and escorts are bought on the Market window's Shipyard tab
+(`crates/game-core/src/combat/gear.rs`,
 prices in the economy rules' `gear_prices`, at today's price level). The payment
 goes to that market's treasury.
 
@@ -356,8 +357,7 @@ goes to that market's treasury.
 Each item is fitted once per ship. At a shipyard it can be removed for the
 hull's resale share of today's price, or swapped for another applicable
 upgrade in one transaction. Selling the ship also sells its fitted upgrades.
-The Market's *Ship
-upgrades* section has a row for every ship of the selected ship's fleet at that
+The Shipyard tab's *Ship upgrades* section has a row for every ship of the selected ship's fleet at that
 port (the selected ship first), each listing only the upgrades that fit its
 model and size, so every ship is outfitted on its own; unaffordable ones are
 disabled with the price. Size follows the ship catalog, so another model of the
@@ -365,7 +365,7 @@ same size can use the same size fitting. The Fleets roster shows each ship's
 fitted gear as glyphs (hover for what each does). A battle never grows beyond
 16 ships, so an escort stays out of a battle that is already full.
 
-**NPC traders arm themselves** (`game-core/src/npc/outfit.rs`). At a market,
+**NPC traders arm themselves** (`crates/game-core/src/npc/outfit.rs`). At a market,
 after repairs and fuel, a trader whose wallet holds more than twice its starting
 credits plus the price fits afterburners, then point defense (one item per stop).
 With more than three times its starting credits it hires an escort whenever it
@@ -378,7 +378,7 @@ someone demands its cargo.
 ## Hailing and robbing NPC traders
 
 The map roster's TRAFFIC list shows **Hail** beside
-every NPC trader your flagship can reach (`game-core/src/piracy.rs`): within 20
+every NPC trader your flagship can reach (`crates/game-core/src/piracy.rs`): within 20
 million km, with both ships in open space or orbit. Your fleet must not be docked
 or landed; a trader laid up for a refit is protected. A trader **docked** at a
 station can be hailed only by a flagship docked at the same port (**Hail ·

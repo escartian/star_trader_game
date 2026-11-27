@@ -38,8 +38,8 @@ currently a print-and-exit fixture; a remote adapter is still planned. Revisit c
 
 ## Client and map
 
-The desktop host is in `game-client/src/desktop.rs`; the initial browser host is
-in `game-client/src/web.rs` and uses the same `Map` UI. Platform entry points
+The desktop host is in `crates/game-client/src/desktop.rs`; the initial browser host is
+in `crates/game-client/src/web.rs` and uses the same `Map` UI. Platform entry points
 stay separate so browser storage and event-loop differences do not leak into
 simulation/session rules.
 
@@ -54,7 +54,7 @@ The Market's Trade tab owns buying, selling and port services. Its Shipyard tab
 is available at every market for ship fittings, fleet software, refits and hull
 transactions, including ports with no hulls currently in stock.
 
-Music is client I/O in `game-client/src/audio.rs`. The map decides which track
+Music is client I/O in `crates/game-client/src/audio.rs`. The map decides which track
 should play (the main menu theme, or in game when the player enables it) and
 the gain from the Settings sliders; `audio` owns the device through rodio
 (on desktop, and in the browser through Web Audio, opened on the player's
@@ -138,7 +138,7 @@ without charging fuel twice; this is not full network retry deduplication.
 `handle_as` requires an authenticated identity from a future adapter; its numeric
 argument is not authentication. The one-player fixture rejects other identities.
 
-`game-server/src/offline.rs` is an in-process identity convenience adapter over the
+`crates/game-server/src/offline.rs` is an in-process identity convenience adapter over the
 same session commands. `game-core::navigation` owns plotted courses, fleet readiness,
 run progress, encounters and deterministic random state. `game-server::navigation`
 resolves a candidate world and advances economy once per run before publication.
@@ -162,7 +162,7 @@ Players plot courses and execute navigation runs; plotting alone consumes no tic
 The client's Advance control only repeats the single-run command until an event
 needs the player; it adds no authoritative rules.
 
-`game-server/src/save.rs` owns schema-8 authoritative JSON, validation, atomic
+`crates/game-server/src/save.rs` owns schema-10 authoritative JSON, validation, atomic
 replacement and a previous-good backup. Saves contain the world/player/economy
 and their active definitions; continuing does not regenerate markets or apply
 changed startup definitions. The client replaces its session only after load
@@ -198,7 +198,7 @@ config/combat.json, factions from config/factions.json and NPC personalities
 from config/npc.json, all embedded as
 fallbacks. Faction territory and your standing live in `Economy::factions`;
 the host adjusts standing and wanted status after each command
-(`game-server/src/standing.rs`) and core prices apply its terms
+(`crates/game-server/src/standing.rs`) and core prices apply its terms
 (`factions::terms`). Police patrols live in `NavigationState::police`; the host
 runs `game-core::police::patrol_run` once per navigation run, after NPC traders,
 routes and patrols, because pursuit reads `Economy::factions`. `game-core::combat` validates them.
@@ -206,7 +206,10 @@ Schema 10 is current. Schemas 7–9 upgrade on load; schemas 7–8 auto-resolve
 an open legacy battle. Schema 10 expands faction and quest state to six powers
 while preserving the four original factions in older games. New games offer
 those four political powers and choose the starting captain's species independently.
-Fleet captains store species and experience in `TravelState::fleets`.
+Fleet captains store species and experience in `TravelState::fleets`. The
+`player_captain_fleet` field tracks the player's captain independently of the
+directly commanded flagship. When that fleet is removed, core rules transfer
+the player captain and their experience to the surviving flagship immediately.
 
 ## Movement spaces and host resolution
 

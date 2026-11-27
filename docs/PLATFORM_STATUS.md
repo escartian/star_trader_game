@@ -23,7 +23,7 @@ crates/game-client/Cargo.toml --target wasm32-unknown-unknown` and
 with `cd crates/game-client && trunk serve`.
 
 The browser build opens the main menu like desktop. Saves and settings go
-through `game-client/src/storage.rs`: files on desktop, `localStorage` in the
+through `crates/game-client/src/storage.rs`: files on desktop, `localStorage` in the
 browser (keys `star-trader/data/slot-N.json`, with `.bak` backups, saves
 zlib-compressed and base64-encoded by `storage/codec.rs`). It autosaves when
 the page is hidden and every 60 seconds. Codec round trips and damage

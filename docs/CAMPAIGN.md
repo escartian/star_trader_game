@@ -6,11 +6,11 @@ destroy, port charters to buy and a Diplomat road through faction story
 quests ([JOBS.md](JOBS.md#story-quests)), and a Pirate road through the Free
 Captains' chain ([JOBS.md](JOBS.md#the-free-captains)).
 
-Code: `game-core/src/campaign.rs` (roads, net worth, score, ends),
+Code: `crates/game-core/src/campaign.rs` (roads, net worth, score, ends),
 `economy/charters.rs` (charters, port share, lanes), `navigation/haven.rs`
-(the Haven); commands and the end-of-game gate in `game-server/src/campaign.rs`;
+(the Haven); commands and the end-of-game gate in `crates/game-server/src/campaign.rs`;
 the Victory panel, charter row and Assault prompt in
-`game-client/src/session/victory.rs`; the end screen in `session/campaign_end.rs`; map marks in `map/local/campaign.rs` and
+`crates/game-client/src/session/victory.rs`; the end screen in `session/campaign_end.rs`; map marks in `map/local/campaign.rs` and
 `map/galaxy_campaign.rs`.
 
 ## Roads to victory

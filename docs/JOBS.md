@@ -6,12 +6,12 @@ Free Captains' chain to the Pirate road (see [CAMPAIGN.md](CAMPAIGN.md)).
 Miri Observatory and Auralith Confluence chains remain available in legacy
 saves that had those political factions; new games treat them as species.
 
-Code: `game-core/src/jobs.rs` (types, accept, catalog), `jobs/board.rs`
+Code: `crates/game-core/src/jobs.rs` (types, accept, catalog), `jobs/board.rs`
 (offers; fence work in `jobs/board/fence.rs`), `jobs/settle.rs` (completion,
 failure, payout), `jobs/quests.rs` (story quests; definitions in
 `jobs/quests/catalog.rs`); commands and the
-after-command pass in `game-server/src/jobs.rs`; the port's Jobs tab, the Jobs
-window and the outcome card in `game-client/src/session/jobs.rs`, quest cards
+after-command pass in `crates/game-server/src/jobs.rs`; the port's Jobs tab, the Jobs
+window and the outcome card in `crates/game-client/src/session/jobs.rs`, quest cards
 in `session/quests.rs`. Tuning and text: `config/jobs.json`, `config/quests.json`.
 
 ## Finding and taking jobs
